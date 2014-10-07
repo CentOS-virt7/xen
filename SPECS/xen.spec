@@ -18,7 +18,7 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.2.4
+Version: 4.2.5
 Release: 33%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
@@ -79,11 +79,11 @@ Patch100: xen-configure-xend.patch
 Patch106: xen-xl-autoballon-with-auto-option.patch
 Patch107: xen-xl-set-autoballon-default-auto.patch
 
-Patch200: xsa89.patch
-Patch201: xen-pygrub-fix-for-rhel7.patch 
-Patch202: xsa92-4.2.patch
-Patch203: xsa96.patch 
-
+#Patch200: xsa89.patch
+Patch205: xsa97-hap-4.2.patch
+Patch206: xsa104.patch
+Patch207: xsa105.patch
+Patch208: xsa106.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -259,10 +259,10 @@ manage Xen virtual machines.
 %patch106 -p1
 %patch107 -p1
 
-%patch200 -p1
-%patch201 -p1
-%patch202 -p1
-%patch203 -p1
+%patch205 -p1
+%patch206 -p1
+%patch207 -p1
+%patch208 -p1
 
 %patch1000 -p1
 
@@ -811,6 +811,14 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Sep 26 2014 Johnny HUghes <johnny@centos.org> -  4.2.5-33.el6.centos
+- upgrade to upstream Xen version 4.2.5
+- removed patches that are already part of 4.2.5
+- Added Patch205 (XSA-97, CVE-2014-5146,CVE-2014-5149)
+- Added Patch206 (XSA-104, CVE-2014-7154)
+- Added Patch207 (XSA-105, CVE-2014-7155)
+- Added Patch208 (XSA-106, CVE-2014-7156) 
+
 * Mon Jun 16 2014 Johnny Hughes <johnny@centos.org> - 4.2.4-33.el6.centos
 - actually apply patch203 :)
 
