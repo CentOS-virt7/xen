@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.4
-Release: 29%{?dist}
+Release: 30%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -78,6 +78,8 @@ Patch100: xen-configure-xend.patch
 
 Patch106: xen-xl-autoballon-with-auto-option.patch
 Patch107: xen-xl-set-autoballon-default-auto.patch
+
+Patch200: xsa89.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -252,6 +254,8 @@ manage Xen virtual machines.
 %patch100 -p1
 %patch106 -p1
 %patch107 -p1
+
+%patch200 -p1
 
 %patch1000 -p1
 
@@ -800,6 +804,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Mar 26 2014 Johnny Hughes <johnny@centos.org> - 4.2.4-30.el6.centos
+- roll in Patch200, XSA-89
+
 * Sun Feb 23 2014 Johnny Hughes <johnny@centos.org> - 4.2.4-29.el6.centos
 - cleaned up older patches, removed qemu-xen upstream git (Source 100) 
   tarball as it is part of the xen-4.2.4.tar.gz tarball now
