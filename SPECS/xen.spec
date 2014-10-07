@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.4
-Release: 32%{?dist}
+Release: 33%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -262,6 +262,7 @@ manage Xen virtual machines.
 %patch200 -p1
 %patch201 -p1
 %patch202 -p1
+%patch203 -p1
 
 %patch1000 -p1
 
@@ -810,6 +811,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jun 16 2014 Johnny Hughes <johnny@centos.org> - 4.2.4-33.el6.centos
+- actually apply patch203 :)
+
 * Mon Jun 16 2014 Johnny Hughes <johnny@centos.org> - 4.2.4-32.el6.centos
 - Patch203 (XSA-96, CVE-2014-3967 and CVE-2014-3968) added
 
