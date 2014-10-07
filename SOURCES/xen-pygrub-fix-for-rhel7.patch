@@ -1,0 +1,25 @@
+# HG changeset patch
+# Parent df2b08554a3b5da3493e536f1dbe762cd65d61f3
+
+diff --git a/tools/pygrub/src/GrubConf.py b/tools/pygrub/src/GrubConf.py
+--- a/tools/pygrub/src/GrubConf.py
++++ b/tools/pygrub/src/GrubConf.py
+@@ -348,7 +348,9 @@
+                 
+     commands = {'set:root': 'root',
+                 'linux': 'kernel',
++                'linux16': 'kernel',
+                 'initrd': 'initrd',
++                'initrd16': 'initrd',
+                 'echo': None,
+                 'insmod': None,
+                 'search': None}
+@@ -394,7 +396,7 @@
+                 continue
+ 
+             # new image
+-            title_match = re.match('^menuentry ["\'](.*)["\'] (.*){', l)
++            title_match = re.match('^menuentry ["\'](.*?)["\'] (.*){', l)
+             if title_match:
+                 if img is not None:
+                     raise RuntimeError, "syntax error: cannot nest menuentry (%d %s)" % (len(img),img)

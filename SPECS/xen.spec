@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.4
-Release: 30%{?dist}
+Release: 32%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -80,6 +80,10 @@ Patch106: xen-xl-autoballon-with-auto-option.patch
 Patch107: xen-xl-set-autoballon-default-auto.patch
 
 Patch200: xsa89.patch
+Patch201: xen-pygrub-fix-for-rhel7.patch 
+Patch202: xsa92-4.2.patch
+Patch203: xsa96.patch 
+
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -256,6 +260,8 @@ manage Xen virtual machines.
 %patch107 -p1
 
 %patch200 -p1
+%patch201 -p1
+%patch202 -p1
 
 %patch1000 -p1
 
@@ -804,8 +810,15 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jun 16 2014 Johnny Hughes <johnny@centos.org> - 4.2.4-32.el6.centos
+- Patch203 (XSA-96, CVE-2014-3967 and CVE-2014-3968) added
+
+* Mon May  5 2014 Johnny Hughes <johnny@centos.org> - 4.2.4-31.el6.centos
+- Roll in Patch202, XSA-92 (CVE-2014-3124)
+- Created Patch201 to allow RHEL7 Beta and RC to boot
+
 * Wed Mar 26 2014 Johnny Hughes <johnny@centos.org> - 4.2.4-30.el6.centos
-- roll in Patch200, XSA-89
+- roll in Patch200, XSA-89 (CVE-2014-2599)
 
 * Sun Feb 23 2014 Johnny Hughes <johnny@centos.org> - 4.2.4-29.el6.centos
 - cleaned up older patches, removed qemu-xen upstream git (Source 100) 
