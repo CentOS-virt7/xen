@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.2
-Release: 22%{?dist}
+Release: 23%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -114,6 +114,8 @@ Patch127: xsa55-4.2-0020-libxc-check-return-values-from-malloc.patch
 Patch128: xsa55-4.2-0021-libxc-range-checks-in-xc_dom_p2m_host-and-_guest.patch
 Patch129: xsa55-4.2-0022-libxc-check-blob-size-before-proceeding-in-xc_dom_ch.patch
 Patch130: xsa55-4.2-0023-libxc-Better-range-check-in-xc_dom_alloc_segment.patch
+Patch131: xsa57-4.2.patch 
+Patch132: xsa58-4.2.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -324,6 +326,8 @@ manage Xen virtual machines.
 %patch128 -p1
 %patch129 -p1
 %patch130 -p1
+%patch131 -p1
+%patch132 -p1
 
 %patch1000 -p1
 
@@ -873,6 +877,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jul 18 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-23.el6.centos
+- added Patch131 for XSA-57 (CVE-2013-2211)
+- added Patch132 for XSA-58 (CVE-2013-1432)
+
 * Fri Jun 14 2013 Johnny Hughes <johnny@cetnos.org> - 4.2.2-22.el6.centos
 - rolled in patches 108 through 130 for XSA-55
 
