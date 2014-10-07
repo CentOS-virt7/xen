@@ -1,0 +1,41 @@
+From de9089b449d2508b1ba05590905c7ebaee00c8c4 Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Fri, 14 Jun 2013 16:43:16 +0100
+Subject: [PATCH 07/23] libelf/xc_dom_load_elf_symtab: Do not use "syms" uninitialised
+
+xc_dom_load_elf_symtab (with load==0) calls elf_round_up, but it
+mistakenly used the uninitialised variable "syms" when calculating
+dom->bsd_symtab_start.  This should be a reference to "elf".
+
+This change might have the effect of rounding the value differently.
+Previously if the uninitialised value (a single byte on the stack) was
+ELFCLASS64 (ie, 2), the alignment would be to 8 bytes, otherwise to 4.
+
+However, the value is calculated from dom->kernel_seg.vend so this
+could only make a difference if that value wasn't already aligned to 8
+bytes.
+
+This is part of the fix to a security issue, XSA-55.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ tools/libxc/xc_dom_elfloader.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/tools/libxc/xc_dom_elfloader.c b/tools/libxc/xc_dom_elfloader.c
+index 031b5b6..e82f6e9 100644
+--- a/tools/libxc/xc_dom_elfloader.c
++++ b/tools/libxc/xc_dom_elfloader.c
+@@ -144,7 +144,7 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+         hdr = xc_dom_malloc(dom, size);
+         if ( hdr == NULL )
+             return 0;
+-        dom->bsd_symtab_start = elf_round_up(&syms, dom->kernel_seg.vend);
++        dom->bsd_symtab_start = elf_round_up(elf, dom->kernel_seg.vend);
+     }
+ 
+     memcpy(hdr + sizeof(int),
+-- 
+1.7.2.5
+

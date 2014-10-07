@@ -1,0 +1,20 @@
+xl list -l should produce readable output when built with yajl2 so
+it is compatible with the xendomains script.
+
+Signed-off-by: Michael Young <m.a.young@durham.ac.uk>
+
+--- xen-4.2.2/tools/libxl/libxl_json.h.orig	2013-03-21 17:55:42.000000000 +0000
++++ xen-4.2.2/tools/libxl/libxl_json.h	2013-04-10 22:14:15.938459238 +0100
+@@ -54,7 +54,11 @@
+ 
+ static inline yajl_gen libxl_yajl_gen_alloc(const yajl_alloc_funcs *allocFuncs)
+ {
+-    return yajl_gen_alloc(allocFuncs);
++    yajl_gen g;
++    g = yajl_gen_alloc(allocFuncs);
++    if (g)
++        yajl_gen_config(g, yajl_gen_beautify, 1);
++    return g;
+ }
+ 
+ #else /* !HAVE_YAJL_V2 */

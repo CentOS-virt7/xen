@@ -1,0 +1,69 @@
+From b06e277b1fc08c7da3befeb3ac3950e1d941585d Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Fri, 14 Jun 2013 16:43:19 +0100
+Subject: [PATCH 18/23] libxc: Add range checking to xc_dom_binloader
+
+This is a simple binary image loader with its own metadata format.
+However, it is too careless with image-supplied values.
+
+Add the following checks:
+
+ * That the image is bigger than the metadata table; otherwise the
+   pointer arithmetic to calculate the metadata table location may
+   yield undefined and dangerous values.
+
+ * When clamping the end of the region to search, that we do not
+   calculate pointers beyond the end of the image.  The C
+   specification does not permit this and compilers are becoming ever
+   more determined to miscompile code when they can "prove" various
+   falsehoods based on assertions from the C spec.
+
+ * That the supplied image is big enough for the text we are allegedly
+   copying from it.  Otherwise we might have a read overrun and copy
+   the results (perhaps a lot of secret data) into the guest.
+
+This is part of the fix to a security issue, XSA-55.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxc/xc_dom_binloader.c |   15 +++++++++++++--
+ 1 files changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxc/xc_dom_binloader.c b/tools/libxc/xc_dom_binloader.c
+index bde93f7..8596a28 100644
+--- a/tools/libxc/xc_dom_binloader.c
++++ b/tools/libxc/xc_dom_binloader.c
+@@ -123,10 +123,13 @@ static struct xen_bin_image_table *find_table(struct xc_dom_image *dom)
+     uint32_t *probe_ptr;
+     uint32_t *probe_end;
+ 
++    if ( dom->kernel_size < sizeof(*table) )
++        return NULL;
+     probe_ptr = dom->kernel_blob;
+-    probe_end = dom->kernel_blob + dom->kernel_size - sizeof(*table);
+-    if ( (void*)probe_end > (dom->kernel_blob + 8192) )
++    if ( dom->kernel_size > (8192 + sizeof(*table)) )
+         probe_end = dom->kernel_blob + 8192;
++    else
++        probe_end = dom->kernel_blob + dom->kernel_size - sizeof(*table);
+ 
+     for ( table = NULL; probe_ptr < probe_end; probe_ptr++ )
+     {
+@@ -282,6 +285,14 @@ static int xc_dom_load_bin_kernel(struct xc_dom_image *dom)
+         return -EINVAL;
+     }
+ 
++    if ( image_size < skip ||
++         image_size - skip < text_size )
++    {
++        DOMPRINTF("%s: image is too small for declared text size",
++                  __FUNCTION__);
++        return -EINVAL;
++    }
++
+     memcpy(dest, image + skip, text_size);
+     memset(dest + text_size, 0, bss_size);
+ 
+-- 
+1.7.2.5
+

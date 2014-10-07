@@ -1,0 +1,6 @@
+# blktap seems not to work with virt-manager
+# the variable RMMOD_BLKTAP, if set to yes will remove the blktap module
+# if set to no it will not remove the module
+
+RMMOD_BLKTAP=no
+

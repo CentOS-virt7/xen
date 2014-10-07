@@ -1,0 +1,35 @@
+diff -uNr xen-4.2.1__orig/tools/blktap2/drivers/Makefile xen-4.2.1/tools/blktap2/drivers/Makefile
+--- xen-4.2.1__orig/tools/blktap2/drivers/Makefile	2013-01-22 14:21:13.643741669 -0500
++++ xen-4.2.1/tools/blktap2/drivers/Makefile	2013-01-22 14:21:44.347092274 -0500
+@@ -207,7 +207,7 @@
+ top_build_prefix = ../
+ top_builddir = ..
+ top_srcdir = ..
+-AM_CFLAGS = -Wall -Werror
++AM_CFLAGS = -Wall 
+ AM_CPPFLAGS = -D_GNU_SOURCE -I$(top_srcdir)/include
+ tapdisk_SOURCES = tapdisk2.c
+ tapdisk_LDADD = libtapdisk.la
+diff -uNr xen-4.2.1__orig/tools/blktap2/drivers/Makefile.am xen-4.2.1/tools/blktap2/drivers/Makefile.am
+--- xen-4.2.1__orig/tools/blktap2/drivers/Makefile.am	2013-01-22 12:43:54.000000000 -0500
++++ xen-4.2.1/tools/blktap2/drivers/Makefile.am	2013-01-22 14:21:44.347732663 -0500
+@@ -1,6 +1,6 @@
+ 
+ AM_CFLAGS  = -Wall
+-AM_CFLAGS += -Werror
++AM_CFLAGS += 
+ 
+ AM_CPPFLAGS  = -D_GNU_SOURCE
+ AM_CPPFLAGS += -I$(top_srcdir)/include
+diff -uNr xen-4.2.1__orig/tools/blktap2/drivers/Makefile.in xen-4.2.1/tools/blktap2/drivers/Makefile.in
+--- xen-4.2.1__orig/tools/blktap2/drivers/Makefile.in	2013-01-22 14:21:09.878842722 -0500
++++ xen-4.2.1/tools/blktap2/drivers/Makefile.in	2013-01-22 14:21:44.349092631 -0500
+@@ -207,7 +207,7 @@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-AM_CFLAGS = -Wall -Werror
++AM_CFLAGS = -Wall 
+ AM_CPPFLAGS = -D_GNU_SOURCE -I$(top_srcdir)/include
+ tapdisk_SOURCES = tapdisk2.c
+ tapdisk_LDADD = libtapdisk.la

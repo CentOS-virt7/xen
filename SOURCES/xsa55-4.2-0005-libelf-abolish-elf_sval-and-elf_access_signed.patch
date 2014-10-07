@@ -1,0 +1,86 @@
+From 83ec905922b496e1a5756e3a88405eb6c2c6ba88 Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Fri, 14 Jun 2013 16:43:16 +0100
+Subject: [PATCH 05/23] libelf: abolish elf_sval and elf_access_signed
+
+These are not used anywhere.
+
+This is part of the fix to a security issue, XSA-55.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/common/libelf/libelf-tools.c |   28 ----------------------------
+ xen/include/xen/libelf.h         |   11 -----------
+ 2 files changed, 0 insertions(+), 39 deletions(-)
+
+diff --git a/xen/common/libelf/libelf-tools.c b/xen/common/libelf/libelf-tools.c
+index cb97908..2f54142 100644
+--- a/xen/common/libelf/libelf-tools.c
++++ b/xen/common/libelf/libelf-tools.c
+@@ -48,34 +48,6 @@ uint64_t elf_access_unsigned(struct elf_binary * elf, const void *ptr,
+     }
+ }
+ 
+-int64_t elf_access_signed(struct elf_binary *elf, const void *ptr,
+-                          uint64_t offset, size_t size)
+-{
+-    int need_swap = elf_swap(elf);
+-    const int8_t *s8;
+-    const int16_t *s16;
+-    const int32_t *s32;
+-    const int64_t *s64;
+-
+-    switch ( size )
+-    {
+-    case 1:
+-        s8 = ptr + offset;
+-        return *s8;
+-    case 2:
+-        s16 = ptr + offset;
+-        return need_swap ? bswap_16(*s16) : *s16;
+-    case 4:
+-        s32 = ptr + offset;
+-        return need_swap ? bswap_32(*s32) : *s32;
+-    case 8:
+-        s64 = ptr + offset;
+-        return need_swap ? bswap_64(*s64) : *s64;
+-    default:
+-        return 0;
+-    }
+-}
+-
+ uint64_t elf_round_up(struct elf_binary *elf, uint64_t addr)
+ {
+     int elf_round = (elf_64bit(elf) ? 8 : 4) - 1;
+diff --git a/xen/include/xen/libelf.h b/xen/include/xen/libelf.h
+index e8f6508..38e490c 100644
+--- a/xen/include/xen/libelf.h
++++ b/xen/include/xen/libelf.h
+@@ -136,23 +136,12 @@ struct elf_binary {
+                            offsetof(typeof(*(str)),e32.elem),           \
+                            sizeof((str)->e32.elem)))
+ 
+-#define elf_sval(elf, str, elem)                                        \
+-    ((ELFCLASS64 == (elf)->class)                                       \
+-     ? elf_access_signed((elf), (str),                                  \
+-                         offsetof(typeof(*(str)),e64.elem),             \
+-                         sizeof((str)->e64.elem))                       \
+-     : elf_access_signed((elf), (str),                                  \
+-                         offsetof(typeof(*(str)),e32.elem),             \
+-                         sizeof((str)->e32.elem)))
+-
+ #define elf_size(elf, str)                              \
+     ((ELFCLASS64 == (elf)->class)                       \
+      ? sizeof((str)->e64) : sizeof((str)->e32))
+ 
+ uint64_t elf_access_unsigned(struct elf_binary *elf, const void *ptr,
+                              uint64_t offset, size_t size);
+-int64_t elf_access_signed(struct elf_binary *elf, const void *ptr,
+-                          uint64_t offset, size_t size);
+ 
+ uint64_t elf_round_up(struct elf_binary *elf, uint64_t addr);
+ 
+-- 
+1.7.2.5
+

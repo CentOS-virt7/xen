@@ -1,0 +1,114 @@
+From d0790bdad7496e720416b2d4a04563c4c27e7b95 Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Fri, 14 Jun 2013 16:43:17 +0100
+Subject: [PATCH 12/23] libelf: Check pointer references in elf_is_elfbinary
+
+elf_is_elfbinary didn't take a length parameter and could potentially
+access out of range when provided with a very short image.
+
+We only need to check the size is enough for the actual dereference in
+elf_is_elfbinary; callers are just using it to check the magic number
+and do their own checks (usually via the new elf_ptrval system) before
+dereferencing other parts of the header.
+
+This is part of the fix to a security issue, XSA-55.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+---
+ tools/libxc/xc_dom_elfloader.c    |    2 +-
+ xen/arch/x86/bzimage.c            |    4 ++--
+ xen/common/libelf/libelf-loader.c |    2 +-
+ xen/common/libelf/libelf-tools.c  |    9 ++++++---
+ xen/include/xen/libelf.h          |    4 +++-
+ 5 files changed, 13 insertions(+), 8 deletions(-)
+
+diff --git a/tools/libxc/xc_dom_elfloader.c b/tools/libxc/xc_dom_elfloader.c
+index b82a08c..ea45886 100644
+--- a/tools/libxc/xc_dom_elfloader.c
++++ b/tools/libxc/xc_dom_elfloader.c
+@@ -95,7 +95,7 @@ static int check_elf_kernel(struct xc_dom_image *dom, int verbose)
+         return -EINVAL;
+     }
+ 
+-    if ( !elf_is_elfbinary(dom->kernel_blob) )
++    if ( !elf_is_elfbinary(dom->kernel_blob, dom->kernel_size) )
+     {
+         if ( verbose )
+             xc_dom_panic(dom->xch,
+diff --git a/xen/arch/x86/bzimage.c b/xen/arch/x86/bzimage.c
+index 5adc223..3600dca 100644
+--- a/xen/arch/x86/bzimage.c
++++ b/xen/arch/x86/bzimage.c
+@@ -220,7 +220,7 @@ unsigned long __init bzimage_headroom(char *image_start,
+         image_length = hdr->payload_length;
+     }
+ 
+-    if ( elf_is_elfbinary(image_start) )
++    if ( elf_is_elfbinary(image_start, image_length) )
+         return 0;
+ 
+     orig_image_len = image_length;
+@@ -251,7 +251,7 @@ int __init bzimage_parse(char *image_base, char **image_start, unsigned long *im
+         *image_len = hdr->payload_length;
+     }
+ 
+-    if ( elf_is_elfbinary(*image_start) )
++    if ( elf_is_elfbinary(*image_start, *image_len) )
+         return 0;
+ 
+     BUG_ON(!(image_base < *image_start));
+diff --git a/xen/common/libelf/libelf-loader.c b/xen/common/libelf/libelf-loader.c
+index a3310e7..f8be635 100644
+--- a/xen/common/libelf/libelf-loader.c
++++ b/xen/common/libelf/libelf-loader.c
+@@ -29,7 +29,7 @@ int elf_init(struct elf_binary *elf, const char *image_input, size_t size)
+     ELF_HANDLE_DECL(elf_shdr) shdr;
+     uint64_t i, count, section, offset;
+ 
+-    if ( !elf_is_elfbinary(image_input) )
++    if ( !elf_is_elfbinary(image_input, size) )
+     {
+         elf_err(elf, "%s: not an ELF binary\n", __FUNCTION__);
+         return -1;
+diff --git a/xen/common/libelf/libelf-tools.c b/xen/common/libelf/libelf-tools.c
+index 46ca553..744027e 100644
+--- a/xen/common/libelf/libelf-tools.c
++++ b/xen/common/libelf/libelf-tools.c
+@@ -332,11 +332,14 @@ ELF_HANDLE_DECL(elf_note) elf_note_next(struct elf_binary *elf, ELF_HANDLE_DECL(
+ 
+ /* ------------------------------------------------------------------------ */
+ 
+-int elf_is_elfbinary(const void *image)
++int elf_is_elfbinary(const void *image_start, size_t image_size)
+ {
+-    const Elf32_Ehdr *ehdr = image;
++    const Elf32_Ehdr *ehdr = image_start;
+ 
+-    return IS_ELF(*ehdr); /* fixme unchecked */
++    if ( image_size < sizeof(*ehdr) )
++        return 0;
++
++    return IS_ELF(*ehdr);
+ }
+ 
+ int elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr)
+diff --git a/xen/include/xen/libelf.h b/xen/include/xen/libelf.h
+index ddc3ed7..ac93858 100644
+--- a/xen/include/xen/libelf.h
++++ b/xen/include/xen/libelf.h
+@@ -350,7 +350,9 @@ uint64_t elf_note_numeric_array(struct elf_binary *, ELF_HANDLE_DECL(elf_note),
+                                 unsigned int unitsz, unsigned int idx);
+ ELF_HANDLE_DECL(elf_note) elf_note_next(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note);
+ 
+-int elf_is_elfbinary(const void *image);
++/* (Only) checks that the image has the right magic number. */
++int elf_is_elfbinary(const void *image_start, size_t image_size);
++
+ int elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr);
+ 
+ /* ------------------------------------------------------------------------ */
+-- 
+1.7.2.5
+

@@ -1,0 +1,143 @@
+commit 48f4af18b3e1e36bf0eda793455ecaea9a316c65
+Author:     David Vrabel <[hidden email]>
+AuthorDate: Thu Apr 4 17:21:12 2013 +0000
+Commit:     Ian Jackson <[hidden email]>
+CommitDate: Mon Apr 8 17:04:52 2013 +0100
+
+    xl: extend autoballoon xl.conf option with an "auto" option
+   
+    autoballoon=1 is not recommened if dom0_mem was used to reduce the
+    amount of dom0 memory.  Instead of requiring users to change xl.conf
+    if they do this, extend the autoballoon option with a new choice:
+    "auto".
+   
+    With autoballoon="auto", autoballooning will be disabled if dom0_mem
+    was used on the Xen command line.
+   
+    For consistency, accept "on" and "off" as valid autoballoon options (1
+    and 0 are still accepted).
+   
+    The default remains "on" for now.
+   
+    Signed-off-by: David Vrabel <[hidden email]>
+    Acked-by: Ian Jackson <[hidden email]>
+---
+ docs/man/xl.conf.pod.5 |   21 ++++++++++++++-------
+ tools/examples/xl.conf |    7 ++++---
+ tools/libxl/xl.c       |   36 ++++++++++++++++++++++++++++++++++--
+ 3 files changed, 52 insertions(+), 12 deletions(-)
+
+diff --git a/docs/man/xl.conf.pod.5 b/docs/man/xl.conf.pod.5
+index 7b9fcac..a4ce3e5 100644
+--- a/docs/man/xl.conf.pod.5
++++ b/docs/man/xl.conf.pod.5
+@@ -45,15 +45,22 @@ The semantics of each C<KEY> defines which form of C<VALUE> is required.
+ 
+ =over 4
+ 
+-=item B<autoballoon=BOOLEAN>
++=item B<autoballoon="off"|"on"|"auto">
+ 
+-If disabled then C<xl> will not attempt to reduce the amount of memory
+-assigned to domain 0 in order to create free memory when starting a
+-new domain. You are strongly recommended to set this to C<0>
+-(C<False>) if you use the C<dom0_mem> hypervisor command line to
+-reduce the amount of memory given to domain 0 by default.
++If set to "on" then C<xl> will automatically reduce the amount of
++memory assigned to domain 0 in order to free memory for new domains.
+ 
+-Default: C<1>
++If set to "off" then C<xl> will not automatically reduce the amount of
++domain 0 memory.
++
++If set to "auto" then auto-ballooning will be disabled if the
++C<dom0_mem> option was provided on the Xen command line.
++
++You are strongly recommended to set this to C<"off"> (or C<"auto">) if
++you use the C<dom0_mem> hypervisor command line to reduce the amount
++of memory given to domain 0 by default.
++
++Default: C<"on">
+ 
+ =item B<run_hotplug_scripts=BOOLEAN>
+ 
+diff --git a/tools/examples/xl.conf b/tools/examples/xl.conf
+index b0caa32..50cba2b 100644
+--- a/tools/examples/xl.conf
++++ b/tools/examples/xl.conf
+@@ -1,8 +1,9 @@
+ ## Global XL config file ##
+ 
+-# automatically balloon down dom0 when xen doesn't have enough free
+-# memory to create a domain
+-#autoballoon=1
++# Control whether dom0 is ballooned down when xen doesn't have enough
++# free memory to create a domain.  "auto" means only balloon if dom0
++# starts with all the host's memory.
++#autoballoon="auto"
+ 
+ # full path of the lockfile used by xl during domain creation
+ #lockfile="/var/lock/xl"
+diff --git a/tools/libxl/xl.c b/tools/libxl/xl.c
+index 4c598db..ac41fcd 100644
+--- a/tools/libxl/xl.c
++++ b/tools/libxl/xl.c
+@@ -26,6 +26,7 @@
+ #include <fcntl.h>
+ #include <ctype.h>
+ #include <inttypes.h>
++#include <regex.h>
+ 
+ #include "libxl.h"
+ #include "libxl_utils.h"
+@@ -48,6 +49,29 @@ enum output_format default_output_format = OUTPUT_FORMAT_JSON;
+ 
+ static xentoollog_level minmsglevel = XTL_PROGRESS;
+ 
++/* Get autoballoon option based on presence of dom0_mem Xen command
++   line option. */
++static int auto_autoballoon(void)
++{
++    const libxl_version_info *info;
++    regex_t regex;
++    int ret;
++
++    info = libxl_get_version_info(ctx);
++    if (!info)
++        return 1; /* default to on */
++
++    ret = regcomp(&regex,
++                  "(^| )dom0_mem=((|min:|max:)[0-9]+[bBkKmMgG]?,?)+($| )",
++                  REG_NOSUB | REG_EXTENDED);
++    if (ret)
++        return 1;
++
++    ret = regexec(&regex, info->commandline, 0, NULL, 0);
++    regfree(&regex);
++    return ret == REG_NOMATCH;
++}
++
+ static void parse_global_config(const char *configfile,
+                               const char *configfile_data,
+                               int configfile_len)
+@@ -69,8 +93,16 @@ static void parse_global_config(const char *configfile,
+         exit(1);
+     }
+ 
+-    if (!xlu_cfg_get_long (config, "autoballoon", &l, 0))
+-        autoballoon = l;
++    if (!xlu_cfg_get_string(config, "autoballoon", &buf, 0)) {
++        if (!strcmp(buf, "on") || !strcmp(buf, "1"))
++            autoballoon = 1;
++        else if (!strcmp(buf, "off") || !strcmp(buf, "0"))
++            autoballoon = 0;
++        else if (!strcmp(buf, "auto"))
++            autoballoon = auto_autoballoon();
++        else
++            fprintf(stderr, "invalid autoballoon option");
++    }
+ 
+     if (!xlu_cfg_get_long (config, "run_hotplug_scripts", &l, 0))
+         run_hotplug_scripts = l;
+--
+generated by git-patchbot for /home/xen/git/xen.git#master

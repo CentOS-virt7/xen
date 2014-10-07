@@ -1,0 +1,11 @@
+diff -uNr xen-4.2.1__orig/tools/Makefile xen-4.2.1/tools/Makefile
+--- xen-4.2.1__orig/tools/Makefile	2012-12-17 10:00:09.000000000 -0500
++++ xen-4.2.1/tools/Makefile	2013-01-17 08:34:52.786982288 -0500
+@@ -187,6 +187,7 @@
+ 		source=.; \
+ 	fi; \
+ 	cd qemu-xen-dir; \
++	env -u CFLAGS \
+ 	$$source/configure --enable-xen --target-list=i386-softmmu \
+ 		--source-path=$$source \
+ 		--extra-cflags="-I$(XEN_ROOT)/tools/include \

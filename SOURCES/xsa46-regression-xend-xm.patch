@@ -1,0 +1,40 @@
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Tested-by: Andreas Falck <falck.andreas.lists@gmail.com> (on 4.1)
+Tested-by: Gordan Bobic <gordan@bobich.net> (on 4.2)
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+master commit: 934a5253d932b6f67fe40fc48975a2b0117e4cce
+master date: 2013-05-21 11:32:34 +0200
+---
+ tools/libxc/xc_physdev.c              |    2 +-
+ tools/python/xen/xend/server/pciif.py |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxc/xc_physdev.c b/tools/libxc/xc_physdev.c
+index bdbcba7..cf02d85 100644
+--- a/tools/libxc/xc_physdev.c
++++ b/tools/libxc/xc_physdev.c
+@@ -49,7 +49,7 @@ int xc_physdev_map_pirq(xc_interface *xch,
+     map.domid = domid;
+     map.type = MAP_PIRQ_TYPE_GSI;
+     map.index = index;
+-    map.pirq = *pirq;
++    map.pirq = *pirq < 0 ? index : *pirq;
+ 
+     rc = do_physdev_op(xch, PHYSDEVOP_map_pirq, &map, sizeof(map));
+ 
+diff --git a/tools/python/xen/xend/server/pciif.py b/tools/python/xen/xend/server/pciif.py
+index 43d0c80..27c1b75 100644
+--- a/tools/python/xen/xend/server/pciif.py
++++ b/tools/python/xen/xend/server/pciif.py
+@@ -340,7 +340,7 @@ class PciController(DevController):
+                 raise VmError(('pci: failed to configure I/O memory on device '+
+                             '%s - errno=%d')%(dev.name,rc))
+ 
+-        if not self.vm.info.is_hvm() and dev.irq:
++        if dev.irq > 0:
+             rc = xc.physdev_map_pirq(domid = fe_domid,
+                                    index = dev.irq,
+                                    pirq  = dev.irq)
+-- 
+1.7.2.5

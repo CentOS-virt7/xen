@@ -1,0 +1,29 @@
+diff -uNrp xen-4.2.1.orig/tools/blktap2/control/tap-ctl-ipc.c xen-4.2.1/tools/blktap2/control/tap-ctl-ipc.c
+--- xen-4.2.1.orig/tools/blktap2/control/tap-ctl-ipc.c	2013-01-22 11:43:54.000000000 -0600
++++ xen-4.2.1/tools/blktap2/control/tap-ctl-ipc.c	2013-03-27 00:07:21.521475110 -0500
+@@ -58,8 +58,11 @@ tap_ctl_read_raw(int fd, void *buf, size
+ 		FD_SET(fd, &readfds);
+ 
+ 		ret = select(fd + 1, &readfds, NULL, NULL, timeout);
+-		if (ret == -1)
+-			break;
++                if (ret == -1) {
++                        if (errno == EINTR)
++                                continue;
++                        break;
++                }
+ 		else if (FD_ISSET(fd, &readfds)) {
+ 			ret = read(fd, buf + offset, size - offset);
+ 			if (ret <= 0)
+@@ -114,6 +117,11 @@ tap_ctl_write_message(int fd, tapdisk_me
+ 		 * bit more time than expected. */
+ 
+ 		ret = select(fd + 1, NULL, &writefds, NULL, timeout);
++               if (ret == -1) {
++                        if (errno == EINTR)
++                                continue;
++                        break;
++                }
+ 		if (ret == -1)
+ 			break;
+ 		else if (FD_ISSET(fd, &writefds)) {
