@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.3
-Release: 25%{?dist}
+Release: 26%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -130,6 +130,10 @@ Patch143: xsa72.patch
 Patch144: xsa73-4.2.patch
 Patch145: xsa75-4.2.patch
 Patch146: xsa78.patch
+Patch147: xsa74-4.1-4.2.patch
+Patch148: xsa76.patch
+Patch149: xsa80.patch
+Patch150: xsa82.patch
 
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
@@ -318,6 +322,10 @@ manage Xen virtual machines.
 %patch144 -p1
 %patch145 -p1
 %patch146 -p1
+%patch147 -p1
+%patch148 -p1
+%patch149 -p1
+%patch150 -p1
 
 %patch1000 -p1
 
@@ -868,6 +876,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Dec 10 2013 Johnny Hughes <johnny@centos.org> - 4.2.3-26.el6.centos
+- Roll in Patches 147, 148, 149, 150 for the following XSAs:
+- XSA-74 (CVE-2013-4553), XSA-76 (CVE-2013-4554), XSA-80 (CVE-2013-6400)
+- XSA-81 (CVE-2013-6885)
+
 * Sat Nov 23 2013 Johnny Hughes <johnny@centos.org> - 4.2.3-25.el6.centos
 - Roll in patch 145 and 146 for XSA-75 (CVE-2013-4551), XSA-78 (CVE-2013-6375) 
 
