@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.5
-Release: 34%{?dist}
+Release: 35%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -135,8 +135,7 @@ Requires: chkconfig
 Requires: module-init-tools
 Requires: gawk
 Requires: grep
-ExclusiveArch: %{ix86} x86_64 ia64
-#ExclusiveArch: %{ix86} x86_64 ia64 noarch
+ExclusiveArch: x86_64
 %if %with_ocaml
 BuildRequires: ocaml, ocaml-findlib
 %endif
@@ -813,6 +812,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Oct 8 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.2.5-35.el6.centos
+ - Remove %{ix86} and ia64 build targets to build with the community build system
+
 * Wed Oct  1 2014 Johnny Hughes <johnny@centos.org> - 4.2.5-34.el6.centos
 - Roll in Patch209 (XSA-108, CVE-2014-7188)
 
