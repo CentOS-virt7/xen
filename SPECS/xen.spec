@@ -581,7 +581,7 @@ rm -rf %{buildroot}
 # xm config
 %config(noreplace) %{_sysconfdir}/%{name}/xm-*
 # xen-kernel config
-%config(noreplace) %{_sysconfdir}/xen-kernel
+%config(noreplace) %{_sysconfdir}/sysconfig/xen-kernel
 # Guest autostart links
 %dir %attr(0700,root,root) %{_sysconfdir}/%{name}/auto
 # Autostart of guests
