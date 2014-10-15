@@ -56,39 +56,11 @@ Source49: tmpfiles.d.xen.conf
 
 Source101: blktap-9960138790b9d3610b12acd153bba20235efa4f5.tar.gz
 
-Patch1: xen-initscript.patch
-Patch4: xen-dumpdir.patch
-Patch5: xen-net-disable-iptables-on-bridge.patch
+Patch1: xen-queue.am
 
-Patch28: pygrubfix.patch
-Patch34: xend.catchbt.patch
-Patch35: xend-pci-loop.patch
-Patch39: xend.selinux.fixes.patch
-Patch46: xen.use.fedora.seabios.patch
-Patch47: xen.use.fedora.ipxe.patch
-
-Patch49: xen.fedora.efi.build.patch
 Patch55: qemu-xen.trad.buildfix.patch
-Patch56: xen.fedora19.buildfix.patch
 
-Patch64: xl.list.-l.format.patch
-Patch65: xen.git-9c23a1d0eb7a6b5e3273d527cfd7960838fbfee6.patch
-
-Patch100: xen-configure-xend.patch
-
-Patch106: xen-xl-autoballon-with-auto-option.patch
-Patch107: xen-xl-set-autoballon-default-auto.patch
-
-#Patch200: xsa89.patch
-Patch205: xsa97-hap-4.2.patch
-Patch206: xsa104.patch
-Patch207: xsa105.patch
-Patch208: xsa106.patch
-Patch209: xsa108.patch
-
-Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
-Patch1003: xen-centos-libxl-with-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
@@ -122,6 +94,7 @@ BuildRequires: bzip2-devel xz-devel
 BuildRequires: e2fsprogs-devel
 # tools now require yajl
 BuildRequires: yajl-devel
+BuildRequires: git
 Requires: bridge-utils
 Requires: python-lxml
 Requires: udev >= 059
@@ -239,33 +212,20 @@ manage Xen virtual machines.
 
 %prep
 %setup -q
-%patch1 -p1
-%patch4 -p1
-%patch5 -p1
 
-%patch28 -p1
-%patch34 -p1
-%patch35 -p1
-%patch39 -p1
-%patch46 -p1
-%patch47 -p1
-%patch49 -p1
+# Create a git repo within the expanded tarball.
+git init
+git config user.email "..."
+git config user.name "..."
+git config gc.auto 0
+git add .
+git commit -a -q -m "%{version} baseline."
+
+# Apply patches to code in the core Xen repo
+git am %{PATCH1}
+
+# Now apply patches to things not in the core Xen repo
 %patch55 -p1
-%patch56 -p1
-
-%patch64 -p1
-%patch65 -p1
-%patch100 -p1
-%patch106 -p1
-%patch107 -p1
-
-%patch205 -p1
-%patch206 -p1
-%patch207 -p1
-%patch208 -p1
-%patch209 -p1
-
-%patch1000 -p1
 
 pushd `pwd`
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
@@ -275,7 +235,6 @@ cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/user --libexecdir=/usr/lib/xen/bin
 popd 
 %patch1001 -p1
-%patch1003 -p1
 %patch1005 -p1
 
 
@@ -807,6 +766,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Oct 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.2.5-36.el6.centos
+ - Port system over to git patchqueue.
+
 * Wed Oct 8 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.2.5-35.el6.centos
  - Remove %{ix86} and ia64 build targets to build with the community build system
 

@@ -1,0 +1,1803 @@
+From 62c70b925a680c5074fbcedae590e0582916ffb9 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:21 +0100
+Subject: [PATCH] Fix up xend init scripts
+
+---
+ tools/misc/xend                           | 89 +------------------------------
+ tools/python/xen/xend/osdep.py            |  2 +-
+ tools/python/xen/xend/server/SrvDaemon.py |  9 +++-
+ 3 files changed, 11 insertions(+), 89 deletions(-)
+
+diff --git a/tools/misc/xend b/tools/misc/xend
+index 9ef0210..0876ee2 100644
+--- a/tools/misc/xend
++++ b/tools/misc/xend
+@@ -8,103 +8,18 @@
+ """Xen management daemon.
+    Provides console server and HTTP management api.
+ 
+-   Run:
+-   xend start
+-
+-   Restart:
+-   xend restart
+-
+-   The daemon is stopped with:
+-   xend stop
+-
+    The daemon should reconnect to device control interfaces
+    and recover its state when restarted.
+ 
+-   On Solaris, the daemons are SMF managed, and you should not attempt
+-   to start xend by hand.
+ """
+-import fcntl
+-import glob
+-import os
+-import os.path
+ import sys
+-import socket
+-import signal
+-import time
+-import commands
+-
+ from xen.xend.server import SrvDaemon
+ 
+-class CheckError(ValueError):
+-    pass
+-
+-def hline():
+-    print >>sys.stderr, "*" * 70
+-
+-def msg(message):
+-    print >>sys.stderr, "*" * 3, message
+-
+-def check_logging():
+-    """Check python logging is installed and raise an error if not.
+-    Logging is standard from Python 2.3 on.
+-    """
+-    try:
+-        import logging
+-    except ImportError:
+-        hline()
+-        msg("Python logging is not installed.")
+-        msg("Use 'make install-logging' at the xen root to install.")
+-        msg("")
+-        msg("Alternatively download and install from")
+-        msg("http://www.red-dove.com/python_logging.html")
+-        hline()
+-        raise CheckError("logging is not installed")
+-
+-def check_user():
+-    """Check that the effective user id is 0 (root).
+-    """
+-    if os.geteuid() != 0:
+-        hline()
+-        msg("Xend must be run as root.")
+-        hline()
+-        raise CheckError("invalid user")
+-
+-def start_daemon(daemon, *args):
+-    if os.fork() == 0:
+-        os.execvp(daemon, (daemon,) + args)
+-
+-def start_blktapctrl():
+-    start_daemon("blktapctrl", "")
+-
+ def main():
+-    try:
+-        check_logging()
+-        check_user()
+-    except CheckError:
+-        sys.exit(1)
+-    
+     daemon = SrvDaemon.instance()
+-    if not sys.argv[1:]:
+-        print 'usage: %s {start|stop|reload|restart}' % sys.argv[0]
+-    elif sys.argv[1] == 'start':
+-        if os.uname()[0] != "SunOS":
+-            start_blktapctrl()
+-        return daemon.start()
+-    elif sys.argv[1] == 'trace_start':
+-        start_blktapctrl()
+-        return daemon.start(trace=1)
+-    elif sys.argv[1] == 'stop':
+-        return daemon.stop()
+-    elif sys.argv[1] == 'reload':
+-        return daemon.reloadConfig()
+-    elif sys.argv[1] == 'restart':
+-        start_blktapctrl()
+-        return daemon.stop() or daemon.start()
+-    elif sys.argv[1] == 'status':
++    if sys.argv[1:] and sys.argv[1] == 'status':
+         return daemon.status()
+-    else:
+-        print 'not an option:', sys.argv[1]
+-    return 1
++    return daemon.start()
+ 
+ if __name__ == '__main__':
+     sys.exit(main())
+diff --git a/tools/python/xen/xend/osdep.py b/tools/python/xen/xend/osdep.py
+index b51dd2e..c1260a8 100644
+--- a/tools/python/xen/xend/osdep.py
++++ b/tools/python/xen/xend/osdep.py
+@@ -22,7 +22,7 @@ import commands
+ 
+ _xend_autorestart = {
+     "NetBSD": True,
+-    "Linux": True,
++    "Linux": False,
+     "SunOS": False,
+ }
+ 
+diff --git a/tools/python/xen/xend/server/SrvDaemon.py b/tools/python/xen/xend/server/SrvDaemon.py
+index 0a330f1..0d7583c 100644
+--- a/tools/python/xen/xend/server/SrvDaemon.py
++++ b/tools/python/xen/xend/server/SrvDaemon.py
+@@ -110,7 +110,14 @@ class Daemon:
+         # Fork, this allows the group leader to exit,
+         # which means the child can never again regain control of the
+         # terminal
+-        if os.fork():
++        child = os.fork()
++        if child:
++            if not osdep.xend_autorestart:
++                pidfile = open(XEND_PID_FILE, 'w')
++                try:
++                    pidfile.write(str(child))
++                finally:
++                    pidfile.close()
+             os._exit(0)
+ 
+         # Detach from standard file descriptors, and redirect them to
+-- 
+1.9.1
+
+
+From bfbf6ee86c2c93aaac0c0a4f4446f96ac4230aa6 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] Change dumpdir to /var/lib/xen
+
+---
+ tools/Makefile                          | 2 +-
+ tools/python/xen/xend/XendDomainInfo.py | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tools/Makefile b/tools/Makefile
+index d8b36f9..20d14a2 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -66,7 +66,7 @@ all: subdirs-all
+ 
+ .PHONY: install
+ install: subdirs-install
+-	$(INSTALL_DIR) $(DESTDIR)/var/xen/dump
++	$(INSTALL_DIR) $(DESTDIR)/var/lib/xen/dump
+ 	$(INSTALL_DIR) $(DESTDIR)/var/log/xen
+ 	$(INSTALL_DIR) $(DESTDIR)/var/lib/xen
+ 	$(INSTALL_DIR) $(DESTDIR)/var/lock/subsys
+diff --git a/tools/python/xen/xend/XendDomainInfo.py b/tools/python/xen/xend/XendDomainInfo.py
+index 456e325..87f2107 100644
+--- a/tools/python/xen/xend/XendDomainInfo.py
++++ b/tools/python/xen/xend/XendDomainInfo.py
+@@ -2283,7 +2283,7 @@ class XendDomainInfo:
+             # To prohibit directory traversal
+             based_name = os.path.basename(self.info['name_label'])
+             
+-            coredir = "/var/xen/dump/%s" % (based_name)
++            coredir = "/var/lib/xen/dump/%s" % (based_name)
+             if not os.path.exists(coredir):
+                 try:
+                     mkdir.parents(coredir, stat.S_IRWXU)
+@@ -2292,7 +2292,7 @@ class XendDomainInfo:
+ 
+             if not os.path.isdir(coredir):
+                 # Use former directory to dump core
+-                coredir = '/var/xen/dump'
++                coredir = '/var/lib/xen/dump'
+ 
+             this_time = time.strftime("%Y-%m%d-%H%M.%S", time.localtime())
+             corefile = "%s/%s-%s.%s.core" % (coredir, this_time,
+-- 
+1.9.1
+
+
+From bc6f33a57029a01a06ab4f787d30fd5c09c5f5c4 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] Disable iptables on the bridge
+
+---
+ tools/hotplug/Linux/vif-bridge            | 4 ----
+ tools/hotplug/Linux/xen-network-common.sh | 7 +++++++
+ 2 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/tools/hotplug/Linux/vif-bridge b/tools/hotplug/Linux/vif-bridge
+index f489519..854590e 100644
+--- a/tools/hotplug/Linux/vif-bridge
++++ b/tools/hotplug/Linux/vif-bridge
+@@ -101,10 +101,6 @@ case "$command" in
+         ;;
+ esac
+ 
+-if [ "$type_if" = vif ]; then
+-    handle_iptable
+-fi
+-
+ call_hooks vif post
+ 
+ log debug "Successful vif-bridge $command for $dev, bridge $bridge."
+diff --git a/tools/hotplug/Linux/xen-network-common.sh b/tools/hotplug/Linux/xen-network-common.sh
+index 8cff156..f88f9b6 100644
+--- a/tools/hotplug/Linux/xen-network-common.sh
++++ b/tools/hotplug/Linux/xen-network-common.sh
+@@ -115,6 +115,13 @@ create_bridge () {
+ 	brctl addbr ${bridge}
+ 	brctl stp ${bridge} off
+ 	brctl setfd ${bridge} 0
++	# Setting these to zero stops guest<->LAN traffic
++	# traversing the bridge from hitting the *tables
++	# rulesets. guest<->host traffic still gets processed
++	# by the host's iptables rules so this isn't a hole
++	sysctl -q -w "net.bridge.bridge-nf-call-arptables=0"
++	sysctl -q -w "net.bridge.bridge-nf-call-ip6tables=0"
++	sysctl -q -w "net.bridge.bridge-nf-call-iptables=0"
+     fi
+ }
+ 
+-- 
+1.9.1
+
+
+From bc9c683411366a7fb624297665f5972445835f19 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] pygrubfix.patch
+
+---
+ tools/pygrub/src/pygrub | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/tools/pygrub/src/pygrub b/tools/pygrub/src/pygrub
+index 5f999de..4eb5c2e 100644
+--- a/tools/pygrub/src/pygrub
++++ b/tools/pygrub/src/pygrub
+@@ -119,6 +119,7 @@ def get_partition_offsets(file):
+     fd = os.open(file, os.O_RDONLY)
+     buf = os.read(fd, 512)
+     os.close(fd)
++    offzerocount = 0
+     for poff in (446, 462, 478, 494): # partition offsets
+ 
+         # MBR contains a 16 byte descriptor per partition
+@@ -128,6 +129,7 @@ def get_partition_offsets(file):
+         
+         # offset == 0 implies this partition is not enabled
+         if offset == 0:
++            offzerocount += 1
+             continue
+ 
+         if type == FDISK_PART_SOLARIS or type == FDISK_PART_SOLARIS_OLD:
+@@ -148,6 +150,9 @@ def get_partition_offsets(file):
+         else:
+             part_offs.append(offset)
+ 
++    if offzerocount == 4:
++        # Might be a grub boot sector pretending to be an MBR
++        part_offs.append(0)
+     return part_offs
+ 
+ class GrubLineEditor(curses.textpad.Textbox):
+-- 
+1.9.1
+
+
+From 046c316249e0a3f136766368d9a7ab583efb6863 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xend.catchbt.patch
+
+---
+ tools/python/xen/xend/XendLogging.py | 6 +++++-
+ tools/python/xen/xend/image.py       | 6 +++++-
+ 2 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/tools/python/xen/xend/XendLogging.py b/tools/python/xen/xend/XendLogging.py
+index d95133b..3e6b8ba 100644
+--- a/tools/python/xen/xend/XendLogging.py
++++ b/tools/python/xen/xend/XendLogging.py
+@@ -132,7 +132,11 @@ def init(filename, level):
+         fileHandler = openFileHandler(filename)
+         logfilename = filename
+     except IOError:
+-        logfilename = tempfile.mkstemp("-xend.log")[1]
++        try:
++            logfilename = tempfile.mkstemp("-xend.log")[1]
++        except IOError:
++            print >>sys.stderr, ('xend/XendLogging.py: Unable to open standard or temporary log file for xend')
++            os._exit(1)
+         fileHandler = openFileHandler(logfilename)
+ 
+     fileHandler.setFormatter(logging.Formatter(LOGFILE_FORMAT, DATE_FORMAT))
+diff --git a/tools/python/xen/xend/image.py b/tools/python/xen/xend/image.py
+index 832c168..161aeb5 100644
+--- a/tools/python/xen/xend/image.py
++++ b/tools/python/xen/xend/image.py
+@@ -43,7 +43,11 @@ from xen.util import oshelp
+ from xen.util import utils
+ from xen.xend import osdep
+ 
+-xc = xen.lowlevel.xc.xc()
++try:
++    xc = xen.lowlevel.xc.xc()
++except Exception:
++    print >>sys.stderr, ('xend/image.py: Error connecting to hypervisor')
++    os._exit(1)
+ 
+ MAX_GUEST_CMDLINE = 1024
+ 
+-- 
+1.9.1
+
+
+From 8adeeec260e3d7afe2f953a894aaec568b4593af Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xend-pci-loop.patch # Don't crash due to weird PCI cards (Bug
+ 767742)
+
+---
+ tools/python/xen/util/pci.py | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/tools/python/xen/util/pci.py b/tools/python/xen/util/pci.py
+index adeca4b..94326b3 100644
+--- a/tools/python/xen/util/pci.py
++++ b/tools/python/xen/util/pci.py
+@@ -1275,7 +1275,12 @@ class PciDevice:
+             pass
+ 
+     def get_info_from_sysfs(self):
+-        self.find_capability(0x11)
++        try:
++            self.find_capability(0x11)
++        except PciDeviceParseError, err:
++            log.error("Caught '%s'" % err)
++            return False
++
+         sysfs_mnt = find_sysfs_mnt()
+         if sysfs_mnt == None:
+             return False
+-- 
+1.9.1
+
+
+From 98290d7afc2c3553d16ffaeedad7c83accf73b7a Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xend.selinux.fixes.patch
+
+---
+ tools/misc/xend                           | 2 +-
+ tools/python/xen/xend/server/SrvDaemon.py | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/tools/misc/xend b/tools/misc/xend
+index 0876ee2..05afc0e 100644
+--- a/tools/misc/xend
++++ b/tools/misc/xend
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python -Es
+ #  -*- mode: python; -*-
+ #============================================================================
+ # Copyright (C) 2004 Mike Wray <mike.wray@hp.com>
+diff --git a/tools/python/xen/xend/server/SrvDaemon.py b/tools/python/xen/xend/server/SrvDaemon.py
+index 0d7583c..af1f546 100644
+--- a/tools/python/xen/xend/server/SrvDaemon.py
++++ b/tools/python/xen/xend/server/SrvDaemon.py
+@@ -325,7 +325,8 @@ class Daemon:
+     def set_user(self):
+         # Set the UID.
+         try:
+-            os.setuid(pwd.getpwnam(XEND_USER)[2])
++            if XEND_USER != "root":
++                os.setuid(pwd.getpwnam(XEND_USER)[2])
+             return 0
+         except KeyError:
+             print >>sys.stderr, "Error: no such user '%s'" % XEND_USER
+-- 
+1.9.1
+
+
+From cfbca1c8d2b49af83fbe7cc60348ae199b517755 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xen.use.fedora.seabios.patch
+
+---
+ tools/firmware/Makefile           | 2 +-
+ tools/firmware/hvmloader/Makefile | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
+index 5fa2a36..39dc2af 100644
+--- a/tools/firmware/Makefile
++++ b/tools/firmware/Makefile
+@@ -7,7 +7,7 @@ INST_DIR := $(DESTDIR)$(XENFIRMWAREDIR)
+ 
+ SUBDIRS-y :=
+ SUBDIRS-$(CONFIG_OVMF) += ovmf
+-SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
++#SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
+ SUBDIRS-$(CONFIG_ROMBIOS) += rombios
+ SUBDIRS-$(CONFIG_ROMBIOS) += vgabios
+ SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
+diff --git a/tools/firmware/hvmloader/Makefile b/tools/firmware/hvmloader/Makefile
+index c6e7376..0d40f57 100644
+--- a/tools/firmware/hvmloader/Makefile
++++ b/tools/firmware/hvmloader/Makefile
+@@ -70,7 +70,7 @@ endif
+ ifeq ($(CONFIG_SEABIOS),y)
+ OBJS += seabios.o
+ CFLAGS += -DENABLE_SEABIOS
+-SEABIOS_ROM := $(SEABIOS_DIR)/out/bios.bin
++SEABIOS_ROM := /usr/share/seabios/bios.bin
+ ROMS += $(SEABIOS_ROM)
+ endif
+ 
+-- 
+1.9.1
+
+
+From 4c935b8e316225e86162b7fd512ee4b550bb30f2 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xen.use.fedora.ipxe.patch
+
+---
+ Config.mk                         | 2 +-
+ tools/firmware/Makefile           | 2 +-
+ tools/firmware/hvmloader/Makefile | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Config.mk b/Config.mk
+index cdd7c40..604f303 100644
+--- a/Config.mk
++++ b/Config.mk
+@@ -208,7 +208,7 @@ SEABIOS_UPSTREAM_TAG ?= rel-1.6.3.2
+ # Sun Mar 11 09:27:07 2012 -0400
+ # Update version to 1.6.3.2
+ 
+-ETHERBOOT_NICS ?= rtl8139 8086100e
++ETHERBOOT_NICS ?= 10ec8139 8086100e
+ 
+ # Specify which qemu-dm to use. This may be `ioemu' to use the old
+ # Mercurial in-tree version, or a local directory, or a git URL.
+diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
+index 39dc2af..9f263dd 100644
+--- a/tools/firmware/Makefile
++++ b/tools/firmware/Makefile
+@@ -10,7 +10,7 @@ SUBDIRS-$(CONFIG_OVMF) += ovmf
+ #SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
+ SUBDIRS-$(CONFIG_ROMBIOS) += rombios
+ SUBDIRS-$(CONFIG_ROMBIOS) += vgabios
+-SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
++#SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
+ SUBDIRS-y += hvmloader
+ 
+ ovmf:
+diff --git a/tools/firmware/hvmloader/Makefile b/tools/firmware/hvmloader/Makefile
+index 0d40f57..c8816cd 100644
+--- a/tools/firmware/hvmloader/Makefile
++++ b/tools/firmware/hvmloader/Makefile
+@@ -48,7 +48,7 @@ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.debug.bin
+ else
+ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.bin
+ endif
+-ETHERBOOT_ROMS := $(addprefix ../etherboot/ipxe/src/bin/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
++ETHERBOOT_ROMS := $(addprefix /usr/share/ipxe/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
+ endif
+ 
+ ROMS := 
+-- 
+1.9.1
+
+
+From 16f5de8e38cda20536c77d445e88bd0bec93d8dd Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xen.fedora.efi.build.patch
+
+---
+ xen/Makefile              | 2 ++
+ xen/arch/x86/Makefile     | 6 +++---
+ xen/arch/x86/efi/Makefile | 2 +-
+ 3 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/xen/Makefile b/xen/Makefile
+index 9138007..05171db 100644
+--- a/xen/Makefile
++++ b/xen/Makefile
+@@ -13,6 +13,8 @@ export BASEDIR := $(CURDIR)
+ export XEN_ROOT := $(BASEDIR)/..
+ 
+ EFI_MOUNTPOINT ?= /boot/efi
++EFI_VENDOR=fedora
++LD_EFI ?= $(LD)
+ 
+ .PHONY: default
+ default: build
+diff --git a/xen/arch/x86/Makefile b/xen/arch/x86/Makefile
+index d273f83..97bf5b8 100644
+--- a/xen/arch/x86/Makefile
++++ b/xen/arch/x86/Makefile
+@@ -126,18 +126,18 @@ $(TARGET).efi: ALT_BASE = 0x$(shell $(NM) efi/relocs-dummy.o | sed -n 's, A ALT_
+ $(TARGET).efi: guard = $(if $(shell echo efi/dis* | grep disabled),:)
+ $(TARGET).efi: prelink-efi.o efi.lds efi/relocs-dummy.o $(BASEDIR)/common/symbols-dummy.o efi/mkreloc
+ 	$(foreach base, $(VIRT_BASE) $(ALT_BASE), \
+-	          $(guard) $(LD) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< efi/relocs-dummy.o \
++	          $(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< efi/relocs-dummy.o \
+ 	                $(BASEDIR)/common/symbols-dummy.o -o $(@D)/.$(@F).$(base).0 &&) :
+ 	$(guard) efi/mkreloc $(foreach base,$(VIRT_BASE) $(ALT_BASE),$(@D)/.$(@F).$(base).0) >$(@D)/.$(@F).0r.S
+ 	$(guard) $(NM) -n $(@D)/.$(@F).$(VIRT_BASE).0 | $(guard) $(BASEDIR)/tools/symbols >$(@D)/.$(@F).0s.S
+ 	$(guard) $(MAKE) -f $(BASEDIR)/Rules.mk $(@D)/.$(@F).0r.o $(@D)/.$(@F).0s.o
+ 	$(foreach base, $(VIRT_BASE) $(ALT_BASE), \
+-	          $(guard) $(LD) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< \
++	          $(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< \
+ 	                $(@D)/.$(@F).0r.o $(@D)/.$(@F).0s.o -o $(@D)/.$(@F).$(base).1 &&) :
+ 	$(guard) efi/mkreloc $(foreach base,$(VIRT_BASE) $(ALT_BASE),$(@D)/.$(@F).$(base).1) >$(@D)/.$(@F).1r.S
+ 	$(guard) $(NM) -n $(@D)/.$(@F).$(VIRT_BASE).1 | $(guard) $(BASEDIR)/tools/symbols >$(@D)/.$(@F).1s.S
+ 	$(guard) $(MAKE) -f $(BASEDIR)/Rules.mk $(@D)/.$(@F).1r.o $(@D)/.$(@F).1s.o
+-	$(guard) $(LD) $(call EFI_LDFLAGS,$(VIRT_BASE)) -T efi.lds -N $< \
++	$(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(VIRT_BASE)) -T efi.lds -N $< \
+ 	                $(@D)/.$(@F).1r.o $(@D)/.$(@F).1s.o -o $@
+ 	if $(guard) false; then rm -f $@; echo 'EFI support disabled'; fi
+ 	rm -f $(@D)/.$(@F).[0-9]*
+diff --git a/xen/arch/x86/efi/Makefile b/xen/arch/x86/efi/Makefile
+index 514dba0..4ffd918 100644
+--- a/xen/arch/x86/efi/Makefile
++++ b/xen/arch/x86/efi/Makefile
+@@ -6,7 +6,7 @@ create = test -e $(1) || touch -t 199901010000 $(1)
+ 
+ efi := $(filter y,$(x86_64)$(shell rm -f disabled))
+ efi := $(if $(efi),$(shell $(CC) $(filter-out $(CFLAGS-y) .%.d,$(CFLAGS)) -c check.c 2>disabled && echo y))
+-efi := $(if $(efi),$(shell $(LD) -mi386pep --subsystem=10 -o check.efi check.o 2>disabled && echo y))
++efi := $(if $(efi),$(shell $(LD_EFI) -mi386pep --subsystem=10 -o check.efi check.o 2>disabled && echo y))
+ efi := $(if $(efi),$(shell rm disabled)y,$(shell $(call create,boot.init.o); $(call create,runtime.o)))
+ 
+ extra-$(efi) += boot.init.o relocs-dummy.o runtime.o compat.o
+-- 
+1.9.1
+
+
+From 12e9a8054cbb49b54ed9fd82e70b8d7c75f3553b Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xen.fedora19.buildfix.patch
+
+---
+ tools/debugger/gdbsx/xg/xg_main.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/debugger/gdbsx/xg/xg_main.c b/tools/debugger/gdbsx/xg/xg_main.c
+index 64c7484..a41ed0a 100644
+--- a/tools/debugger/gdbsx/xg/xg_main.c
++++ b/tools/debugger/gdbsx/xg/xg_main.c
+@@ -179,7 +179,7 @@ _domctl_hcall(uint32_t cmd,            /* which domctl hypercall */
+     hypercall.op = __HYPERVISOR_domctl;
+     hypercall.arg[0] = (unsigned long)&domctl;
+ 
+-    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (ulong)&hypercall);
++    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (unsigned long)&hypercall);
+     if (domctlarg && sz)
+         munlock(domctlarg, sz);
+     return rc;
+@@ -219,7 +219,7 @@ _check_hyp(int guest_bitness)
+     hypercall.arg[0] = (unsigned long)XENVER_capabilities;
+     hypercall.arg[1] = (unsigned long)&xen_caps;
+ 
+-    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (ulong)&hypercall);
++    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (unsigned long)&hypercall);
+     munlock(&xen_caps, sizeof(xen_caps));
+     XGTRC("XENCAPS:%s\n", xen_caps);
+ 
+-- 
+1.9.1
+
+
+From 91a5de5659ccbf410a8157c28acbc88a666ff539 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xl.list.-l.format.patch xl list -l should produce readable
+ output when built with yajl2 so it is compatible with the xendomains script.
+
+Signed-off-by: Michael Young <m.a.young@durham.ac.uk>
+---
+ tools/libxl/libxl_json.h | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/tools/libxl/libxl_json.h b/tools/libxl/libxl_json.h
+index 1464459..a4dd8fc 100644
+--- a/tools/libxl/libxl_json.h
++++ b/tools/libxl/libxl_json.h
+@@ -54,7 +54,11 @@ static inline yajl_handle libxl__yajl_alloc(const yajl_callbacks *callbacks,
+ 
+ static inline yajl_gen libxl_yajl_gen_alloc(const yajl_alloc_funcs *allocFuncs)
+ {
+-    return yajl_gen_alloc(allocFuncs);
++    yajl_gen g;
++    g = yajl_gen_alloc(allocFuncs);
++    if (g)
++        yajl_gen_config(g, yajl_gen_beautify, 1);
++    return g;
+ }
+ 
+ #else /* !HAVE_YAJL_V2 */
+-- 
+1.9.1
+
+
+From 40a1dada06c7cdd108eead5e448821579d92bf42 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] fix wrong path while calling pygrub and libxl-save-helper
+
+in current xen x86_64, the default libexec directory is /usr/lib/xen/bin,
+while the private binder is /usr/lib64/xen/bin. but some commands(pygrub,
+libxl-save-helper) located in private binder directory is called from
+libexec directory which lead to the following error:
+1, for pygrub bootloader:
+
+libxl: debug: libxl_bootloader.c:429:bootloader_disk_attached_cb: /usr/lib/xen/bin/pygrub doesn't exist, falling back to config path
+
+2, for libxl-save-helper:
+
+libxl: cannot execute /usr/lib/xen/bin/libxl-save-helper: No such file or directory
+libxl: error: libxl_utils.c:363:libxl_read_exactly: file/stream truncated reading ipc msg header from domain 3 save/restore helper stdout pipe
+libxl: error: libxl_exec.c:118:libxl_report_child_exitstatus: domain 3 save/restore helper [10222] exited with error status 255
+
+there are two ways to fix above error. the first one is make such command
+store in the /usr/lib/xen/bin and /usr/lib64/xen/bin(symbol link to
+previous), e.g. qemu-dm. The second way is using private binder dir
+instead of libexec dir. e.g. xenconsole.
+For these cases, the latter one is suitable.
+
+Signed-off-by: Bamvor Jian Zhang <bjzhang@suse.com>
+Committed-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ tools/libxl/libxl_bootloader.c   | 2 +-
+ tools/libxl/libxl_save_callout.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl_bootloader.c b/tools/libxl/libxl_bootloader.c
+index e103ee9..ed12b2c 100644
+--- a/tools/libxl/libxl_bootloader.c
++++ b/tools/libxl/libxl_bootloader.c
+@@ -419,7 +419,7 @@ static void bootloader_disk_attached_cb(libxl__egc *egc,
+         const char *bltmp;
+         struct stat st;
+ 
+-        bltmp = libxl__abs_path(gc, bootloader, libxl__libexec_path());
++        bltmp = libxl__abs_path(gc, bootloader, libxl__private_bindir_path());
+         /* Check to see if the file exists in this location; if not,
+          * fall back to checking the path */
+         LOG(DEBUG, "Checking for bootloader in libexec path: %s", bltmp);
+diff --git a/tools/libxl/libxl_save_callout.c b/tools/libxl/libxl_save_callout.c
+index 2fb3d2b..f1a3a6f 100644
+--- a/tools/libxl/libxl_save_callout.c
++++ b/tools/libxl/libxl_save_callout.c
+@@ -172,7 +172,7 @@ static void run_helper(libxl__egc *egc, libxl__save_helper_state *shs,
+     shs->stdout_what = GCSPRINTF("domain %"PRIu32" save/restore helper"
+                                  " stdout pipe", domid);
+ 
+-    *arg++ = getenv("LIBXL_SAVE_HELPER") ?: LIBEXEC "/" "libxl-save-helper";
++    *arg++ = getenv("LIBXL_SAVE_HELPER") ?: PRIVATE_BINDIR "/" "libxl-save-helper";
+     *arg++ = mode_arg;
+     const char **stream_fd_arg = arg++;
+     for (i=0; i<num_argnums; i++)
+-- 
+1.9.1
+
+
+From d976c97585eee2c8b867812ef9f0f0f0fd51c547 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xen-configure-xend.patch
+
+---
+ tools/examples/xend-config.sxp | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/tools/examples/xend-config.sxp b/tools/examples/xend-config.sxp
+index 0896a27..cea12e1 100644
+--- a/tools/examples/xend-config.sxp
++++ b/tools/examples/xend-config.sxp
+@@ -58,11 +58,11 @@
+ 
+ 
+ #(xend-http-server no)
+-#(xend-unix-server no)
++(xend-unix-server yes)
+ #(xend-tcp-xmlrpc-server no)
+ #(xend-unix-xmlrpc-server yes)
+-#(xend-relocation-server no)
+-(xend-relocation-server yes)
++(xend-relocation-server no)
++#(xend-relocation-server yes)
+ #(xend-relocation-ssl-server no)
+ #(xend-udev-event-server no)
+ 
+@@ -170,7 +170,8 @@
+ # two fake interfaces per guest domain.  To do things like this, write
+ # yourself a wrapper script, and call network-bridge from it, as appropriate.
+ #
+-(network-script network-bridge)
++#(network-script network-bridge)
++(network-script /bin/true)
+ 
+ # The script used to control virtual interfaces.  This can be overridden on a
+ # per-vif basis when creating a domain or a configuring a new vif.  The
+@@ -203,7 +204,7 @@
+ # dom0-min-mem is the lowest permissible memory level (in MB) for dom0.
+ # This is a minimum both for auto-ballooning (as enabled by
+ # enable-dom0-ballooning below) and for xm mem-set when applied to dom0.
+-(dom0-min-mem 196)
++(dom0-min-mem 256)
+ 
+ # Whether to enable auto-ballooning of dom0 to allow domUs to be created.
+ # If enable-dom0-ballooning = no, dom0 will never balloon out.
+-- 
+1.9.1
+
+
+From 406602e3b31a5c61832b25de4f447afbd6150dea Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH]     xl: extend autoballoon xl.conf option with an "auto"
+ option
+
+    autoballoon=1 is not recommened if dom0_mem was used to reduce the
+    amount of dom0 memory.  Instead of requiring users to change xl.conf
+    if they do this, extend the autoballoon option with a new choice:
+    "auto".
+
+    With autoballoon="auto", autoballooning will be disabled if dom0_mem
+    was used on the Xen command line.
+
+    For consistency, accept "on" and "off" as valid autoballoon options (1
+    and 0 are still accepted).
+
+    The default remains "on" for now.
+
+    Signed-off-by: David Vrabel <[hidden email]>
+    Acked-by: Ian Jackson <[hidden email]>
+---
+ docs/man/xl.conf.pod.5 | 21 ++++++++++++++-------
+ tools/examples/xl.conf |  7 ++++---
+ tools/libxl/xl.c       | 36 ++++++++++++++++++++++++++++++++++--
+ 3 files changed, 52 insertions(+), 12 deletions(-)
+
+diff --git a/docs/man/xl.conf.pod.5 b/docs/man/xl.conf.pod.5
+index 82c6b20..959f494 100644
+--- a/docs/man/xl.conf.pod.5
++++ b/docs/man/xl.conf.pod.5
+@@ -45,15 +45,22 @@ The semantics of each C<KEY> defines which form of C<VALUE> is required.
+ 
+ =over 4
+ 
+-=item B<autoballoon=BOOLEAN>
++=item B<autoballoon="off"|"on"|"auto">
+ 
+-If disabled then C<xl> will not attempt to reduce the amount of memory
+-assigned to domain 0 in order to create free memory when starting a
+-new domain. You are strongly recommended to set this to C<0>
+-(C<False>) if you use the C<dom0_mem> hypervisor command line to
+-reduce the amount of memory given to domain 0 by default.
++If set to "on" then C<xl> will automatically reduce the amount of
++memory assigned to domain 0 in order to free memory for new domains.
+ 
+-Default: C<1>
++If set to "off" then C<xl> will not automatically reduce the amount of
++domain 0 memory.
++
++If set to "auto" then auto-ballooning will be disabled if the
++C<dom0_mem> option was provided on the Xen command line.
++
++You are strongly recommended to set this to C<"off"> (or C<"auto">) if
++you use the C<dom0_mem> hypervisor command line to reduce the amount
++of memory given to domain 0 by default.
++
++Default: C<"on">
+ 
+ =item B<run_hotplug_scripts=BOOLEAN>
+ 
+diff --git a/tools/examples/xl.conf b/tools/examples/xl.conf
+index 28ab796..e770b08 100644
+--- a/tools/examples/xl.conf
++++ b/tools/examples/xl.conf
+@@ -1,8 +1,9 @@
+ ## Global XL config file ##
+ 
+-# automatically balloon down dom0 when xen doesn't have enough free
+-# memory to create a domain
+-#autoballoon=1
++# Control whether dom0 is ballooned down when xen doesn't have enough
++# free memory to create a domain.  "auto" means only balloon if dom0
++# starts with all the host's memory.
++#autoballoon="auto"
+ 
+ # full path of the lockfile used by xl during domain creation
+ #lockfile="/var/lock/xl"
+diff --git a/tools/libxl/xl.c b/tools/libxl/xl.c
+index f31e836..0592f6b 100644
+--- a/tools/libxl/xl.c
++++ b/tools/libxl/xl.c
+@@ -26,6 +26,7 @@
+ #include <fcntl.h>
+ #include <ctype.h>
+ #include <inttypes.h>
++#include <regex.h>
+ 
+ #include "libxl.h"
+ #include "libxl_utils.h"
+@@ -47,6 +48,29 @@ enum output_format default_output_format = OUTPUT_FORMAT_JSON;
+ 
+ static xentoollog_level minmsglevel = XTL_PROGRESS;
+ 
++/* Get autoballoon option based on presence of dom0_mem Xen command
++   line option. */
++static int auto_autoballoon(void)
++{
++    const libxl_version_info *info;
++    regex_t regex;
++    int ret;
++
++    info = libxl_get_version_info(ctx);
++    if (!info)
++        return 1; /* default to on */
++
++    ret = regcomp(&regex,
++                  "(^| )dom0_mem=((|min:|max:)[0-9]+[bBkKmMgG]?,?)+($| )",
++                  REG_NOSUB | REG_EXTENDED);
++    if (ret)
++        return 1;
++
++    ret = regexec(&regex, info->commandline, 0, NULL, 0);
++    regfree(&regex);
++    return ret == REG_NOMATCH;
++}
++
+ static void parse_global_config(const char *configfile,
+                               const char *configfile_data,
+                               int configfile_len)
+@@ -68,8 +92,16 @@ static void parse_global_config(const char *configfile,
+         exit(1);
+     }
+ 
+-    if (!xlu_cfg_get_long (config, "autoballoon", &l, 0))
+-        autoballoon = l;
++    if (!xlu_cfg_get_string(config, "autoballoon", &buf, 0)) {
++        if (!strcmp(buf, "on") || !strcmp(buf, "1"))
++            autoballoon = 1;
++        else if (!strcmp(buf, "off") || !strcmp(buf, "0"))
++            autoballoon = 0;
++        else if (!strcmp(buf, "auto"))
++            autoballoon = auto_autoballoon();
++        else
++            fprintf(stderr, "invalid autoballoon option");
++    }
+ 
+     if (!xlu_cfg_get_long (config, "run_hotplug_scripts", &l, 0))
+         run_hotplug_scripts = l;
+-- 
+1.9.1
+
+
+From 76bd1ed03b81218d0c2ff789ae5e233e722faa13 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:23 +0100
+Subject: [PATCH]     xl: default autoballoon option to "auto"
+
+    In xl.conf, autoballoon="auto" will do the right thing for most
+    people.  Make it the default (instead of "on").
+
+    Signed-off-by: David Vrabel <[hidden email]>
+    Committed-by: Ian Jackson <[hidden email]>
+---
+ docs/man/xl.conf.pod.5 | 2 +-
+ tools/libxl/xl.c       | 6 ++++--
+ 2 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/docs/man/xl.conf.pod.5 b/docs/man/xl.conf.pod.5
+index 959f494..de55b86 100644
+--- a/docs/man/xl.conf.pod.5
++++ b/docs/man/xl.conf.pod.5
+@@ -60,7 +60,7 @@ You are strongly recommended to set this to C<"off"> (or C<"auto">) if
+ you use the C<dom0_mem> hypervisor command line to reduce the amount
+ of memory given to domain 0 by default.
+ 
+-Default: C<"on">
++Default: C<"auto">
+ 
+ =item B<run_hotplug_scripts=BOOLEAN>
+ 
+diff --git a/tools/libxl/xl.c b/tools/libxl/xl.c
+index 0592f6b..7423a6b 100644
+--- a/tools/libxl/xl.c
++++ b/tools/libxl/xl.c
+@@ -38,7 +38,7 @@
+ xentoollog_logger_stdiostream *logger;
+ int dryrun_only;
+ int force_execution;
+-int autoballoon = 1;
++int autoballoon = -1;
+ char *blkdev_start;
+ int run_hotplug_scripts = 1;
+ char *lockfile;
+@@ -98,10 +98,12 @@ static void parse_global_config(const char *configfile,
+         else if (!strcmp(buf, "off") || !strcmp(buf, "0"))
+             autoballoon = 0;
+         else if (!strcmp(buf, "auto"))
+-            autoballoon = auto_autoballoon();
++            autoballoon = -1;
+         else
+             fprintf(stderr, "invalid autoballoon option");
+     }
++    if (autoballoon == -1)
++        autoballoon = auto_autoballoon();
+ 
+     if (!xlu_cfg_get_long (config, "run_hotplug_scripts", &l, 0))
+         run_hotplug_scripts = l;
+-- 
+1.9.1
+
+
+From 326408aa00acafab4856b0a3a6d67e78bdc7c6c3 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:50:15 +0100
+Subject: [PATCH] x86/paging: make log-dirty operations preemptible
+
+Both the freeing and the inspection of the bitmap get done in (nested)
+loops which - besides having a rather high iteration count in general,
+albeit that would be covered by XSA-77 - have the number of non-trivial
+iterations they need to perform (indirectly) controllable by both the
+guest they are for and any domain controlling the guest (including the
+one running qemu for it).
+
+This is XSA-97.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/domain.c           |   4 +-
+ xen/arch/x86/domctl.c           |   3 +
+ xen/arch/x86/mm/hap/hap.c       |   3 +-
+ xen/arch/x86/mm/paging.c        | 199 ++++++++++++++++++++++++++++++++--------
+ xen/arch/x86/mm/shadow/common.c |   3 +-
+ xen/common/domain.c             |   1 -
+ xen/include/asm-x86/domain.h    |  14 +++
+ xen/include/asm-x86/paging.h    |   8 +-
+ 8 files changed, 186 insertions(+), 49 deletions(-)
+
+diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
+index 8f11473..2799e86 100644
+--- a/xen/arch/x86/domain.c
++++ b/xen/arch/x86/domain.c
+@@ -2136,7 +2136,9 @@ int domain_relinquish_resources(struct domain *d)
+         pci_release_devices(d);
+ 
+         /* Tear down paging-assistance stuff. */
+-        paging_teardown(d);
++        ret = paging_teardown(d);
++        if ( ret )
++            return ret;
+ 
+         /* Drop the in-use references to page-table bases. */
+         for_each_vcpu ( d, v )
+diff --git a/xen/arch/x86/domctl.c b/xen/arch/x86/domctl.c
+index 48de4bf..e392cca 100644
+--- a/xen/arch/x86/domctl.c
++++ b/xen/arch/x86/domctl.c
+@@ -66,6 +66,9 @@ long arch_do_domctl(
+                                 &domctl->u.shadow_op,
+                                 guest_handle_cast(u_domctl, void));
+             rcu_unlock_domain(d);
++            if ( ret == -EAGAIN )
++                return hypercall_create_continuation(__HYPERVISOR_domctl,
++                                                     "h", u_domctl);
+             copy_to_guest(u_domctl, domctl, 1);
+         } 
+     }
+diff --git a/xen/arch/x86/mm/hap/hap.c b/xen/arch/x86/mm/hap/hap.c
+index c198323..acdc192 100644
+--- a/xen/arch/x86/mm/hap/hap.c
++++ b/xen/arch/x86/mm/hap/hap.c
+@@ -678,8 +678,7 @@ int hap_domctl(struct domain *d, xen_domctl_shadow_op_t *sc,
+         paging_unlock(d);
+         if ( preempted )
+             /* Not finished.  Set up to re-run the call. */
+-            rc = hypercall_create_continuation(__HYPERVISOR_domctl, "h",
+-                                               u_domctl);
++            rc = -EAGAIN;
+         else
+             /* Finished.  Return the new allocation */
+             sc->mb = hap_get_allocation(d);
+diff --git a/xen/arch/x86/mm/paging.c b/xen/arch/x86/mm/paging.c
+index 0fd1199..7a7fdf6 100644
+--- a/xen/arch/x86/mm/paging.c
++++ b/xen/arch/x86/mm/paging.c
+@@ -26,6 +26,7 @@
+ #include <asm/shadow.h>
+ #include <asm/p2m.h>
+ #include <asm/hap.h>
++#include <asm/event.h>
+ #include <asm/hvm/nestedhvm.h>
+ #include <xen/numa.h>
+ #include <xsm/xsm.h>
+@@ -116,26 +117,46 @@ static void paging_free_log_dirty_page(struct domain *d, mfn_t mfn)
+     d->arch.paging.free_page(d, mfn_to_page(mfn));
+ }
+ 
+-void paging_free_log_dirty_bitmap(struct domain *d)
++static int paging_free_log_dirty_bitmap(struct domain *d, int rc)
+ {
+     mfn_t *l4, *l3, *l2;
+     int i4, i3, i2;
+ 
++    paging_lock(d);
++
+     if ( !mfn_valid(d->arch.paging.log_dirty.top) )
+-        return;
++    {
++        paging_unlock(d);
++        return 0;
++    }
+ 
+-    paging_lock(d);
++    if ( !d->arch.paging.preempt.vcpu )
++    {
++        memset(&d->arch.paging.preempt.log_dirty, 0,
++               sizeof(d->arch.paging.preempt.log_dirty));
++        ASSERT(rc <= 0);
++        d->arch.paging.preempt.log_dirty.done = -rc;
++    }
++    else if ( d->arch.paging.preempt.vcpu != current ||
++              d->arch.paging.preempt.op != XEN_DOMCTL_SHADOW_OP_OFF )
++    {
++        paging_unlock(d);
++        return -EBUSY;
++    }
+ 
+     l4 = map_domain_page(mfn_x(d->arch.paging.log_dirty.top));
++    i4 = d->arch.paging.preempt.log_dirty.i4;
++    i3 = d->arch.paging.preempt.log_dirty.i3;
++    rc = 0;
+ 
+-    for ( i4 = 0; i4 < LOGDIRTY_NODE_ENTRIES; i4++ )
++    for ( ; i4 < LOGDIRTY_NODE_ENTRIES; i4++, i3 = 0 )
+     {
+         if ( !mfn_valid(l4[i4]) )
+             continue;
+ 
+         l3 = map_domain_page(mfn_x(l4[i4]));
+ 
+-        for ( i3 = 0; i3 < LOGDIRTY_NODE_ENTRIES; i3++ )
++        for ( ; i3 < LOGDIRTY_NODE_ENTRIES; i3++ )
+         {
+             if ( !mfn_valid(l3[i3]) )
+                 continue;
+@@ -148,20 +169,54 @@ void paging_free_log_dirty_bitmap(struct domain *d)
+ 
+             unmap_domain_page(l2);
+             paging_free_log_dirty_page(d, l3[i3]);
++            l3[i3] = _mfn(INVALID_MFN);
++
++            if ( i3 < LOGDIRTY_NODE_ENTRIES - 1 && hypercall_preempt_check() )
++            {
++                d->arch.paging.preempt.log_dirty.i3 = i3 + 1;
++                d->arch.paging.preempt.log_dirty.i4 = i4;
++                rc = -EAGAIN;
++                break;
++            }
+         }
+ 
+         unmap_domain_page(l3);
++        if ( rc )
++            break;
+         paging_free_log_dirty_page(d, l4[i4]);
++        l4[i4] = _mfn(INVALID_MFN);
++
++        if ( i4 < LOGDIRTY_NODE_ENTRIES - 1 && hypercall_preempt_check() )
++        {
++            d->arch.paging.preempt.log_dirty.i3 = 0;
++            d->arch.paging.preempt.log_dirty.i4 = i4 + 1;
++            rc = -EAGAIN;
++            break;
++        }
+     }
+ 
+     unmap_domain_page(l4);
+-    paging_free_log_dirty_page(d, d->arch.paging.log_dirty.top);
+-    d->arch.paging.log_dirty.top = _mfn(INVALID_MFN);
+ 
+-    ASSERT(d->arch.paging.log_dirty.allocs == 0);
+-    d->arch.paging.log_dirty.failed_allocs = 0;
++    if ( !rc )
++    {
++        paging_free_log_dirty_page(d, d->arch.paging.log_dirty.top);
++        d->arch.paging.log_dirty.top = _mfn(INVALID_MFN);
++
++        ASSERT(d->arch.paging.log_dirty.allocs == 0);
++        d->arch.paging.log_dirty.failed_allocs = 0;
++
++        rc = -d->arch.paging.preempt.log_dirty.done;
++        d->arch.paging.preempt.vcpu = NULL;
++    }
++    else
++    {
++        d->arch.paging.preempt.vcpu = current;
++        d->arch.paging.preempt.op = XEN_DOMCTL_SHADOW_OP_OFF;
++    }
+ 
+     paging_unlock(d);
++
++    return rc;
+ }
+ 
+ int paging_log_dirty_enable(struct domain *d)
+@@ -178,15 +233,25 @@ int paging_log_dirty_enable(struct domain *d)
+     return ret;
+ }
+ 
+-int paging_log_dirty_disable(struct domain *d)
++static int paging_log_dirty_disable(struct domain *d, bool_t resuming)
+ {
+-    int ret;
++    int ret = 1;
++
++    if ( !resuming )
++    {
++        domain_pause(d);
++        /* Safe because the domain is paused. */
++        ret = d->arch.paging.log_dirty.disable_log_dirty(d);
++        ASSERT(ret <= 0);
++    }
+ 
+-    domain_pause(d);
+-    /* Safe because the domain is paused. */
+-    ret = d->arch.paging.log_dirty.disable_log_dirty(d);
+     if ( !paging_mode_log_dirty(d) )
+-        paging_free_log_dirty_bitmap(d);
++    {
++        ret = paging_free_log_dirty_bitmap(d, ret);
++        if ( ret == -EAGAIN )
++            return ret;
++    }
++
+     domain_unpause(d);
+ 
+     return ret;
+@@ -326,7 +391,9 @@ int paging_mfn_is_dirty(struct domain *d, mfn_t gmfn)
+ 
+ /* Read a domain's log-dirty bitmap and stats.  If the operation is a CLEAN,
+  * clear the bitmap and stats as well. */
+-int paging_log_dirty_op(struct domain *d, struct xen_domctl_shadow_op *sc)
++static int paging_log_dirty_op(struct domain *d,
++                               struct xen_domctl_shadow_op *sc,
++                               bool_t resuming)
+ {
+     int rv = 0, clean = 0, peek = 1;
+     unsigned long pages = 0;
+@@ -334,9 +401,22 @@ int paging_log_dirty_op(struct domain *d, struct xen_domctl_shadow_op *sc)
+     unsigned long *l1 = NULL;
+     int i4, i3, i2;
+ 
+-    domain_pause(d);
++    if ( !resuming )
++        domain_pause(d);
+     paging_lock(d);
+ 
++    if ( !d->arch.paging.preempt.vcpu )
++        memset(&d->arch.paging.preempt.log_dirty, 0,
++               sizeof(d->arch.paging.preempt.log_dirty));
++    else if ( d->arch.paging.preempt.vcpu != current ||
++              d->arch.paging.preempt.op != sc->op )
++    {
++        paging_unlock(d);
++        ASSERT(!resuming);
++        domain_unpause(d);
++        return -EBUSY;
++    }
++
+     clean = (sc->op == XEN_DOMCTL_SHADOW_OP_CLEAN);
+ 
+     PAGING_DEBUG(LOGDIRTY, "log-dirty %s: dom %u faults=%u dirty=%u\n",
+@@ -365,17 +445,15 @@ int paging_log_dirty_op(struct domain *d, struct xen_domctl_shadow_op *sc)
+         goto out;
+     }
+ 
+-    pages = 0;
+     l4 = paging_map_log_dirty_bitmap(d);
++    i4 = d->arch.paging.preempt.log_dirty.i4;
++    i3 = d->arch.paging.preempt.log_dirty.i3;
++    pages = d->arch.paging.preempt.log_dirty.done;
+ 
+-    for ( i4 = 0;
+-          (pages < sc->pages) && (i4 < LOGDIRTY_NODE_ENTRIES);
+-          i4++ )
++    for ( ; (pages < sc->pages) && (i4 < LOGDIRTY_NODE_ENTRIES); i4++, i3 = 0 )
+     {
+         l3 = (l4 && mfn_valid(l4[i4])) ? map_domain_page(mfn_x(l4[i4])) : NULL;
+-        for ( i3 = 0;
+-              (pages < sc->pages) && (i3 < LOGDIRTY_NODE_ENTRIES);
+-              i3++ )
++        for ( ; (pages < sc->pages) && (i3 < LOGDIRTY_NODE_ENTRIES); i3++ )
+         {
+             l2 = ((l3 && mfn_valid(l3[i3])) ?
+                   map_domain_page(mfn_x(l3[i3])) : NULL);
+@@ -410,18 +488,51 @@ int paging_log_dirty_op(struct domain *d, struct xen_domctl_shadow_op *sc)
+             }
+             if ( l2 )
+                 unmap_domain_page(l2);
++
++            if ( i3 < LOGDIRTY_NODE_ENTRIES - 1 && hypercall_preempt_check() )
++            {
++                d->arch.paging.preempt.log_dirty.i4 = i4;
++                d->arch.paging.preempt.log_dirty.i3 = i3 + 1;
++                rv = -EAGAIN;
++                break;
++            }
+         }
+         if ( l3 )
+             unmap_domain_page(l3);
++
++        if ( !rv && i4 < LOGDIRTY_NODE_ENTRIES - 1 &&
++             hypercall_preempt_check() )
++        {
++            d->arch.paging.preempt.log_dirty.i4 = i4 + 1;
++            d->arch.paging.preempt.log_dirty.i3 = 0;
++            rv = -EAGAIN;
++        }
++        if ( rv )
++            break;
+     }
+     if ( l4 )
+         unmap_domain_page(l4);
+ 
+-    if ( pages < sc->pages )
+-        sc->pages = pages;
++    if ( !rv )
++        d->arch.paging.preempt.vcpu = NULL;
++    else
++    {
++        d->arch.paging.preempt.vcpu = current;
++        d->arch.paging.preempt.op = sc->op;
++        d->arch.paging.preempt.log_dirty.done = pages;
++    }
+ 
+     paging_unlock(d);
+ 
++    if ( rv )
++    {
++        /* Never leave the domain paused for other errors. */
++        ASSERT(rv == -EAGAIN);
++        return rv;
++    }
++
++    if ( pages < sc->pages )
++        sc->pages = pages;
+     if ( clean )
+     {
+         /* We need to further call clean_dirty_bitmap() functions of specific
+@@ -432,6 +543,7 @@ int paging_log_dirty_op(struct domain *d, struct xen_domctl_shadow_op *sc)
+     return rv;
+ 
+  out:
++    d->arch.paging.preempt.vcpu = NULL;
+     paging_unlock(d);
+     domain_unpause(d);
+ 
+@@ -498,12 +610,6 @@ void paging_log_dirty_init(struct domain *d,
+     d->arch.paging.log_dirty.clean_dirty_bitmap = clean_dirty_bitmap;
+ }
+ 
+-/* This function fress log dirty bitmap resources. */
+-static void paging_log_dirty_teardown(struct domain*d)
+-{
+-    paging_free_log_dirty_bitmap(d);
+-}
+-
+ /************************************************/
+ /*           CODE FOR PAGING SUPPORT            */
+ /************************************************/
+@@ -547,6 +653,7 @@ void paging_vcpu_init(struct vcpu *v)
+ int paging_domctl(struct domain *d, xen_domctl_shadow_op_t *sc,
+                   XEN_GUEST_HANDLE(void) u_domctl)
+ {
++    bool_t resuming = 0;
+     int rc;
+ 
+     if ( unlikely(d == current->domain) )
+@@ -569,6 +676,20 @@ int paging_domctl(struct domain *d, xen_domctl_shadow_op_t *sc,
+         return -EINVAL;
+     }
+ 
++    if ( d->arch.paging.preempt.vcpu )
++    {
++        if ( d->arch.paging.preempt.vcpu != current ||
++             d->arch.paging.preempt.op != sc->op )
++        {
++            printk(XENLOG_G_DEBUG
++                   "d%d:v%d: Paging op %#x on Dom%u with unfinished prior op %#x\n",
++                   current->domain->domain_id, current->vcpu_id,
++                   sc->op, d->domain_id, d->arch.paging.preempt.op);
++            return -EBUSY;
++        }
++        resuming = 1;
++    }
++
+     rc = xsm_shadow_control(d, sc->op);
+     if ( rc )
+         return rc;
+@@ -594,13 +715,13 @@ int paging_domctl(struct domain *d, xen_domctl_shadow_op_t *sc,
+ 
+     case XEN_DOMCTL_SHADOW_OP_OFF:
+         if ( paging_mode_log_dirty(d) )
+-            if ( (rc = paging_log_dirty_disable(d)) != 0 )
++            if ( (rc = paging_log_dirty_disable(d, resuming)) != 0 )
+                 return rc;
+         break;
+ 
+     case XEN_DOMCTL_SHADOW_OP_CLEAN:
+     case XEN_DOMCTL_SHADOW_OP_PEEK:
+-        return paging_log_dirty_op(d, sc);
++        return paging_log_dirty_op(d, sc, resuming);
+     }
+ 
+     /* Here, dispatch domctl to the appropriate paging code */
+@@ -611,18 +732,24 @@ int paging_domctl(struct domain *d, xen_domctl_shadow_op_t *sc,
+ }
+ 
+ /* Call when destroying a domain */
+-void paging_teardown(struct domain *d)
++int paging_teardown(struct domain *d)
+ {
++    int rc;
++
+     if ( hap_enabled(d) )
+         hap_teardown(d);
+     else
+         shadow_teardown(d);
+ 
+     /* clean up log dirty resources. */
+-    paging_log_dirty_teardown(d);
++    rc = paging_free_log_dirty_bitmap(d, 0);
++    if ( rc == -EAGAIN )
++        return rc;
+ 
+     /* Move populate-on-demand cache back to domain_list for destruction */
+     p2m_pod_empty_cache(d);
++
++    return rc;
+ }
+ 
+ /* Call once all of the references to the domain have gone away */
+diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
+index 0362c85..d5c5905 100644
+--- a/xen/arch/x86/mm/shadow/common.c
++++ b/xen/arch/x86/mm/shadow/common.c
+@@ -3829,8 +3829,7 @@ int shadow_domctl(struct domain *d,
+         paging_unlock(d);
+         if ( preempted )
+             /* Not finished.  Set up to re-run the call. */
+-            rc = hypercall_create_continuation(
+-                __HYPERVISOR_domctl, "h", u_domctl);
++            rc = -EAGAIN;
+         else 
+             /* Finished.  Return the new allocation */
+             sc->mb = shadow_get_allocation(d);
+diff --git a/xen/common/domain.c b/xen/common/domain.c
+index 73842f9..45d90bf 100644
+--- a/xen/common/domain.c
++++ b/xen/common/domain.c
+@@ -479,7 +479,6 @@ int domain_kill(struct domain *d)
+         rc = domain_relinquish_resources(d);
+         if ( rc != 0 )
+         {
+-            BUG_ON(rc != -EAGAIN);
+             break;
+         }
+         if ( sched_move_domain(d, cpupool0) )
+diff --git a/xen/include/asm-x86/domain.h b/xen/include/asm-x86/domain.h
+index 6c62c25..bd170ed 100644
+--- a/xen/include/asm-x86/domain.h
++++ b/xen/include/asm-x86/domain.h
+@@ -193,6 +193,20 @@ struct paging_domain {
+     struct hap_domain       hap;
+     /* log dirty support */
+     struct log_dirty_domain log_dirty;
++
++    /* preemption handling */
++    struct {
++        struct vcpu *vcpu;
++        unsigned int op;
++        union {
++            struct {
++                unsigned long done:PADDR_BITS - PAGE_SHIFT;
++                unsigned long i4:PAGETABLE_ORDER;
++                unsigned long i3:PAGETABLE_ORDER;
++            } log_dirty;
++        };
++    } preempt;
++
+     /* alloc/free pages from the pool for paging-assistance structures
+      * (used by p2m and log-dirty code for their tries) */
+     struct page_info * (*alloc_page)(struct domain *d);
+diff --git a/xen/include/asm-x86/paging.h b/xen/include/asm-x86/paging.h
+index 1e77e78..21daf04 100644
+--- a/xen/include/asm-x86/paging.h
++++ b/xen/include/asm-x86/paging.h
+@@ -141,9 +141,6 @@ struct paging_mode {
+ /*****************************************************************************
+  * Log dirty code */
+ 
+-/* free log dirty bitmap resource */
+-void paging_free_log_dirty_bitmap(struct domain *d);
+-
+ /* get the dirty bitmap for a specific range of pfns */
+ void paging_log_dirty_range(struct domain *d,
+                             unsigned long begin_pfn,
+@@ -153,9 +150,6 @@ void paging_log_dirty_range(struct domain *d,
+ /* enable log dirty */
+ int paging_log_dirty_enable(struct domain *d);
+ 
+-/* disable log dirty */
+-int paging_log_dirty_disable(struct domain *d);
+-
+ /* log dirty initialization */
+ void paging_log_dirty_init(struct domain *d,
+                            int  (*enable_log_dirty)(struct domain *d),
+@@ -218,7 +212,7 @@ int paging_domctl(struct domain *d, xen_domctl_shadow_op_t *sc,
+                   XEN_GUEST_HANDLE(void) u_domctl);
+ 
+ /* Call when destroying a domain */
+-void paging_teardown(struct domain *d);
++int paging_teardown(struct domain *d);
+ 
+ /* Call once all of the references to the domain have gone away */
+ void paging_final_teardown(struct domain *d);
+-- 
+1.9.1
+
+
+From b72bfd7c6e18c912af20c54818723547243408d1 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:50:23 +0100
+Subject: [PATCH] x86/shadow: fix race condition sampling the dirty vram state
+
+d->arch.hvm_domain.dirty_vram must be read with the domain's paging lock held.
+
+If not, two concurrent hypercalls could both end up attempting to free
+dirty_vram (the second of which will free a wild pointer), or both end up
+allocating a new dirty_vram structure (the first of which will be leaked).
+
+This is XSA-104.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm/shadow/common.c  | 4 +++-
+ xen/include/asm-x86/hvm/domain.h | 2 +-
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
+index d5c5905..6165dd4 100644
+--- a/xen/arch/x86/mm/shadow/common.c
++++ b/xen/arch/x86/mm/shadow/common.c
+@@ -3601,7 +3601,7 @@ int shadow_track_dirty_vram(struct domain *d,
+     int flush_tlb = 0;
+     unsigned long i;
+     p2m_type_t t;
+-    struct sh_dirty_vram *dirty_vram = d->arch.hvm_domain.dirty_vram;
++    struct sh_dirty_vram *dirty_vram;
+     struct p2m_domain *p2m = p2m_get_hostp2m(d);
+ 
+     if ( end_pfn < begin_pfn || end_pfn > p2m->max_mapped_pfn + 1 )
+@@ -3611,6 +3611,8 @@ int shadow_track_dirty_vram(struct domain *d,
+     p2m_lock(p2m_get_hostp2m(d));
+     paging_lock(d);
+ 
++    dirty_vram = d->arch.hvm_domain.dirty_vram;
++
+     if ( dirty_vram && (!nr ||
+              ( begin_pfn != dirty_vram->begin_pfn
+             || end_pfn   != dirty_vram->end_pfn )) )
+diff --git a/xen/include/asm-x86/hvm/domain.h b/xen/include/asm-x86/hvm/domain.h
+index 27b3de5..863b097 100644
+--- a/xen/include/asm-x86/hvm/domain.h
++++ b/xen/include/asm-x86/hvm/domain.h
+@@ -73,7 +73,7 @@ struct hvm_domain {
+     /* Memory ranges with pinned cache attributes. */
+     struct list_head       pinned_cacheattr_ranges;
+ 
+-    /* VRAM dirty support. */
++    /* VRAM dirty support.  Protect with the domain paging lock. */
+     struct sh_dirty_vram *dirty_vram;
+ 
+     /* If one of vcpus of this domain is in no_fill_mode or
+-- 
+1.9.1
+
+
+From 1dea5ee2d6095d891eca294291f1cc2391f90169 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:54:16 +0100
+Subject: [PATCH] x86/emulate: check cpl for all privileged instructions
+
+Without this, it is possible for userspace to load its own IDT or GDT.
+
+This is XSA-105.
+
+Reported-by: Andrei LUTAS <vlutas@bitdefender.com>
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Tested-by: Andrei LUTAS <vlutas@bitdefender.com>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index b0363de..1d2eb03 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -3296,6 +3296,7 @@ x86_emulate(
+         goto swint;
+ 
+     case 0xf4: /* hlt */
++        generate_exception_if(!mode_ring0(), EXC_GP, 0);
+         ctxt->retire.flags.hlt = 1;
+         break;
+ 
+@@ -3721,6 +3722,7 @@ x86_emulate(
+             break;
+         case 2: /* lgdt */
+         case 3: /* lidt */
++            generate_exception_if(!mode_ring0(), EXC_GP, 0);
+             generate_exception_if(ea.type != OP_MEM, EXC_UD, -1);
+             fail_if(ops->write_segment == NULL);
+             memset(&reg, 0, sizeof(reg));
+@@ -3749,6 +3751,7 @@ x86_emulate(
+         case 6: /* lmsw */
+             fail_if(ops->read_cr == NULL);
+             fail_if(ops->write_cr == NULL);
++            generate_exception_if(!mode_ring0(), EXC_GP, 0);
+             if ( (rc = ops->read_cr(0, &cr0, ctxt)) )
+                 goto done;
+             if ( ea.type == OP_REG )
+-- 
+1.9.1
+
+
+From b979486004eb468ed37962f0b256a30e605ff74c Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:54:20 +0100
+Subject: [PATCH] x86emul: only emulate software interrupt injection for real
+ mode
+
+Protected mode emulation currently lacks proper privilege checking of
+the referenced IDT entry, and there's currently no legitimate way for
+any of the respective instructions to reach the emulator when the guest
+is in protected mode.
+
+This is XSA-106.
+
+Reported-by: Andrei LUTAS <vlutas@bitdefender.com>
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Keir Fraser <keir@xen.org>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 1d2eb03..45a39b6 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -2616,6 +2616,7 @@ x86_emulate(
+     case 0xcd: /* int imm8 */
+         src.val = insn_fetch_type(uint8_t);
+     swint:
++        fail_if(!in_realmode(ctxt, ops)); /* XSA-106 */
+         fail_if(ops->inject_sw_interrupt == NULL);
+         rc = ops->inject_sw_interrupt(src.val, _regs.eip - ctxt->regs->eip,
+                                       ctxt) ? : X86EMUL_EXCEPTION;
+-- 
+1.9.1
+
+
+From 6212fc352f19368ac44edbcc1c244b372839de57 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:54:23 +0100
+Subject: [PATCH] x86/HVM: properly bound x2APIC MSR range
+
+While the write path change appears to be purely cosmetic (but still
+gets done here for consistency), the read side mistake permitted
+accesses beyond the virtual APIC page.
+
+Note that while this isn't fully in line with the specification
+(digesting MSRs 0x800-0xBFF for the x2APIC), this is the minimal
+possible fix addressing the security issue and getting x2APIC related
+code into a consistent shape (elsewhere a 256 rather than 1024 wide
+window is being used too). This will be dealt with subsequently.
+
+This is XSA-108.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/hvm.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index 153b89a..edef31b 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -2878,7 +2878,7 @@ int hvm_msr_read_intercept(unsigned int msr, uint64_t *msr_content)
+         *msr_content = vcpu_vlapic(v)->hw.apic_base_msr;
+         break;
+ 
+-    case MSR_IA32_APICBASE_MSR ... MSR_IA32_APICBASE_MSR + 0x3ff:
++    case MSR_IA32_APICBASE_MSR ... MSR_IA32_APICBASE_MSR + 0xff:
+         if ( hvm_x2apic_msr_read(v, msr, msr_content) )
+             goto gp_fault;
+         break;
+@@ -2998,7 +2998,7 @@ int hvm_msr_write_intercept(unsigned int msr, uint64_t msr_content)
+         vlapic_tdt_msr_set(vcpu_vlapic(v), msr_content);
+         break;
+ 
+-    case MSR_IA32_APICBASE_MSR ... MSR_IA32_APICBASE_MSR + 0x3ff:
++    case MSR_IA32_APICBASE_MSR ... MSR_IA32_APICBASE_MSR + 0xff:
+         if ( hvm_x2apic_msr_write(v, msr, msr_content) )
+             goto gp_fault;
+         break;
+-- 
+1.9.1
+
+
+From 317d0aae33a00a4104eab3cc4e20749130200bdd Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:23 +0100
+Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
+
+---
+ tools/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tools/Makefile b/tools/Makefile
+index 20d14a2..01ee453 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -187,6 +187,7 @@ subdir-all-qemu-xen-dir: qemu-xen-dir-find
+ 		source=.; \
+ 	fi; \
+ 	cd qemu-xen-dir; \
++	env -u CFLAGS \
+ 	$$source/configure --enable-xen --target-list=i386-softmmu \
+ 		--source-path=$$source \
+ 		--extra-cflags="-I$(XEN_ROOT)/tools/include \
+-- 
+1.9.1
+
+
+From b47384b10691652466e54e73e9a688c43f4d4025 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:23 +0100
+Subject: [PATCH]
+
+---
+ tools/Rules.mk              |  6 +++---
+ tools/libxl/libxl_blktap2.c | 41 +++++++++++++++++++++++++++--------------
+ 2 files changed, 30 insertions(+), 17 deletions(-)
+
+diff --git a/tools/Rules.mk b/tools/Rules.mk
+index e83f682..4c75cfd 100644
+--- a/tools/Rules.mk
++++ b/tools/Rules.mk
+@@ -46,9 +46,9 @@ LIBXL_BLKTAP ?= n
+ endif
+ 
+ ifeq ($(LIBXL_BLKTAP),y)
+-CFLAGS_libblktapctl = -I$(XEN_BLKTAP2)/control -I$(XEN_BLKTAP2)/include $(CFLAGS_xeninclude)
+-LDLIBS_libblktapctl = -L$(XEN_BLKTAP2)/control -lblktapctl
+-SHLIB_libblktapctl  = -Wl,-rpath-link=$(XEN_BLKTAP2)/control
++CFLAGS_libblktapctl = -I$(XEN_BLKTAP2)/include $(CFLAGS_xeninclude)
++LDLIBS_libblktapctl = -L$(XEN_BLKTAP2)/control/.libs -lblktapctl
++SHLIB_libblktapctl  = -Wl,-rpath-link=$(XEN_BLKTAP2)/control/.libs
+ else
+ CFLAGS_libblktapctl =
+ LDLIBS_libblktapctl =
+diff --git a/tools/libxl/libxl_blktap2.c b/tools/libxl/libxl_blktap2.c
+index 2053403..c85b182 100644
+--- a/tools/libxl/libxl_blktap2.c
++++ b/tools/libxl/libxl_blktap2.c
+@@ -29,20 +29,15 @@ char *libxl__blktap_devpath(libxl__gc *gc,
+ {
+     const char *type;
+     char *params, *devname = NULL;
+-    tap_list_t tap;
+     int err;
+ 
+     type = libxl__device_disk_string_of_format(format);
+-    err = tap_ctl_find(type, disk, &tap);
+-    if (err == 0) {
+-        devname = libxl__sprintf(gc, "/dev/xen/blktap-2/tapdev%d", tap.minor);
+-        if (devname)
+-            return devname;
+-    }
+ 
+     params = libxl__sprintf(gc, "%s:%s", type, disk);
+-    err = tap_ctl_create(params, &devname);
++    fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,params);
++    err = tap_ctl_create(params, &devname, 0, -1, 0);
+     if (!err) {
++        fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,devname);
+         libxl__ptr_add(gc, devname);
+         return devname;
+     }
+@@ -55,7 +50,10 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
+ {
+     char *type, *disk;
+     int err;
+-    tap_list_t tap;
++	struct list_head list = LIST_HEAD_INIT(list);
++	tap_list_t *entry;
++    int minor = -1;
++    pid_t pid = -1;
+ 
+     type = libxl__strdup(gc, params);
+ 
+@@ -65,19 +63,34 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
+         return ERROR_INVAL;
+     }
+ 
++    fprintf(stderr, "DEBUG %s %d type=%s disk=%s\n",__func__,__LINE__,type,disk);
+     *disk++ = '\0';
+ 
+-    err = tap_ctl_find(type, disk, &tap);
+-    if (err < 0) {
+-        /* returns -errno */
++    err = tap_ctl_list(&list);
++    if (err)
++        return err;
++    tap_list_for_each_entry(entry, &list) {
++		if (type && (!entry->type || strcmp(entry->type, type)))
++			continue;
++
++		if (disk && (!entry->path || strcmp(entry->path, disk)))
++			continue;
++
++        minor = entry->minor;
++        pid = entry->pid;
++		break;
++	}
++	tap_ctl_list_free(&list);
++
++    if (minor < 0) {
+         LOGEV(ERROR, -err, "Unable to find type %s disk %s", type, disk);
+         return ERROR_FAIL;
+     }
+ 
+-    err = tap_ctl_destroy(tap.id, tap.minor);
++    err = tap_ctl_destroy(pid, minor, 1, NULL);
+     if (err < 0) {
+         LOGEV(ERROR, -err, "Failed to destroy tap device id %d minor %d",
+-              tap.id, tap.minor);
++              pid, minor);
+         return ERROR_FAIL;
+     }
+ 
+-- 
+1.9.1
+
