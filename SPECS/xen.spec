@@ -202,7 +202,7 @@ Group: Development/Libraries
 Requires: xen-libs = %{version}-%{release}
 
 %description devel
-This package contains what's needed to develop applications
+This package contains what\'s needed to develop applications
 which manage Xen virtual machines.
 
 
