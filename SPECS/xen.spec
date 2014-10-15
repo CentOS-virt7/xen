@@ -14,12 +14,12 @@
 %define with_systemd 0
 
 # Hypervisor ABI
-%define hv_abi  4.2
+%define hv_abi  4.4
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.2.5
-Release: 35%{?dist}
+Version: 4.4.1
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -32,6 +32,7 @@ Source11: newlib-1.16.0.tar.gz
 Source12: zlib-1.2.3.tar.gz
 Source13: pciutils-2.2.9.tar.bz2
 Source14: grub-0.97.tar.gz
+Source15: polarssl-1.1.4-gpl.tgz
 # init.d bits
 Source20: init.xenstored
 Source21: init.xenconsoled
@@ -57,8 +58,6 @@ Source49: tmpfiles.d.xen.conf
 Source101: blktap-9960138790b9d3610b12acd153bba20235efa4f5.tar.gz
 
 Patch1: xen-queue.am
-
-Patch55: qemu-xen.trad.buildfix.patch
 
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
@@ -225,7 +224,6 @@ git commit -a -q -m "%{version} baseline."
 git am %{PATCH1}
 
 # Now apply patches to things not in the core Xen repo
-%patch55 -p1
 
 pushd `pwd`
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
@@ -239,7 +237,7 @@ popd
 
 
 # stubdom sources
-cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
+cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} stubdom
 
 
 %build
@@ -254,7 +252,7 @@ export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
 export CFLAGS="$RPM_OPT_FLAGS"
 make %{?_smp_mflags} %{?efi_flags} prefix=/usr dist-xen
-./configure --libdir=%{_libdir}
+WGET=/bin/false ./configure --enable-xend --libdir=%{_libdir} --with-system-seabios=/usr/share/seabios/bios.bin
 make %{?_smp_mflags} %{?ocaml_flags} prefix=/usr dist-tools
 make                 prefix=/usr dist-docs
 unset CFLAGS
@@ -302,6 +300,7 @@ rm -f %{buildroot}%{_sbindir}/xen-python-path
 # qemu stuff (unused or available from upstream)
 rm -rf %{buildroot}/usr/share/xen/man
 rm -rf %{buildroot}/usr/bin/qemu-*-xen
+rm %{buildroot}/usr/libexec/qemu-bridge-helper
 ln -s qemu-img %{buildroot}/%{_bindir}/qemu-img-xen
 ln -s qemu-img %{buildroot}/%{_bindir}/qemu-nbd-xen
 for file in bios.bin openbios-sparc32 openbios-sparc64 ppc_rom.bin \
@@ -622,6 +621,10 @@ rm -rf %{buildroot}
 %{_mandir}/man5/xl.cfg.5*
 %{_mandir}/man5/xl.conf.5*
 %{_mandir}/man5/xlcpupool.cfg.5*
+%{_mandir}/man1/xenstore-chmod.1.gz
+%{_mandir}/man1/xenstore-ls.1.gz
+%{_mandir}/man1/xenstore.1.gz
+
 
 %{python_sitearch}/fsimage.so
 %{python_sitearch}/grub
@@ -652,7 +655,7 @@ rm -rf %{buildroot}
 %dir %attr(0700,root,root) %{_localstatedir}/run/xenstored
 # XenD runtime state
 %ghost %attr(0700,root,root) %{_localstatedir}/run/xend
-%ghost %attr(0700,root,root) %{_localstatedir}/run/xend/boot
+#%ghost %attr(0700,root,root) %{_localstatedir}/run/xend/boot
 
 # All xenstore CLI tools
 %{_bindir}/qemu-*-xen
@@ -661,15 +664,7 @@ rm -rf %{buildroot}
 %{_bindir}/pygrub
 %{_bindir}/xentrace*
 %{_bindir}/remus
-# blktap daemon
-%{_sbindir}/blktapctrl
-%{_sbindir}/tapdisk*
-# XSM
-%{_sbindir}/flask-*
-# Disk utils
-%{_sbindir}/qcow-create
-%{_sbindir}/qcow2raw
-%{_sbindir}/img2qcow
+%{_bindir}/xencov_split
 # Misc stuff
 %{_bindir}/xen-detect
 %{_sbindir}/gdbsx
@@ -694,9 +689,10 @@ rm -rf %{buildroot}
 %{_sbindir}/xenperf
 %{_sbindir}/xenwatchdogd
 %{_sbindir}/xl
-%{_sbindir}/xsview
 %{_sbindir}/xen-lowmemd
 %{_sbindir}/xen-ringwatch
+%{_sbindir}/xencov
+%{_sbindir}/xen-mfndump
 #blktap
 %{_bindir}/vhd-index
 %{_bindir}/vhd-update
@@ -724,7 +720,6 @@ rm -rf %{buildroot}
 %defattr(-,root,root)
 %doc docs/misc/
 %doc dist/install/usr/share/doc/xen/html
-%doc dist/install/usr/share/doc/xen/pdf/*.pdf
 
 %files devel
 %defattr(-,root,root)
@@ -766,6 +761,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Oct 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-1.el6.centos
+ - Removed patches which were reflected upstream
+ - Took advantage of --with-system-seabios config option to remove seabios patch
+ - Included polarssl (now required for pvgrub)
+
 * Wed Oct 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.2.5-36.el6.centos
  - Port system over to git patchqueue.
 
