@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.5
-Release: 36%{?dist}
+Release: 37%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -55,7 +55,6 @@ Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
 
 Source101: blktap-9960138790b9d3610b12acd153bba20235efa4f5.tar.gz
-Source102: xen-kernel
 
 Patch1: xen-initscript.patch
 Patch4: xen-dumpdir.patch
@@ -413,7 +412,6 @@ mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 install -m 644 %{SOURCE30} %{buildroot}%{_sysconfdir}/sysconfig/xenstored
 install -m 644 %{SOURCE31} %{buildroot}%{_sysconfdir}/sysconfig/xenconsoled
 install -m 644 %{SOURCE32} %{buildroot}%{_sysconfdir}/sysconfig/blktapctrl
-install -m 644 %{SOURCE102} %{buildroot}%{_sysconfdir}/sysconfig/xen-kernel
 
 # systemd
 %if %with_systemd
@@ -580,8 +578,6 @@ rm -rf %{buildroot}
 %config(noreplace) %{_sysconfdir}/%{name}/xend-*
 # xm config
 %config(noreplace) %{_sysconfdir}/%{name}/xm-*
-# xen-kernel config
-%config(noreplace) %{_sysconfdir}/sysconfig/xen-kernel
 # Guest autostart links
 %dir %attr(0700,root,root) %{_sysconfdir}/%{name}/auto
 # Autostart of guests
@@ -816,6 +812,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Oct 20 2014 Johnny Hughes <johnny@centos.org> - 4.2.5-37.el6.centos
+- shifted /etc/sysconfig/xen-kernel to centos-xen-release instead of xen
+
 * Thu Oct 9 2014 Johnny Hughes <johnny@centos.org> -  4.2.5-36.el6.centos
 - added /etc/sysconfig/xen-kernel for auto grub install options
 

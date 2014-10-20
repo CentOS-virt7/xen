@@ -1,2 +1,0 @@
-BOOT_XEN_AS_DEFAULT="yes"
-XEN_KERNEL_MBARGS="--mbargs=dom0_mem=1024M,max:1024M loglvl=all guest_loglvl=all"
