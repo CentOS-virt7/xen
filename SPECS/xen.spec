@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.1
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -55,7 +55,7 @@ Source47: xendomains.service
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
 
-Source101: blktap-9960138790b9d3610b12acd153bba20235efa4f5.tar.gz
+Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
 Patch1: xen-queue.am
 
@@ -761,6 +761,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Oct 22 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-2.el6.centos
+ - Updated to blktap 2.5 v0.9.2
+
 * Wed Oct 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-1.el6.centos
  - Removed patches which were reflected upstream
  - Took advantage of --with-system-seabios config option to remove seabios patch

@@ -1,4 +1,4 @@
-From 0e244ee2d47f6f05e8caa3d1254f92f2537ea061 Mon Sep 17 00:00:00 2001
+From 339f5bfe2118628b62626226158301edaae34c46 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 16:30:44 +0100
 Subject: [PATCH] Fix up xend init scripts
@@ -156,7 +156,7 @@ index 9ef0210..0876ee2 100644
 1.9.1
 
 
-From b9b87bcbfad213222b761b3fa83dc6eb63194213 Mon Sep 17 00:00:00 2001
+From 718ad3ee41aba8a426a46485b239b4f5cdf8d9eb Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 16:30:44 +0100
 Subject: [PATCH] Change dumpdir to /var/lib/xen
@@ -167,7 +167,7 @@ Subject: [PATCH] Change dumpdir to /var/lib/xen
  2 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/tools/Makefile b/tools/Makefile
-index d548e5e..6610a8d 100644
+index 00c69ee..125acee 100644
 --- a/tools/Makefile
 +++ b/tools/Makefile
 @@ -60,7 +60,7 @@ all: subdirs-all
@@ -205,7 +205,7 @@ index 8d4ff5c..895fc01 100644
 1.9.1
 
 
-From 8e1ea07fe9d64c893cf08db19f96dae49c477f4c Mon Sep 17 00:00:00 2001
+From 596ee6c002f92918da0c483998c7f2c3242cc5b0 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 16:30:44 +0100
 Subject: [PATCH] Disable iptables on the bridge
@@ -252,7 +252,7 @@ index 3c63c55..f74de3d 100644
 1.9.1
 
 
-From 5818ffa5f619720ebccf594a630930234b4d3a03 Mon Sep 17 00:00:00 2001
+From 753ee1d1056b18479aac93466977c3fa8c4e2a16 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 16:30:44 +0100
 Subject: [PATCH] pygrubfix.patch
@@ -295,7 +295,7 @@ index 45a7290..6e39ae5 100644
 1.9.1
 
 
-From 33cbefb2cc2860e3cb5c467b17dda6b8b48d1235 Mon Sep 17 00:00:00 2001
+From 53f2efc145161f31910ae2cf11abd3639bc75b72 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 16:30:44 +0100
 Subject: [PATCH] xend.catchbt.patch
@@ -343,7 +343,7 @@ index 832c168..161aeb5 100644
 1.9.1
 
 
-From 80a025112f7b89186633e9ce67164623263979cb Mon Sep 17 00:00:00 2001
+From 3251da2d848a1cee982f75030981894bcc44af92 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 16:30:44 +0100
 Subject: [PATCH] xend-pci-loop.patch # Don't crash due to weird PCI cards (Bug
@@ -375,7 +375,7 @@ index adeca4b..94326b3 100644
 1.9.1
 
 
-From 5da9f9df7b688f8278455ac7f79ec71adb0c2d4d Mon Sep 17 00:00:00 2001
+From c74aba60ce42d66ae3824a9d7bf412efaee6d380 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 16:30:45 +0100
 Subject: [PATCH] xend.selinux.fixes.patch
@@ -413,7 +413,7 @@ index 0876ee2..05afc0e 100644
 1.9.1
 
 
-From 9191080e8bdee8be76aeae7b174807f9f24aefe0 Mon Sep 17 00:00:00 2001
+From e3997e2ae052ad46312bfdeae72b61a6628a58bf Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:22 +0100
 Subject: [PATCH] xen.use.fedora.ipxe.patch
@@ -425,10 +425,10 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index c44853f..42d21e6 100644
+index 33f3d9b..0b69f2f 100644
 --- a/Config.mk
 +++ b/Config.mk
-@@ -239,7 +239,7 @@ SEABIOS_UPSTREAM_TAG ?= rel-1.7.3.1
+@@ -241,7 +241,7 @@ SEABIOS_UPSTREAM_TAG ?= rel-1.7.3.1
  # Fri Aug 2 14:12:09 2013 -0400
  # Fix bug in CBFS file walking with compressed files.
  
@@ -438,7 +438,7 @@ index c44853f..42d21e6 100644
  # Specify which qemu-dm to use. This may be `ioemu' to use the old
  # Mercurial in-tree version, or a local directory, or a git URL.
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
-index 97de642..118dd75 100644
+index cb13212..428045b 100644
 --- a/tools/firmware/Makefile
 +++ b/tools/firmware/Makefile
 @@ -14,7 +14,7 @@ SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
@@ -467,7 +467,7 @@ index 00ee952..b0c6f37 100644
 1.9.1
 
 
-From 9256b08381e337ddf79925267d5c04cebc65b46e Mon Sep 17 00:00:00 2001
+From a4b3976d608bef3564cc52cf9d9e7db23e10e031 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:22 +0100
 Subject: [PATCH] xen.fedora.efi.build.patch
@@ -534,7 +534,7 @@ index 1daa7ac..f5398c4 100644
 1.9.1
 
 
-From 6b83f1160ab45ceb0de23868305eff802336f08e Mon Sep 17 00:00:00 2001
+From dd45532cbfbbf11339c77a1edf0f7d8cf02eb88f Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:22 +0100
 Subject: [PATCH] xen.fedora19.buildfix.patch
@@ -569,7 +569,7 @@ index 0fc3f82..0d43727 100644
 1.9.1
 
 
-From c032e6bdd88b7f3961cda95df4d699ae486c43fa Mon Sep 17 00:00:00 2001
+From e2364c9c6f39484cb46413659482321b21a8b5de Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:22 +0100
 Subject: [PATCH] xen-configure-xend.patch
@@ -620,7 +620,7 @@ index 0896a27..cea12e1 100644
 1.9.1
 
 
-From 843555896427c3d3fdf62a4a5b536b33847f84ef Mon Sep 17 00:00:00 2001
+From f2c93d572b9e1d0dc5026a84f1044b528c4d5f2e Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:50:23 +0100
 Subject: [PATCH] x86/shadow: fix race condition sampling the dirty vram state
@@ -679,7 +679,7 @@ index b1e3187..99c5e44 100644
 1.9.1
 
 
-From b3633ccea202d54edd0801a5d714c9e58868b629 Mon Sep 17 00:00:00 2001
+From d13ef8eba3f4dba0a8d8f2f042f53c066a73603f Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:54:16 +0100
 Subject: [PATCH] x86/emulate: check cpl for all privileged instructions
@@ -728,7 +728,7 @@ index 50d8965..4810e68 100644
 1.9.1
 
 
-From 73fcc81d9f252c79f2fcb3a93fe53c155667ee80 Mon Sep 17 00:00:00 2001
+From a0ba544c3c5ad7785b21d8aefb4729c63cd9d477 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:54:20 +0100
 Subject: [PATCH] x86emul: only emulate software interrupt injection for real
@@ -764,7 +764,7 @@ index 4810e68..5fbe024 100644
 1.9.1
 
 
-From fdf1614760e187b9d43eb50c59218a4374d03f1c Mon Sep 17 00:00:00 2001
+From 86019dc2c87f436623d1d3aff2cf8d63d47ec0d1 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:54:23 +0100
 Subject: [PATCH] x86/HVM: properly bound x2APIC MSR range
@@ -812,7 +812,7 @@ index be1a2d3..3289604 100644
 1.9.1
 
 
-From 3e9f5a9193d6bcf51d71a4562183e0fb01b6256d Mon Sep 17 00:00:00 2001
+From 4d2e465691947530efa89189326c6a2d14286498 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:23 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -822,7 +822,7 @@ Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
  1 file changed, 1 insertion(+)
 
 diff --git a/tools/Makefile b/tools/Makefile
-index 6610a8d..86d8a58 100644
+index 125acee..ce752b0 100644
 --- a/tools/Makefile
 +++ b/tools/Makefile
 @@ -186,6 +186,7 @@ subdir-all-qemu-xen-dir: qemu-xen-dir-find
@@ -837,11 +837,12 @@ index 6610a8d..86d8a58 100644
 1.9.1
 
 
-From bd653df8eda0a55eff8b63ffac7354a441f68387 Mon Sep 17 00:00:00 2001
+From 9b1a730b48f2a9a621c2d2541c7ee1ee9121f3ca Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 15 Oct 2014 15:36:23 +0100
-Subject: [PATCH]
+Date: Wed, 22 Oct 2014 19:24:18 +0100
+Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
+Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
 ---
  tools/Rules.mk              |  6 +++---
  tools/libxl/libxl_blktap2.c | 41 +++++++++++++++++++++++++++--------------
@@ -865,7 +866,7 @@ index 13d8fc1..df84f98 100644
  CFLAGS_libblktapctl =
  LDLIBS_libblktapctl =
 diff --git a/tools/libxl/libxl_blktap2.c b/tools/libxl/libxl_blktap2.c
-index 2053403..c85b182 100644
+index 2053403..9a0641b 100644
 --- a/tools/libxl/libxl_blktap2.c
 +++ b/tools/libxl/libxl_blktap2.c
 @@ -29,20 +29,15 @@ char *libxl__blktap_devpath(libxl__gc *gc,
@@ -886,7 +887,7 @@ index 2053403..c85b182 100644
      params = libxl__sprintf(gc, "%s:%s", type, disk);
 -    err = tap_ctl_create(params, &devname);
 +    fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,params);
-+    err = tap_ctl_create(params, &devname, 0, -1, 0);
++    err = tap_ctl_create(params, &devname, 0, -1, 0, 0);
      if (!err) {
 +        fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,devname);
          libxl__ptr_add(gc, devname);
