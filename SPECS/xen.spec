@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -61,6 +61,8 @@ Patch1: xen-queue.am
 
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
+
+Patch2001: qemu-xen-b04df88-fix-persistent-unmap.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -235,6 +237,9 @@ popd
 %patch1001 -p1
 %patch1005 -p1
 
+pushd tools/qemu-xen
+%patch2001 -p1
+pushd
 
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} stubdom
@@ -761,6 +766,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Dec 11 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-3.el6.centos
+ - Backported qdisk persistent grant fix
+
 * Wed Oct 22 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-2.el6.centos
  - Updated to blktap 2.5 v0.9.2
 
