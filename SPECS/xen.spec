@@ -768,6 +768,7 @@ rm -rf %{buildroot}
 %changelog
 * Thu Dec 11 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-3.el6.centos
  - Backported qdisk persistent grant fix
+ - Backported fixes to use tapdisk with HVM guests
 
 * Wed Oct 22 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-2.el6.centos
  - Updated to blktap 2.5 v0.9.2
