@@ -764,7 +764,187 @@ index 4810e68..5fbe024 100644
 1.9.1
 
 
-From fdf1614760e187b9d43eb50c59218a4374d03f1c Mon Sep 17 00:00:00 2001
+From 77c6a6476e79a669254b845824249471bb588ad2 Mon Sep 17 00:00:00 2001
+From: David Vrabel <david.vrabel@citrix.com>
+Date: Thu, 11 Dec 2014 16:49:15 +0000
+Subject: [PATCH] evtchn: check control block exists when using FIFO-based
+ events
+
+When using the FIFO-based event channels, there are no checks for the
+existance of a control block when binding an event or moving it to a
+different VCPU.  This is because events may be bound when the ABI is
+in 2-level mode (e.g., by the toolstack before the domain is started).
+
+The guest may trigger a Xen crash in evtchn_fifo_set_pending() if:
+
+  a) the event is bound to a VCPU without a control block; or
+  b) VCPU 0 does not have a control block.
+
+In case (a), Xen will crash when looking up the current queue.  In
+(b), Xen will crash when looking up the old queue (which defaults to a
+queue on VCPU 0).
+
+By allocating all the per-VCPU structures when enabling the FIFO ABI,
+we can be sure that v->evtchn_fifo is always valid.
+
+EVTCHNOP_init_control_block for all the other CPUs need only map the
+shared control block.
+
+A single check in evtchn_fifo_set_pending() before accessing the
+control block fixes all cases where the guest has not initialized some
+control blocks.
+
+This is XSA-107.
+
+Reported-by: Vitaly Kuznetsov <vkuznets@redhat.com>
+Signed-off-by: David Vrabel <david.vrabel@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+master commit: a4e0cea6fced50e251453dfe52e1b9dde77a84f5
+master date: 2014-09-09 15:25:58 +0200
+---
+ xen/common/event_fifo.c | 82 ++++++++++++++++++++++++++++++++++---------------
+ 1 file changed, 58 insertions(+), 24 deletions(-)
+
+diff --git a/xen/common/event_fifo.c b/xen/common/event_fifo.c
+index 1fce3f1..e9c1fbe 100644
+--- a/xen/common/event_fifo.c
++++ b/xen/common/event_fifo.c
+@@ -178,6 +178,19 @@ static void evtchn_fifo_set_pending(struct vcpu *v, struct evtchn *evtchn)
+         bool_t linked = 0;
+ 
+         /*
++         * Control block not mapped.  The guest must not unmask an
++         * event until the control block is initialized, so we can
++         * just drop the event.
++         */
++        if ( unlikely(!v->evtchn_fifo->control_block) )
++        {
++            printk(XENLOG_G_WARNING
++                   "d%dv%d has no FIFO event channel control block\n",
++                   d->domain_id, v->vcpu_id);
++            goto done;
++        }
++
++        /*
+          * No locking around getting the queue. This may race with
+          * changing the priority but we are allowed to signal the
+          * event once on the old priority.
+@@ -385,36 +398,42 @@ static void init_queue(struct vcpu *v, struct evtchn_fifo_queue *q,
+ {
+     spin_lock_init(&q->lock);
+     q->priority = i;
+-    q->head = &v->evtchn_fifo->control_block->head[i];
+ }
+ 
+-static int setup_control_block(struct vcpu *v, uint64_t gfn, uint32_t offset)
++static int setup_control_block(struct vcpu *v)
+ {
+-    struct domain *d = v->domain;
+     struct evtchn_fifo_vcpu *efv;
+-    void *virt;
+     unsigned int i;
+-    int rc;
+-
+-    if ( v->evtchn_fifo )
+-        return -EINVAL;
+ 
+     efv = xzalloc(struct evtchn_fifo_vcpu);
+     if ( !efv )
+         return -ENOMEM;
+ 
+-    rc = map_guest_page(d, gfn, &virt);
++    for ( i = 0; i <= EVTCHN_FIFO_PRIORITY_MIN; i++ )
++        init_queue(v, &efv->queue[i], i);
++
++    v->evtchn_fifo = efv;
++
++    return 0;
++}
++
++static int map_control_block(struct vcpu *v, uint64_t gfn, uint32_t offset)
++{
++    void *virt;
++    unsigned int i;
++    int rc;
++
++    if ( v->evtchn_fifo->control_block )
++        return -EINVAL;
++
++    rc = map_guest_page(v->domain, gfn, &virt);
+     if ( rc < 0 )
+-    {
+-        xfree(efv);
+         return rc;
+-    }
+ 
+-    v->evtchn_fifo = efv;
+     v->evtchn_fifo->control_block = virt + offset;
+ 
+     for ( i = 0; i <= EVTCHN_FIFO_PRIORITY_MIN; i++ )
+-        init_queue(v, &v->evtchn_fifo->queue[i], i);
++        v->evtchn_fifo->queue[i].head = &v->evtchn_fifo->control_block->head[i];
+ 
+     return 0;
+ }
+@@ -508,28 +527,43 @@ int evtchn_fifo_init_control(struct evtchn_init_control *init_control)
+ 
+     spin_lock(&d->event_lock);
+ 
+-    rc = setup_control_block(v, gfn, offset);
+-
+     /*
+      * If this is the first control block, setup an empty event array
+      * and switch to the fifo port ops.
+      */
+-    if ( rc == 0 && !d->evtchn_fifo )
++    if ( !d->evtchn_fifo )
+     {
++        struct vcpu *vcb;
++
++        for_each_vcpu ( d, vcb ) {
++            rc = setup_control_block(vcb);
++            if ( rc < 0 )
++                goto error;
++        }
++
+         rc = setup_event_array(d);
+         if ( rc < 0 )
+-            cleanup_control_block(v);
+-        else
+-        {
+-            d->evtchn_port_ops = &evtchn_port_ops_fifo;
+-            d->max_evtchns = EVTCHN_FIFO_NR_CHANNELS;
+-            setup_ports(d);
+-        }
++            goto error;
++
++        rc = map_control_block(v, gfn, offset);
++        if ( rc < 0 )
++            goto error;
++
++        d->evtchn_port_ops = &evtchn_port_ops_fifo;
++        d->max_evtchns = EVTCHN_FIFO_NR_CHANNELS;
++        setup_ports(d);
+     }
++    else
++        rc = map_control_block(v, gfn, offset);
+ 
+     spin_unlock(&d->event_lock);
+ 
+     return rc;
++
++ error:
++    evtchn_fifo_destroy(d);
++    spin_unlock(&d->event_lock);
++    return rc;
+ }
+ 
+ static int add_page_to_event_array(struct domain *d, unsigned long gfn)
+-- 
+1.9.1
+
+
+From 04e50def38c9b141d46b90975744b0b24905338c Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:54:23 +0100
 Subject: [PATCH] x86/HVM: properly bound x2APIC MSR range
@@ -812,7 +992,1095 @@ index be1a2d3..3289604 100644
 1.9.1
 
 
-From cf503bf76a659278509b5671fd8c59bb78896323 Mon Sep 17 00:00:00 2001
+From 79ee9d6fce6a5f7b2393f7f24b78f2129fbcf69d Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 11 Dec 2014 16:49:39 +0000
+Subject: [PATCH] x86: don't allow page table updates on non-PV page tables in
+ do_mmu_update()
+
+paging_write_guest_entry() and paging_cmpxchg_guest_entry() aren't
+consistently supported for non-PV guests (they'd deref NULL for PVH or
+non-HAP HVM ones). Don't allow respective MMU_* operations on the
+page tables of such domains.
+
+This is CVE-2014-8594 / XSA-109.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Tim Deegan <tim@xen.org>
+master commit: e4292c5aac41b80f33d4877104348d5ee7c95aa4
+master date: 2014-11-18 14:15:21 +0100
+---
+ xen/arch/x86/mm.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index fdc5ed3..f88323f 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -3508,6 +3508,10 @@ long do_mmu_update(
+         {
+             p2m_type_t p2mt;
+ 
++            rc = -EOPNOTSUPP;
++            if ( unlikely(paging_mode_refcounts(pt_owner)) )
++                break;
++
+             xsm_needed |= XSM_MMU_NORMAL_UPDATE;
+             if ( get_pte_flags(req.val) & _PAGE_PRESENT )
+             {
+-- 
+1.9.1
+
+
+From 6ea79aab6d71fb9588f82ccb6ef72b92ecb656a6 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 11 Dec 2014 16:49:57 +0000
+Subject: [PATCH] x86emul: enforce privilege level restrictions when loading CS
+
+Privilege level checks were basically missing for the CS case, the
+only check that was done (RPL == DPL for nonconforming segments)
+was solely covering a single special case (return to non-conforming
+segment).
+
+Additionally in long mode the L bit set requires the D bit to be clear,
+as was recently pointed out for KVM by Nadav Amit
+<namit@cs.technion.ac.il>.
+
+Finally we also need to force the loaded selector's RPL to CPL (at
+least as long as lret/retf emulation doesn't support privilege level
+changes).
+
+This is CVE-2014-8595 / XSA-110.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+master commit: 1d68c1a70e00ed95ef0889cfa005379dab27b37d
+master date: 2014-11-18 14:16:23 +0100
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 42 ++++++++++++++++++++++------------
+ 1 file changed, 28 insertions(+), 14 deletions(-)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 5fbe024..25571c6 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1114,7 +1114,7 @@ realmode_load_seg(
+ static int
+ protmode_load_seg(
+     enum x86_segment seg,
+-    uint16_t sel,
++    uint16_t sel, bool_t is_ret,
+     struct x86_emulate_ctxt *ctxt,
+     const struct x86_emulate_ops *ops)
+ {
+@@ -1180,9 +1180,23 @@ protmode_load_seg(
+         /* Code segment? */
+         if ( !(desc.b & (1u<<11)) )
+             goto raise_exn;
+-        /* Non-conforming segment: check DPL against RPL. */
+-        if ( ((desc.b & (6u<<9)) != (6u<<9)) && (dpl != rpl) )
++        if ( is_ret
++             ? /*
++                * Really rpl < cpl, but our sole caller doesn't handle
++                * privilege level changes.
++                */
++               rpl != cpl || (desc.b & (1 << 10) ? dpl > rpl : dpl != rpl)
++             : desc.b & (1 << 10)
++               /* Conforming segment: check DPL against CPL. */
++               ? dpl > cpl
++               /* Non-conforming segment: check RPL and DPL against CPL. */
++               : rpl > cpl || dpl != cpl )
++            goto raise_exn;
++        /* 64-bit code segments (L bit set) must have D bit clear. */
++        if ( in_longmode(ctxt, ops) &&
++             (desc.b & (1 << 21)) && (desc.b & (1 << 22)) )
+             goto raise_exn;
++        sel = (sel ^ rpl) | cpl;
+         break;
+     case x86_seg_ss:
+         /* Writable data segment? */
+@@ -1247,7 +1261,7 @@ protmode_load_seg(
+ static int
+ load_seg(
+     enum x86_segment seg,
+-    uint16_t sel,
++    uint16_t sel, bool_t is_ret,
+     struct x86_emulate_ctxt *ctxt,
+     const struct x86_emulate_ops *ops)
+ {
+@@ -1256,7 +1270,7 @@ load_seg(
+         return X86EMUL_UNHANDLEABLE;
+ 
+     if ( in_protmode(ctxt, ops) )
+-        return protmode_load_seg(seg, sel, ctxt, ops);
++        return protmode_load_seg(seg, sel, is_ret, ctxt, ops);
+ 
+     return realmode_load_seg(seg, sel, ctxt, ops);
+ }
+@@ -1888,7 +1902,7 @@ x86_emulate(
+         if ( (rc = read_ulong(x86_seg_ss, sp_post_inc(op_bytes),
+                               &dst.val, op_bytes, ctxt, ops)) != 0 )
+             goto done;
+-        if ( (rc = load_seg(src.val, (uint16_t)dst.val, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(src.val, dst.val, 0, ctxt, ops)) != 0 )
+             return rc;
+         break;
+ 
+@@ -2242,7 +2256,7 @@ x86_emulate(
+         enum x86_segment seg = decode_segment(modrm_reg);
+         generate_exception_if(seg == decode_segment_failed, EXC_UD, -1);
+         generate_exception_if(seg == x86_seg_cs, EXC_UD, -1);
+-        if ( (rc = load_seg(seg, (uint16_t)src.val, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(seg, src.val, 0, ctxt, ops)) != 0 )
+             goto done;
+         if ( seg == x86_seg_ss )
+             ctxt->retire.flags.mov_ss = 1;
+@@ -2323,7 +2337,7 @@ x86_emulate(
+                               &_regs.eip, op_bytes, ctxt)) )
+             goto done;
+ 
+-        if ( (rc = load_seg(x86_seg_cs, sel, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(x86_seg_cs, sel, 0, ctxt, ops)) != 0 )
+             goto done;
+         _regs.eip = eip;
+         break;
+@@ -2547,7 +2561,7 @@ x86_emulate(
+         if ( (rc = read_ulong(src.mem.seg, src.mem.off + src.bytes,
+                               &sel, 2, ctxt, ops)) != 0 )
+             goto done;
+-        if ( (rc = load_seg(dst.val, (uint16_t)sel, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(dst.val, sel, 0, ctxt, ops)) != 0 )
+             goto done;
+         dst.val = src.val;
+         break;
+@@ -2621,7 +2635,7 @@ x86_emulate(
+                               &dst.val, op_bytes, ctxt, ops)) ||
+              (rc = read_ulong(x86_seg_ss, sp_post_inc(op_bytes + offset),
+                               &src.val, op_bytes, ctxt, ops)) ||
+-             (rc = load_seg(x86_seg_cs, (uint16_t)src.val, ctxt, ops)) )
++             (rc = load_seg(x86_seg_cs, src.val, 1, ctxt, ops)) )
+             goto done;
+         _regs.eip = dst.val;
+         break;
+@@ -2668,7 +2682,7 @@ x86_emulate(
+         _regs.eflags &= mask;
+         _regs.eflags |= (uint32_t)(eflags & ~mask) | 0x02;
+         _regs.eip = eip;
+-        if ( (rc = load_seg(x86_seg_cs, (uint16_t)cs, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(x86_seg_cs, cs, 1, ctxt, ops)) != 0 )
+             goto done;
+         break;
+     }
+@@ -3298,7 +3312,7 @@ x86_emulate(
+         generate_exception_if(mode_64bit(), EXC_UD, -1);
+         eip = insn_fetch_bytes(op_bytes);
+         sel = insn_fetch_type(uint16_t);
+-        if ( (rc = load_seg(x86_seg_cs, sel, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(x86_seg_cs, sel, 0, ctxt, ops)) != 0 )
+             goto done;
+         _regs.eip = eip;
+         break;
+@@ -3596,7 +3610,7 @@ x86_emulate(
+                     goto done;
+             }
+ 
+-            if ( (rc = load_seg(x86_seg_cs, sel, ctxt, ops)) != 0 )
++            if ( (rc = load_seg(x86_seg_cs, sel, 0, ctxt, ops)) != 0 )
+                 goto done;
+             _regs.eip = src.val;
+ 
+@@ -3663,7 +3677,7 @@ x86_emulate(
+         generate_exception_if(!in_protmode(ctxt, ops), EXC_UD, -1);
+         generate_exception_if(!mode_ring0(), EXC_GP, 0);
+         if ( (rc = load_seg((modrm_reg & 1) ? x86_seg_tr : x86_seg_ldtr,
+-                            src.val, ctxt, ops)) != 0 )
++                            src.val, 0, ctxt, ops)) != 0 )
+             goto done;
+         break;
+ 
+-- 
+1.9.1
+
+
+From dbaa1d123b3c6ac8c12c4051c6fdf0770a83a5ab Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 11 Dec 2014 16:50:38 +0000
+Subject: [PATCH] x86: limit checks in hypercall_xlat_continuation() to actual
+ arguments
+
+HVM/PVH guests can otherwise trigger the final BUG_ON() in that
+function by entering 64-bit mode, setting the high halves of affected
+registers to non-zero values, leaving 64-bit mode, and issuing a
+hypercall that might get preempted and hence become subject to
+continuation argument translation (HYPERVISOR_memory_op being the only
+one possible for HVM, PVH also having the option of using
+HYPERVISOR_mmuext_op). This issue got introduced when HVM code was
+switched to use compat_memory_op() - neither that nor
+hypercall_xlat_continuation() were originally intended to be used by
+other than PV guests (which can't enter 64-bit mode and hence have no
+way to alter the high halves of 64-bit registers).
+
+This is CVE-2014-8866 / XSA-111.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+master commit: 0ad715304b04739fd2fc9517ce8671d3947c7621
+master date: 2014-11-27 14:00:23 +0100
+---
+ xen/arch/x86/domain.c           | 12 ++++++++----
+ xen/arch/x86/x86_64/compat/mm.c |  6 +++---
+ xen/common/compat/memory.c      |  2 +-
+ xen/include/xen/compat.h        |  5 ++++-
+ 4 files changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
+index 195b07f..54411db 100644
+--- a/xen/arch/x86/domain.c
++++ b/xen/arch/x86/domain.c
+@@ -1697,7 +1697,8 @@ unsigned long hypercall_create_continuation(
+     return op;
+ }
+ 
+-int hypercall_xlat_continuation(unsigned int *id, unsigned int mask, ...)
++int hypercall_xlat_continuation(unsigned int *id, unsigned int nr,
++                                unsigned int mask, ...)
+ {
+     int rc = 0;
+     struct mc_state *mcs = &current->mc_state;
+@@ -1706,7 +1707,10 @@ int hypercall_xlat_continuation(unsigned int *id, unsigned int mask, ...)
+     unsigned long nval = 0;
+     va_list args;
+ 
+-    BUG_ON(id && *id > 5);
++    ASSERT(nr <= ARRAY_SIZE(mcs->call.args));
++    ASSERT(!(mask >> nr));
++
++    BUG_ON(id && *id >= nr);
+     BUG_ON(id && (mask & (1U << *id)));
+ 
+     va_start(args, mask);
+@@ -1719,7 +1723,7 @@ int hypercall_xlat_continuation(unsigned int *id, unsigned int mask, ...)
+             return 0;
+         }
+ 
+-        for ( i = 0; i < 6; ++i, mask >>= 1 )
++        for ( i = 0; i < nr; ++i, mask >>= 1 )
+         {
+             if ( mask & 1 )
+             {
+@@ -1747,7 +1751,7 @@ int hypercall_xlat_continuation(unsigned int *id, unsigned int mask, ...)
+     else
+     {
+         regs = guest_cpu_user_regs();
+-        for ( i = 0; i < 6; ++i, mask >>= 1 )
++        for ( i = 0; i < nr; ++i, mask >>= 1 )
+         {
+             unsigned long *reg;
+ 
+diff --git a/xen/arch/x86/x86_64/compat/mm.c b/xen/arch/x86/x86_64/compat/mm.c
+index 0a8408b..42aa85e 100644
+--- a/xen/arch/x86/x86_64/compat/mm.c
++++ b/xen/arch/x86/x86_64/compat/mm.c
+@@ -116,7 +116,7 @@ int compat_arch_memory_op(int op, XEN_GUEST_HANDLE_PARAM(void) arg)
+             break;
+ 
+         if ( rc == __HYPERVISOR_memory_op )
+-            hypercall_xlat_continuation(NULL, 0x2, nat, arg);
++            hypercall_xlat_continuation(NULL, 2, 0x2, nat, arg);
+ 
+         XLAT_pod_target(&cmp, nat);
+ 
+@@ -351,7 +351,7 @@ int compat_mmuext_op(XEN_GUEST_HANDLE_PARAM(mmuext_op_compat_t) cmp_uops,
+                 left = 1;
+                 if ( arg1 != MMU_UPDATE_PREEMPTED )
+                 {
+-                    BUG_ON(!hypercall_xlat_continuation(&left, 0x01, nat_ops,
++                    BUG_ON(!hypercall_xlat_continuation(&left, 4, 0x01, nat_ops,
+                                                         cmp_uops));
+                     if ( !test_bit(_MCSF_in_multicall, &mcs->flags) )
+                         regs->_ecx += count - i;
+@@ -359,7 +359,7 @@ int compat_mmuext_op(XEN_GUEST_HANDLE_PARAM(mmuext_op_compat_t) cmp_uops,
+                         mcs->compat_call.args[1] += count - i;
+                 }
+                 else
+-                    BUG_ON(hypercall_xlat_continuation(&left, 0));
++                    BUG_ON(hypercall_xlat_continuation(&left, 4, 0));
+                 BUG_ON(left != arg1);
+             }
+             else
+diff --git a/xen/common/compat/memory.c b/xen/common/compat/memory.c
+index daa2e04..c5d58e6 100644
+--- a/xen/common/compat/memory.c
++++ b/xen/common/compat/memory.c
+@@ -279,7 +279,7 @@ int compat_memory_op(unsigned int cmd, XEN_GUEST_HANDLE_PARAM(void) compat)
+             break;
+ 
+         cmd = 0;
+-        if ( hypercall_xlat_continuation(&cmd, 0x02, nat.hnd, compat) )
++        if ( hypercall_xlat_continuation(&cmd, 2, 0x02, nat.hnd, compat) )
+         {
+             BUG_ON(rc != __HYPERVISOR_memory_op);
+             BUG_ON((cmd & MEMOP_CMD_MASK) != op);
+diff --git a/xen/include/xen/compat.h b/xen/include/xen/compat.h
+index ca60699..bb3ffd1 100644
+--- a/xen/include/xen/compat.h
++++ b/xen/include/xen/compat.h
+@@ -195,6 +195,8 @@ static inline int name(k xen_ ## n *x, k compat_ ## n *c) \
+  * This option is useful for extracting the "op" argument or similar from the
+  * hypercall to enable further xlat processing.
+  *
++ * nr: Total number of arguments the hypercall has.
++ *
+  * mask: Specifies which of the hypercall arguments require compat translation.
+  * bit 0 indicates that the 0'th argument requires translation, bit 1 indicates
+  * that the first argument requires translation and so on. Native and compat
+@@ -214,7 +216,8 @@ static inline int name(k xen_ ## n *x, k compat_ ## n *c) \
+  *
+  * Return: Number of arguments which were actually translated.
+  */
+-int hypercall_xlat_continuation(unsigned int *id, unsigned int mask, ...);
++int hypercall_xlat_continuation(unsigned int *id, unsigned int nr,
++                                unsigned int mask, ...);
+ 
+ /* In-place translation functons: */
+ struct start_info;
+-- 
+1.9.1
+
+
+From e0f56f5a2c4dc0001726b62b90c1b15a65e83d94 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 11 Dec 2014 16:50:54 +0000
+Subject: [PATCH] x86/HVM: confine internally handled MMIO to solitary regions
+
+While it is generally wrong to cross region boundaries when dealing
+with MMIO accesses of repeated string instructions (currently only
+MOVS) as that would do things a guest doesn't expect (leaving aside
+that none of these regions would normally be accessed with repeated
+string instructions in the first place), this is even more of a problem
+for all virtual MSI-X page accesses (both msixtbl_{read,write}() can be
+made dereference NULL "entry" pointers this way) as well as undersized
+(1- or 2-byte) LAPIC writes (causing vlapic_read_aligned() to access
+space beyond the one memory page set up for holding LAPIC register
+values).
+
+Since those functions validly assume to be called only with addresses
+their respective checking functions indicated to be okay, it is generic
+code that needs to be fixed to clip the repetition count.
+
+To be on the safe side (and consistent), also do the same for buffered
+I/O intercepts, even if their only client (stdvga) doesn't put the
+hypervisor at risk (i.e. "only" guest misbehavior would result).
+
+This is CVE-2014-8867 / XSA-112.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+master commit: c5397354b998d030b021810b8202de93b9526818
+master date: 2014-11-27 14:01:40 +0100
+---
+ xen/arch/x86/hvm/intercept.c | 22 +++++++++++++++++++++-
+ xen/arch/x86/hvm/vmsi.c      |  4 ++++
+ 2 files changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/hvm/intercept.c b/xen/arch/x86/hvm/intercept.c
+index 7cc13b5..52ffee3 100644
+--- a/xen/arch/x86/hvm/intercept.c
++++ b/xen/arch/x86/hvm/intercept.c
+@@ -169,11 +169,24 @@ int hvm_mmio_intercept(ioreq_t *p)
+     int i;
+ 
+     for ( i = 0; i < HVM_MMIO_HANDLER_NR; i++ )
+-        if ( hvm_mmio_handlers[i]->check_handler(v, p->addr) )
++    {
++        hvm_mmio_check_t check_handler =
++            hvm_mmio_handlers[i]->check_handler;
++
++        if ( check_handler(v, p->addr) )
++        {
++            if ( unlikely(p->count > 1) &&
++                 !check_handler(v, unlikely(p->df)
++                                   ? p->addr - (p->count - 1L) * p->size
++                                   : p->addr + (p->count - 1L) * p->size) )
++                p->count = 1;
++
+             return hvm_mmio_access(
+                 v, p,
+                 hvm_mmio_handlers[i]->read_handler,
+                 hvm_mmio_handlers[i]->write_handler);
++        }
++    }
+ 
+     return X86EMUL_UNHANDLEABLE;
+ }
+@@ -330,6 +343,13 @@ int hvm_io_intercept(ioreq_t *p, int type)
+             if ( type == HVM_PORTIO )
+                 return process_portio_intercept(
+                     handler->hdl_list[i].action.portio, p);
++
++            if ( unlikely(p->count > 1) &&
++                 (unlikely(p->df)
++                  ? p->addr - (p->count - 1L) * p->size < addr
++                  : p->addr + p->count * 1L * p->size - 1 >= addr + size) )
++                p->count = 1;
++
+             return handler->hdl_list[i].action.mmio(p);
+         }
+     }
+diff --git a/xen/arch/x86/hvm/vmsi.c b/xen/arch/x86/hvm/vmsi.c
+index 10e5f34..dc3e4d7 100644
+--- a/xen/arch/x86/hvm/vmsi.c
++++ b/xen/arch/x86/hvm/vmsi.c
+@@ -235,6 +235,8 @@ static int msixtbl_read(
+     rcu_read_lock(&msixtbl_rcu_lock);
+ 
+     entry = msixtbl_find_entry(v, address);
++    if ( !entry )
++        goto out;
+     offset = address & (PCI_MSIX_ENTRY_SIZE - 1);
+ 
+     if ( offset != PCI_MSIX_ENTRY_VECTOR_CTRL_OFFSET )
+@@ -277,6 +279,8 @@ static int msixtbl_write(struct vcpu *v, unsigned long address,
+     rcu_read_lock(&msixtbl_rcu_lock);
+ 
+     entry = msixtbl_find_entry(v, address);
++    if ( !entry )
++        goto out;
+     nr_entry = (address - entry->gtable) / PCI_MSIX_ENTRY_SIZE;
+ 
+     offset = address & (PCI_MSIX_ENTRY_SIZE - 1);
+-- 
+1.9.1
+
+
+From 96dee19c385e86398ac34b2ba5022546da46302b Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Thu, 11 Dec 2014 16:51:13 +0000
+Subject: [PATCH] x86/mm: fix a reference counting error in MMU_MACHPHYS_UPDATE
+
+Any domain which can pass the XSM check against a translated guest can cause a
+page reference to be leaked.
+
+While shuffling the order of checks, drop the quite-pointless MEM_LOG().  This
+brings the check in line with similar checks in the vicinity.
+
+Discovered while reviewing the XSA-109/110 followup series.
+
+This is XSA-113.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm.c | 13 ++++++-------
+ 1 file changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index f88323f..db0b6fe 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -3634,6 +3634,12 @@ long do_mmu_update(
+ 
+         case MMU_MACHPHYS_UPDATE:
+ 
++            if ( unlikely(paging_mode_translate(pg_owner)) )
++            {
++                rc = -EINVAL;
++                break;
++            }
++
+             mfn = req.ptr >> PAGE_SHIFT;
+             gpfn = req.val;
+ 
+@@ -3653,13 +3659,6 @@ long do_mmu_update(
+                 break;
+             }
+ 
+-            if ( unlikely(paging_mode_translate(pg_owner)) )
+-            {
+-                MEM_LOG("Mach-phys update on auto-translate guest");
+-                rc = -EINVAL;
+-                break;
+-            }
+-
+             set_gpfn_from_mfn(mfn, gpfn);
+ 
+             paging_mark_dirty(pg_owner, mfn);
+-- 
+1.9.1
+
+
+From d5ad07648bd50248e071a76ab74bed9f2ea2dd18 Mon Sep 17 00:00:00 2001
+From: Keir Fraser <keir@xen.org>
+Date: Thu, 11 Dec 2014 16:51:31 +0000
+Subject: [PATCH] switch to write-biased r/w locks
+
+This is to improve fairness: A permanent flow of read acquires can
+otherwise lock out eventual writers indefinitely.
+
+This is CVE-2014-9065 / XSA-114.
+
+Signed-off-by: Keir Fraser <keir@xen.org>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Tested-by: Andrew Cooper <andrew.cooper3@citrix.com>
+master commit: 2a549b9c8aa48dc39d7c97e5a93978b781b3a1db
+master date: 2014-12-08 14:45:46 +0100
+---
+ xen/common/spinlock.c                | 136 +++++++++++++++++++++++------------
+ xen/include/asm-arm/arm32/spinlock.h |  78 --------------------
+ xen/include/asm-arm/arm64/spinlock.h |  63 ----------------
+ xen/include/asm-x86/spinlock.h       |  54 --------------
+ xen/include/xen/spinlock.h           |   6 +-
+ 5 files changed, 93 insertions(+), 244 deletions(-)
+
+diff --git a/xen/common/spinlock.c b/xen/common/spinlock.c
+index 575cc6d..f9f19a8 100644
+--- a/xen/common/spinlock.c
++++ b/xen/common/spinlock.c
+@@ -271,112 +271,151 @@ void _spin_unlock_recursive(spinlock_t *lock)
+ 
+ void _read_lock(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_read_trylock(&lock->raw)) )
+-    {
+-        while ( likely(_raw_rw_is_write_locked(&lock->raw)) )
++    do {
++        while ( (x = lock->lock) & RW_WRITE_FLAG )
+             cpu_relax();
+-    }
++    } while ( cmpxchg(&lock->lock, x, x+1) != x );
+     preempt_disable();
+ }
+ 
+ void _read_lock_irq(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     ASSERT(local_irq_is_enabled());
+     local_irq_disable();
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_read_trylock(&lock->raw)) )
+-    {
+-        local_irq_enable();
+-        while ( likely(_raw_rw_is_write_locked(&lock->raw)) )
+-            cpu_relax();
+-        local_irq_disable();
+-    }
++    do {
++        if ( (x = lock->lock) & RW_WRITE_FLAG )
++        {
++            local_irq_enable();
++            while ( (x = lock->lock) & RW_WRITE_FLAG )
++                cpu_relax();
++            local_irq_disable();
++        }
++    } while ( cmpxchg(&lock->lock, x, x+1) != x );
+     preempt_disable();
+ }
+ 
+ unsigned long _read_lock_irqsave(rwlock_t *lock)
+ {
++    uint32_t x;
+     unsigned long flags;
++
+     local_irq_save(flags);
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_read_trylock(&lock->raw)) )
+-    {
+-        local_irq_restore(flags);
+-        while ( likely(_raw_rw_is_write_locked(&lock->raw)) )
+-            cpu_relax();
+-        local_irq_save(flags);
+-    }
++    do {
++        if ( (x = lock->lock) & RW_WRITE_FLAG )
++        {
++            local_irq_restore(flags);
++            while ( (x = lock->lock) & RW_WRITE_FLAG )
++                cpu_relax();
++            local_irq_save(flags);
++        }
++    } while ( cmpxchg(&lock->lock, x, x+1) != x );
+     preempt_disable();
+     return flags;
+ }
+ 
+ int _read_trylock(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     check_lock(&lock->debug);
+-    if ( !_raw_read_trylock(&lock->raw) )
+-        return 0;
++    do {
++        if ( (x = lock->lock) & RW_WRITE_FLAG )
++            return 0;
++    } while ( cmpxchg(&lock->lock, x, x+1) != x );
+     preempt_disable();
+     return 1;
+ }
+ 
+ void _read_unlock(rwlock_t *lock)
+ {
++    uint32_t x, y;
++
+     preempt_enable();
+-    _raw_read_unlock(&lock->raw);
++    x = lock->lock;
++    while ( (y = cmpxchg(&lock->lock, x, x-1)) != x )
++        x = y;
+ }
+ 
+ void _read_unlock_irq(rwlock_t *lock)
+ {
+-    preempt_enable();
+-    _raw_read_unlock(&lock->raw);
++    _read_unlock(lock);
+     local_irq_enable();
+ }
+ 
+ void _read_unlock_irqrestore(rwlock_t *lock, unsigned long flags)
+ {
+-    preempt_enable();
+-    _raw_read_unlock(&lock->raw);
++    _read_unlock(lock);
+     local_irq_restore(flags);
+ }
+ 
+ void _write_lock(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_write_trylock(&lock->raw)) )
+-    {
+-        while ( likely(_raw_rw_is_locked(&lock->raw)) )
++    do {
++        while ( (x = lock->lock) & RW_WRITE_FLAG )
+             cpu_relax();
++    } while ( cmpxchg(&lock->lock, x, x|RW_WRITE_FLAG) != x );
++    while ( x != 0 )
++    {
++        cpu_relax();
++        x = lock->lock & ~RW_WRITE_FLAG;
+     }
+     preempt_disable();
+ }
+ 
+ void _write_lock_irq(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     ASSERT(local_irq_is_enabled());
+     local_irq_disable();
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_write_trylock(&lock->raw)) )
++    do {
++        if ( (x = lock->lock) & RW_WRITE_FLAG )
++        {
++            local_irq_enable();
++            while ( (x = lock->lock) & RW_WRITE_FLAG )
++                cpu_relax();
++            local_irq_disable();
++        }
++    } while ( cmpxchg(&lock->lock, x, x|RW_WRITE_FLAG) != x );
++    while ( x != 0 )
+     {
+-        local_irq_enable();
+-        while ( likely(_raw_rw_is_locked(&lock->raw)) )
+-            cpu_relax();
+-        local_irq_disable();
++        cpu_relax();
++        x = lock->lock & ~RW_WRITE_FLAG;
+     }
+     preempt_disable();
+ }
+ 
+ unsigned long _write_lock_irqsave(rwlock_t *lock)
+ {
++    uint32_t x;
+     unsigned long flags;
++
+     local_irq_save(flags);
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_write_trylock(&lock->raw)) )
++    do {
++        if ( (x = lock->lock) & RW_WRITE_FLAG )
++        {
++            local_irq_restore(flags);
++            while ( (x = lock->lock) & RW_WRITE_FLAG )
++                cpu_relax();
++            local_irq_save(flags);
++        }
++    } while ( cmpxchg(&lock->lock, x, x|RW_WRITE_FLAG) != x );
++    while ( x != 0 )
+     {
+-        local_irq_restore(flags);
+-        while ( likely(_raw_rw_is_locked(&lock->raw)) )
+-            cpu_relax();
+-        local_irq_save(flags);
++        cpu_relax();
++        x = lock->lock & ~RW_WRITE_FLAG;
+     }
+     preempt_disable();
+     return flags;
+@@ -384,9 +423,13 @@ unsigned long _write_lock_irqsave(rwlock_t *lock)
+ 
+ int _write_trylock(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     check_lock(&lock->debug);
+-    if ( !_raw_write_trylock(&lock->raw) )
+-        return 0;
++    do {
++        if ( (x = lock->lock) != 0 )
++            return 0;
++    } while ( cmpxchg(&lock->lock, x, x|RW_WRITE_FLAG) != x );
+     preempt_disable();
+     return 1;
+ }
+@@ -394,33 +437,32 @@ int _write_trylock(rwlock_t *lock)
+ void _write_unlock(rwlock_t *lock)
+ {
+     preempt_enable();
+-    _raw_write_unlock(&lock->raw);
++    if ( cmpxchg(&lock->lock, RW_WRITE_FLAG, 0) != RW_WRITE_FLAG )
++        BUG();
+ }
+ 
+ void _write_unlock_irq(rwlock_t *lock)
+ {
+-    preempt_enable();
+-    _raw_write_unlock(&lock->raw);
++    _write_unlock(lock);
+     local_irq_enable();
+ }
+ 
+ void _write_unlock_irqrestore(rwlock_t *lock, unsigned long flags)
+ {
+-    preempt_enable();
+-    _raw_write_unlock(&lock->raw);
++    _write_unlock(lock);
+     local_irq_restore(flags);
+ }
+ 
+ int _rw_is_locked(rwlock_t *lock)
+ {
+     check_lock(&lock->debug);
+-    return _raw_rw_is_locked(&lock->raw);
++    return (lock->lock != 0); /* anyone in critical section? */
+ }
+ 
+ int _rw_is_write_locked(rwlock_t *lock)
+ {
+     check_lock(&lock->debug);
+-    return _raw_rw_is_write_locked(&lock->raw);
++    return (lock->lock == RW_WRITE_FLAG); /* writer in critical section? */
+ }
+ 
+ #ifdef LOCK_PROFILE
+diff --git a/xen/include/asm-arm/arm32/spinlock.h b/xen/include/asm-arm/arm32/spinlock.h
+index ba11ad6..bc0343c 100644
+--- a/xen/include/asm-arm/arm32/spinlock.h
++++ b/xen/include/asm-arm/arm32/spinlock.h
+@@ -55,84 +55,6 @@ static always_inline int _raw_spin_trylock(raw_spinlock_t *lock)
+     }
+ }
+ 
+-typedef struct {
+-    volatile unsigned int lock;
+-} raw_rwlock_t;
+-
+-#define _RAW_RW_LOCK_UNLOCKED { 0 }
+-
+-static always_inline int _raw_read_trylock(raw_rwlock_t *rw)
+-{
+-    unsigned long tmp, tmp2 = 1;
+-
+-    __asm__ __volatile__(
+-"1: ldrex   %0, [%2]\n"
+-"   adds    %0, %0, #1\n"
+-"   strexpl %1, %0, [%2]\n"
+-    : "=&r" (tmp), "+r" (tmp2)
+-    : "r" (&rw->lock)
+-    : "cc");
+-
+-    smp_mb();
+-    return tmp2 == 0;
+-}
+-
+-static always_inline int _raw_write_trylock(raw_rwlock_t *rw)
+-{
+-    unsigned long tmp;
+-
+-    __asm__ __volatile__(
+-"1: ldrex   %0, [%1]\n"
+-"   teq     %0, #0\n"
+-"   strexeq %0, %2, [%1]"
+-    : "=&r" (tmp)
+-    : "r" (&rw->lock), "r" (0x80000000)
+-    : "cc");
+-
+-    if (tmp == 0) {
+-        smp_mb();
+-        return 1;
+-    } else {
+-        return 0;
+-    }
+-}
+-
+-static inline void _raw_read_unlock(raw_rwlock_t *rw)
+-{
+-    unsigned long tmp, tmp2;
+-
+-    smp_mb();
+-
+-    __asm__ __volatile__(
+-"1: ldrex   %0, [%2]\n"
+-"   sub     %0, %0, #1\n"
+-"   strex   %1, %0, [%2]\n"
+-"   teq     %1, #0\n"
+-"   bne     1b"
+-    : "=&r" (tmp), "=&r" (tmp2)
+-    : "r" (&rw->lock)
+-    : "cc");
+-
+-    if (tmp == 0)
+-        dsb_sev();
+-}
+-
+-static inline void _raw_write_unlock(raw_rwlock_t *rw)
+-{
+-    smp_mb();
+-
+-    __asm__ __volatile__(
+-    "str    %1, [%0]\n"
+-    :
+-    : "r" (&rw->lock), "r" (0)
+-    : "cc");
+-
+-    dsb_sev();
+-}
+-
+-#define _raw_rw_is_locked(x) ((x)->lock != 0)
+-#define _raw_rw_is_write_locked(x) ((x)->lock == 0x80000000)
+-
+ #endif /* __ASM_SPINLOCK_H */
+ /*
+  * Local variables:
+diff --git a/xen/include/asm-arm/arm64/spinlock.h b/xen/include/asm-arm/arm64/spinlock.h
+index 3a36cfd..5ae034d 100644
+--- a/xen/include/asm-arm/arm64/spinlock.h
++++ b/xen/include/asm-arm/arm64/spinlock.h
+@@ -52,69 +52,6 @@ static always_inline int _raw_spin_trylock(raw_spinlock_t *lock)
+     return !tmp;
+ }
+ 
+-typedef struct {
+-    volatile unsigned int lock;
+-} raw_rwlock_t;
+-
+-#define _RAW_RW_LOCK_UNLOCKED { 0 }
+-
+-static always_inline int _raw_read_trylock(raw_rwlock_t *rw)
+-{
+-    unsigned int tmp, tmp2 = 1;
+-
+-    asm volatile(
+-        "       ldaxr   %w0, %2\n"
+-        "       add     %w0, %w0, #1\n"
+-        "       tbnz    %w0, #31, 1f\n"
+-        "       stxr    %w1, %w0, %2\n"
+-        "1:\n"
+-        : "=&r" (tmp), "+r" (tmp2), "+Q" (rw->lock)
+-        :
+-        : "cc", "memory");
+-
+-    return !tmp2;
+-}
+-
+-static always_inline int _raw_write_trylock(raw_rwlock_t *rw)
+-{
+-    unsigned int tmp;
+-
+-    asm volatile(
+-        "       ldaxr   %w0, %1\n"
+-        "       cbnz    %w0, 1f\n"
+-        "       stxr    %w0, %w2, %1\n"
+-        "1:\n"
+-        : "=&r" (tmp), "+Q" (rw->lock)
+-        : "r" (0x80000000)
+-        : "cc", "memory");
+-
+-    return !tmp;
+-}
+-
+-static inline void _raw_read_unlock(raw_rwlock_t *rw)
+-{
+-    unsigned int tmp, tmp2;
+-
+-    asm volatile(
+-        "    1: ldxr    %w0, %2\n"
+-        "       sub     %w0, %w0, #1\n"
+-        "       stlxr   %w1, %w0, %2\n"
+-        "       cbnz    %w1, 1b\n"
+-        : "=&r" (tmp), "=&r" (tmp2), "+Q" (rw->lock)
+-        :
+-        : "cc", "memory");
+-}
+-
+-static inline void _raw_write_unlock(raw_rwlock_t *rw)
+-{
+-    asm volatile(
+-        "       stlr    %w1, %0\n"
+-        : "=Q" (rw->lock) : "r" (0) : "memory");
+-}
+-
+-#define _raw_rw_is_locked(x) ((x)->lock != 0)
+-#define _raw_rw_is_write_locked(x) ((x)->lock == 0x80000000)
+-
+ #endif /* __ASM_SPINLOCK_H */
+ /*
+  * Local variables:
+diff --git a/xen/include/asm-x86/spinlock.h b/xen/include/asm-x86/spinlock.h
+index 6bc044c..06d9b04 100644
+--- a/xen/include/asm-x86/spinlock.h
++++ b/xen/include/asm-x86/spinlock.h
+@@ -31,58 +31,4 @@ static always_inline int _raw_spin_trylock(raw_spinlock_t *lock)
+     return (oldval > 0);
+ }
+ 
+-typedef struct {
+-    volatile int lock;
+-} raw_rwlock_t;
+-
+-#define RW_WRITE_BIAS 0x7fffffff
+-#define _RAW_RW_LOCK_UNLOCKED /*(raw_rwlock_t)*/ { 0 }
+-
+-static always_inline int _raw_read_trylock(raw_rwlock_t *rw)
+-{
+-    int acquired;
+-
+-    asm volatile (
+-        "    lock; decl %0         \n"
+-        "    jns 2f                \n"
+-#ifdef __clang__ /* clang's builtin assember can't do .subsection */
+-        "1:  .pushsection .fixup,\"ax\"\n"
+-#else
+-        "1:  .subsection 1         \n"
+-#endif
+-        "2:  lock; incl %0         \n"
+-        "    decl %1               \n"
+-        "    jmp 1b                \n"
+-#ifdef __clang__
+-        "    .popsection           \n"
+-#else
+-        "    .subsection 0         \n"
+-#endif
+-        : "=m" (rw->lock), "=r" (acquired) : "1" (1) : "memory" );
+-
+-    return acquired;
+-}
+-
+-static always_inline int _raw_write_trylock(raw_rwlock_t *rw)
+-{
+-    return (cmpxchg(&rw->lock, 0, RW_WRITE_BIAS) == 0);
+-}
+-
+-static always_inline void _raw_read_unlock(raw_rwlock_t *rw)
+-{
+-    asm volatile (
+-        "lock ; incl %0"
+-        : "=m" ((rw)->lock) : : "memory" );
+-}
+-
+-static always_inline void _raw_write_unlock(raw_rwlock_t *rw)
+-{
+-    asm volatile (
+-        "lock ; subl %1,%0"
+-        : "=m" ((rw)->lock) : "i" (RW_WRITE_BIAS) : "memory" );
+-}
+-
+-#define _raw_rw_is_locked(x) ((x)->lock != 0)
+-#define _raw_rw_is_write_locked(x) ((x)->lock > 0)
+-
+ #endif /* __ASM_SPINLOCK_H */
+diff --git a/xen/include/xen/spinlock.h b/xen/include/xen/spinlock.h
+index 12b0a89..eda9b2e 100644
+--- a/xen/include/xen/spinlock.h
++++ b/xen/include/xen/spinlock.h
+@@ -141,11 +141,13 @@ typedef struct spinlock {
+ #define spin_lock_init(l) (*(l) = (spinlock_t)SPIN_LOCK_UNLOCKED)
+ 
+ typedef struct {
+-    raw_rwlock_t raw;
++    volatile uint32_t lock;
+     struct lock_debug debug;
+ } rwlock_t;
+ 
+-#define RW_LOCK_UNLOCKED { _RAW_RW_LOCK_UNLOCKED, _LOCK_DEBUG }
++#define RW_WRITE_FLAG (1u<<31)
++
++#define RW_LOCK_UNLOCKED { 0, _LOCK_DEBUG }
+ #define DEFINE_RWLOCK(l) rwlock_t l = RW_LOCK_UNLOCKED
+ #define rwlock_init(l) (*(l) = (rwlock_t)RW_LOCK_UNLOCKED)
+ 
+-- 
+1.9.1
+
+
+From 9eac0773d9fb5501e56054d914a4e5ade251b791 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 11 Dec 2014 16:52:06 +0000
+Subject: [PATCH] VT-d: suppress UR signaling for further desktop chipsets
+
+This extends commit d6cb14b34f ("VT-d: suppress UR signaling for
+desktop chipsets") as per the finally obtained list of affected
+chipsets from Intel.
+
+Also pad the IDs we had listed there before to full 4 hex digits.
+
+This is CVE-2013-3495 / XSA-59.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Yang Zhang <yang.z.zhang@intel.com>
+master commit: 3e2331d271cc0882e4013c8f20398c46c35f90a1
+master date: 2014-09-18 15:03:22 +0200
+---
+ xen/drivers/passthrough/vtd/quirks.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/xen/drivers/passthrough/vtd/quirks.c b/xen/drivers/passthrough/vtd/quirks.c
+index 647723d..2fac35d 100644
+--- a/xen/drivers/passthrough/vtd/quirks.c
++++ b/xen/drivers/passthrough/vtd/quirks.c
+@@ -474,10 +474,12 @@ void pci_vtd_quirk(const struct pci_dev *pdev)
+                action, seg, bus, dev, func);
+         break;
+ 
+-    case 0x100: case 0x104: case 0x108: /* Sandybridge */
+-    case 0x150: case 0x154: case 0x158: /* Ivybridge */
+-    case 0xa04: /* Haswell ULT */
+-    case 0xc00: case 0xc04: case 0xc08: /* Haswell */
++    case 0x0040: case 0x0044: case 0x0048: /* Nehalem/Westmere */
++    case 0x0100: case 0x0104: case 0x0108: /* Sandybridge */
++    case 0x0150: case 0x0154: case 0x0158: /* Ivybridge */
++    case 0x0a04: /* Haswell ULT */
++    case 0x0c00: case 0x0c04: case 0x0c08: /* Haswell */
++    case 0x1600: case 0x1604: case 0x1608: /* Broadwell */
+         bar = pci_conf_read32(seg, bus, dev, func, 0x6c);
+         bar = (bar << 32) | pci_conf_read32(seg, bus, dev, func, 0x68);
+         pa = bar & 0x7ffffff000UL; /* bits 12...38 */
+-- 
+1.9.1
+
+
+From 80167d17a5b9fc73e923c26cad7c9922abeb3ad5 Mon Sep 17 00:00:00 2001
 From: Wen Congyang <wency@cn.fujitsu.com>
 Date: Thu, 11 Dec 2014 16:21:21 +0000
 Subject: [PATCH] tools: libxl: pass correct file to qemu if we use blktap2
@@ -870,7 +2138,7 @@ index f6f7bbd..65104d5 100644
 1.9.1
 
 
-From 026039c134e0c91d7bb2410ebcf655147e3c369c Mon Sep 17 00:00:00 2001
+From 168069308ee140b09023bd5cfdd312e38c654133 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Dec 2014 16:23:09 +0000
 Subject: [PATCH] it: George Dunlap <george.dunlap@eu.citrix.com>
@@ -941,7 +2209,7 @@ index 65104d5..aef7fb8 100644
 1.9.1
 
 
-From 399a8465e8604fea91438dc093acfcb3c93b422c Mon Sep 17 00:00:00 2001
+From a170a29814a379ccb7758a3f48e9d991379ec4af Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:23 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -966,7 +2234,7 @@ index 6610a8d..86d8a58 100644
 1.9.1
 
 
-From 271e989675ef858022f959034524ae1b3961d93b Mon Sep 17 00:00:00 2001
+From 51e2e2631a3410275bc9588ebca0886b583af66b Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:23 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
