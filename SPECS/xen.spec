@@ -36,18 +36,15 @@ Source15: polarssl-1.1.4-gpl.tgz
 # init.d bits
 Source20: init.xenstored
 Source21: init.xenconsoled
-Source22: init.blktapctrl
 Source23: init.xend
 # sysconfig bits
 Source30: sysconfig.xenstored
 Source31: sysconfig.xenconsoled
-Source32: sysconfig.blktapctrl
 Source33: sysconfig.xend
 # systemd bits
 Source40: proc-xen.mount
 Source41: var-lib-xenstored.mount
 Source42: xenstored.service
-Source43: blktapctrl.service
 Source44: xend.service
 Source45: xenconsoled.service
 Source46: xen-watchdog.service
@@ -356,7 +353,6 @@ install -m 644 %{SOURCE2} %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 %if %with_sysv
 install -m 755 %{SOURCE20} %{buildroot}%{_sysconfdir}/rc.d/init.d/xenstored
 install -m 755 %{SOURCE21} %{buildroot}%{_sysconfdir}/rc.d/init.d/xenconsoled
-install -m 755 %{SOURCE22} %{buildroot}%{_sysconfdir}/rc.d/init.d/blktapctrl
 install -m 755 %{SOURCE23} %{buildroot}%{_sysconfdir}/rc.d/init.d/xend
 %else
 rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xen-watchdog
@@ -369,7 +365,6 @@ rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xendomains
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 install -m 644 %{SOURCE30} %{buildroot}%{_sysconfdir}/sysconfig/xenstored
 install -m 644 %{SOURCE31} %{buildroot}%{_sysconfdir}/sysconfig/xenconsoled
-install -m 644 %{SOURCE32} %{buildroot}%{_sysconfdir}/sysconfig/blktapctrl
 
 # systemd
 %if %with_systemd
@@ -377,7 +372,6 @@ mkdir -p %{buildroot}%{_unitdir}
 install -m 644 %{SOURCE40} %{buildroot}%{_unitdir}/proc-xen.mount
 install -m 644 %{SOURCE41} %{buildroot}%{_unitdir}/var-lib-xenstored.mount
 install -m 644 %{SOURCE42} %{buildroot}%{_unitdir}/xenstored.service
-install -m 644 %{SOURCE43} %{buildroot}%{_unitdir}/blktapctrl.service
 install -m 644 %{SOURCE44} %{buildroot}%{_unitdir}/xend.service
 install -m 644 %{SOURCE45} %{buildroot}%{_unitdir}/xenconsoled.service
 install -m 644 %{SOURCE46} %{buildroot}%{_unitdir}/xen-watchdog.service
@@ -466,7 +460,6 @@ fi
 /sbin/chkconfig --add xenconsoled
 /sbin/chkconfig --add xenstored
 /sbin/chkconfig --add xencommons
-/sbin/chkconfig --add blktapctrl
 %endif
 %if %with_systemd
 /bin/systemctl enable xenstored.service
@@ -486,7 +479,6 @@ if [ $1 = 0 ]; then
   /sbin/chkconfig --del xenconsoled
   /sbin/chkconfig --del xenstored
   /sbin/chkconfig --del xencommons
-  /sbin/chkconfig --del blktapctrl
 %endif
 %if %with_systemd
   /bin/systemctl disable xenstored.service
@@ -571,7 +563,6 @@ rm -rf %{buildroot}
 %config %attr(0700,root,root) %{_sysconfdir}/%{name}/scripts/*
 
 %if %with_sysv
-%{_sysconfdir}/rc.d/init.d/blktapctrl
 %{_sysconfdir}/rc.d/init.d/xenstored
 %{_sysconfdir}/rc.d/init.d/xenconsoled
 %{_sysconfdir}/rc.d/init.d/xen-watchdog
@@ -583,7 +574,6 @@ rm -rf %{buildroot}
 %{_unitdir}/proc-xen.mount
 %{_unitdir}/var-lib-xenstored.mount
 %{_unitdir}/xenstored.service
-%{_unitdir}/blktapctrl.service
 %{_unitdir}/xenconsoled.service
 %{_unitdir}/xen-watchdog.service
 /usr/lib/tmpfiles.d/xen.conf
@@ -591,7 +581,6 @@ rm -rf %{buildroot}
 
 %config(noreplace) %{_sysconfdir}/sysconfig/xenstored
 %config(noreplace) %{_sysconfdir}/sysconfig/xenconsoled
-%config(noreplace) %{_sysconfdir}/sysconfig/blktapctrl
 %config(noreplace) %{_sysconfdir}/sysconfig/xencommons
 %config(noreplace) %{_sysconfdir}/xen/xl.conf
 %config(noreplace) %{_sysconfdir}/xen/cpupool
@@ -771,6 +760,7 @@ rm -rf %{buildroot}
  - Backported fixes to use tapdisk with HVM guests
  - Backported XSAs 107,109-114
  - Backported fixes to migration, cpupools
+ - Remove blktapctl initscripts as it\'s no longer available in 4.4
 
 * Wed Oct 22 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-2.el6.centos
  - Updated to blktap 2.5 v0.9.2
