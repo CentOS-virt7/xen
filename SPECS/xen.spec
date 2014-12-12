@@ -34,12 +34,8 @@ Source13: pciutils-2.2.9.tar.bz2
 Source14: grub-0.97.tar.gz
 Source15: polarssl-1.1.4-gpl.tgz
 # init.d bits
-Source20: init.xenstored
-Source21: init.xenconsoled
 Source23: init.xend
 # sysconfig bits
-Source30: sysconfig.xenstored
-Source31: sysconfig.xenconsoled
 Source33: sysconfig.xend
 # systemd bits
 Source40: proc-xen.mount
@@ -351,8 +347,6 @@ install -m 644 %{SOURCE2} %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 #mv %{buildroot}%{_sysconfdir}/init.d/* %{buildroot}%{_sysconfdir}/rc.d/init.d
 #rmdir %{buildroot}%{_sysconfdir}/init.d
 %if %with_sysv
-install -m 755 %{SOURCE20} %{buildroot}%{_sysconfdir}/rc.d/init.d/xenstored
-install -m 755 %{SOURCE21} %{buildroot}%{_sysconfdir}/rc.d/init.d/xenconsoled
 install -m 755 %{SOURCE23} %{buildroot}%{_sysconfdir}/rc.d/init.d/xend
 %else
 rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xen-watchdog
@@ -363,8 +357,6 @@ rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xendomains
 
 # sysconfig
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
-install -m 644 %{SOURCE30} %{buildroot}%{_sysconfdir}/sysconfig/xenstored
-install -m 644 %{SOURCE31} %{buildroot}%{_sysconfdir}/sysconfig/xenconsoled
 
 # systemd
 %if %with_systemd
@@ -457,8 +449,6 @@ fi
 
 %post runtime
 %if %with_sysv
-/sbin/chkconfig --add xenconsoled
-/sbin/chkconfig --add xenstored
 /sbin/chkconfig --add xencommons
 %endif
 %if %with_systemd
@@ -469,15 +459,13 @@ fi
 
 %if %with_sysv
 if [ $1 != 0 ]; then
-  service xenconsoled condrestart
+  service xencommons restart
 fi
 %endif
 
 %preun runtime
 if [ $1 = 0 ]; then
 %if %with_sysv
-  /sbin/chkconfig --del xenconsoled
-  /sbin/chkconfig --del xenstored
   /sbin/chkconfig --del xencommons
 %endif
 %if %with_systemd
@@ -563,8 +551,6 @@ rm -rf %{buildroot}
 %config %attr(0700,root,root) %{_sysconfdir}/%{name}/scripts/*
 
 %if %with_sysv
-%{_sysconfdir}/rc.d/init.d/xenstored
-%{_sysconfdir}/rc.d/init.d/xenconsoled
 %{_sysconfdir}/rc.d/init.d/xen-watchdog
 %{_sysconfdir}/rc.d/init.d/xencommons
 %endif
@@ -579,8 +565,6 @@ rm -rf %{buildroot}
 /usr/lib/tmpfiles.d/xen.conf
 %endif
 
-%config(noreplace) %{_sysconfdir}/sysconfig/xenstored
-%config(noreplace) %{_sysconfdir}/sysconfig/xenconsoled
 %config(noreplace) %{_sysconfdir}/sysconfig/xencommons
 %config(noreplace) %{_sysconfdir}/xen/xl.conf
 %config(noreplace) %{_sysconfdir}/xen/cpupool
@@ -761,6 +745,7 @@ rm -rf %{buildroot}
  - Backported XSAs 107,109-114
  - Backported fixes to migration, cpupools
  - Remove blktapctl initscripts as it\'s no longer available in 4.4
+ - Removed custom xenconsoled and xenstored initscripts in favor of xencommons
 
 * Wed Oct 22 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-2.el6.centos
  - Updated to blktap 2.5 v0.9.2
