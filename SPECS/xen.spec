@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.1
-Release: 3%{?dist}
+Release: 4%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -739,6 +739,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Dec 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-4.el6.centos
+ - Disabled xend by default
+
 * Thu Dec 11 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-3.el6.centos
  - Backported qdisk persistent grant fix
  - Backported fixes to use tapdisk with HVM guests
