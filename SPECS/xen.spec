@@ -741,6 +741,7 @@ rm -rf %{buildroot}
 %changelog
 * Mon Dec 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-4.el6.centos
  - Disabled xend by default
+ - Revert 'choose qdisk first' change
 
 * Thu Dec 11 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-3.el6.centos
  - Backported qdisk persistent grant fix

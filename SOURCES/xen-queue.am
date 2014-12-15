@@ -2435,7 +2435,44 @@ index 4418883..996a08a 100644
 1.9.1
 
 
-From 8518a090c4c19700cd885f7468cb5314e299faad Mon Sep 17 00:00:00 2001
+From 2bbc90604371ee5eb89f89ea3fbd881dc13c245b Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Mon, 15 Dec 2014 15:56:14 +0000
+Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
+ backend"
+
+This reverts commit 0166217103e18368424fbd5ffff01c1ea50d0b17.
+
+There are some disk formats commonly supported by both qdisk and blktap.
+As qdisk is better supported and blktap is unmaintained, we choose qdisk
+over blktap whenever possible.
+
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_device.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
+index 29ed547..0f9fe2d 100644
+--- a/tools/libxl/libxl_device.c
++++ b/tools/libxl/libxl_device.c
+@@ -278,8 +278,8 @@ int libxl__device_disk_set_backend(libxl__gc *gc, libxl_device_disk *disk) {
+     } else {
+         ok=
+             disk_try_backend(&a, LIBXL_DISK_BACKEND_PHY) ?:
+-            disk_try_backend(&a, LIBXL_DISK_BACKEND_QDISK) ?:
+-            disk_try_backend(&a, LIBXL_DISK_BACKEND_TAP);
++            disk_try_backend(&a, LIBXL_DISK_BACKEND_TAP) ?:
++            disk_try_backend(&a, LIBXL_DISK_BACKEND_QDISK);
+         if (ok)
+             LOG(DEBUG, "Disk vdev=%s, using backend %s",
+                        disk->vdev,
+-- 
+1.9.1
+
+
+From 336b22545fb376f4315b188525ade797515ddabd Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:23 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -2460,7 +2497,7 @@ index 6610a8d..86d8a58 100644
 1.9.1
 
 
-From 611b1f115a73741aa0d7b9c96c10d8ecb7edf9ba Mon Sep 17 00:00:00 2001
+From c5ef1a8c9f1194798b68d679d3a6ac77a6c3abdd Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:23 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
