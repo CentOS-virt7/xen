@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -739,6 +739,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Jan  7 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-5.el6.centos
+ - Import xsa-116
+
 * Mon Dec 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-4.el6.centos
  - Disabled xend by default
  - Revert 'choose qdisk first' change
