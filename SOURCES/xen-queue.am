@@ -2252,7 +2252,43 @@ index b371f8f..0e34e59 100644
 1.9.1
 
 
-From 4d0627b18a481d53a7f35164c71c9744d5b37e73 Mon Sep 17 00:00:00 2001
+From 4bbb680cabff423faacd4350a0793fff31217a2d Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Mar 2015 12:20:26 +0000
+Subject: [PATCH] x86emul: fully ignore segment override for register-only
+ operations
+
+For ModRM encoded instructions with register operands we must not
+overwrite ea.mem.seg (if a - bogus in that case - segment override was
+present) as it aliases with ea.reg.
+
+This is CVE-2015-2151 / XSA-123.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+Reviewed-by: Keir Fraser <keir@xen.org>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 25571c6..9ebff22 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1641,7 +1641,7 @@ x86_emulate(
+         }
+     }
+ 
+-    if ( override_seg != -1 )
++    if ( override_seg != -1 && ea.type == OP_MEM )
+         ea.mem.seg = override_seg;
+ 
+     /* Early operand adjustments. */
+-- 
+1.9.1
+
+
+From f04a6efb7170e790d55e78fff996bae820f9b8b0 Mon Sep 17 00:00:00 2001
 From: Wen Congyang <wency@cn.fujitsu.com>
 Date: Thu, 11 Dec 2014 16:21:21 +0000
 Subject: [PATCH] tools: libxl: pass correct file to qemu if we use blktap2
@@ -2310,7 +2346,7 @@ index f6f7bbd..65104d5 100644
 1.9.1
 
 
-From 6cb41c384de754be37fdd664a952dd9438607116 Mon Sep 17 00:00:00 2001
+From e480dc24ba35ef1d79024c03f2e5b72f81662b06 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Dec 2014 16:23:09 +0000
 Subject: [PATCH] it: George Dunlap <george.dunlap@eu.citrix.com>
@@ -2381,7 +2417,7 @@ index 65104d5..aef7fb8 100644
 1.9.1
 
 
-From 006e17057c4de3dc9b11673b159d6ad5c73722ed Mon Sep 17 00:00:00 2001
+From d7baea39e46b3314d5075326ba426974b3c80959 Mon Sep 17 00:00:00 2001
 From: Don Koch <dkoch@verizon.com>
 Date: Thu, 11 Dec 2014 17:02:21 +0000
 Subject: [PATCH] x86/HVM: sanity check xsave area when migrating or restoring
@@ -2476,7 +2512,7 @@ index eb7e498..18c1c26 100644
 1.9.1
 
 
-From 03c5d6f11df1f3389387a52918c305a930387aa6 Mon Sep 17 00:00:00 2001
+From becd1476a7e60e669a396edce3ae762c20c68b30 Mon Sep 17 00:00:00 2001
 From: Juergen Gross <jgross@suse.com>
 Date: Thu, 11 Dec 2014 17:02:33 +0000
 Subject: [PATCH] adjust number of domains in cpupools when destroying domain
@@ -2607,7 +2643,7 @@ index 4418883..996a08a 100644
 1.9.1
 
 
-From ac4c1bdec8423c2d81ddc8f12075858c491e23ee Mon Sep 17 00:00:00 2001
+From 9211dfc9d64bfcbe6da5c7dd6a064372a594f142 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 15 Dec 2014 15:56:14 +0000
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
@@ -2644,7 +2680,7 @@ index 29ed547..0f9fe2d 100644
 1.9.1
 
 
-From abe3115a6be270f04b948020f5bc173180b8c04a Mon Sep 17 00:00:00 2001
+From e55d103063374dfa6913d96bb57d921899b89d61 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:23 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -2669,7 +2705,7 @@ index 6610a8d..86d8a58 100644
 1.9.1
 
 
-From 11c213a71b2d55db04653c10863c50cb695648d7 Mon Sep 17 00:00:00 2001
+From 98624525fb8a8ab19c92258fea21f05375f0daba Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:23 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
