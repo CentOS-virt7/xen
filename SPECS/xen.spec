@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.1
-Release: 8%{?dist}
+Release: 9%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -739,6 +739,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Mar 13 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-9.el6.centos
+ - Fix issue with blktap that left 'zombie' tapdisk processes around
+ - Pass readwrite flag to blktap to make it possible to mount disk images
+   from read-only files.
+
 * Thu Mar 12 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-8.el6.centos
  - Import xsa-119
 

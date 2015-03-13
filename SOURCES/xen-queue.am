@@ -2806,16 +2806,19 @@ index 6610a8d..86d8a58 100644
 1.9.1
 
 
-From 485cb391a1b93980274d57a219ab19ae630f11a4 Mon Sep 17 00:00:00 2001
+From b6a65188b1488a5ee88a4a9083f3821320b955c8 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 15 Oct 2014 15:36:23 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
 ---
- tools/Rules.mk              |  6 +++---
- tools/libxl/libxl_blktap2.c | 41 +++++++++++++++++++++++++++--------------
- 2 files changed, 30 insertions(+), 17 deletions(-)
+ tools/Rules.mk               |  6 ++---
+ tools/libxl/libxl.c          |  6 +++--
+ tools/libxl/libxl_blktap2.c  | 58 ++++++++++++++++++++++++++++++++++++--------
+ tools/libxl/libxl_dm.c       |  3 ++-
+ tools/libxl/libxl_internal.h |  3 ++-
+ 5 files changed, 59 insertions(+), 17 deletions(-)
 
 diff --git a/tools/Rules.mk b/tools/Rules.mk
 index 13d8fc1..df84f98 100644
@@ -2834,86 +2837,165 @@ index 13d8fc1..df84f98 100644
  else
  CFLAGS_libblktapctl =
  LDLIBS_libblktapctl =
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 2d29ad2..9e03bdc 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2143,7 +2143,8 @@ static void device_disk_add(libxl__egc *egc, uint32_t domid,
+             case LIBXL_DISK_BACKEND_TAP:
+                 if (dev == NULL) {
+                     dev = libxl__blktap_devpath(gc, disk->pdev_path,
+-                                                disk->format);
++                                                disk->format,
++                                                disk->readwrite);
+                     if (!dev) {
+                         LOG(ERROR, "failed to get blktap devpath for %p\n",
+                             disk->pdev_path);
+@@ -2645,7 +2646,8 @@ void libxl__device_disk_local_initiate_attach(libxl__egc *egc,
+                 break;
+             case LIBXL_DISK_FORMAT_VHD:
+                 dev = libxl__blktap_devpath(gc, disk->pdev_path,
+-                                            disk->format);
++                                            disk->format,
++                                            disk->readwrite);
+                 break;
+             case LIBXL_DISK_FORMAT_QCOW:
+             case LIBXL_DISK_FORMAT_QCOW2:
 diff --git a/tools/libxl/libxl_blktap2.c b/tools/libxl/libxl_blktap2.c
-index 2053403..9a0641b 100644
+index 2053403..24939d7 100644
 --- a/tools/libxl/libxl_blktap2.c
 +++ b/tools/libxl/libxl_blktap2.c
-@@ -29,20 +29,15 @@ char *libxl__blktap_devpath(libxl__gc *gc,
+@@ -23,26 +23,62 @@ int libxl__blktap_enabled(libxl__gc *gc)
+     return !tap_ctl_check(&msg);
+ }
+ 
++static int tap_ctl_find(const char *type, const char *disk, tap_list_t *tap) 
++{
++    int err;
++    struct list_head list = LIST_HEAD_INIT(list);
++    tap_list_t *entry;
++
++    err = tap_ctl_list(&list);
++    if (err)
++        return err;
++
++    err = ERROR_FAIL;
++
++    tap_list_for_each_entry(entry, &list) {
++        if (type && (!entry->type || strcmp(entry->type, type)))
++            continue;
++        
++        if (disk && (!entry->path || strcmp(entry->path, disk)))
++            continue;
++        
++        tap->minor = entry->minor;
++        tap->pid = entry->pid;
++        err = 0;
++        break;
++    }
++    tap_ctl_list_free(&list);
++    
++    return err;
++}
++
+ char *libxl__blktap_devpath(libxl__gc *gc,
+                             const char *disk,
+-                            libxl_disk_format format)
++                            libxl_disk_format format,
++                            int readwrite)
  {
      const char *type;
      char *params, *devname = NULL;
 -    tap_list_t tap;
      int err;
++    int minor;
++    int flags;
  
      type = libxl__device_disk_string_of_format(format);
 -    err = tap_ctl_find(type, disk, &tap);
 -    if (err == 0) {
 -        devname = libxl__sprintf(gc, "/dev/xen/blktap-2/tapdev%d", tap.minor);
--        if (devname)
--            return devname;
--    }
++
++    minor = tap_ctl_find_minor(type, disk);
++    if (minor >= 0) {
++        devname = libxl__sprintf(gc, "/dev/xen/blktap-2/tapdev%d", minor);
+         if (devname)
+             return devname;
+     }
  
      params = libxl__sprintf(gc, "%s:%s", type, disk);
 -    err = tap_ctl_create(params, &devname);
-+    fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,params);
-+    err = tap_ctl_create(params, &devname, 0, -1, 0, 0);
++    fprintf(stderr, "DEBUG %s %d %s\n", __func__, __LINE__, params);
++    flags = readwrite ? 0 : TAPDISK_MESSAGE_FLAG_RDONLY;
++
++    err = tap_ctl_create(params, &devname, flags, -1, 0, 0);
      if (!err) {
-+        fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,devname);
++        fprintf(stderr, "DEBUG %s %d %s\n", __func__, __LINE__, devname);
          libxl__ptr_add(gc, devname);
          return devname;
      }
-@@ -55,7 +50,10 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
+@@ -55,7 +91,8 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
  {
      char *type, *disk;
      int err;
 -    tap_list_t tap;
-+	struct list_head list = LIST_HEAD_INIT(list);
-+	tap_list_t *entry;
-+    int minor = -1;
-+    pid_t pid = -1;
++    struct list_head list = LIST_HEAD_INIT(list);
++    tap_list_t tap = { .minor=-1, .pid=-1 };
  
      type = libxl__strdup(gc, params);
  
-@@ -65,19 +63,34 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
+@@ -65,19 +102,20 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
          return ERROR_INVAL;
      }
  
 +    fprintf(stderr, "DEBUG %s %d type=%s disk=%s\n",__func__,__LINE__,type,disk);
      *disk++ = '\0';
  
--    err = tap_ctl_find(type, disk, &tap);
+     err = tap_ctl_find(type, disk, &tap);
 -    if (err < 0) {
--        /* returns -errno */
-+    err = tap_ctl_list(&list);
-+    if (err)
-+        return err;
-+    tap_list_for_each_entry(entry, &list) {
-+		if (type && (!entry->type || strcmp(entry->type, type)))
-+			continue;
-+
-+		if (disk && (!entry->path || strcmp(entry->path, disk)))
-+			continue;
-+
-+        minor = entry->minor;
-+        pid = entry->pid;
-+		break;
-+	}
-+	tap_ctl_list_free(&list);
-+
-+    if (minor < 0) {
++    if (err) {
+         /* returns -errno */
          LOGEV(ERROR, -err, "Unable to find type %s disk %s", type, disk);
          return ERROR_FAIL;
      }
  
 -    err = tap_ctl_destroy(tap.id, tap.minor);
-+    err = tap_ctl_destroy(pid, minor, 1, NULL);
++    err = tap_ctl_destroy(tap.pid, tap.minor, 1, NULL);
      if (err < 0) {
          LOGEV(ERROR, -err, "Failed to destroy tap device id %d minor %d",
 -              tap.id, tap.minor);
-+              pid, minor);
++              tap.pid, tap.minor);
          return ERROR_FAIL;
      }
  
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index 44c3db0..579957a 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -729,7 +729,8 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+                 if (disks[i].backend == LIBXL_DISK_BACKEND_TAP) {
+                     format = qemu_disk_format_string(LIBXL_DISK_FORMAT_RAW);
+                     pdev_path = libxl__blktap_devpath(gc, disks[i].pdev_path,
+-                                                      disks[i].format);
++                                                      disks[i].format,
++                                                      disks[i].readwrite);
+                 } else {
+                     pdev_path = disks[i].pdev_path;
+                 }
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index 9d17586..144d571 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -1394,7 +1394,8 @@ _hidden int libxl__blktap_enabled(libxl__gc *gc);
+  */
+ _hidden char *libxl__blktap_devpath(libxl__gc *gc,
+                                     const char *disk,
+-                                    libxl_disk_format format);
++                                    libxl_disk_format format,
++                                    int readwrite);
+ 
+ /* libxl__device_destroy_tapdisk:
+  *   Destroys any tapdisk process associated with the backend represented
 -- 
 1.9.1
 
