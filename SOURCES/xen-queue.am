@@ -1,0 +1,3001 @@
+From 0e244ee2d47f6f05e8caa3d1254f92f2537ea061 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 16:30:44 +0100
+Subject: [PATCH] Fix up xend init scripts
+
+---
+ tools/python/xen/xend/osdep.py            |  2 +-
+ tools/python/xen/xend/server/SrvDaemon.py |  9 +++-
+ tools/python/xen/xend/xend                | 89 +------------------------------
+ 3 files changed, 11 insertions(+), 89 deletions(-)
+
+diff --git a/tools/python/xen/xend/osdep.py b/tools/python/xen/xend/osdep.py
+index b51dd2e..c1260a8 100644
+--- a/tools/python/xen/xend/osdep.py
++++ b/tools/python/xen/xend/osdep.py
+@@ -22,7 +22,7 @@ import commands
+ 
+ _xend_autorestart = {
+     "NetBSD": True,
+-    "Linux": True,
++    "Linux": False,
+     "SunOS": False,
+ }
+ 
+diff --git a/tools/python/xen/xend/server/SrvDaemon.py b/tools/python/xen/xend/server/SrvDaemon.py
+index 0a330f1..0d7583c 100644
+--- a/tools/python/xen/xend/server/SrvDaemon.py
++++ b/tools/python/xen/xend/server/SrvDaemon.py
+@@ -110,7 +110,14 @@ class Daemon:
+         # Fork, this allows the group leader to exit,
+         # which means the child can never again regain control of the
+         # terminal
+-        if os.fork():
++        child = os.fork()
++        if child:
++            if not osdep.xend_autorestart:
++                pidfile = open(XEND_PID_FILE, 'w')
++                try:
++                    pidfile.write(str(child))
++                finally:
++                    pidfile.close()
+             os._exit(0)
+ 
+         # Detach from standard file descriptors, and redirect them to
+diff --git a/tools/python/xen/xend/xend b/tools/python/xen/xend/xend
+index 9ef0210..0876ee2 100644
+--- a/tools/python/xen/xend/xend
++++ b/tools/python/xen/xend/xend
+@@ -8,103 +8,18 @@
+ """Xen management daemon.
+    Provides console server and HTTP management api.
+ 
+-   Run:
+-   xend start
+-
+-   Restart:
+-   xend restart
+-
+-   The daemon is stopped with:
+-   xend stop
+-
+    The daemon should reconnect to device control interfaces
+    and recover its state when restarted.
+ 
+-   On Solaris, the daemons are SMF managed, and you should not attempt
+-   to start xend by hand.
+ """
+-import fcntl
+-import glob
+-import os
+-import os.path
+ import sys
+-import socket
+-import signal
+-import time
+-import commands
+-
+ from xen.xend.server import SrvDaemon
+ 
+-class CheckError(ValueError):
+-    pass
+-
+-def hline():
+-    print >>sys.stderr, "*" * 70
+-
+-def msg(message):
+-    print >>sys.stderr, "*" * 3, message
+-
+-def check_logging():
+-    """Check python logging is installed and raise an error if not.
+-    Logging is standard from Python 2.3 on.
+-    """
+-    try:
+-        import logging
+-    except ImportError:
+-        hline()
+-        msg("Python logging is not installed.")
+-        msg("Use 'make install-logging' at the xen root to install.")
+-        msg("")
+-        msg("Alternatively download and install from")
+-        msg("http://www.red-dove.com/python_logging.html")
+-        hline()
+-        raise CheckError("logging is not installed")
+-
+-def check_user():
+-    """Check that the effective user id is 0 (root).
+-    """
+-    if os.geteuid() != 0:
+-        hline()
+-        msg("Xend must be run as root.")
+-        hline()
+-        raise CheckError("invalid user")
+-
+-def start_daemon(daemon, *args):
+-    if os.fork() == 0:
+-        os.execvp(daemon, (daemon,) + args)
+-
+-def start_blktapctrl():
+-    start_daemon("blktapctrl", "")
+-
+ def main():
+-    try:
+-        check_logging()
+-        check_user()
+-    except CheckError:
+-        sys.exit(1)
+-    
+     daemon = SrvDaemon.instance()
+-    if not sys.argv[1:]:
+-        print 'usage: %s {start|stop|reload|restart}' % sys.argv[0]
+-    elif sys.argv[1] == 'start':
+-        if os.uname()[0] != "SunOS":
+-            start_blktapctrl()
+-        return daemon.start()
+-    elif sys.argv[1] == 'trace_start':
+-        start_blktapctrl()
+-        return daemon.start(trace=1)
+-    elif sys.argv[1] == 'stop':
+-        return daemon.stop()
+-    elif sys.argv[1] == 'reload':
+-        return daemon.reloadConfig()
+-    elif sys.argv[1] == 'restart':
+-        start_blktapctrl()
+-        return daemon.stop() or daemon.start()
+-    elif sys.argv[1] == 'status':
++    if sys.argv[1:] and sys.argv[1] == 'status':
+         return daemon.status()
+-    else:
+-        print 'not an option:', sys.argv[1]
+-    return 1
++    return daemon.start()
+ 
+ if __name__ == '__main__':
+     sys.exit(main())
+-- 
+1.9.1
+
+
+From b9b87bcbfad213222b761b3fa83dc6eb63194213 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 16:30:44 +0100
+Subject: [PATCH] Change dumpdir to /var/lib/xen
+
+---
+ tools/Makefile                          | 2 +-
+ tools/python/xen/xend/XendDomainInfo.py | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tools/Makefile b/tools/Makefile
+index d548e5e..6610a8d 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -60,7 +60,7 @@ all: subdirs-all
+ 
+ .PHONY: install
+ install: subdirs-install
+-	$(INSTALL_DIR) $(DESTDIR)/var/xen/dump
++	$(INSTALL_DIR) $(DESTDIR)/var/lib/xen/dump
+ 	$(INSTALL_DIR) $(DESTDIR)/var/log/xen
+ 	$(INSTALL_DIR) $(DESTDIR)/var/lib/xen
+ 	$(INSTALL_DIR) $(DESTDIR)/var/lock/subsys
+diff --git a/tools/python/xen/xend/XendDomainInfo.py b/tools/python/xen/xend/XendDomainInfo.py
+index 8d4ff5c..895fc01 100644
+--- a/tools/python/xen/xend/XendDomainInfo.py
++++ b/tools/python/xen/xend/XendDomainInfo.py
+@@ -2288,7 +2288,7 @@ class XendDomainInfo:
+             # To prohibit directory traversal
+             based_name = os.path.basename(self.info['name_label'])
+             
+-            coredir = "/var/xen/dump/%s" % (based_name)
++            coredir = "/var/lib/xen/dump/%s" % (based_name)
+             if not os.path.exists(coredir):
+                 try:
+                     mkdir.parents(coredir, stat.S_IRWXU)
+@@ -2297,7 +2297,7 @@ class XendDomainInfo:
+ 
+             if not os.path.isdir(coredir):
+                 # Use former directory to dump core
+-                coredir = '/var/xen/dump'
++                coredir = '/var/lib/xen/dump'
+ 
+             this_time = time.strftime("%Y-%m%d-%H%M.%S", time.localtime())
+             corefile = "%s/%s-%s.%s.core" % (coredir, this_time,
+-- 
+1.9.1
+
+
+From 8e1ea07fe9d64c893cf08db19f96dae49c477f4c Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 16:30:44 +0100
+Subject: [PATCH] Disable iptables on the bridge
+
+---
+ tools/hotplug/Linux/vif-bridge            | 4 ----
+ tools/hotplug/Linux/xen-network-common.sh | 7 +++++++
+ 2 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/tools/hotplug/Linux/vif-bridge b/tools/hotplug/Linux/vif-bridge
+index b7dcbd6..178bf66 100644
+--- a/tools/hotplug/Linux/vif-bridge
++++ b/tools/hotplug/Linux/vif-bridge
+@@ -97,10 +97,6 @@ case "$command" in
+         ;;
+ esac
+ 
+-if [ "$type_if" = vif ]; then
+-    handle_iptable
+-fi
+-
+ call_hooks vif post
+ 
+ log debug "Successful vif-bridge $command for $dev, bridge $bridge."
+diff --git a/tools/hotplug/Linux/xen-network-common.sh b/tools/hotplug/Linux/xen-network-common.sh
+index 3c63c55..f74de3d 100644
+--- a/tools/hotplug/Linux/xen-network-common.sh
++++ b/tools/hotplug/Linux/xen-network-common.sh
+@@ -115,6 +115,13 @@ create_bridge () {
+ 	brctl addbr ${bridge}
+ 	brctl stp ${bridge} off
+ 	brctl setfd ${bridge} 0
++	# Setting these to zero stops guest<->LAN traffic
++	# traversing the bridge from hitting the *tables
++	# rulesets. guest<->host traffic still gets processed
++	# by the host's iptables rules so this isn't a hole
++	sysctl -q -w "net.bridge.bridge-nf-call-arptables=0"
++	sysctl -q -w "net.bridge.bridge-nf-call-ip6tables=0"
++	sysctl -q -w "net.bridge.bridge-nf-call-iptables=0"
+     fi
+ }
+ 
+-- 
+1.9.1
+
+
+From 5818ffa5f619720ebccf594a630930234b4d3a03 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 16:30:44 +0100
+Subject: [PATCH] pygrubfix.patch
+
+---
+ tools/pygrub/src/pygrub | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/tools/pygrub/src/pygrub b/tools/pygrub/src/pygrub
+index 45a7290..6e39ae5 100644
+--- a/tools/pygrub/src/pygrub
++++ b/tools/pygrub/src/pygrub
+@@ -119,6 +119,7 @@ def get_partition_offsets(file):
+     fd = os.open(file, os.O_RDONLY)
+     buf = os.read(fd, 512)
+     os.close(fd)
++    offzerocount = 0
+     for poff in (446, 462, 478, 494): # partition offsets
+ 
+         # MBR contains a 16 byte descriptor per partition
+@@ -128,6 +129,7 @@ def get_partition_offsets(file):
+         
+         # offset == 0 implies this partition is not enabled
+         if offset == 0:
++            offzerocount += 1
+             continue
+ 
+         if type == FDISK_PART_SOLARIS or type == FDISK_PART_SOLARIS_OLD:
+@@ -148,6 +150,9 @@ def get_partition_offsets(file):
+         else:
+             part_offs.append(offset)
+ 
++    if offzerocount == 4:
++        # Might be a grub boot sector pretending to be an MBR
++        part_offs.append(0)
+     return part_offs
+ 
+ class GrubLineEditor(curses.textpad.Textbox):
+-- 
+1.9.1
+
+
+From 33cbefb2cc2860e3cb5c467b17dda6b8b48d1235 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 16:30:44 +0100
+Subject: [PATCH] xend.catchbt.patch
+
+---
+ tools/python/xen/xend/XendLogging.py | 6 +++++-
+ tools/python/xen/xend/image.py       | 6 +++++-
+ 2 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/tools/python/xen/xend/XendLogging.py b/tools/python/xen/xend/XendLogging.py
+index d95133b..3e6b8ba 100644
+--- a/tools/python/xen/xend/XendLogging.py
++++ b/tools/python/xen/xend/XendLogging.py
+@@ -132,7 +132,11 @@ def init(filename, level):
+         fileHandler = openFileHandler(filename)
+         logfilename = filename
+     except IOError:
+-        logfilename = tempfile.mkstemp("-xend.log")[1]
++        try:
++            logfilename = tempfile.mkstemp("-xend.log")[1]
++        except IOError:
++            print >>sys.stderr, ('xend/XendLogging.py: Unable to open standard or temporary log file for xend')
++            os._exit(1)
+         fileHandler = openFileHandler(logfilename)
+ 
+     fileHandler.setFormatter(logging.Formatter(LOGFILE_FORMAT, DATE_FORMAT))
+diff --git a/tools/python/xen/xend/image.py b/tools/python/xen/xend/image.py
+index 832c168..161aeb5 100644
+--- a/tools/python/xen/xend/image.py
++++ b/tools/python/xen/xend/image.py
+@@ -43,7 +43,11 @@ from xen.util import oshelp
+ from xen.util import utils
+ from xen.xend import osdep
+ 
+-xc = xen.lowlevel.xc.xc()
++try:
++    xc = xen.lowlevel.xc.xc()
++except Exception:
++    print >>sys.stderr, ('xend/image.py: Error connecting to hypervisor')
++    os._exit(1)
+ 
+ MAX_GUEST_CMDLINE = 1024
+ 
+-- 
+1.9.1
+
+
+From 80a025112f7b89186633e9ce67164623263979cb Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 16:30:44 +0100
+Subject: [PATCH] xend-pci-loop.patch # Don't crash due to weird PCI cards (Bug
+ 767742)
+
+---
+ tools/python/xen/util/pci.py | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/tools/python/xen/util/pci.py b/tools/python/xen/util/pci.py
+index adeca4b..94326b3 100644
+--- a/tools/python/xen/util/pci.py
++++ b/tools/python/xen/util/pci.py
+@@ -1275,7 +1275,12 @@ class PciDevice:
+             pass
+ 
+     def get_info_from_sysfs(self):
+-        self.find_capability(0x11)
++        try:
++            self.find_capability(0x11)
++        except PciDeviceParseError, err:
++            log.error("Caught '%s'" % err)
++            return False
++
+         sysfs_mnt = find_sysfs_mnt()
+         if sysfs_mnt == None:
+             return False
+-- 
+1.9.1
+
+
+From 5da9f9df7b688f8278455ac7f79ec71adb0c2d4d Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 16:30:45 +0100
+Subject: [PATCH] xend.selinux.fixes.patch
+
+---
+ tools/python/xen/xend/server/SrvDaemon.py | 3 ++-
+ tools/python/xen/xend/xend                | 2 +-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/tools/python/xen/xend/server/SrvDaemon.py b/tools/python/xen/xend/server/SrvDaemon.py
+index 0d7583c..af1f546 100644
+--- a/tools/python/xen/xend/server/SrvDaemon.py
++++ b/tools/python/xen/xend/server/SrvDaemon.py
+@@ -325,7 +325,8 @@ class Daemon:
+     def set_user(self):
+         # Set the UID.
+         try:
+-            os.setuid(pwd.getpwnam(XEND_USER)[2])
++            if XEND_USER != "root":
++                os.setuid(pwd.getpwnam(XEND_USER)[2])
+             return 0
+         except KeyError:
+             print >>sys.stderr, "Error: no such user '%s'" % XEND_USER
+diff --git a/tools/python/xen/xend/xend b/tools/python/xen/xend/xend
+index 0876ee2..05afc0e 100644
+--- a/tools/python/xen/xend/xend
++++ b/tools/python/xen/xend/xend
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python -Es
+ #  -*- mode: python; -*-
+ #============================================================================
+ # Copyright (C) 2004 Mike Wray <mike.wray@hp.com>
+-- 
+1.9.1
+
+
+From 9191080e8bdee8be76aeae7b174807f9f24aefe0 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xen.use.fedora.ipxe.patch
+
+---
+ Config.mk                         | 2 +-
+ tools/firmware/Makefile           | 2 +-
+ tools/firmware/hvmloader/Makefile | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Config.mk b/Config.mk
+index c44853f..42d21e6 100644
+--- a/Config.mk
++++ b/Config.mk
+@@ -239,7 +239,7 @@ SEABIOS_UPSTREAM_TAG ?= rel-1.7.3.1
+ # Fri Aug 2 14:12:09 2013 -0400
+ # Fix bug in CBFS file walking with compressed files.
+ 
+-ETHERBOOT_NICS ?= rtl8139 8086100e
++ETHERBOOT_NICS ?= 10ec8139 8086100e
+ 
+ # Specify which qemu-dm to use. This may be `ioemu' to use the old
+ # Mercurial in-tree version, or a local directory, or a git URL.
+diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
+index 97de642..118dd75 100644
+--- a/tools/firmware/Makefile
++++ b/tools/firmware/Makefile
+@@ -14,7 +14,7 @@ SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
+ endif
+ SUBDIRS-$(CONFIG_ROMBIOS) += rombios
+ SUBDIRS-$(CONFIG_ROMBIOS) += vgabios
+-SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
++#SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
+ SUBDIRS-y += hvmloader
+ 
+ ovmf-dir:
+diff --git a/tools/firmware/hvmloader/Makefile b/tools/firmware/hvmloader/Makefile
+index 00ee952..b0c6f37 100644
+--- a/tools/firmware/hvmloader/Makefile
++++ b/tools/firmware/hvmloader/Makefile
+@@ -48,7 +48,7 @@ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.debug.bin
+ else
+ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.bin
+ endif
+-ETHERBOOT_ROMS := $(addprefix ../etherboot/ipxe/src/bin/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
++ETHERBOOT_ROMS := $(addprefix /usr/share/ipxe/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
+ endif
+ 
+ ROMS := 
+-- 
+1.9.1
+
+
+From 9256b08381e337ddf79925267d5c04cebc65b46e Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xen.fedora.efi.build.patch
+
+---
+ xen/Makefile              | 2 ++
+ xen/arch/x86/Makefile     | 6 +++---
+ xen/arch/x86/efi/Makefile | 2 +-
+ 3 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/xen/Makefile b/xen/Makefile
+index 134a8bd..7d91319 100644
+--- a/xen/Makefile
++++ b/xen/Makefile
+@@ -13,6 +13,8 @@ export BASEDIR := $(CURDIR)
+ export XEN_ROOT := $(BASEDIR)/..
+ 
+ EFI_MOUNTPOINT ?= /boot/efi
++EFI_VENDOR=fedora
++LD_EFI ?= $(LD)
+ 
+ .PHONY: default
+ default: build
+diff --git a/xen/arch/x86/Makefile b/xen/arch/x86/Makefile
+index d502bdf..4dd6846 100644
+--- a/xen/arch/x86/Makefile
++++ b/xen/arch/x86/Makefile
+@@ -126,18 +126,18 @@ $(TARGET).efi: ALT_BASE = 0x$(shell $(NM) efi/relocs-dummy.o | sed -n 's, A ALT_
+ $(TARGET).efi: guard = $(if $(shell echo efi/dis* | grep disabled),:)
+ $(TARGET).efi: prelink-efi.o efi.lds efi/relocs-dummy.o $(BASEDIR)/common/symbols-dummy.o efi/mkreloc
+ 	$(foreach base, $(VIRT_BASE) $(ALT_BASE), \
+-	          $(guard) $(LD) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< efi/relocs-dummy.o \
++	          $(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< efi/relocs-dummy.o \
+ 	                $(BASEDIR)/common/symbols-dummy.o -o $(@D)/.$(@F).$(base).0 &&) :
+ 	$(guard) efi/mkreloc $(foreach base,$(VIRT_BASE) $(ALT_BASE),$(@D)/.$(@F).$(base).0) >$(@D)/.$(@F).0r.S
+ 	$(guard) $(NM) -n $(@D)/.$(@F).$(VIRT_BASE).0 | $(guard) $(BASEDIR)/tools/symbols >$(@D)/.$(@F).0s.S
+ 	$(guard) $(MAKE) -f $(BASEDIR)/Rules.mk $(@D)/.$(@F).0r.o $(@D)/.$(@F).0s.o
+ 	$(foreach base, $(VIRT_BASE) $(ALT_BASE), \
+-	          $(guard) $(LD) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< \
++	          $(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< \
+ 	                $(@D)/.$(@F).0r.o $(@D)/.$(@F).0s.o -o $(@D)/.$(@F).$(base).1 &&) :
+ 	$(guard) efi/mkreloc $(foreach base,$(VIRT_BASE) $(ALT_BASE),$(@D)/.$(@F).$(base).1) >$(@D)/.$(@F).1r.S
+ 	$(guard) $(NM) -n $(@D)/.$(@F).$(VIRT_BASE).1 | $(guard) $(BASEDIR)/tools/symbols >$(@D)/.$(@F).1s.S
+ 	$(guard) $(MAKE) -f $(BASEDIR)/Rules.mk $(@D)/.$(@F).1r.o $(@D)/.$(@F).1s.o
+-	$(guard) $(LD) $(call EFI_LDFLAGS,$(VIRT_BASE)) -T efi.lds -N $< \
++	$(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(VIRT_BASE)) -T efi.lds -N $< \
+ 	                $(@D)/.$(@F).1r.o $(@D)/.$(@F).1s.o -o $@
+ 	if $(guard) false; then rm -f $@; echo 'EFI support disabled'; fi
+ 	rm -f $(@D)/.$(@F).[0-9]*
+diff --git a/xen/arch/x86/efi/Makefile b/xen/arch/x86/efi/Makefile
+index 1daa7ac..f5398c4 100644
+--- a/xen/arch/x86/efi/Makefile
++++ b/xen/arch/x86/efi/Makefile
+@@ -6,7 +6,7 @@ create = test -e $(1) || touch -t 199901010000 $(1)
+ 
+ efi := $(filter y,$(x86_64)$(shell rm -f disabled))
+ efi := $(if $(efi),$(shell $(CC) $(filter-out $(CFLAGS-y) .%.d,$(CFLAGS)) -c check.c 2>disabled && echo y))
+-efi := $(if $(efi),$(shell $(LD) -mi386pep --subsystem=10 -o check.efi check.o 2>disabled && echo y))
++efi := $(if $(efi),$(shell $(LD_EFI) -mi386pep --subsystem=10 -o check.efi check.o 2>disabled && echo y))
+ efi := $(if $(efi),$(shell rm disabled)y,$(shell $(call create,boot.init.o); $(call create,runtime.o)))
+ 
+ extra-$(efi) += boot.init.o relocs-dummy.o runtime.o compat.o
+-- 
+1.9.1
+
+
+From 6b83f1160ab45ceb0de23868305eff802336f08e Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xen.fedora19.buildfix.patch
+
+---
+ tools/debugger/gdbsx/xg/xg_main.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/debugger/gdbsx/xg/xg_main.c b/tools/debugger/gdbsx/xg/xg_main.c
+index 0fc3f82..0d43727 100644
+--- a/tools/debugger/gdbsx/xg/xg_main.c
++++ b/tools/debugger/gdbsx/xg/xg_main.c
+@@ -180,7 +180,7 @@ _domctl_hcall(uint32_t cmd,            /* which domctl hypercall */
+     hypercall.op = __HYPERVISOR_domctl;
+     hypercall.arg[0] = (unsigned long)&domctl;
+ 
+-    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (ulong)&hypercall);
++    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (unsigned long)&hypercall);
+     if (domctlarg && sz)
+         munlock(domctlarg, sz);
+     return rc;
+@@ -220,7 +220,7 @@ _check_hyp(int guest_bitness)
+     hypercall.arg[0] = (unsigned long)XENVER_capabilities;
+     hypercall.arg[1] = (unsigned long)&xen_caps;
+ 
+-    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (ulong)&hypercall);
++    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (unsigned long)&hypercall);
+     munlock(&xen_caps, sizeof(xen_caps));
+     XGTRC("XENCAPS:%s\n", xen_caps);
+ 
+-- 
+1.9.1
+
+
+From c032e6bdd88b7f3961cda95df4d699ae486c43fa Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:22 +0100
+Subject: [PATCH] xen-configure-xend.patch
+
+---
+ tools/examples/xend-config.sxp | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/tools/examples/xend-config.sxp b/tools/examples/xend-config.sxp
+index 0896a27..cea12e1 100644
+--- a/tools/examples/xend-config.sxp
++++ b/tools/examples/xend-config.sxp
+@@ -58,11 +58,11 @@
+ 
+ 
+ #(xend-http-server no)
+-#(xend-unix-server no)
++(xend-unix-server yes)
+ #(xend-tcp-xmlrpc-server no)
+ #(xend-unix-xmlrpc-server yes)
+-#(xend-relocation-server no)
+-(xend-relocation-server yes)
++(xend-relocation-server no)
++#(xend-relocation-server yes)
+ #(xend-relocation-ssl-server no)
+ #(xend-udev-event-server no)
+ 
+@@ -170,7 +170,8 @@
+ # two fake interfaces per guest domain.  To do things like this, write
+ # yourself a wrapper script, and call network-bridge from it, as appropriate.
+ #
+-(network-script network-bridge)
++#(network-script network-bridge)
++(network-script /bin/true)
+ 
+ # The script used to control virtual interfaces.  This can be overridden on a
+ # per-vif basis when creating a domain or a configuring a new vif.  The
+@@ -203,7 +204,7 @@
+ # dom0-min-mem is the lowest permissible memory level (in MB) for dom0.
+ # This is a minimum both for auto-ballooning (as enabled by
+ # enable-dom0-ballooning below) and for xm mem-set when applied to dom0.
+-(dom0-min-mem 196)
++(dom0-min-mem 256)
+ 
+ # Whether to enable auto-ballooning of dom0 to allow domUs to be created.
+ # If enable-dom0-ballooning = no, dom0 will never balloon out.
+-- 
+1.9.1
+
+
+From 843555896427c3d3fdf62a4a5b536b33847f84ef Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:50:23 +0100
+Subject: [PATCH] x86/shadow: fix race condition sampling the dirty vram state
+
+d->arch.hvm_domain.dirty_vram must be read with the domain's paging lock held.
+
+If not, two concurrent hypercalls could both end up attempting to free
+dirty_vram (the second of which will free a wild pointer), or both end up
+allocating a new dirty_vram structure (the first of which will be leaked).
+
+This is XSA-104.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm/shadow/common.c  | 4 +++-
+ xen/include/asm-x86/hvm/domain.h | 2 +-
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
+index be095f6..3ed48c4 100644
+--- a/xen/arch/x86/mm/shadow/common.c
++++ b/xen/arch/x86/mm/shadow/common.c
+@@ -3486,7 +3486,7 @@ int shadow_track_dirty_vram(struct domain *d,
+     int flush_tlb = 0;
+     unsigned long i;
+     p2m_type_t t;
+-    struct sh_dirty_vram *dirty_vram = d->arch.hvm_domain.dirty_vram;
++    struct sh_dirty_vram *dirty_vram;
+     struct p2m_domain *p2m = p2m_get_hostp2m(d);
+ 
+     if ( end_pfn < begin_pfn || end_pfn > p2m->max_mapped_pfn + 1 )
+@@ -3496,6 +3496,8 @@ int shadow_track_dirty_vram(struct domain *d,
+     p2m_lock(p2m_get_hostp2m(d));
+     paging_lock(d);
+ 
++    dirty_vram = d->arch.hvm_domain.dirty_vram;
++
+     if ( dirty_vram && (!nr ||
+              ( begin_pfn != dirty_vram->begin_pfn
+             || end_pfn   != dirty_vram->end_pfn )) )
+diff --git a/xen/include/asm-x86/hvm/domain.h b/xen/include/asm-x86/hvm/domain.h
+index b1e3187..99c5e44 100644
+--- a/xen/include/asm-x86/hvm/domain.h
++++ b/xen/include/asm-x86/hvm/domain.h
+@@ -67,7 +67,7 @@ struct hvm_domain {
+     /* Memory ranges with pinned cache attributes. */
+     struct list_head       pinned_cacheattr_ranges;
+ 
+-    /* VRAM dirty support. */
++    /* VRAM dirty support.  Protect with the domain paging lock. */
+     struct sh_dirty_vram *dirty_vram;
+ 
+     /* If one of vcpus of this domain is in no_fill_mode or
+-- 
+1.9.1
+
+
+From b3633ccea202d54edd0801a5d714c9e58868b629 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:54:16 +0100
+Subject: [PATCH] x86/emulate: check cpl for all privileged instructions
+
+Without this, it is possible for userspace to load its own IDT or GDT.
+
+This is XSA-105.
+
+Reported-by: Andrei LUTAS <vlutas@bitdefender.com>
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Tested-by: Andrei LUTAS <vlutas@bitdefender.com>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 50d8965..4810e68 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -3314,6 +3314,7 @@ x86_emulate(
+         goto swint;
+ 
+     case 0xf4: /* hlt */
++        generate_exception_if(!mode_ring0(), EXC_GP, 0);
+         ctxt->retire.flags.hlt = 1;
+         break;
+ 
+@@ -3710,6 +3711,7 @@ x86_emulate(
+             break;
+         case 2: /* lgdt */
+         case 3: /* lidt */
++            generate_exception_if(!mode_ring0(), EXC_GP, 0);
+             generate_exception_if(ea.type != OP_MEM, EXC_UD, -1);
+             fail_if(ops->write_segment == NULL);
+             memset(&reg, 0, sizeof(reg));
+@@ -3738,6 +3740,7 @@ x86_emulate(
+         case 6: /* lmsw */
+             fail_if(ops->read_cr == NULL);
+             fail_if(ops->write_cr == NULL);
++            generate_exception_if(!mode_ring0(), EXC_GP, 0);
+             if ( (rc = ops->read_cr(0, &cr0, ctxt)) )
+                 goto done;
+             if ( ea.type == OP_REG )
+-- 
+1.9.1
+
+
+From 73fcc81d9f252c79f2fcb3a93fe53c155667ee80 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:54:20 +0100
+Subject: [PATCH] x86emul: only emulate software interrupt injection for real
+ mode
+
+Protected mode emulation currently lacks proper privilege checking of
+the referenced IDT entry, and there's currently no legitimate way for
+any of the respective instructions to reach the emulator when the guest
+is in protected mode.
+
+This is XSA-106.
+
+Reported-by: Andrei LUTAS <vlutas@bitdefender.com>
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Keir Fraser <keir@xen.org>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 4810e68..5fbe024 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -2634,6 +2634,7 @@ x86_emulate(
+     case 0xcd: /* int imm8 */
+         src.val = insn_fetch_type(uint8_t);
+     swint:
++        fail_if(!in_realmode(ctxt, ops)); /* XSA-106 */
+         fail_if(ops->inject_sw_interrupt == NULL);
+         rc = ops->inject_sw_interrupt(src.val, _regs.eip - ctxt->regs->eip,
+                                       ctxt) ? : X86EMUL_EXCEPTION;
+-- 
+1.9.1
+
+
+From 77c6a6476e79a669254b845824249471bb588ad2 Mon Sep 17 00:00:00 2001
+From: David Vrabel <david.vrabel@citrix.com>
+Date: Thu, 11 Dec 2014 16:49:15 +0000
+Subject: [PATCH] evtchn: check control block exists when using FIFO-based
+ events
+
+When using the FIFO-based event channels, there are no checks for the
+existance of a control block when binding an event or moving it to a
+different VCPU.  This is because events may be bound when the ABI is
+in 2-level mode (e.g., by the toolstack before the domain is started).
+
+The guest may trigger a Xen crash in evtchn_fifo_set_pending() if:
+
+  a) the event is bound to a VCPU without a control block; or
+  b) VCPU 0 does not have a control block.
+
+In case (a), Xen will crash when looking up the current queue.  In
+(b), Xen will crash when looking up the old queue (which defaults to a
+queue on VCPU 0).
+
+By allocating all the per-VCPU structures when enabling the FIFO ABI,
+we can be sure that v->evtchn_fifo is always valid.
+
+EVTCHNOP_init_control_block for all the other CPUs need only map the
+shared control block.
+
+A single check in evtchn_fifo_set_pending() before accessing the
+control block fixes all cases where the guest has not initialized some
+control blocks.
+
+This is XSA-107.
+
+Reported-by: Vitaly Kuznetsov <vkuznets@redhat.com>
+Signed-off-by: David Vrabel <david.vrabel@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+master commit: a4e0cea6fced50e251453dfe52e1b9dde77a84f5
+master date: 2014-09-09 15:25:58 +0200
+---
+ xen/common/event_fifo.c | 82 ++++++++++++++++++++++++++++++++++---------------
+ 1 file changed, 58 insertions(+), 24 deletions(-)
+
+diff --git a/xen/common/event_fifo.c b/xen/common/event_fifo.c
+index 1fce3f1..e9c1fbe 100644
+--- a/xen/common/event_fifo.c
++++ b/xen/common/event_fifo.c
+@@ -178,6 +178,19 @@ static void evtchn_fifo_set_pending(struct vcpu *v, struct evtchn *evtchn)
+         bool_t linked = 0;
+ 
+         /*
++         * Control block not mapped.  The guest must not unmask an
++         * event until the control block is initialized, so we can
++         * just drop the event.
++         */
++        if ( unlikely(!v->evtchn_fifo->control_block) )
++        {
++            printk(XENLOG_G_WARNING
++                   "d%dv%d has no FIFO event channel control block\n",
++                   d->domain_id, v->vcpu_id);
++            goto done;
++        }
++
++        /*
+          * No locking around getting the queue. This may race with
+          * changing the priority but we are allowed to signal the
+          * event once on the old priority.
+@@ -385,36 +398,42 @@ static void init_queue(struct vcpu *v, struct evtchn_fifo_queue *q,
+ {
+     spin_lock_init(&q->lock);
+     q->priority = i;
+-    q->head = &v->evtchn_fifo->control_block->head[i];
+ }
+ 
+-static int setup_control_block(struct vcpu *v, uint64_t gfn, uint32_t offset)
++static int setup_control_block(struct vcpu *v)
+ {
+-    struct domain *d = v->domain;
+     struct evtchn_fifo_vcpu *efv;
+-    void *virt;
+     unsigned int i;
+-    int rc;
+-
+-    if ( v->evtchn_fifo )
+-        return -EINVAL;
+ 
+     efv = xzalloc(struct evtchn_fifo_vcpu);
+     if ( !efv )
+         return -ENOMEM;
+ 
+-    rc = map_guest_page(d, gfn, &virt);
++    for ( i = 0; i <= EVTCHN_FIFO_PRIORITY_MIN; i++ )
++        init_queue(v, &efv->queue[i], i);
++
++    v->evtchn_fifo = efv;
++
++    return 0;
++}
++
++static int map_control_block(struct vcpu *v, uint64_t gfn, uint32_t offset)
++{
++    void *virt;
++    unsigned int i;
++    int rc;
++
++    if ( v->evtchn_fifo->control_block )
++        return -EINVAL;
++
++    rc = map_guest_page(v->domain, gfn, &virt);
+     if ( rc < 0 )
+-    {
+-        xfree(efv);
+         return rc;
+-    }
+ 
+-    v->evtchn_fifo = efv;
+     v->evtchn_fifo->control_block = virt + offset;
+ 
+     for ( i = 0; i <= EVTCHN_FIFO_PRIORITY_MIN; i++ )
+-        init_queue(v, &v->evtchn_fifo->queue[i], i);
++        v->evtchn_fifo->queue[i].head = &v->evtchn_fifo->control_block->head[i];
+ 
+     return 0;
+ }
+@@ -508,28 +527,43 @@ int evtchn_fifo_init_control(struct evtchn_init_control *init_control)
+ 
+     spin_lock(&d->event_lock);
+ 
+-    rc = setup_control_block(v, gfn, offset);
+-
+     /*
+      * If this is the first control block, setup an empty event array
+      * and switch to the fifo port ops.
+      */
+-    if ( rc == 0 && !d->evtchn_fifo )
++    if ( !d->evtchn_fifo )
+     {
++        struct vcpu *vcb;
++
++        for_each_vcpu ( d, vcb ) {
++            rc = setup_control_block(vcb);
++            if ( rc < 0 )
++                goto error;
++        }
++
+         rc = setup_event_array(d);
+         if ( rc < 0 )
+-            cleanup_control_block(v);
+-        else
+-        {
+-            d->evtchn_port_ops = &evtchn_port_ops_fifo;
+-            d->max_evtchns = EVTCHN_FIFO_NR_CHANNELS;
+-            setup_ports(d);
+-        }
++            goto error;
++
++        rc = map_control_block(v, gfn, offset);
++        if ( rc < 0 )
++            goto error;
++
++        d->evtchn_port_ops = &evtchn_port_ops_fifo;
++        d->max_evtchns = EVTCHN_FIFO_NR_CHANNELS;
++        setup_ports(d);
+     }
++    else
++        rc = map_control_block(v, gfn, offset);
+ 
+     spin_unlock(&d->event_lock);
+ 
+     return rc;
++
++ error:
++    evtchn_fifo_destroy(d);
++    spin_unlock(&d->event_lock);
++    return rc;
+ }
+ 
+ static int add_page_to_event_array(struct domain *d, unsigned long gfn)
+-- 
+1.9.1
+
+
+From 04e50def38c9b141d46b90975744b0b24905338c Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:54:23 +0100
+Subject: [PATCH] x86/HVM: properly bound x2APIC MSR range
+
+While the write path change appears to be purely cosmetic (but still
+gets done here for consistency), the read side mistake permitted
+accesses beyond the virtual APIC page.
+
+Note that while this isn't fully in line with the specification
+(digesting MSRs 0x800-0xBFF for the x2APIC), this is the minimal
+possible fix addressing the security issue and getting x2APIC related
+code into a consistent shape (elsewhere a 256 rather than 1024 wide
+window is being used too). This will be dealt with subsequently.
+
+This is XSA-108.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/hvm.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index be1a2d3..3289604 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -3022,7 +3022,7 @@ int hvm_msr_read_intercept(unsigned int msr, uint64_t *msr_content)
+         *msr_content = vcpu_vlapic(v)->hw.apic_base_msr;
+         break;
+ 
+-    case MSR_IA32_APICBASE_MSR ... MSR_IA32_APICBASE_MSR + 0x3ff:
++    case MSR_IA32_APICBASE_MSR ... MSR_IA32_APICBASE_MSR + 0xff:
+         if ( hvm_x2apic_msr_read(v, msr, msr_content) )
+             goto gp_fault;
+         break;
+@@ -3148,7 +3148,7 @@ int hvm_msr_write_intercept(unsigned int msr, uint64_t msr_content)
+         vlapic_tdt_msr_set(vcpu_vlapic(v), msr_content);
+         break;
+ 
+-    case MSR_IA32_APICBASE_MSR ... MSR_IA32_APICBASE_MSR + 0x3ff:
++    case MSR_IA32_APICBASE_MSR ... MSR_IA32_APICBASE_MSR + 0xff:
+         if ( hvm_x2apic_msr_write(v, msr, msr_content) )
+             goto gp_fault;
+         break;
+-- 
+1.9.1
+
+
+From 79ee9d6fce6a5f7b2393f7f24b78f2129fbcf69d Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 11 Dec 2014 16:49:39 +0000
+Subject: [PATCH] x86: don't allow page table updates on non-PV page tables in
+ do_mmu_update()
+
+paging_write_guest_entry() and paging_cmpxchg_guest_entry() aren't
+consistently supported for non-PV guests (they'd deref NULL for PVH or
+non-HAP HVM ones). Don't allow respective MMU_* operations on the
+page tables of such domains.
+
+This is CVE-2014-8594 / XSA-109.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Tim Deegan <tim@xen.org>
+master commit: e4292c5aac41b80f33d4877104348d5ee7c95aa4
+master date: 2014-11-18 14:15:21 +0100
+---
+ xen/arch/x86/mm.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index fdc5ed3..f88323f 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -3508,6 +3508,10 @@ long do_mmu_update(
+         {
+             p2m_type_t p2mt;
+ 
++            rc = -EOPNOTSUPP;
++            if ( unlikely(paging_mode_refcounts(pt_owner)) )
++                break;
++
+             xsm_needed |= XSM_MMU_NORMAL_UPDATE;
+             if ( get_pte_flags(req.val) & _PAGE_PRESENT )
+             {
+-- 
+1.9.1
+
+
+From 6ea79aab6d71fb9588f82ccb6ef72b92ecb656a6 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 11 Dec 2014 16:49:57 +0000
+Subject: [PATCH] x86emul: enforce privilege level restrictions when loading CS
+
+Privilege level checks were basically missing for the CS case, the
+only check that was done (RPL == DPL for nonconforming segments)
+was solely covering a single special case (return to non-conforming
+segment).
+
+Additionally in long mode the L bit set requires the D bit to be clear,
+as was recently pointed out for KVM by Nadav Amit
+<namit@cs.technion.ac.il>.
+
+Finally we also need to force the loaded selector's RPL to CPL (at
+least as long as lret/retf emulation doesn't support privilege level
+changes).
+
+This is CVE-2014-8595 / XSA-110.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+master commit: 1d68c1a70e00ed95ef0889cfa005379dab27b37d
+master date: 2014-11-18 14:16:23 +0100
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 42 ++++++++++++++++++++++------------
+ 1 file changed, 28 insertions(+), 14 deletions(-)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 5fbe024..25571c6 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1114,7 +1114,7 @@ realmode_load_seg(
+ static int
+ protmode_load_seg(
+     enum x86_segment seg,
+-    uint16_t sel,
++    uint16_t sel, bool_t is_ret,
+     struct x86_emulate_ctxt *ctxt,
+     const struct x86_emulate_ops *ops)
+ {
+@@ -1180,9 +1180,23 @@ protmode_load_seg(
+         /* Code segment? */
+         if ( !(desc.b & (1u<<11)) )
+             goto raise_exn;
+-        /* Non-conforming segment: check DPL against RPL. */
+-        if ( ((desc.b & (6u<<9)) != (6u<<9)) && (dpl != rpl) )
++        if ( is_ret
++             ? /*
++                * Really rpl < cpl, but our sole caller doesn't handle
++                * privilege level changes.
++                */
++               rpl != cpl || (desc.b & (1 << 10) ? dpl > rpl : dpl != rpl)
++             : desc.b & (1 << 10)
++               /* Conforming segment: check DPL against CPL. */
++               ? dpl > cpl
++               /* Non-conforming segment: check RPL and DPL against CPL. */
++               : rpl > cpl || dpl != cpl )
++            goto raise_exn;
++        /* 64-bit code segments (L bit set) must have D bit clear. */
++        if ( in_longmode(ctxt, ops) &&
++             (desc.b & (1 << 21)) && (desc.b & (1 << 22)) )
+             goto raise_exn;
++        sel = (sel ^ rpl) | cpl;
+         break;
+     case x86_seg_ss:
+         /* Writable data segment? */
+@@ -1247,7 +1261,7 @@ protmode_load_seg(
+ static int
+ load_seg(
+     enum x86_segment seg,
+-    uint16_t sel,
++    uint16_t sel, bool_t is_ret,
+     struct x86_emulate_ctxt *ctxt,
+     const struct x86_emulate_ops *ops)
+ {
+@@ -1256,7 +1270,7 @@ load_seg(
+         return X86EMUL_UNHANDLEABLE;
+ 
+     if ( in_protmode(ctxt, ops) )
+-        return protmode_load_seg(seg, sel, ctxt, ops);
++        return protmode_load_seg(seg, sel, is_ret, ctxt, ops);
+ 
+     return realmode_load_seg(seg, sel, ctxt, ops);
+ }
+@@ -1888,7 +1902,7 @@ x86_emulate(
+         if ( (rc = read_ulong(x86_seg_ss, sp_post_inc(op_bytes),
+                               &dst.val, op_bytes, ctxt, ops)) != 0 )
+             goto done;
+-        if ( (rc = load_seg(src.val, (uint16_t)dst.val, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(src.val, dst.val, 0, ctxt, ops)) != 0 )
+             return rc;
+         break;
+ 
+@@ -2242,7 +2256,7 @@ x86_emulate(
+         enum x86_segment seg = decode_segment(modrm_reg);
+         generate_exception_if(seg == decode_segment_failed, EXC_UD, -1);
+         generate_exception_if(seg == x86_seg_cs, EXC_UD, -1);
+-        if ( (rc = load_seg(seg, (uint16_t)src.val, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(seg, src.val, 0, ctxt, ops)) != 0 )
+             goto done;
+         if ( seg == x86_seg_ss )
+             ctxt->retire.flags.mov_ss = 1;
+@@ -2323,7 +2337,7 @@ x86_emulate(
+                               &_regs.eip, op_bytes, ctxt)) )
+             goto done;
+ 
+-        if ( (rc = load_seg(x86_seg_cs, sel, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(x86_seg_cs, sel, 0, ctxt, ops)) != 0 )
+             goto done;
+         _regs.eip = eip;
+         break;
+@@ -2547,7 +2561,7 @@ x86_emulate(
+         if ( (rc = read_ulong(src.mem.seg, src.mem.off + src.bytes,
+                               &sel, 2, ctxt, ops)) != 0 )
+             goto done;
+-        if ( (rc = load_seg(dst.val, (uint16_t)sel, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(dst.val, sel, 0, ctxt, ops)) != 0 )
+             goto done;
+         dst.val = src.val;
+         break;
+@@ -2621,7 +2635,7 @@ x86_emulate(
+                               &dst.val, op_bytes, ctxt, ops)) ||
+              (rc = read_ulong(x86_seg_ss, sp_post_inc(op_bytes + offset),
+                               &src.val, op_bytes, ctxt, ops)) ||
+-             (rc = load_seg(x86_seg_cs, (uint16_t)src.val, ctxt, ops)) )
++             (rc = load_seg(x86_seg_cs, src.val, 1, ctxt, ops)) )
+             goto done;
+         _regs.eip = dst.val;
+         break;
+@@ -2668,7 +2682,7 @@ x86_emulate(
+         _regs.eflags &= mask;
+         _regs.eflags |= (uint32_t)(eflags & ~mask) | 0x02;
+         _regs.eip = eip;
+-        if ( (rc = load_seg(x86_seg_cs, (uint16_t)cs, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(x86_seg_cs, cs, 1, ctxt, ops)) != 0 )
+             goto done;
+         break;
+     }
+@@ -3298,7 +3312,7 @@ x86_emulate(
+         generate_exception_if(mode_64bit(), EXC_UD, -1);
+         eip = insn_fetch_bytes(op_bytes);
+         sel = insn_fetch_type(uint16_t);
+-        if ( (rc = load_seg(x86_seg_cs, sel, ctxt, ops)) != 0 )
++        if ( (rc = load_seg(x86_seg_cs, sel, 0, ctxt, ops)) != 0 )
+             goto done;
+         _regs.eip = eip;
+         break;
+@@ -3596,7 +3610,7 @@ x86_emulate(
+                     goto done;
+             }
+ 
+-            if ( (rc = load_seg(x86_seg_cs, sel, ctxt, ops)) != 0 )
++            if ( (rc = load_seg(x86_seg_cs, sel, 0, ctxt, ops)) != 0 )
+                 goto done;
+             _regs.eip = src.val;
+ 
+@@ -3663,7 +3677,7 @@ x86_emulate(
+         generate_exception_if(!in_protmode(ctxt, ops), EXC_UD, -1);
+         generate_exception_if(!mode_ring0(), EXC_GP, 0);
+         if ( (rc = load_seg((modrm_reg & 1) ? x86_seg_tr : x86_seg_ldtr,
+-                            src.val, ctxt, ops)) != 0 )
++                            src.val, 0, ctxt, ops)) != 0 )
+             goto done;
+         break;
+ 
+-- 
+1.9.1
+
+
+From dbaa1d123b3c6ac8c12c4051c6fdf0770a83a5ab Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 11 Dec 2014 16:50:38 +0000
+Subject: [PATCH] x86: limit checks in hypercall_xlat_continuation() to actual
+ arguments
+
+HVM/PVH guests can otherwise trigger the final BUG_ON() in that
+function by entering 64-bit mode, setting the high halves of affected
+registers to non-zero values, leaving 64-bit mode, and issuing a
+hypercall that might get preempted and hence become subject to
+continuation argument translation (HYPERVISOR_memory_op being the only
+one possible for HVM, PVH also having the option of using
+HYPERVISOR_mmuext_op). This issue got introduced when HVM code was
+switched to use compat_memory_op() - neither that nor
+hypercall_xlat_continuation() were originally intended to be used by
+other than PV guests (which can't enter 64-bit mode and hence have no
+way to alter the high halves of 64-bit registers).
+
+This is CVE-2014-8866 / XSA-111.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+master commit: 0ad715304b04739fd2fc9517ce8671d3947c7621
+master date: 2014-11-27 14:00:23 +0100
+---
+ xen/arch/x86/domain.c           | 12 ++++++++----
+ xen/arch/x86/x86_64/compat/mm.c |  6 +++---
+ xen/common/compat/memory.c      |  2 +-
+ xen/include/xen/compat.h        |  5 ++++-
+ 4 files changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
+index 195b07f..54411db 100644
+--- a/xen/arch/x86/domain.c
++++ b/xen/arch/x86/domain.c
+@@ -1697,7 +1697,8 @@ unsigned long hypercall_create_continuation(
+     return op;
+ }
+ 
+-int hypercall_xlat_continuation(unsigned int *id, unsigned int mask, ...)
++int hypercall_xlat_continuation(unsigned int *id, unsigned int nr,
++                                unsigned int mask, ...)
+ {
+     int rc = 0;
+     struct mc_state *mcs = &current->mc_state;
+@@ -1706,7 +1707,10 @@ int hypercall_xlat_continuation(unsigned int *id, unsigned int mask, ...)
+     unsigned long nval = 0;
+     va_list args;
+ 
+-    BUG_ON(id && *id > 5);
++    ASSERT(nr <= ARRAY_SIZE(mcs->call.args));
++    ASSERT(!(mask >> nr));
++
++    BUG_ON(id && *id >= nr);
+     BUG_ON(id && (mask & (1U << *id)));
+ 
+     va_start(args, mask);
+@@ -1719,7 +1723,7 @@ int hypercall_xlat_continuation(unsigned int *id, unsigned int mask, ...)
+             return 0;
+         }
+ 
+-        for ( i = 0; i < 6; ++i, mask >>= 1 )
++        for ( i = 0; i < nr; ++i, mask >>= 1 )
+         {
+             if ( mask & 1 )
+             {
+@@ -1747,7 +1751,7 @@ int hypercall_xlat_continuation(unsigned int *id, unsigned int mask, ...)
+     else
+     {
+         regs = guest_cpu_user_regs();
+-        for ( i = 0; i < 6; ++i, mask >>= 1 )
++        for ( i = 0; i < nr; ++i, mask >>= 1 )
+         {
+             unsigned long *reg;
+ 
+diff --git a/xen/arch/x86/x86_64/compat/mm.c b/xen/arch/x86/x86_64/compat/mm.c
+index 0a8408b..42aa85e 100644
+--- a/xen/arch/x86/x86_64/compat/mm.c
++++ b/xen/arch/x86/x86_64/compat/mm.c
+@@ -116,7 +116,7 @@ int compat_arch_memory_op(int op, XEN_GUEST_HANDLE_PARAM(void) arg)
+             break;
+ 
+         if ( rc == __HYPERVISOR_memory_op )
+-            hypercall_xlat_continuation(NULL, 0x2, nat, arg);
++            hypercall_xlat_continuation(NULL, 2, 0x2, nat, arg);
+ 
+         XLAT_pod_target(&cmp, nat);
+ 
+@@ -351,7 +351,7 @@ int compat_mmuext_op(XEN_GUEST_HANDLE_PARAM(mmuext_op_compat_t) cmp_uops,
+                 left = 1;
+                 if ( arg1 != MMU_UPDATE_PREEMPTED )
+                 {
+-                    BUG_ON(!hypercall_xlat_continuation(&left, 0x01, nat_ops,
++                    BUG_ON(!hypercall_xlat_continuation(&left, 4, 0x01, nat_ops,
+                                                         cmp_uops));
+                     if ( !test_bit(_MCSF_in_multicall, &mcs->flags) )
+                         regs->_ecx += count - i;
+@@ -359,7 +359,7 @@ int compat_mmuext_op(XEN_GUEST_HANDLE_PARAM(mmuext_op_compat_t) cmp_uops,
+                         mcs->compat_call.args[1] += count - i;
+                 }
+                 else
+-                    BUG_ON(hypercall_xlat_continuation(&left, 0));
++                    BUG_ON(hypercall_xlat_continuation(&left, 4, 0));
+                 BUG_ON(left != arg1);
+             }
+             else
+diff --git a/xen/common/compat/memory.c b/xen/common/compat/memory.c
+index daa2e04..c5d58e6 100644
+--- a/xen/common/compat/memory.c
++++ b/xen/common/compat/memory.c
+@@ -279,7 +279,7 @@ int compat_memory_op(unsigned int cmd, XEN_GUEST_HANDLE_PARAM(void) compat)
+             break;
+ 
+         cmd = 0;
+-        if ( hypercall_xlat_continuation(&cmd, 0x02, nat.hnd, compat) )
++        if ( hypercall_xlat_continuation(&cmd, 2, 0x02, nat.hnd, compat) )
+         {
+             BUG_ON(rc != __HYPERVISOR_memory_op);
+             BUG_ON((cmd & MEMOP_CMD_MASK) != op);
+diff --git a/xen/include/xen/compat.h b/xen/include/xen/compat.h
+index ca60699..bb3ffd1 100644
+--- a/xen/include/xen/compat.h
++++ b/xen/include/xen/compat.h
+@@ -195,6 +195,8 @@ static inline int name(k xen_ ## n *x, k compat_ ## n *c) \
+  * This option is useful for extracting the "op" argument or similar from the
+  * hypercall to enable further xlat processing.
+  *
++ * nr: Total number of arguments the hypercall has.
++ *
+  * mask: Specifies which of the hypercall arguments require compat translation.
+  * bit 0 indicates that the 0'th argument requires translation, bit 1 indicates
+  * that the first argument requires translation and so on. Native and compat
+@@ -214,7 +216,8 @@ static inline int name(k xen_ ## n *x, k compat_ ## n *c) \
+  *
+  * Return: Number of arguments which were actually translated.
+  */
+-int hypercall_xlat_continuation(unsigned int *id, unsigned int mask, ...);
++int hypercall_xlat_continuation(unsigned int *id, unsigned int nr,
++                                unsigned int mask, ...);
+ 
+ /* In-place translation functons: */
+ struct start_info;
+-- 
+1.9.1
+
+
+From e0f56f5a2c4dc0001726b62b90c1b15a65e83d94 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 11 Dec 2014 16:50:54 +0000
+Subject: [PATCH] x86/HVM: confine internally handled MMIO to solitary regions
+
+While it is generally wrong to cross region boundaries when dealing
+with MMIO accesses of repeated string instructions (currently only
+MOVS) as that would do things a guest doesn't expect (leaving aside
+that none of these regions would normally be accessed with repeated
+string instructions in the first place), this is even more of a problem
+for all virtual MSI-X page accesses (both msixtbl_{read,write}() can be
+made dereference NULL "entry" pointers this way) as well as undersized
+(1- or 2-byte) LAPIC writes (causing vlapic_read_aligned() to access
+space beyond the one memory page set up for holding LAPIC register
+values).
+
+Since those functions validly assume to be called only with addresses
+their respective checking functions indicated to be okay, it is generic
+code that needs to be fixed to clip the repetition count.
+
+To be on the safe side (and consistent), also do the same for buffered
+I/O intercepts, even if their only client (stdvga) doesn't put the
+hypervisor at risk (i.e. "only" guest misbehavior would result).
+
+This is CVE-2014-8867 / XSA-112.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+master commit: c5397354b998d030b021810b8202de93b9526818
+master date: 2014-11-27 14:01:40 +0100
+---
+ xen/arch/x86/hvm/intercept.c | 22 +++++++++++++++++++++-
+ xen/arch/x86/hvm/vmsi.c      |  4 ++++
+ 2 files changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/hvm/intercept.c b/xen/arch/x86/hvm/intercept.c
+index 7cc13b5..52ffee3 100644
+--- a/xen/arch/x86/hvm/intercept.c
++++ b/xen/arch/x86/hvm/intercept.c
+@@ -169,11 +169,24 @@ int hvm_mmio_intercept(ioreq_t *p)
+     int i;
+ 
+     for ( i = 0; i < HVM_MMIO_HANDLER_NR; i++ )
+-        if ( hvm_mmio_handlers[i]->check_handler(v, p->addr) )
++    {
++        hvm_mmio_check_t check_handler =
++            hvm_mmio_handlers[i]->check_handler;
++
++        if ( check_handler(v, p->addr) )
++        {
++            if ( unlikely(p->count > 1) &&
++                 !check_handler(v, unlikely(p->df)
++                                   ? p->addr - (p->count - 1L) * p->size
++                                   : p->addr + (p->count - 1L) * p->size) )
++                p->count = 1;
++
+             return hvm_mmio_access(
+                 v, p,
+                 hvm_mmio_handlers[i]->read_handler,
+                 hvm_mmio_handlers[i]->write_handler);
++        }
++    }
+ 
+     return X86EMUL_UNHANDLEABLE;
+ }
+@@ -330,6 +343,13 @@ int hvm_io_intercept(ioreq_t *p, int type)
+             if ( type == HVM_PORTIO )
+                 return process_portio_intercept(
+                     handler->hdl_list[i].action.portio, p);
++
++            if ( unlikely(p->count > 1) &&
++                 (unlikely(p->df)
++                  ? p->addr - (p->count - 1L) * p->size < addr
++                  : p->addr + p->count * 1L * p->size - 1 >= addr + size) )
++                p->count = 1;
++
+             return handler->hdl_list[i].action.mmio(p);
+         }
+     }
+diff --git a/xen/arch/x86/hvm/vmsi.c b/xen/arch/x86/hvm/vmsi.c
+index 10e5f34..dc3e4d7 100644
+--- a/xen/arch/x86/hvm/vmsi.c
++++ b/xen/arch/x86/hvm/vmsi.c
+@@ -235,6 +235,8 @@ static int msixtbl_read(
+     rcu_read_lock(&msixtbl_rcu_lock);
+ 
+     entry = msixtbl_find_entry(v, address);
++    if ( !entry )
++        goto out;
+     offset = address & (PCI_MSIX_ENTRY_SIZE - 1);
+ 
+     if ( offset != PCI_MSIX_ENTRY_VECTOR_CTRL_OFFSET )
+@@ -277,6 +279,8 @@ static int msixtbl_write(struct vcpu *v, unsigned long address,
+     rcu_read_lock(&msixtbl_rcu_lock);
+ 
+     entry = msixtbl_find_entry(v, address);
++    if ( !entry )
++        goto out;
+     nr_entry = (address - entry->gtable) / PCI_MSIX_ENTRY_SIZE;
+ 
+     offset = address & (PCI_MSIX_ENTRY_SIZE - 1);
+-- 
+1.9.1
+
+
+From 96dee19c385e86398ac34b2ba5022546da46302b Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Thu, 11 Dec 2014 16:51:13 +0000
+Subject: [PATCH] x86/mm: fix a reference counting error in MMU_MACHPHYS_UPDATE
+
+Any domain which can pass the XSM check against a translated guest can cause a
+page reference to be leaked.
+
+While shuffling the order of checks, drop the quite-pointless MEM_LOG().  This
+brings the check in line with similar checks in the vicinity.
+
+Discovered while reviewing the XSA-109/110 followup series.
+
+This is XSA-113.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm.c | 13 ++++++-------
+ 1 file changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index f88323f..db0b6fe 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -3634,6 +3634,12 @@ long do_mmu_update(
+ 
+         case MMU_MACHPHYS_UPDATE:
+ 
++            if ( unlikely(paging_mode_translate(pg_owner)) )
++            {
++                rc = -EINVAL;
++                break;
++            }
++
+             mfn = req.ptr >> PAGE_SHIFT;
+             gpfn = req.val;
+ 
+@@ -3653,13 +3659,6 @@ long do_mmu_update(
+                 break;
+             }
+ 
+-            if ( unlikely(paging_mode_translate(pg_owner)) )
+-            {
+-                MEM_LOG("Mach-phys update on auto-translate guest");
+-                rc = -EINVAL;
+-                break;
+-            }
+-
+             set_gpfn_from_mfn(mfn, gpfn);
+ 
+             paging_mark_dirty(pg_owner, mfn);
+-- 
+1.9.1
+
+
+From d5ad07648bd50248e071a76ab74bed9f2ea2dd18 Mon Sep 17 00:00:00 2001
+From: Keir Fraser <keir@xen.org>
+Date: Thu, 11 Dec 2014 16:51:31 +0000
+Subject: [PATCH] switch to write-biased r/w locks
+
+This is to improve fairness: A permanent flow of read acquires can
+otherwise lock out eventual writers indefinitely.
+
+This is CVE-2014-9065 / XSA-114.
+
+Signed-off-by: Keir Fraser <keir@xen.org>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Tested-by: Andrew Cooper <andrew.cooper3@citrix.com>
+master commit: 2a549b9c8aa48dc39d7c97e5a93978b781b3a1db
+master date: 2014-12-08 14:45:46 +0100
+---
+ xen/common/spinlock.c                | 136 +++++++++++++++++++++++------------
+ xen/include/asm-arm/arm32/spinlock.h |  78 --------------------
+ xen/include/asm-arm/arm64/spinlock.h |  63 ----------------
+ xen/include/asm-x86/spinlock.h       |  54 --------------
+ xen/include/xen/spinlock.h           |   6 +-
+ 5 files changed, 93 insertions(+), 244 deletions(-)
+
+diff --git a/xen/common/spinlock.c b/xen/common/spinlock.c
+index 575cc6d..f9f19a8 100644
+--- a/xen/common/spinlock.c
++++ b/xen/common/spinlock.c
+@@ -271,112 +271,151 @@ void _spin_unlock_recursive(spinlock_t *lock)
+ 
+ void _read_lock(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_read_trylock(&lock->raw)) )
+-    {
+-        while ( likely(_raw_rw_is_write_locked(&lock->raw)) )
++    do {
++        while ( (x = lock->lock) & RW_WRITE_FLAG )
+             cpu_relax();
+-    }
++    } while ( cmpxchg(&lock->lock, x, x+1) != x );
+     preempt_disable();
+ }
+ 
+ void _read_lock_irq(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     ASSERT(local_irq_is_enabled());
+     local_irq_disable();
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_read_trylock(&lock->raw)) )
+-    {
+-        local_irq_enable();
+-        while ( likely(_raw_rw_is_write_locked(&lock->raw)) )
+-            cpu_relax();
+-        local_irq_disable();
+-    }
++    do {
++        if ( (x = lock->lock) & RW_WRITE_FLAG )
++        {
++            local_irq_enable();
++            while ( (x = lock->lock) & RW_WRITE_FLAG )
++                cpu_relax();
++            local_irq_disable();
++        }
++    } while ( cmpxchg(&lock->lock, x, x+1) != x );
+     preempt_disable();
+ }
+ 
+ unsigned long _read_lock_irqsave(rwlock_t *lock)
+ {
++    uint32_t x;
+     unsigned long flags;
++
+     local_irq_save(flags);
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_read_trylock(&lock->raw)) )
+-    {
+-        local_irq_restore(flags);
+-        while ( likely(_raw_rw_is_write_locked(&lock->raw)) )
+-            cpu_relax();
+-        local_irq_save(flags);
+-    }
++    do {
++        if ( (x = lock->lock) & RW_WRITE_FLAG )
++        {
++            local_irq_restore(flags);
++            while ( (x = lock->lock) & RW_WRITE_FLAG )
++                cpu_relax();
++            local_irq_save(flags);
++        }
++    } while ( cmpxchg(&lock->lock, x, x+1) != x );
+     preempt_disable();
+     return flags;
+ }
+ 
+ int _read_trylock(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     check_lock(&lock->debug);
+-    if ( !_raw_read_trylock(&lock->raw) )
+-        return 0;
++    do {
++        if ( (x = lock->lock) & RW_WRITE_FLAG )
++            return 0;
++    } while ( cmpxchg(&lock->lock, x, x+1) != x );
+     preempt_disable();
+     return 1;
+ }
+ 
+ void _read_unlock(rwlock_t *lock)
+ {
++    uint32_t x, y;
++
+     preempt_enable();
+-    _raw_read_unlock(&lock->raw);
++    x = lock->lock;
++    while ( (y = cmpxchg(&lock->lock, x, x-1)) != x )
++        x = y;
+ }
+ 
+ void _read_unlock_irq(rwlock_t *lock)
+ {
+-    preempt_enable();
+-    _raw_read_unlock(&lock->raw);
++    _read_unlock(lock);
+     local_irq_enable();
+ }
+ 
+ void _read_unlock_irqrestore(rwlock_t *lock, unsigned long flags)
+ {
+-    preempt_enable();
+-    _raw_read_unlock(&lock->raw);
++    _read_unlock(lock);
+     local_irq_restore(flags);
+ }
+ 
+ void _write_lock(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_write_trylock(&lock->raw)) )
+-    {
+-        while ( likely(_raw_rw_is_locked(&lock->raw)) )
++    do {
++        while ( (x = lock->lock) & RW_WRITE_FLAG )
+             cpu_relax();
++    } while ( cmpxchg(&lock->lock, x, x|RW_WRITE_FLAG) != x );
++    while ( x != 0 )
++    {
++        cpu_relax();
++        x = lock->lock & ~RW_WRITE_FLAG;
+     }
+     preempt_disable();
+ }
+ 
+ void _write_lock_irq(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     ASSERT(local_irq_is_enabled());
+     local_irq_disable();
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_write_trylock(&lock->raw)) )
++    do {
++        if ( (x = lock->lock) & RW_WRITE_FLAG )
++        {
++            local_irq_enable();
++            while ( (x = lock->lock) & RW_WRITE_FLAG )
++                cpu_relax();
++            local_irq_disable();
++        }
++    } while ( cmpxchg(&lock->lock, x, x|RW_WRITE_FLAG) != x );
++    while ( x != 0 )
+     {
+-        local_irq_enable();
+-        while ( likely(_raw_rw_is_locked(&lock->raw)) )
+-            cpu_relax();
+-        local_irq_disable();
++        cpu_relax();
++        x = lock->lock & ~RW_WRITE_FLAG;
+     }
+     preempt_disable();
+ }
+ 
+ unsigned long _write_lock_irqsave(rwlock_t *lock)
+ {
++    uint32_t x;
+     unsigned long flags;
++
+     local_irq_save(flags);
+     check_lock(&lock->debug);
+-    while ( unlikely(!_raw_write_trylock(&lock->raw)) )
++    do {
++        if ( (x = lock->lock) & RW_WRITE_FLAG )
++        {
++            local_irq_restore(flags);
++            while ( (x = lock->lock) & RW_WRITE_FLAG )
++                cpu_relax();
++            local_irq_save(flags);
++        }
++    } while ( cmpxchg(&lock->lock, x, x|RW_WRITE_FLAG) != x );
++    while ( x != 0 )
+     {
+-        local_irq_restore(flags);
+-        while ( likely(_raw_rw_is_locked(&lock->raw)) )
+-            cpu_relax();
+-        local_irq_save(flags);
++        cpu_relax();
++        x = lock->lock & ~RW_WRITE_FLAG;
+     }
+     preempt_disable();
+     return flags;
+@@ -384,9 +423,13 @@ unsigned long _write_lock_irqsave(rwlock_t *lock)
+ 
+ int _write_trylock(rwlock_t *lock)
+ {
++    uint32_t x;
++
+     check_lock(&lock->debug);
+-    if ( !_raw_write_trylock(&lock->raw) )
+-        return 0;
++    do {
++        if ( (x = lock->lock) != 0 )
++            return 0;
++    } while ( cmpxchg(&lock->lock, x, x|RW_WRITE_FLAG) != x );
+     preempt_disable();
+     return 1;
+ }
+@@ -394,33 +437,32 @@ int _write_trylock(rwlock_t *lock)
+ void _write_unlock(rwlock_t *lock)
+ {
+     preempt_enable();
+-    _raw_write_unlock(&lock->raw);
++    if ( cmpxchg(&lock->lock, RW_WRITE_FLAG, 0) != RW_WRITE_FLAG )
++        BUG();
+ }
+ 
+ void _write_unlock_irq(rwlock_t *lock)
+ {
+-    preempt_enable();
+-    _raw_write_unlock(&lock->raw);
++    _write_unlock(lock);
+     local_irq_enable();
+ }
+ 
+ void _write_unlock_irqrestore(rwlock_t *lock, unsigned long flags)
+ {
+-    preempt_enable();
+-    _raw_write_unlock(&lock->raw);
++    _write_unlock(lock);
+     local_irq_restore(flags);
+ }
+ 
+ int _rw_is_locked(rwlock_t *lock)
+ {
+     check_lock(&lock->debug);
+-    return _raw_rw_is_locked(&lock->raw);
++    return (lock->lock != 0); /* anyone in critical section? */
+ }
+ 
+ int _rw_is_write_locked(rwlock_t *lock)
+ {
+     check_lock(&lock->debug);
+-    return _raw_rw_is_write_locked(&lock->raw);
++    return (lock->lock == RW_WRITE_FLAG); /* writer in critical section? */
+ }
+ 
+ #ifdef LOCK_PROFILE
+diff --git a/xen/include/asm-arm/arm32/spinlock.h b/xen/include/asm-arm/arm32/spinlock.h
+index ba11ad6..bc0343c 100644
+--- a/xen/include/asm-arm/arm32/spinlock.h
++++ b/xen/include/asm-arm/arm32/spinlock.h
+@@ -55,84 +55,6 @@ static always_inline int _raw_spin_trylock(raw_spinlock_t *lock)
+     }
+ }
+ 
+-typedef struct {
+-    volatile unsigned int lock;
+-} raw_rwlock_t;
+-
+-#define _RAW_RW_LOCK_UNLOCKED { 0 }
+-
+-static always_inline int _raw_read_trylock(raw_rwlock_t *rw)
+-{
+-    unsigned long tmp, tmp2 = 1;
+-
+-    __asm__ __volatile__(
+-"1: ldrex   %0, [%2]\n"
+-"   adds    %0, %0, #1\n"
+-"   strexpl %1, %0, [%2]\n"
+-    : "=&r" (tmp), "+r" (tmp2)
+-    : "r" (&rw->lock)
+-    : "cc");
+-
+-    smp_mb();
+-    return tmp2 == 0;
+-}
+-
+-static always_inline int _raw_write_trylock(raw_rwlock_t *rw)
+-{
+-    unsigned long tmp;
+-
+-    __asm__ __volatile__(
+-"1: ldrex   %0, [%1]\n"
+-"   teq     %0, #0\n"
+-"   strexeq %0, %2, [%1]"
+-    : "=&r" (tmp)
+-    : "r" (&rw->lock), "r" (0x80000000)
+-    : "cc");
+-
+-    if (tmp == 0) {
+-        smp_mb();
+-        return 1;
+-    } else {
+-        return 0;
+-    }
+-}
+-
+-static inline void _raw_read_unlock(raw_rwlock_t *rw)
+-{
+-    unsigned long tmp, tmp2;
+-
+-    smp_mb();
+-
+-    __asm__ __volatile__(
+-"1: ldrex   %0, [%2]\n"
+-"   sub     %0, %0, #1\n"
+-"   strex   %1, %0, [%2]\n"
+-"   teq     %1, #0\n"
+-"   bne     1b"
+-    : "=&r" (tmp), "=&r" (tmp2)
+-    : "r" (&rw->lock)
+-    : "cc");
+-
+-    if (tmp == 0)
+-        dsb_sev();
+-}
+-
+-static inline void _raw_write_unlock(raw_rwlock_t *rw)
+-{
+-    smp_mb();
+-
+-    __asm__ __volatile__(
+-    "str    %1, [%0]\n"
+-    :
+-    : "r" (&rw->lock), "r" (0)
+-    : "cc");
+-
+-    dsb_sev();
+-}
+-
+-#define _raw_rw_is_locked(x) ((x)->lock != 0)
+-#define _raw_rw_is_write_locked(x) ((x)->lock == 0x80000000)
+-
+ #endif /* __ASM_SPINLOCK_H */
+ /*
+  * Local variables:
+diff --git a/xen/include/asm-arm/arm64/spinlock.h b/xen/include/asm-arm/arm64/spinlock.h
+index 3a36cfd..5ae034d 100644
+--- a/xen/include/asm-arm/arm64/spinlock.h
++++ b/xen/include/asm-arm/arm64/spinlock.h
+@@ -52,69 +52,6 @@ static always_inline int _raw_spin_trylock(raw_spinlock_t *lock)
+     return !tmp;
+ }
+ 
+-typedef struct {
+-    volatile unsigned int lock;
+-} raw_rwlock_t;
+-
+-#define _RAW_RW_LOCK_UNLOCKED { 0 }
+-
+-static always_inline int _raw_read_trylock(raw_rwlock_t *rw)
+-{
+-    unsigned int tmp, tmp2 = 1;
+-
+-    asm volatile(
+-        "       ldaxr   %w0, %2\n"
+-        "       add     %w0, %w0, #1\n"
+-        "       tbnz    %w0, #31, 1f\n"
+-        "       stxr    %w1, %w0, %2\n"
+-        "1:\n"
+-        : "=&r" (tmp), "+r" (tmp2), "+Q" (rw->lock)
+-        :
+-        : "cc", "memory");
+-
+-    return !tmp2;
+-}
+-
+-static always_inline int _raw_write_trylock(raw_rwlock_t *rw)
+-{
+-    unsigned int tmp;
+-
+-    asm volatile(
+-        "       ldaxr   %w0, %1\n"
+-        "       cbnz    %w0, 1f\n"
+-        "       stxr    %w0, %w2, %1\n"
+-        "1:\n"
+-        : "=&r" (tmp), "+Q" (rw->lock)
+-        : "r" (0x80000000)
+-        : "cc", "memory");
+-
+-    return !tmp;
+-}
+-
+-static inline void _raw_read_unlock(raw_rwlock_t *rw)
+-{
+-    unsigned int tmp, tmp2;
+-
+-    asm volatile(
+-        "    1: ldxr    %w0, %2\n"
+-        "       sub     %w0, %w0, #1\n"
+-        "       stlxr   %w1, %w0, %2\n"
+-        "       cbnz    %w1, 1b\n"
+-        : "=&r" (tmp), "=&r" (tmp2), "+Q" (rw->lock)
+-        :
+-        : "cc", "memory");
+-}
+-
+-static inline void _raw_write_unlock(raw_rwlock_t *rw)
+-{
+-    asm volatile(
+-        "       stlr    %w1, %0\n"
+-        : "=Q" (rw->lock) : "r" (0) : "memory");
+-}
+-
+-#define _raw_rw_is_locked(x) ((x)->lock != 0)
+-#define _raw_rw_is_write_locked(x) ((x)->lock == 0x80000000)
+-
+ #endif /* __ASM_SPINLOCK_H */
+ /*
+  * Local variables:
+diff --git a/xen/include/asm-x86/spinlock.h b/xen/include/asm-x86/spinlock.h
+index 6bc044c..06d9b04 100644
+--- a/xen/include/asm-x86/spinlock.h
++++ b/xen/include/asm-x86/spinlock.h
+@@ -31,58 +31,4 @@ static always_inline int _raw_spin_trylock(raw_spinlock_t *lock)
+     return (oldval > 0);
+ }
+ 
+-typedef struct {
+-    volatile int lock;
+-} raw_rwlock_t;
+-
+-#define RW_WRITE_BIAS 0x7fffffff
+-#define _RAW_RW_LOCK_UNLOCKED /*(raw_rwlock_t)*/ { 0 }
+-
+-static always_inline int _raw_read_trylock(raw_rwlock_t *rw)
+-{
+-    int acquired;
+-
+-    asm volatile (
+-        "    lock; decl %0         \n"
+-        "    jns 2f                \n"
+-#ifdef __clang__ /* clang's builtin assember can't do .subsection */
+-        "1:  .pushsection .fixup,\"ax\"\n"
+-#else
+-        "1:  .subsection 1         \n"
+-#endif
+-        "2:  lock; incl %0         \n"
+-        "    decl %1               \n"
+-        "    jmp 1b                \n"
+-#ifdef __clang__
+-        "    .popsection           \n"
+-#else
+-        "    .subsection 0         \n"
+-#endif
+-        : "=m" (rw->lock), "=r" (acquired) : "1" (1) : "memory" );
+-
+-    return acquired;
+-}
+-
+-static always_inline int _raw_write_trylock(raw_rwlock_t *rw)
+-{
+-    return (cmpxchg(&rw->lock, 0, RW_WRITE_BIAS) == 0);
+-}
+-
+-static always_inline void _raw_read_unlock(raw_rwlock_t *rw)
+-{
+-    asm volatile (
+-        "lock ; incl %0"
+-        : "=m" ((rw)->lock) : : "memory" );
+-}
+-
+-static always_inline void _raw_write_unlock(raw_rwlock_t *rw)
+-{
+-    asm volatile (
+-        "lock ; subl %1,%0"
+-        : "=m" ((rw)->lock) : "i" (RW_WRITE_BIAS) : "memory" );
+-}
+-
+-#define _raw_rw_is_locked(x) ((x)->lock != 0)
+-#define _raw_rw_is_write_locked(x) ((x)->lock > 0)
+-
+ #endif /* __ASM_SPINLOCK_H */
+diff --git a/xen/include/xen/spinlock.h b/xen/include/xen/spinlock.h
+index 12b0a89..eda9b2e 100644
+--- a/xen/include/xen/spinlock.h
++++ b/xen/include/xen/spinlock.h
+@@ -141,11 +141,13 @@ typedef struct spinlock {
+ #define spin_lock_init(l) (*(l) = (spinlock_t)SPIN_LOCK_UNLOCKED)
+ 
+ typedef struct {
+-    raw_rwlock_t raw;
++    volatile uint32_t lock;
+     struct lock_debug debug;
+ } rwlock_t;
+ 
+-#define RW_LOCK_UNLOCKED { _RAW_RW_LOCK_UNLOCKED, _LOCK_DEBUG }
++#define RW_WRITE_FLAG (1u<<31)
++
++#define RW_LOCK_UNLOCKED { 0, _LOCK_DEBUG }
+ #define DEFINE_RWLOCK(l) rwlock_t l = RW_LOCK_UNLOCKED
+ #define rwlock_init(l) (*(l) = (rwlock_t)RW_LOCK_UNLOCKED)
+ 
+-- 
+1.9.1
+
+
+From 9eac0773d9fb5501e56054d914a4e5ade251b791 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 11 Dec 2014 16:52:06 +0000
+Subject: [PATCH] VT-d: suppress UR signaling for further desktop chipsets
+
+This extends commit d6cb14b34f ("VT-d: suppress UR signaling for
+desktop chipsets") as per the finally obtained list of affected
+chipsets from Intel.
+
+Also pad the IDs we had listed there before to full 4 hex digits.
+
+This is CVE-2013-3495 / XSA-59.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Yang Zhang <yang.z.zhang@intel.com>
+master commit: 3e2331d271cc0882e4013c8f20398c46c35f90a1
+master date: 2014-09-18 15:03:22 +0200
+---
+ xen/drivers/passthrough/vtd/quirks.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/xen/drivers/passthrough/vtd/quirks.c b/xen/drivers/passthrough/vtd/quirks.c
+index 647723d..2fac35d 100644
+--- a/xen/drivers/passthrough/vtd/quirks.c
++++ b/xen/drivers/passthrough/vtd/quirks.c
+@@ -474,10 +474,12 @@ void pci_vtd_quirk(const struct pci_dev *pdev)
+                action, seg, bus, dev, func);
+         break;
+ 
+-    case 0x100: case 0x104: case 0x108: /* Sandybridge */
+-    case 0x150: case 0x154: case 0x158: /* Ivybridge */
+-    case 0xa04: /* Haswell ULT */
+-    case 0xc00: case 0xc04: case 0xc08: /* Haswell */
++    case 0x0040: case 0x0044: case 0x0048: /* Nehalem/Westmere */
++    case 0x0100: case 0x0104: case 0x0108: /* Sandybridge */
++    case 0x0150: case 0x0154: case 0x0158: /* Ivybridge */
++    case 0x0a04: /* Haswell ULT */
++    case 0x0c00: case 0x0c04: case 0x0c08: /* Haswell */
++    case 0x1600: case 0x1604: case 0x1608: /* Broadwell */
+         bar = pci_conf_read32(seg, bus, dev, func, 0x6c);
+         bar = (bar << 32) | pci_conf_read32(seg, bus, dev, func, 0x68);
+         pa = bar & 0x7ffffff000UL; /* bits 12...38 */
+-- 
+1.9.1
+
+
+From 4f62968e95cd5ecf9b3bd3636ac7169db4d6f716 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 7 Jan 2015 15:42:07 +0000
+Subject: [PATCH] x86/HVM: prevent use-after-free when destroying a domain
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+hvm_domain_relinquish_resources() can free certain domain resources
+which can still be accessed, e.g. by HVMOP_set_param, while the domain
+is being cleaned up.
+
+Signed-off-by: Mihai Donțu <mdontu@bitdefender.com>
+Tested-by: Răzvan Cojocaru <rcojocaru@bitdefender.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/hvm.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index 3289604..eb7e498 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -625,9 +625,6 @@ int hvm_domain_initialise(struct domain *d)
+ 
+ void hvm_domain_relinquish_resources(struct domain *d)
+ {
+-    xfree(d->arch.hvm_domain.io_handler);
+-    xfree(d->arch.hvm_domain.params);
+-
+     if ( is_pvh_domain(d) )
+         return;
+ 
+@@ -650,6 +647,9 @@ void hvm_domain_relinquish_resources(struct domain *d)
+ 
+ void hvm_domain_destroy(struct domain *d)
+ {
++    xfree(d->arch.hvm_domain.io_handler);
++    xfree(d->arch.hvm_domain.params);
++
+     hvm_destroy_cacheattr_region_list(d);
+ 
+     if ( is_pvh_domain(d) )
+-- 
+1.9.1
+
+
+From e731744d0a118a28c9667440a2b841f1a43a5e69 Mon Sep 17 00:00:00 2001
+From: Ian Campbell <ian.campbell@citrix.com>
+Date: Fri, 20 Feb 2015 14:41:09 +0000
+Subject: [PATCH] From f433bfafbaf7d8a41c4c27aa3e8e78b1ab900b69 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH] tools: libxl: Explicitly disable graphics
+ backends on qemu  cmdline
+
+By default qemu will try to create some sort of backend for the
+emulated VGA device, either SDL or VNC.
+
+However when the user specifies sdl=0 and vnc=0 in their configuration
+libxl was not explicitly disabling either backend, which could lead to
+one unexpectedly running.
+
+If either sdl=1 or vnc=1 is configured then both before and after this
+change only the backends which are explicitly enabled are configured,
+i.e. this issue only occurs when all backends are supposed to have
+been disabled.
+
+This affects qemu-xen and qemu-xen-traditional differently.
+
+If qemu-xen was compiled with SDL support then this would result in an
+SDL window being opened if $DISPLAY is valid, or a failure to start
+the guest if not. Passing "-display none" to qemu before any further
+-sdl options disables this default behaviour and ensures that SDL is
+only started if the libxl configuration demands it.
+
+If qemu-xen was compiled without SDL support then qemu would instead
+start a VNC server listening on ::1 (IPv6 localhost) or 127.0.0.1
+(IPv4 localhost) with IPv6 preferred if available. Explicitly pass
+"-vnc none" when vnc is not enabled in the libxl configuration to
+remove this possibility.
+
+qemu-xen-traditional would never start a vnc backend unless asked.
+However by default it will start an SDL backend, the way to disable
+this is to pass a -vnc option. In other words passing "-vnc none" will
+disable both vnc and sdl by default. sdl can then be reenabled if
+configured by subsequent use of the -sdl option.
+
+Tested with both qemu-xen and qemu-xen-traditional built with SDL
+support and:
+	xl cr # defaults
+	xl cr sdl=0 vnc=0
+	xl cr sdl=1 vnc=0
+	xl cr sdl=0 vnc=1
+	xl cr sdl=0 vnc=0 vga=\"none\"
+	xl cr sdl=0 vnc=0 nographic=1
+with both valid and invalid $DISPLAY.
+
+This is XSA-119.
+
+Reported-by: Sander Eikelenboom <linux@eikelenboom.it>
+Signed-off-by: Ian Campbell <ian.campbell@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_dm.c | 21 +++++++++++++++++++--
+ 1 file changed, 19 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index f6f7bbd..4dbfddc 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -179,7 +179,14 @@ static char ** libxl__build_device_model_args_old(libxl__gc *gc,
+         if (libxl_defbool_val(vnc->findunused)) {
+             flexarray_append(dm_args, "-vncunused");
+         }
+-    }
++    } else
++        /*
++         * VNC is not enabled by default by qemu-xen-traditional,
++         * however passing -vnc none causes SDL to not be
++         * (unexpectedly) enabled by default. This is overridden by
++         * explicitly passing -sdl below as required.
++         */
++        flexarray_append_pair(dm_args, "-vnc", "none");
+ 
+     if (sdl) {
+         flexarray_append(dm_args, "-sdl");
+@@ -463,7 +470,17 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+         }
+ 
+         flexarray_append(dm_args, vncarg);
+-    }
++    } else
++        /*
++         * Ensure that by default no vnc server is created.
++         */
++        flexarray_append_pair(dm_args, "-vnc", "none");
++
++    /*
++     * Ensure that by default no display backend is created. Further
++     * options given below might then enable more.
++     */
++    flexarray_append_pair(dm_args, "-display", "none");
+ 
+     if (sdl) {
+         flexarray_append(dm_args, "-sdl");
+-- 
+1.9.1
+
+
+From 26423ef27e8ed3f40f8e1c51981938a78f31f89b Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Mar 2015 12:01:29 +0000
+Subject: [PATCH] x86/HVM: return all ones on wrong-sized reads of system
+ device I/O ports
+
+So far the value presented to the guest remained uninitialized.
+
+This is XSA-121.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/arch/x86/hvm/i8254.c   | 1 +
+ xen/arch/x86/hvm/pmtimer.c | 1 +
+ xen/arch/x86/hvm/rtc.c     | 3 ++-
+ xen/arch/x86/hvm/vpic.c    | 1 +
+ 4 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/hvm/i8254.c b/xen/arch/x86/hvm/i8254.c
+index f7493b8..e92424e 100644
+--- a/xen/arch/x86/hvm/i8254.c
++++ b/xen/arch/x86/hvm/i8254.c
+@@ -477,6 +477,7 @@ static int handle_pit_io(
+     if ( bytes != 1 )
+     {
+         gdprintk(XENLOG_WARNING, "PIT bad access\n");
++        *val = ~0;
+         return X86EMUL_OKAY;
+     }
+ 
+diff --git a/xen/arch/x86/hvm/pmtimer.c b/xen/arch/x86/hvm/pmtimer.c
+index 01ae31d..6ad2797 100644
+--- a/xen/arch/x86/hvm/pmtimer.c
++++ b/xen/arch/x86/hvm/pmtimer.c
+@@ -213,6 +213,7 @@ static int handle_pmt_io(
+     if ( bytes != 4 )
+     {
+         gdprintk(XENLOG_WARNING, "HVM_PMT bad access\n");
++        *val = ~0;
+         return X86EMUL_OKAY;
+     }
+     
+diff --git a/xen/arch/x86/hvm/rtc.c b/xen/arch/x86/hvm/rtc.c
+index 639b4c5..30270cb 100644
+--- a/xen/arch/x86/hvm/rtc.c
++++ b/xen/arch/x86/hvm/rtc.c
+@@ -696,7 +696,8 @@ static int handle_rtc_io(
+ 
+     if ( bytes != 1 )
+     {
+-        gdprintk(XENLOG_WARNING, "HVM_RTC bas access\n");
++        gdprintk(XENLOG_WARNING, "HVM_RTC bad access\n");
++        *val = ~0;
+         return X86EMUL_OKAY;
+     }
+     
+diff --git a/xen/arch/x86/hvm/vpic.c b/xen/arch/x86/hvm/vpic.c
+index fea3f68..6e4d422 100644
+--- a/xen/arch/x86/hvm/vpic.c
++++ b/xen/arch/x86/hvm/vpic.c
+@@ -324,6 +324,7 @@ static int vpic_intercept_pic_io(
+     if ( bytes != 1 )
+     {
+         gdprintk(XENLOG_WARNING, "PIC_IO bad access size %d\n", bytes);
++        *val = ~0;
+         return X86EMUL_OKAY;
+     }
+ 
+-- 
+1.9.1
+
+
+From 21c4b1ca2a388905c97de8f925d39b7c3fd1809f Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Mar 2015 12:01:34 +0000
+Subject: [PATCH] pre-fill structures for certain HYPERVISOR_xen_version
+ sub-ops
+
+... avoiding to pass hypervisor stack contents back to the caller
+through space unused by the respective strings.
+
+This is XSA-122.
+
+Acked-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/common/kernel.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/xen/common/kernel.c b/xen/common/kernel.c
+index b371f8f..0e34e59 100644
+--- a/xen/common/kernel.c
++++ b/xen/common/kernel.c
+@@ -233,6 +233,8 @@ DO(xen_version)(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
+     case XENVER_extraversion:
+     {
+         xen_extraversion_t extraversion;
++
++        memset(extraversion, 0, sizeof(extraversion));
+         safe_strcpy(extraversion, xen_extra_version());
+         if ( copy_to_guest(arg, extraversion, ARRAY_SIZE(extraversion)) )
+             return -EFAULT;
+@@ -242,6 +244,8 @@ DO(xen_version)(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
+     case XENVER_compile_info:
+     {
+         struct xen_compile_info info;
++
++        memset(&info, 0, sizeof(info));
+         safe_strcpy(info.compiler,       xen_compiler());
+         safe_strcpy(info.compile_by,     xen_compile_by());
+         safe_strcpy(info.compile_domain, xen_compile_domain());
+@@ -277,6 +281,8 @@ DO(xen_version)(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
+     case XENVER_changeset:
+     {
+         xen_changeset_info_t chgset;
++
++        memset(chgset, 0, sizeof(chgset));
+         safe_strcpy(chgset, xen_changeset());
+         if ( copy_to_guest(arg, chgset, ARRAY_SIZE(chgset)) )
+             return -EFAULT;
+-- 
+1.9.1
+
+
+From c135a21c69a3cbd00b8936cb64dffd477438c3d2 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Mar 2015 12:20:26 +0000
+Subject: [PATCH] x86emul: fully ignore segment override for register-only
+ operations
+
+For ModRM encoded instructions with register operands we must not
+overwrite ea.mem.seg (if a - bogus in that case - segment override was
+present) as it aliases with ea.reg.
+
+This is CVE-2015-2151 / XSA-123.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+Reviewed-by: Keir Fraser <keir@xen.org>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 25571c6..9ebff22 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1641,7 +1641,7 @@ x86_emulate(
+         }
+     }
+ 
+-    if ( override_seg != -1 )
++    if ( override_seg != -1 && ea.type == OP_MEM )
+         ea.mem.seg = override_seg;
+ 
+     /* Early operand adjustments. */
+-- 
+1.9.1
+
+
+From 2a675c69e657bfa4cac07390ffb953a662aacb35 Mon Sep 17 00:00:00 2001
+From: Wen Congyang <wency@cn.fujitsu.com>
+Date: Thu, 11 Dec 2014 16:21:21 +0000
+Subject: [PATCH] tools: libxl: pass correct file to qemu if we use blktap2
+
+If we use blktap2, the correct file should be blktap device
+not the pdev_path.
+
+Signed-off-by: Wen Congyang <wency@cn.fujitsu.com>
+Cc: Shriram Rajagopalan <rshriram@cs.ubc.ca>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ tools/libxl/libxl_dm.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index 4dbfddc..d855fc6 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -696,6 +696,7 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+                 libxl__device_disk_dev_number(disks[i].vdev, &disk, &part);
+             const char *format = qemu_disk_format_string(disks[i].format);
+             char *drive;
++            const char *pdev_path;
+ 
+             if (dev_number == -1) {
+                 LIBXL__LOG(ctx, LIBXL__LOG_WARNING, "unable to determine"
+@@ -725,6 +726,12 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+                     continue;
+                 }
+ 
++                if (disks[i].backend == LIBXL_DISK_BACKEND_TAP)
++                    pdev_path = libxl__blktap_devpath(gc, disks[i].pdev_path,
++                                                      disks[i].format);
++                else
++                    pdev_path = disks[i].pdev_path;
++
+                 /*
+                  * Explicit sd disks are passed through as is.
+                  *
+@@ -734,11 +741,11 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+                 if (strncmp(disks[i].vdev, "sd", 2) == 0)
+                     drive = libxl__sprintf
+                         (gc, "file=%s,if=scsi,bus=0,unit=%d,format=%s,cache=writeback",
+-                         disks[i].pdev_path, disk, format);
++                         pdev_path, disk, format);
+                 else if (disk < 4)
+                     drive = libxl__sprintf
+                         (gc, "file=%s,if=ide,index=%d,media=disk,format=%s,cache=writeback",
+-                         disks[i].pdev_path, disk, format);
++                         pdev_path, disk, format);
+                 else
+                     continue; /* Do not emulate this disk */
+             }
+-- 
+1.9.1
+
+
+From 1f5dc43f8b7bb1b24b5b95b0bac00051cc6b8d2d Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 11 Dec 2014 16:23:09 +0000
+Subject: [PATCH] it: George Dunlap <george.dunlap@eu.citrix.com>
+
+libxl: Tell qemu to use raw format when using a tapdisk
+
+At the moment libxl unconditinally passes the underlying file format
+to qemu in the device string.  However, when tapdisk is in use,
+tapdisk handles the underlying format and presents qemu with
+effectively a raw disk.  When qemu looks at the tapdisk block device
+and doesn't find the image format it was looking for, it will fail.
+
+This effectively means that tapdisk cannot be used with HVM domains at
+the moment except for raw files.
+
+Instead, if we're using a tapdisk backend, tell qemu to use a raw file
+format.
+
+Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
+---
+CC: Ian Campbell <ian.campbell@citrix.com>
+CC: Ian Jackson <ian.jackson@citrix.com>
+CC: Wei Liu <wei.liu2@citrix.com>
+CC: Konrad Wilk <konrad.wilk@oracle.com>
+
+Release exception justification: This fixes a bug in functionality, in
+that at the moment HVM guests cannot boot with tapdisk and vhd format.
+
+This is not a regression in xl functionality per se, since (AFAICT)
+this has never worked.  However, given that 4.5 is the first release
+without xend, this *does* represent a regression in functionality for
+Xen as a whole (since before people using hvm guest with vhd on blktap
+could use xend).
+
+The fix is very simple and should only affect codepaths that already
+don't work, so the risk of regressions should be very low.
+
+While preparing this patch, I also noticed that cdroms will ignore the
+backend parameter and treat everything as a file.  This is a bug but I
+think it's a much less important one to address this late in the
+release cycle.
+---
+ tools/libxl/libxl_dm.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index d855fc6..44c3db0 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -726,11 +726,14 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+                     continue;
+                 }
+ 
+-                if (disks[i].backend == LIBXL_DISK_BACKEND_TAP)
++                if (disks[i].backend == LIBXL_DISK_BACKEND_TAP) {
++                    format = qemu_disk_format_string(LIBXL_DISK_FORMAT_RAW);
+                     pdev_path = libxl__blktap_devpath(gc, disks[i].pdev_path,
+                                                       disks[i].format);
+-                else
++                } else {
+                     pdev_path = disks[i].pdev_path;
++                }
++
+ 
+                 /*
+                  * Explicit sd disks are passed through as is.
+-- 
+1.9.1
+
+
+From da32c47a7418e338938fc985e0462eaef69550a7 Mon Sep 17 00:00:00 2001
+From: Don Koch <dkoch@verizon.com>
+Date: Thu, 11 Dec 2014 17:02:21 +0000
+Subject: [PATCH] x86/HVM: sanity check xsave area when migrating or restoring
+ from older Xen versions
+
+Xen 4.3.0, 4.2.3 and older transferred a maximum sized xsave area (as
+if all the available XCR0 bits were set); the new version only
+transfers based on the actual XCR0 bits. This may result in a smaller
+area if the last sections were missing (e.g., the LWP area from an AMD
+machine). If the size doesn't match the XCR0 derived size, the size is
+checked against the maximum size and the part of the xsave area
+between the actual and maximum used size is checked for zero data. If
+either the max size check or any part of the overflow area is
+non-zero, we return with an error.
+
+Signed-off-by: Don Koch <dkoch@verizon.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+master commit: d7bb8e88a087690feba63ef83c13ba067f041da0
+master date: 2014-10-27 16:45:09 +0100
+---
+ xen/arch/x86/hvm/hvm.c | 31 ++++++++++++++++++++-----------
+ 1 file changed, 20 insertions(+), 11 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index eb7e498..18c1c26 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -1041,6 +1041,7 @@ static int hvm_load_cpu_xsave_states(struct domain *d, hvm_domain_context_t *h)
+     struct vcpu *v;
+     struct hvm_hw_cpu_xsave *ctxt;
+     struct hvm_save_descriptor *desc;
++    unsigned int i, desc_start;
+ 
+     /* Which vcpu is this? */
+     vcpuid = hvm_load_instance(h);
+@@ -1081,15 +1082,8 @@ static int hvm_load_cpu_xsave_states(struct domain *d, hvm_domain_context_t *h)
+                         save_area) + XSTATE_AREA_MIN_SIZE);
+         return -EINVAL;
+     }
+-    size = HVM_CPU_XSAVE_SIZE(xfeature_mask);
+-    if ( desc->length > size )
+-    {
+-        printk(XENLOG_G_WARNING
+-               "HVM%d.%d restore mismatch: xsave length %u > %u\n",
+-               d->domain_id, vcpuid, desc->length, size);
+-        return -EOPNOTSUPP;
+-    }
+     h->cur += sizeof (*desc);
++    desc_start = h->cur;
+ 
+     ctxt = (struct hvm_hw_cpu_xsave *)&h->data[h->cur];
+     h->cur += desc->length;
+@@ -1109,10 +1103,24 @@ static int hvm_load_cpu_xsave_states(struct domain *d, hvm_domain_context_t *h)
+     size = HVM_CPU_XSAVE_SIZE(ctxt->xcr0_accum);
+     if ( desc->length > size )
+     {
++        /*
++         * Xen 4.3.0, 4.2.3 and older used to send longer-than-needed
++         * xsave regions.  Permit loading the record if the extra data
++         * is all zero.
++         */
++        for ( i = size; i < desc->length; i++ )
++        {
++            if ( h->data[desc_start + i] )
++            {
++                printk(XENLOG_G_WARNING
++                       "HVM%d.%u restore mismatch: xsave length %#x > %#x (non-zero data at %#x)\n",
++                       d->domain_id, vcpuid, desc->length, size, i);
++                return -EOPNOTSUPP;
++            }
++        }
+         printk(XENLOG_G_WARNING
+-               "HVM%d.%d restore mismatch: xsave length %u > %u\n",
++               "HVM%d.%u restore mismatch: xsave length %#x > %#x\n",
+                d->domain_id, vcpuid, desc->length, size);
+-        return -EOPNOTSUPP;
+     }
+     /* Checking finished */
+ 
+@@ -1121,7 +1129,8 @@ static int hvm_load_cpu_xsave_states(struct domain *d, hvm_domain_context_t *h)
+     if ( ctxt->xcr0_accum & XSTATE_NONLAZY )
+         v->arch.nonlazy_xstate_used = 1;
+     memcpy(v->arch.xsave_area, &ctxt->save_area,
+-           desc->length - offsetof(struct hvm_hw_cpu_xsave, save_area));
++           min(desc->length, size) - offsetof(struct hvm_hw_cpu_xsave,
++           save_area));
+ 
+     return 0;
+ }
+-- 
+1.9.1
+
+
+From 20f859d711b8e18a96d7b386c006a3f0317ab606 Mon Sep 17 00:00:00 2001
+From: Juergen Gross <jgross@suse.com>
+Date: Thu, 11 Dec 2014 17:02:33 +0000
+Subject: [PATCH] adjust number of domains in cpupools when destroying domain
+
+Commit bac6334b51d9bcfe57ecf4a4cb5288348fcf044a (move domain to
+cpupool0 before destroying it) introduced an error in the accounting
+of cpupools regarding the number of domains. The number of domains
+is nor adjusted when a domain is moved to cpupool0 in kill_domain().
+
+Correct this by introducing a cpupool function doing the move
+instead of open coding it by calling sched_move_domain().
+
+Reported-by: Dietmar Hahn <dietmar.hahn@ts.fujitsu.com>
+Signed-off-by: Juergen Gross <jgross@suse.com>
+Tested-by: Dietmar Hahn <dietmar.hahn@ts.fujitsu.com>
+Reviewed-by: Andrew Cooper <Andrew.Cooper3@citrix.com>
+Acked-by: George Dunlap <george.dunlap@eu.citrix.com>
+master commit: 934e7baa6c12d19cfaf24e8f8e27d6c6a8b8c5e4
+master date: 2014-11-12 12:39:58 +0100
+---
+ xen/common/cpupool.c    | 47 +++++++++++++++++++++++++++++++++--------------
+ xen/common/domain.c     |  2 +-
+ xen/include/xen/sched.h |  1 +
+ 3 files changed, 35 insertions(+), 15 deletions(-)
+
+diff --git a/xen/common/cpupool.c b/xen/common/cpupool.c
+index e46e930..53a1394 100644
+--- a/xen/common/cpupool.c
++++ b/xen/common/cpupool.c
+@@ -225,6 +225,35 @@ static int cpupool_destroy(struct cpupool *c)
+ }
+ 
+ /*
++ * Move domain to another cpupool
++ */
++static int cpupool_move_domain_locked(struct domain *d, struct cpupool *c)
++{
++    int ret;
++
++    d->cpupool->n_dom--;
++    ret = sched_move_domain(d, c);
++    if ( ret )
++        d->cpupool->n_dom++;
++    else
++        c->n_dom++;
++
++    return ret;
++}
++int cpupool_move_domain(struct domain *d, struct cpupool *c)
++{
++    int ret;
++
++    spin_lock(&cpupool_lock);
++
++    ret = cpupool_move_domain_locked(d, c);
++
++    spin_unlock(&cpupool_lock);
++
++    return ret;
++}
++
++/*
+  * assign a specific cpu to a cpupool
+  * cpupool_lock must be held
+  */
+@@ -338,14 +367,9 @@ int cpupool_unassign_cpu(struct cpupool *c, unsigned int cpu)
+                 ret = -EBUSY;
+                 break;
+             }
+-            c->n_dom--;
+-            ret = sched_move_domain(d, cpupool0);
++            ret = cpupool_move_domain_locked(d, cpupool0);
+             if ( ret )
+-            {
+-                c->n_dom++;
+                 break;
+-            }
+-            cpupool0->n_dom++;
+         }
+         rcu_read_unlock(&domlist_read_lock);
+         if ( ret )
+@@ -613,16 +637,11 @@ int cpupool_do_sysctl(struct xen_sysctl_cpupool_op *op)
+                         d->domain_id, op->cpupool_id);
+         ret = -ENOENT;
+         spin_lock(&cpupool_lock);
++
+         c = cpupool_find_by_id(op->cpupool_id);
+         if ( (c != NULL) && cpumask_weight(c->cpu_valid) )
+-        {
+-            d->cpupool->n_dom--;
+-            ret = sched_move_domain(d, c);
+-            if ( ret )
+-                d->cpupool->n_dom++;
+-            else
+-                c->n_dom++;
+-        }
++            ret = cpupool_move_domain_locked(d, c);
++
+         spin_unlock(&cpupool_lock);
+         cpupool_dprintk("cpupool move_domain(dom=%d)->pool=%d ret %d\n",
+                         d->domain_id, op->cpupool_id, ret);
+diff --git a/xen/common/domain.c b/xen/common/domain.c
+index 1308193..b18e0a7 100644
+--- a/xen/common/domain.c
++++ b/xen/common/domain.c
+@@ -539,7 +539,7 @@ int domain_kill(struct domain *d)
+             BUG_ON(rc != -EAGAIN);
+             break;
+         }
+-        if ( sched_move_domain(d, cpupool0) )
++        if ( cpupool_move_domain(d, cpupool0) )
+             return -EAGAIN;
+         for_each_vcpu ( d, v )
+             unmap_vcpu_info(v);
+diff --git a/xen/include/xen/sched.h b/xen/include/xen/sched.h
+index 4418883..996a08a 100644
+--- a/xen/include/xen/sched.h
++++ b/xen/include/xen/sched.h
+@@ -828,6 +828,7 @@ struct cpupool *cpupool_get_by_id(int poolid);
+ void cpupool_put(struct cpupool *pool);
+ int cpupool_add_domain(struct domain *d, int poolid);
+ void cpupool_rm_domain(struct domain *d);
++int cpupool_move_domain(struct domain *d, struct cpupool *c);
+ int cpupool_do_sysctl(struct xen_sysctl_cpupool_op *op);
+ void schedule_dump(struct cpupool *c);
+ extern void dump_runq(unsigned char key);
+-- 
+1.9.1
+
+
+From cb97f6ae474c71a7b6d912ded12125fd7a714250 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Mon, 15 Dec 2014 15:56:14 +0000
+Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
+ backend"
+
+This reverts commit 0166217103e18368424fbd5ffff01c1ea50d0b17.
+
+There are some disk formats commonly supported by both qdisk and blktap.
+As qdisk is better supported and blktap is unmaintained, we choose qdisk
+over blktap whenever possible.
+
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_device.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
+index 29ed547..0f9fe2d 100644
+--- a/tools/libxl/libxl_device.c
++++ b/tools/libxl/libxl_device.c
+@@ -278,8 +278,8 @@ int libxl__device_disk_set_backend(libxl__gc *gc, libxl_device_disk *disk) {
+     } else {
+         ok=
+             disk_try_backend(&a, LIBXL_DISK_BACKEND_PHY) ?:
+-            disk_try_backend(&a, LIBXL_DISK_BACKEND_QDISK) ?:
+-            disk_try_backend(&a, LIBXL_DISK_BACKEND_TAP);
++            disk_try_backend(&a, LIBXL_DISK_BACKEND_TAP) ?:
++            disk_try_backend(&a, LIBXL_DISK_BACKEND_QDISK);
+         if (ok)
+             LOG(DEBUG, "Disk vdev=%s, using backend %s",
+                        disk->vdev,
+-- 
+1.9.1
+
+
+From 951cc979ba60c64e378e950e5eb9e97b49e578a5 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:23 +0100
+Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
+
+---
+ tools/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tools/Makefile b/tools/Makefile
+index 6610a8d..86d8a58 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -186,6 +186,7 @@ subdir-all-qemu-xen-dir: qemu-xen-dir-find
+ 		source=.; \
+ 	fi; \
+ 	cd qemu-xen-dir; \
++	env -u CFLAGS \
+ 	$$source/configure --enable-xen --target-list=i386-softmmu \
+ 		$(QEMU_XEN_ENABLE_DEBUG) \
+ 		--prefix=$(PREFIX) \
+-- 
+1.9.1
+
+
+From b6a65188b1488a5ee88a4a9083f3821320b955c8 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 15 Oct 2014 15:36:23 +0100
+Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
+
+Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
+---
+ tools/Rules.mk               |  6 ++---
+ tools/libxl/libxl.c          |  6 +++--
+ tools/libxl/libxl_blktap2.c  | 58 ++++++++++++++++++++++++++++++++++++--------
+ tools/libxl/libxl_dm.c       |  3 ++-
+ tools/libxl/libxl_internal.h |  3 ++-
+ 5 files changed, 59 insertions(+), 17 deletions(-)
+
+diff --git a/tools/Rules.mk b/tools/Rules.mk
+index 13d8fc1..df84f98 100644
+--- a/tools/Rules.mk
++++ b/tools/Rules.mk
+@@ -46,9 +46,9 @@ LIBXL_BLKTAP ?= n
+ endif
+ 
+ ifeq ($(LIBXL_BLKTAP),y)
+-CFLAGS_libblktapctl = -I$(XEN_BLKTAP2)/control -I$(XEN_BLKTAP2)/include $(CFLAGS_xeninclude)
+-LDLIBS_libblktapctl = -L$(XEN_BLKTAP2)/control -lblktapctl
+-SHLIB_libblktapctl  = -Wl,-rpath-link=$(XEN_BLKTAP2)/control
++CFLAGS_libblktapctl = -I$(XEN_BLKTAP2)/include $(CFLAGS_xeninclude)
++LDLIBS_libblktapctl = -L$(XEN_BLKTAP2)/control/.libs -lblktapctl
++SHLIB_libblktapctl  = -Wl,-rpath-link=$(XEN_BLKTAP2)/control/.libs
+ else
+ CFLAGS_libblktapctl =
+ LDLIBS_libblktapctl =
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 2d29ad2..9e03bdc 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2143,7 +2143,8 @@ static void device_disk_add(libxl__egc *egc, uint32_t domid,
+             case LIBXL_DISK_BACKEND_TAP:
+                 if (dev == NULL) {
+                     dev = libxl__blktap_devpath(gc, disk->pdev_path,
+-                                                disk->format);
++                                                disk->format,
++                                                disk->readwrite);
+                     if (!dev) {
+                         LOG(ERROR, "failed to get blktap devpath for %p\n",
+                             disk->pdev_path);
+@@ -2645,7 +2646,8 @@ void libxl__device_disk_local_initiate_attach(libxl__egc *egc,
+                 break;
+             case LIBXL_DISK_FORMAT_VHD:
+                 dev = libxl__blktap_devpath(gc, disk->pdev_path,
+-                                            disk->format);
++                                            disk->format,
++                                            disk->readwrite);
+                 break;
+             case LIBXL_DISK_FORMAT_QCOW:
+             case LIBXL_DISK_FORMAT_QCOW2:
+diff --git a/tools/libxl/libxl_blktap2.c b/tools/libxl/libxl_blktap2.c
+index 2053403..24939d7 100644
+--- a/tools/libxl/libxl_blktap2.c
++++ b/tools/libxl/libxl_blktap2.c
+@@ -23,26 +23,62 @@ int libxl__blktap_enabled(libxl__gc *gc)
+     return !tap_ctl_check(&msg);
+ }
+ 
++static int tap_ctl_find(const char *type, const char *disk, tap_list_t *tap) 
++{
++    int err;
++    struct list_head list = LIST_HEAD_INIT(list);
++    tap_list_t *entry;
++
++    err = tap_ctl_list(&list);
++    if (err)
++        return err;
++
++    err = ERROR_FAIL;
++
++    tap_list_for_each_entry(entry, &list) {
++        if (type && (!entry->type || strcmp(entry->type, type)))
++            continue;
++        
++        if (disk && (!entry->path || strcmp(entry->path, disk)))
++            continue;
++        
++        tap->minor = entry->minor;
++        tap->pid = entry->pid;
++        err = 0;
++        break;
++    }
++    tap_ctl_list_free(&list);
++    
++    return err;
++}
++
+ char *libxl__blktap_devpath(libxl__gc *gc,
+                             const char *disk,
+-                            libxl_disk_format format)
++                            libxl_disk_format format,
++                            int readwrite)
+ {
+     const char *type;
+     char *params, *devname = NULL;
+-    tap_list_t tap;
+     int err;
++    int minor;
++    int flags;
+ 
+     type = libxl__device_disk_string_of_format(format);
+-    err = tap_ctl_find(type, disk, &tap);
+-    if (err == 0) {
+-        devname = libxl__sprintf(gc, "/dev/xen/blktap-2/tapdev%d", tap.minor);
++
++    minor = tap_ctl_find_minor(type, disk);
++    if (minor >= 0) {
++        devname = libxl__sprintf(gc, "/dev/xen/blktap-2/tapdev%d", minor);
+         if (devname)
+             return devname;
+     }
+ 
+     params = libxl__sprintf(gc, "%s:%s", type, disk);
+-    err = tap_ctl_create(params, &devname);
++    fprintf(stderr, "DEBUG %s %d %s\n", __func__, __LINE__, params);
++    flags = readwrite ? 0 : TAPDISK_MESSAGE_FLAG_RDONLY;
++
++    err = tap_ctl_create(params, &devname, flags, -1, 0, 0);
+     if (!err) {
++        fprintf(stderr, "DEBUG %s %d %s\n", __func__, __LINE__, devname);
+         libxl__ptr_add(gc, devname);
+         return devname;
+     }
+@@ -55,7 +91,8 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
+ {
+     char *type, *disk;
+     int err;
+-    tap_list_t tap;
++    struct list_head list = LIST_HEAD_INIT(list);
++    tap_list_t tap = { .minor=-1, .pid=-1 };
+ 
+     type = libxl__strdup(gc, params);
+ 
+@@ -65,19 +102,20 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
+         return ERROR_INVAL;
+     }
+ 
++    fprintf(stderr, "DEBUG %s %d type=%s disk=%s\n",__func__,__LINE__,type,disk);
+     *disk++ = '\0';
+ 
+     err = tap_ctl_find(type, disk, &tap);
+-    if (err < 0) {
++    if (err) {
+         /* returns -errno */
+         LOGEV(ERROR, -err, "Unable to find type %s disk %s", type, disk);
+         return ERROR_FAIL;
+     }
+ 
+-    err = tap_ctl_destroy(tap.id, tap.minor);
++    err = tap_ctl_destroy(tap.pid, tap.minor, 1, NULL);
+     if (err < 0) {
+         LOGEV(ERROR, -err, "Failed to destroy tap device id %d minor %d",
+-              tap.id, tap.minor);
++              tap.pid, tap.minor);
+         return ERROR_FAIL;
+     }
+ 
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index 44c3db0..579957a 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -729,7 +729,8 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+                 if (disks[i].backend == LIBXL_DISK_BACKEND_TAP) {
+                     format = qemu_disk_format_string(LIBXL_DISK_FORMAT_RAW);
+                     pdev_path = libxl__blktap_devpath(gc, disks[i].pdev_path,
+-                                                      disks[i].format);
++                                                      disks[i].format,
++                                                      disks[i].readwrite);
+                 } else {
+                     pdev_path = disks[i].pdev_path;
+                 }
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index 9d17586..144d571 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -1394,7 +1394,8 @@ _hidden int libxl__blktap_enabled(libxl__gc *gc);
+  */
+ _hidden char *libxl__blktap_devpath(libxl__gc *gc,
+                                     const char *disk,
+-                                    libxl_disk_format format);
++                                    libxl_disk_format format,
++                                    int readwrite);
+ 
+ /* libxl__device_destroy_tapdisk:
+  *   Destroys any tapdisk process associated with the backend represented
+-- 
+1.9.1
+

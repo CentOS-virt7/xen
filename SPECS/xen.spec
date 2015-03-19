@@ -14,12 +14,12 @@
 %define with_systemd 0
 
 # Hypervisor ABI
-%define hv_abi  4.2
+%define hv_abi  4.4
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.2.5
-Release: 37%{?dist}
+Version: 4.4.1
+Release: 9%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -32,21 +32,15 @@ Source11: newlib-1.16.0.tar.gz
 Source12: zlib-1.2.3.tar.gz
 Source13: pciutils-2.2.9.tar.bz2
 Source14: grub-0.97.tar.gz
+Source15: polarssl-1.1.4-gpl.tgz
 # init.d bits
-Source20: init.xenstored
-Source21: init.xenconsoled
-Source22: init.blktapctrl
 Source23: init.xend
 # sysconfig bits
-Source30: sysconfig.xenstored
-Source31: sysconfig.xenconsoled
-Source32: sysconfig.blktapctrl
 Source33: sysconfig.xend
 # systemd bits
 Source40: proc-xen.mount
 Source41: var-lib-xenstored.mount
 Source42: xenstored.service
-Source43: blktapctrl.service
 Source44: xend.service
 Source45: xenconsoled.service
 Source46: xen-watchdog.service
@@ -54,42 +48,14 @@ Source47: xendomains.service
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
 
-Source101: blktap-9960138790b9d3610b12acd153bba20235efa4f5.tar.gz
+Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
-Patch1: xen-initscript.patch
-Patch4: xen-dumpdir.patch
-Patch5: xen-net-disable-iptables-on-bridge.patch
+Patch1: xen-queue.am
 
-Patch28: pygrubfix.patch
-Patch34: xend.catchbt.patch
-Patch35: xend-pci-loop.patch
-Patch39: xend.selinux.fixes.patch
-Patch46: xen.use.fedora.seabios.patch
-Patch47: xen.use.fedora.ipxe.patch
-
-Patch49: xen.fedora.efi.build.patch
-Patch55: qemu-xen.trad.buildfix.patch
-Patch56: xen.fedora19.buildfix.patch
-
-Patch64: xl.list.-l.format.patch
-Patch65: xen.git-9c23a1d0eb7a6b5e3273d527cfd7960838fbfee6.patch
-
-Patch100: xen-configure-xend.patch
-
-Patch106: xen-xl-autoballon-with-auto-option.patch
-Patch107: xen-xl-set-autoballon-default-auto.patch
-
-#Patch200: xsa89.patch
-Patch205: xsa97-hap-4.2.patch
-Patch206: xsa104.patch
-Patch207: xsa105.patch
-Patch208: xsa106.patch
-Patch209: xsa108.patch
-
-Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
-Patch1003: xen-centos-libxl-with-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
+
+Patch2001: qemu-xen-b04df88-fix-persistent-unmap.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -122,6 +88,7 @@ BuildRequires: bzip2-devel xz-devel
 BuildRequires: e2fsprogs-devel
 # tools now require yajl
 BuildRequires: yajl-devel
+BuildRequires: git
 Requires: bridge-utils
 Requires: python-lxml
 Requires: udev >= 059
@@ -202,7 +169,7 @@ Group: Development/Libraries
 Requires: xen-libs = %{version}-%{release}
 
 %description devel
-This package contains what's needed to develop applications
+This package contains what\'s needed to develop applications
 which manage Xen virtual machines.
 
 
@@ -239,33 +206,19 @@ manage Xen virtual machines.
 
 %prep
 %setup -q
-%patch1 -p1
-%patch4 -p1
-%patch5 -p1
 
-%patch28 -p1
-%patch34 -p1
-%patch35 -p1
-%patch39 -p1
-%patch46 -p1
-%patch47 -p1
-%patch49 -p1
-%patch55 -p1
-%patch56 -p1
+# Create a git repo within the expanded tarball.
+git init
+git config user.email "..."
+git config user.name "..."
+git config gc.auto 0
+git add .
+git commit -a -q -m "%{version} baseline."
 
-%patch64 -p1
-%patch65 -p1
-%patch100 -p1
-%patch106 -p1
-%patch107 -p1
+# Apply patches to code in the core Xen repo
+git am %{PATCH1}
 
-%patch205 -p1
-%patch206 -p1
-%patch207 -p1
-%patch208 -p1
-%patch209 -p1
-
-%patch1000 -p1
+# Now apply patches to things not in the core Xen repo
 
 pushd `pwd`
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
@@ -275,17 +228,14 @@ cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/user --libexecdir=/usr/lib/xen/bin
 popd 
 %patch1001 -p1
-%patch1003 -p1
 %patch1005 -p1
 
-
-pushd `pwd`
-cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/qemu-xen
-#%patch105 -p1
-popd
+pushd tools/qemu-xen
+%patch2001 -p1
+pushd
 
 # stubdom sources
-cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
+cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} stubdom
 
 
 %build
@@ -300,7 +250,7 @@ export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
 export CFLAGS="$RPM_OPT_FLAGS"
 make %{?_smp_mflags} %{?efi_flags} prefix=/usr dist-xen
-./configure --libdir=%{_libdir}
+WGET=/bin/false ./configure --enable-xend --libdir=%{_libdir} --with-system-seabios=/usr/share/seabios/bios.bin
 make %{?_smp_mflags} %{?ocaml_flags} prefix=/usr dist-tools
 make                 prefix=/usr dist-docs
 unset CFLAGS
@@ -348,6 +298,7 @@ rm -f %{buildroot}%{_sbindir}/xen-python-path
 # qemu stuff (unused or available from upstream)
 rm -rf %{buildroot}/usr/share/xen/man
 rm -rf %{buildroot}/usr/bin/qemu-*-xen
+rm %{buildroot}/usr/libexec/qemu-bridge-helper
 ln -s qemu-img %{buildroot}/%{_bindir}/qemu-img-xen
 ln -s qemu-img %{buildroot}/%{_bindir}/qemu-nbd-xen
 for file in bios.bin openbios-sparc32 openbios-sparc64 ppc_rom.bin \
@@ -396,9 +347,6 @@ install -m 644 %{SOURCE2} %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 #mv %{buildroot}%{_sysconfdir}/init.d/* %{buildroot}%{_sysconfdir}/rc.d/init.d
 #rmdir %{buildroot}%{_sysconfdir}/init.d
 %if %with_sysv
-install -m 755 %{SOURCE20} %{buildroot}%{_sysconfdir}/rc.d/init.d/xenstored
-install -m 755 %{SOURCE21} %{buildroot}%{_sysconfdir}/rc.d/init.d/xenconsoled
-install -m 755 %{SOURCE22} %{buildroot}%{_sysconfdir}/rc.d/init.d/blktapctrl
 install -m 755 %{SOURCE23} %{buildroot}%{_sysconfdir}/rc.d/init.d/xend
 %else
 rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xen-watchdog
@@ -409,9 +357,6 @@ rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xendomains
 
 # sysconfig
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
-install -m 644 %{SOURCE30} %{buildroot}%{_sysconfdir}/sysconfig/xenstored
-install -m 644 %{SOURCE31} %{buildroot}%{_sysconfdir}/sysconfig/xenconsoled
-install -m 644 %{SOURCE32} %{buildroot}%{_sysconfdir}/sysconfig/blktapctrl
 
 # systemd
 %if %with_systemd
@@ -419,7 +364,6 @@ mkdir -p %{buildroot}%{_unitdir}
 install -m 644 %{SOURCE40} %{buildroot}%{_unitdir}/proc-xen.mount
 install -m 644 %{SOURCE41} %{buildroot}%{_unitdir}/var-lib-xenstored.mount
 install -m 644 %{SOURCE42} %{buildroot}%{_unitdir}/xenstored.service
-install -m 644 %{SOURCE43} %{buildroot}%{_unitdir}/blktapctrl.service
 install -m 644 %{SOURCE44} %{buildroot}%{_unitdir}/xend.service
 install -m 644 %{SOURCE45} %{buildroot}%{_unitdir}/xenconsoled.service
 install -m 644 %{SOURCE46} %{buildroot}%{_unitdir}/xen-watchdog.service
@@ -505,10 +449,7 @@ fi
 
 %post runtime
 %if %with_sysv
-/sbin/chkconfig --add xenconsoled
-/sbin/chkconfig --add xenstored
 /sbin/chkconfig --add xencommons
-/sbin/chkconfig --add blktapctrl
 %endif
 %if %with_systemd
 /bin/systemctl enable xenstored.service
@@ -518,17 +459,14 @@ fi
 
 %if %with_sysv
 if [ $1 != 0 ]; then
-  service xenconsoled condrestart
+  service xencommons restart
 fi
 %endif
 
 %preun runtime
 if [ $1 = 0 ]; then
 %if %with_sysv
-  /sbin/chkconfig --del xenconsoled
-  /sbin/chkconfig --del xenstored
   /sbin/chkconfig --del xencommons
-  /sbin/chkconfig --del blktapctrl
 %endif
 %if %with_systemd
   /bin/systemctl disable xenstored.service
@@ -613,9 +551,6 @@ rm -rf %{buildroot}
 %config %attr(0700,root,root) %{_sysconfdir}/%{name}/scripts/*
 
 %if %with_sysv
-%{_sysconfdir}/rc.d/init.d/blktapctrl
-%{_sysconfdir}/rc.d/init.d/xenstored
-%{_sysconfdir}/rc.d/init.d/xenconsoled
 %{_sysconfdir}/rc.d/init.d/xen-watchdog
 %{_sysconfdir}/rc.d/init.d/xencommons
 %endif
@@ -625,15 +560,11 @@ rm -rf %{buildroot}
 %{_unitdir}/proc-xen.mount
 %{_unitdir}/var-lib-xenstored.mount
 %{_unitdir}/xenstored.service
-%{_unitdir}/blktapctrl.service
 %{_unitdir}/xenconsoled.service
 %{_unitdir}/xen-watchdog.service
 /usr/lib/tmpfiles.d/xen.conf
 %endif
 
-%config(noreplace) %{_sysconfdir}/sysconfig/xenstored
-%config(noreplace) %{_sysconfdir}/sysconfig/xenconsoled
-%config(noreplace) %{_sysconfdir}/sysconfig/blktapctrl
 %config(noreplace) %{_sysconfdir}/sysconfig/xencommons
 %config(noreplace) %{_sysconfdir}/xen/xl.conf
 %config(noreplace) %{_sysconfdir}/xen/cpupool
@@ -668,6 +599,10 @@ rm -rf %{buildroot}
 %{_mandir}/man5/xl.cfg.5*
 %{_mandir}/man5/xl.conf.5*
 %{_mandir}/man5/xlcpupool.cfg.5*
+%{_mandir}/man1/xenstore-chmod.1.gz
+%{_mandir}/man1/xenstore-ls.1.gz
+%{_mandir}/man1/xenstore.1.gz
+
 
 %{python_sitearch}/fsimage.so
 %{python_sitearch}/grub
@@ -698,7 +633,7 @@ rm -rf %{buildroot}
 %dir %attr(0700,root,root) %{_localstatedir}/run/xenstored
 # XenD runtime state
 %ghost %attr(0700,root,root) %{_localstatedir}/run/xend
-%ghost %attr(0700,root,root) %{_localstatedir}/run/xend/boot
+#%ghost %attr(0700,root,root) %{_localstatedir}/run/xend/boot
 
 # All xenstore CLI tools
 %{_bindir}/qemu-*-xen
@@ -707,15 +642,7 @@ rm -rf %{buildroot}
 %{_bindir}/pygrub
 %{_bindir}/xentrace*
 %{_bindir}/remus
-# blktap daemon
-%{_sbindir}/blktapctrl
-%{_sbindir}/tapdisk*
-# XSM
-%{_sbindir}/flask-*
-# Disk utils
-%{_sbindir}/qcow-create
-%{_sbindir}/qcow2raw
-%{_sbindir}/img2qcow
+%{_bindir}/xencov_split
 # Misc stuff
 %{_bindir}/xen-detect
 %{_sbindir}/gdbsx
@@ -740,9 +667,10 @@ rm -rf %{buildroot}
 %{_sbindir}/xenperf
 %{_sbindir}/xenwatchdogd
 %{_sbindir}/xl
-%{_sbindir}/xsview
 %{_sbindir}/xen-lowmemd
 %{_sbindir}/xen-ringwatch
+%{_sbindir}/xencov
+%{_sbindir}/xen-mfndump
 #blktap
 %{_bindir}/vhd-index
 %{_bindir}/vhd-update
@@ -770,7 +698,6 @@ rm -rf %{buildroot}
 %defattr(-,root,root)
 %doc docs/misc/
 %doc dist/install/usr/share/doc/xen/html
-%doc dist/install/usr/share/doc/xen/pdf/*.pdf
 
 %files devel
 %defattr(-,root,root)
@@ -812,6 +739,46 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Mar 13 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-9.el6.centos
+ - Fix issue with blktap that left 'zombie' tapdisk processes around
+ - Pass readwrite flag to blktap to make it possible to mount disk images
+   from read-only files.
+
+* Thu Mar 12 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-8.el6.centos
+ - Import xsa-119
+
+* Thu Mar  5 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-7.el6.centos
+ - Import xsa-123
+
+* Thu Mar  5 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-6.el6.centos
+ - Import xsa-121, xsa-122
+
+* Wed Jan  7 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-5.el6.centos
+ - Import xsa-116
+
+* Mon Dec 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-4.el6.centos
+ - Disabled xend by default
+ - Revert 'choose qdisk first' change
+
+* Thu Dec 11 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-3.el6.centos
+ - Backported qdisk persistent grant fix
+ - Backported fixes to use tapdisk with HVM guests
+ - Backported XSAs 107,109-114
+ - Backported fixes to migration, cpupools
+ - Remove blktapctl initscripts as it\'s no longer available in 4.4
+ - Removed custom xenconsoled and xenstored initscripts in favor of xencommons
+
+* Wed Oct 22 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-2.el6.centos
+ - Updated to blktap 2.5 v0.9.2
+
+* Wed Oct 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-1.el6.centos
+ - Removed patches which were reflected upstream
+ - Took advantage of --with-system-seabios config option to remove seabios patch
+ - Included polarssl (now required for pvgrub)
+
+* Wed Oct 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.2.5-36.el6.centos
+ - Port system over to git patchqueue.
+
 * Mon Oct 20 2014 Johnny Hughes <johnny@centos.org> - 4.2.5-37.el6.centos
 - shifted /etc/sysconfig/xen-kernel to centos-xen-release instead of xen
 
