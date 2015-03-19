@@ -771,6 +771,9 @@ rm -rf %{buildroot}
 * Wed Oct 22 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-2.el6.centos
  - Updated to blktap 2.5 v0.9.2
 
+* Mon Oct 20 2014 Johnny Hughes <johnny@centos.org> - 4.2.5-37.el6.centos
+- shifted /etc/sysconfig/xen-kernel to centos-xen-release instead of xen
+
 * Wed Oct 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-1.el6.centos
  - Removed patches which were reflected upstream
  - Took advantage of --with-system-seabios config option to remove seabios patch
@@ -778,9 +781,6 @@ rm -rf %{buildroot}
 
 * Wed Oct 15 2014 George Dunlap <george.dunlap@eu.citrix.com> - 4.2.5-36.el6.centos
  - Port system over to git patchqueue.
-
-* Mon Oct 20 2014 Johnny Hughes <johnny@centos.org> - 4.2.5-37.el6.centos
-- shifted /etc/sysconfig/xen-kernel to centos-xen-release instead of xen
 
 * Thu Oct 9 2014 Johnny Hughes <johnny@centos.org> -  4.2.5-36.el6.centos
 - added /etc/sysconfig/xen-kernel for auto grub install options
