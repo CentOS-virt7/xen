@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.2
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -57,6 +57,8 @@ Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 
 Patch2002: xsa126-qemuu.patch
 Patch2003: xsa126-qemut.patch
+Patch2004: xsa133-qemuu.patch
+Patch2005: xsa133-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -233,10 +235,12 @@ popd
 
 pushd tools/qemu-xen
 %patch2002 -p1
+%patch2004 -p1
 popd
 
 pushd tools/qemu-xen-traditional
 %patch2003 -p1
+%patch2005 -p1
 popd
 
 # stubdom sources
@@ -744,6 +748,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed May 13 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-2.el6.centos
+ - Import XSA-133
+
 * Thu Apr 23 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-1.el6.centos
  - Update to 4.4.2
  - Import XSA-132
