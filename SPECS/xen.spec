@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.2
-Release: 2%{?dist}
+Release: 3%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -55,10 +55,34 @@ Patch1: xen-queue.am
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 
-Patch2002: xsa126-qemuu.patch
-Patch2003: xsa126-qemut.patch
-Patch2004: xsa133-qemuu.patch
-Patch2005: xsa133-qemut.patch
+Patch2001: xsa126-qemuu.patch
+Patch2002: xsa128-qemuu.patch
+Patch2003: xsa129-qemuu.patch
+Patch2004: xsa130-qemuu.patch
+Patch2005: xsa131-qemuu-4.4-1.patch
+Patch2006: xsa131-qemuu-2.patch
+Patch2007: xsa131-qemuu-3.patch
+Patch2008: xsa131-qemuu-4.patch
+Patch2009: xsa131-qemuu-5.patch
+Patch2010: xsa131-qemuu-6.patch
+Patch2011: xsa131-qemuu-7.patch
+Patch2012: xsa131-qemuu-8.patch
+Patch2013: xsa133-qemuu.patch
+
+Patch3001: xsa126-qemut.patch
+Patch3002: xsa128-qemut.patch
+Patch3003: xsa129-qemut.patch
+Patch3004: xsa130-qemut.patch
+Patch3005: xsa131-qemut-1.patch
+Patch3006: xsa131-qemut-2.patch
+Patch3007: xsa131-qemut-3.patch
+Patch3008: xsa131-qemut-4.patch
+Patch3009: xsa131-qemut-5.patch
+Patch3010: xsa131-qemut-6.patch
+Patch3011: xsa131-qemut-7.patch
+Patch3012: xsa131-qemut-8.patch
+Patch3013: xsa133-qemut.patch
+
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -233,14 +257,38 @@ popd
 %patch1001 -p1
 %patch1005 -p1
 
+%define _default_patch_fuzz 2
+
 pushd tools/qemu-xen
+%patch2001 -p1
 %patch2002 -p1
+%patch2003 -p1
 %patch2004 -p1
+%patch2005 -p1
+%patch2006 -p1
+%patch2007 -p1
+%patch2008 -p1
+%patch2009 -p1
+%patch2010 -p1
+%patch2011 -p1
+%patch2012 -p1
+%patch2013 -p1
 popd
 
 pushd tools/qemu-xen-traditional
-%patch2003 -p1
-%patch2005 -p1
+%patch3001 -p1
+%patch3002 -p1
+%patch3003 -p1
+%patch3004 -p1
+%patch3005 -p1
+%patch3006 -p1
+%patch3007 -p1
+%patch3008 -p1
+%patch3009 -p1
+%patch3010 -p1
+%patch3011 -p1
+%patch3012 -p1
+%patch3013 -p1
 popd
 
 # stubdom sources
@@ -748,6 +796,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jun  1 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-3.el6.centos
+ - Import XSA-128,129.130,131
+
 * Wed May 13 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-2.el6.centos
  - Import XSA-133
 
