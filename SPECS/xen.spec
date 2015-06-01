@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.2
-Release: 3%{?dist}
+Release: 4%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -68,6 +68,8 @@ Patch2010: xsa131-qemuu-6.patch
 Patch2011: xsa131-qemuu-7.patch
 Patch2012: xsa131-qemuu-8.patch
 Patch2013: xsa133-qemuu.patch
+Patch2014: xsa135-qemuu-4.5-1.patch
+Patch2015: xsa135-qemuu-4.5-2.patch
 
 Patch3001: xsa126-qemut.patch
 Patch3002: xsa128-qemut.patch
@@ -82,6 +84,8 @@ Patch3010: xsa131-qemut-6.patch
 Patch3011: xsa131-qemut-7.patch
 Patch3012: xsa131-qemut-8.patch
 Patch3013: xsa133-qemut.patch
+Patch3014: xsa135-qemut-1.patch
+Patch3015: xsa135-qemut-2.patch
 
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
@@ -273,6 +277,8 @@ pushd tools/qemu-xen
 %patch2011 -p1
 %patch2012 -p1
 %patch2013 -p1
+%patch2014 -p1
+%patch2015 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -289,6 +295,8 @@ pushd tools/qemu-xen-traditional
 %patch3011 -p1
 %patch3012 -p1
 %patch3013 -p1
+%patch3014 -p1
+%patch3015 -p1
 popd
 
 # stubdom sources
@@ -796,6 +804,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jun  1 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-4.el6.centos
+ - Import XSA-134,135,136
+
 * Mon Jun  1 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-3.el6.centos
  - Import XSA-128,129.130,131
 
