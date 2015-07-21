@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.2
-Release: 4%{?dist}
+Release: 5%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -70,6 +70,9 @@ Patch2012: xsa131-qemuu-8.patch
 Patch2013: xsa133-qemuu.patch
 Patch2014: xsa135-qemuu-4.5-1.patch
 Patch2015: xsa135-qemuu-4.5-2.patch
+Patch2016: xsa138-qemuu-1.patch
+Patch2017: xsa138-qemuu-2.patch
+Patch2018: xsa138-qemuu-3.patch
 
 Patch3001: xsa126-qemut.patch
 Patch3002: xsa128-qemut.patch
@@ -86,6 +89,8 @@ Patch3012: xsa131-qemut-8.patch
 Patch3013: xsa133-qemut.patch
 Patch3014: xsa135-qemut-1.patch
 Patch3015: xsa135-qemut-2.patch
+Patch3016: xsa138-qemut-1.patch
+Patch3017: xsa138-qemut-2.patch
 
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
@@ -279,6 +284,9 @@ pushd tools/qemu-xen
 %patch2013 -p1
 %patch2014 -p1
 %patch2015 -p1
+%patch2016 -p1
+%patch2017 -p1
+%patch2018 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -297,6 +305,8 @@ pushd tools/qemu-xen-traditional
 %patch3013 -p1
 %patch3014 -p1
 %patch3015 -p1
+%patch3016 -p1
+%patch3017 -p1
 popd
 
 # stubdom sources
@@ -804,6 +814,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Jun 30 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-5.el6.centos
+ - Import XSA-137
+ - Import XSA-138
+
 * Mon Jun  1 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-4.el6.centos
  - Import XSA-134,135,136
 
