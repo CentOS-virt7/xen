@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.2
-Release: 6%{?dist}
+Release: 7%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -73,6 +73,14 @@ Patch2015: xsa135-qemuu-4.5-2.patch
 Patch2016: xsa138-qemuu-1.patch
 Patch2017: xsa138-qemuu-2.patch
 Patch2018: xsa138-qemuu-3.patch
+Patch2019: xsa139-qemuu-4.5.patch
+Patch2020: xsa140-qemuu-unstable-1.patch
+Patch2021: xsa140-qemuu-unstable-2.patch
+Patch2022: xsa140-qemuu-unstable-3.patch
+Patch2023: xsa140-qemuu-unstable-4.patch
+Patch2024: xsa140-qemuu-unstable-5.patch
+Patch2025: xsa140-qemuu-unstable-6.patch
+Patch2026: xsa140-qemuu-unstable-7.patch
 
 Patch3001: xsa126-qemut.patch
 Patch3002: xsa128-qemut.patch
@@ -287,6 +295,14 @@ pushd tools/qemu-xen
 %patch2016 -p1
 %patch2017 -p1
 %patch2018 -p1
+%patch2019 -p1
+%patch2020 -p1
+%patch2021 -p1
+%patch2022 -p1
+%patch2023 -p1
+%patch2024 -p1
+%patch2025 -p1
+%patch2026 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -814,7 +830,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
-* Tue Jun 30 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-6.el6.centos
+* Thu Jul 30 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-7.el6.centos
+ - Import XSA-139
+ - Import XSA-140
+
+* Tue Jul 28 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-6.el6.centos
  - Gratuitous revision bump to pull \in new version of seabios
 
 * Tue Jun 30 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-5.el6.centos
