@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.2
-Release: 7%{?dist}
+Release: 8%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -569,13 +569,19 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %post hypervisor
-if [ $1 = 1 -a -f /sbin/grub2-mkconfig -a -f /boot/grub2/grub.cfg ]; then
-  /sbin/grub2-mkconfig -o /boot/grub2/grub.cfg
+if [ $1 = 1 ] ; then
+    if [ -f %{_bindir}/grub-bootxen.sh ]; then
+	%{_bindir}/grub-bootxen.sh
+    elif [ -f /sbin/grub2-mkconfig -a -f /boot/grub2/grub.cfg ]; then
+	/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg
+    fi
 fi
 
-%postun hypervisor
-if [ -f /sbin/grub2-mkconfig -a -f /boot/grub2/grub.cfg ]; then
-  /sbin/grub2-mkconfig -o /boot/grub2/grub.cfg
+%postuninstall hypervisor
+if [ -f %{_bindir}/grub-bootxen.sh ]; then
+    %{_bindir}/grub-bootxen.sh
+elif [ -f /sbin/grub2-mkconfig -a -f /boot/grub2/grub.cfg ]; then
+    /sbin/grub2-mkconfig -o /boot/grub2/grub.cfg
 fi
 
 %clean
@@ -830,6 +836,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Aug 03 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-8.el6.centos
+ - Run grub-bootxen.sh on hypervisor post (un)install
+
 * Thu Jul 30 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-7.el6.centos
  - Import XSA-139
  - Import XSA-140
