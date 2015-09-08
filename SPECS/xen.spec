@@ -781,7 +781,7 @@ rm -rf %{buildroot}
  - Import XSA-126
  - Import XSA-127
 
-* Thu Mar 13 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-9.el6.centos
+* Fri Mar 13 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.1-9.el6.centos
  - Fix issue with blktap that left 'zombie' tapdisk processes around
  - Pass readwrite flag to blktap to make it possible to mount disk images
    from read-only files.
@@ -878,7 +878,7 @@ rm -rf %{buildroot}
 * Sat Nov 23 2013 Johnny Hughes <johnny@centos.org> - 4.2.3-25.el6.centos
 - Roll in patch 145 and 146 for XSA-75 (CVE-2013-4551), XSA-78 (CVE-2013-6375) 
 
-* Wed Nov  4 2013 Johnny Hughes <johnny@centos.org> - 4.2.3-24.el6.centos
+* Mon Nov  4 2013 Johnny Hughes <johnny@centos.org> - 4.2.3-24.el6.centos
 - Roll in patches 134 to 141, 143 to 144 for the following XSAs:
 - XSA-62 (CVE-2013-1442), XSA-63 (CVE-2013-4355), XSA-72 (CVE-2013-4416)
 - XSA-64 (CVE-2013-4356), XSA-66 (CVE-2013-4361), XSA-67 (CVE-2013-4368)
@@ -897,11 +897,11 @@ rm -rf %{buildroot}
 * Fri Jun 14 2013 Johnny Hughes <johnny@cetnos.org> - 4.2.2-22.el6.centos
 - rolled in patches 108 through 130 for XSA-55
 
-* Tue Jun  5 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-21.el6.centos
+* Wed Jun  5 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-21.el6.centos
 - remarked out XSA-55 patches while they are being better tested upstream 
 - cleaned up XEN_VENDORVERSION to remove .centos.alt
 
-* Tue Jun  5 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-20.el6.centos
+* Wed Jun  5 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-20.el6.centos
 - added XEN_VENDORVERSION to the make install section of the spec
 - added XEN_DOMAIN=centos.org make and make install sections of the spec
 
@@ -939,7 +939,7 @@ rm -rf %{buildroot}
   set the autoballon option to auto (Patch107)
 - Roll in security fix for XSA-44,CVE-2013-1917 (Patch108) 
 
-* Thu Apr  5 2013 Johnny Hughes <johnny@centos.org> 4.2.1-10.1.el6.centos.8
+* Fri Apr  5 2013 Johnny Hughes <johnny@centos.org> 4.2.1-10.1.el6.centos.8
 - added patches 103 and 104.  Patch104 is Security fix for XSA-47,CVE-2013-1920  
 
 * Wed Mar 27 2013 Johnny Hughes <johnny@centos.org> 4.2.1-6.1.el6.centos.8
