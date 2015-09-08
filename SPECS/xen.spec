@@ -18,8 +18,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.4.2
-Release: 8%{?dist}
+Version: 4.4.3
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -54,52 +54,6 @@ Patch1: xen-queue.am
 
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
-
-Patch2001: xsa126-qemuu.patch
-Patch2002: xsa128-qemuu.patch
-Patch2003: xsa129-qemuu.patch
-Patch2004: xsa130-qemuu.patch
-Patch2005: xsa131-qemuu-4.4-1.patch
-Patch2006: xsa131-qemuu-2.patch
-Patch2007: xsa131-qemuu-3.patch
-Patch2008: xsa131-qemuu-4.patch
-Patch2009: xsa131-qemuu-5.patch
-Patch2010: xsa131-qemuu-6.patch
-Patch2011: xsa131-qemuu-7.patch
-Patch2012: xsa131-qemuu-8.patch
-Patch2013: xsa133-qemuu.patch
-Patch2014: xsa135-qemuu-4.5-1.patch
-Patch2015: xsa135-qemuu-4.5-2.patch
-Patch2016: xsa138-qemuu-1.patch
-Patch2017: xsa138-qemuu-2.patch
-Patch2018: xsa138-qemuu-3.patch
-Patch2019: xsa139-qemuu-4.5.patch
-Patch2020: xsa140-qemuu-unstable-1.patch
-Patch2021: xsa140-qemuu-unstable-2.patch
-Patch2022: xsa140-qemuu-unstable-3.patch
-Patch2023: xsa140-qemuu-unstable-4.patch
-Patch2024: xsa140-qemuu-unstable-5.patch
-Patch2025: xsa140-qemuu-unstable-6.patch
-Patch2026: xsa140-qemuu-unstable-7.patch
-
-Patch3001: xsa126-qemut.patch
-Patch3002: xsa128-qemut.patch
-Patch3003: xsa129-qemut.patch
-Patch3004: xsa130-qemut.patch
-Patch3005: xsa131-qemut-1.patch
-Patch3006: xsa131-qemut-2.patch
-Patch3007: xsa131-qemut-3.patch
-Patch3008: xsa131-qemut-4.patch
-Patch3009: xsa131-qemut-5.patch
-Patch3010: xsa131-qemut-6.patch
-Patch3011: xsa131-qemut-7.patch
-Patch3012: xsa131-qemut-8.patch
-Patch3013: xsa133-qemut.patch
-Patch3014: xsa135-qemut-1.patch
-Patch3015: xsa135-qemut-2.patch
-Patch3016: xsa138-qemut-1.patch
-Patch3017: xsa138-qemut-2.patch
-
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -277,52 +231,9 @@ popd
 %define _default_patch_fuzz 2
 
 pushd tools/qemu-xen
-%patch2001 -p1
-%patch2002 -p1
-%patch2003 -p1
-%patch2004 -p1
-%patch2005 -p1
-%patch2006 -p1
-%patch2007 -p1
-%patch2008 -p1
-%patch2009 -p1
-%patch2010 -p1
-%patch2011 -p1
-%patch2012 -p1
-%patch2013 -p1
-%patch2014 -p1
-%patch2015 -p1
-%patch2016 -p1
-%patch2017 -p1
-%patch2018 -p1
-%patch2019 -p1
-%patch2020 -p1
-%patch2021 -p1
-%patch2022 -p1
-%patch2023 -p1
-%patch2024 -p1
-%patch2025 -p1
-%patch2026 -p1
 popd
 
 pushd tools/qemu-xen-traditional
-%patch3001 -p1
-%patch3002 -p1
-%patch3003 -p1
-%patch3004 -p1
-%patch3005 -p1
-%patch3006 -p1
-%patch3007 -p1
-%patch3008 -p1
-%patch3009 -p1
-%patch3010 -p1
-%patch3011 -p1
-%patch3012 -p1
-%patch3013 -p1
-%patch3014 -p1
-%patch3015 -p1
-%patch3016 -p1
-%patch3017 -p1
 popd
 
 # stubdom sources
@@ -836,6 +747,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Sep 8 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-1.el6.centos
+ - Update to Xen 4.4.3
+
 * Mon Aug 03 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-8.el6.centos
  - Run grub-bootxen.sh on hypervisor post (un)install
 

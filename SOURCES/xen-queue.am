@@ -1,6 +1,6 @@
-From 672c65dc360624107cf0195e8b443d55d11d2deb Mon Sep 17 00:00:00 2001
+From a86e958631b6d321cfda9c945177ad769dd35c70 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:10 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] Fix up xend init scripts
 
 ---
@@ -156,9 +156,9 @@ index 9ef0210..0876ee2 100644
 1.9.1
 
 
-From fcdb630d2a7ec4dd657125c3de5999491d9f6fe7 Mon Sep 17 00:00:00 2001
+From 51965c28a1067f10463ad2d8d8d1f414b28615a1 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:10 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] Change dumpdir to /var/lib/xen
 
 ---
@@ -205,9 +205,9 @@ index 8d4ff5c..895fc01 100644
 1.9.1
 
 
-From 0db2982fcd00e8bcd7f30b3baa87d293a28dbd6d Mon Sep 17 00:00:00 2001
+From 01331ef849d39e380756cd533b025960940cb9d8 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:10 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] Disable iptables on the bridge
 
 ---
@@ -252,9 +252,9 @@ index 3c63c55..f74de3d 100644
 1.9.1
 
 
-From 72e95dc962312b8b2f05e188926c2a9c2c96bc5d Mon Sep 17 00:00:00 2001
+From 763e5473dede3bb16945fc95ac3d95800b666c64 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:10 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] pygrubfix.patch
 
 ---
@@ -295,9 +295,9 @@ index c7b6aa7..8ff6964 100755
 1.9.1
 
 
-From 0a27e5b00e33d44d500a2113d996b37a7da87e93 Mon Sep 17 00:00:00 2001
+From 78a501e834a8a15902d4f4722e830787f9785651 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:10 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] xend.catchbt.patch
 
 ---
@@ -343,9 +343,9 @@ index 832c168..161aeb5 100644
 1.9.1
 
 
-From 86c7061a7d6e0f6d3a7bab29841c71afd4073025 Mon Sep 17 00:00:00 2001
+From 6d12b97a3724d0467cea1f646eb4c4b0d6846d9f Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:10 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] xend-pci-loop.patch # Don't crash due to weird PCI cards (Bug
  767742)
 
@@ -375,9 +375,9 @@ index adeca4b..94326b3 100644
 1.9.1
 
 
-From 1c48fb2eb756ff1ad4f9729baf91351f6f4e2b83 Mon Sep 17 00:00:00 2001
+From 2411f463df7900e73a4c0256be827b8ce04c3399 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:10 +0100
+Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xend.selinux.fixes.patch
 
 ---
@@ -413,9 +413,9 @@ index 0876ee2..05afc0e 100644
 1.9.1
 
 
-From cb5b2911fac846bee9f902e3564f78ac95451347 Mon Sep 17 00:00:00 2001
+From 06263641b43e6401e7f44cb08d978f99dbbe20b8 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:10 +0100
+Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen.use.fedora.ipxe.patch
 
 ---
@@ -425,7 +425,7 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index 4a73ef9..b041144 100644
+index 06768f6..b8dde44 100644
 --- a/Config.mk
 +++ b/Config.mk
 @@ -239,7 +239,7 @@ SEABIOS_UPSTREAM_TAG ?= rel-1.7.3.1
@@ -467,9 +467,9 @@ index 00ee952..b0c6f37 100644
 1.9.1
 
 
-From ba819cdfb1cca3ec22896324189e3cffae8687ee Mon Sep 17 00:00:00 2001
+From fb7d7f34bfdf3ed28e8591dfb391789af2a1a4db Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:11 +0100
+Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen.fedora.efi.build.patch
 
 ---
@@ -479,7 +479,7 @@ Subject: [PATCH] xen.fedora.efi.build.patch
  3 files changed, 6 insertions(+), 4 deletions(-)
 
 diff --git a/xen/Makefile b/xen/Makefile
-index c5c40df..03874b1 100644
+index dccc47d..ac7c113 100644
 --- a/xen/Makefile
 +++ b/xen/Makefile
 @@ -13,6 +13,8 @@ export BASEDIR := $(CURDIR)
@@ -534,9 +534,9 @@ index 1daa7ac..f5398c4 100644
 1.9.1
 
 
-From b242416f71e17431a253c7797a5ef36aea4e8a72 Mon Sep 17 00:00:00 2001
+From a410962f52212fa58e6cc625054697edb9023bd9 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:11 +0100
+Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen.fedora19.buildfix.patch
 
 ---
@@ -569,9 +569,9 @@ index 0fc3f82..0d43727 100644
 1.9.1
 
 
-From e31fc86fdd20698b5cb011cbb4cf09410113645f Mon Sep 17 00:00:00 2001
+From 8cfbc328dc60dfbcca9855f41877229be38f17cb Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:11 +0100
+Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen-configure-xend.patch
 
 ---
@@ -620,572 +620,7 @@ index 0896a27..cea12e1 100644
 1.9.1
 
 
-From 562971344fe649291934c6a9f07f1077b6946a64 Mon Sep 17 00:00:00 2001
-From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-Date: Thu, 23 Apr 2015 15:06:13 +0100
-Subject: [PATCH] From df2922ce672cc35500e2f3ba041441021f44b41c Mon Sep 17
- 00:00:00 2001 Subject: [PATCH] Limit XEN_DOMCTL_memory_mapping hypercall to
- only process up  to 64 GFNs (or less)
-
-Said hypercall for large BARs can take quite a while. As such
-we can require that the hypercall MUST break up the request
-in smaller values.
-
-Another approach is to add preemption to it - whether we do the
-preemption using hypercall_create_continuation or returning
-EAGAIN to userspace (and have it re-invocate the call) - either
-way the issue we cannot easily solve is that in 'map_mmio_regions'
-if we encounter an error we MUST call 'unmap_mmio_regions' for the
-whole BAR region.
-
-Since the preemption would re-use input fields such as nr_mfns,
-first_gfn, first_mfn - we would lose the original values -
-and only undo what was done in the current round (i.e. ignoring
-anything that was done prior to earlier preemptions).
-
-Unless we re-used the return value as 'EAGAIN|nr_mfns_done<<10' but
-that puts a limit (since the return value is a long) on the amount
-of nr_mfns that can provided.
-
-This patch sidesteps this problem by:
- - Setting an hard limit of nr_mfns having to be 64 or less.
- - Toolstack adjusts correspondingly to the nr_mfn limit.
- - If the there is an error when adding the toolstack will call the
-   remove operation to remove the whole region.
-
-The need to break this hypercall down is for large BARs can take
-more than the guest (initial domain usually) time-slice. This has
-the negative result in that the guest is locked out for a long
-duration and is unable to act on any pending events.
-
-We also augment the code to return zero if nr_mfns instead
-of trying to the hypercall.
-
-Suggested-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: Jan Beulich <jbeulich@suse.com>
-Signed-off-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- tools/libxc/xc_domain.c     | 55 ++++++++++++++++++++++++++++++++++++++++-----
- xen/arch/x86/domctl.c       |  5 +++++
- xen/include/public/domctl.h |  1 +
- 3 files changed, 56 insertions(+), 5 deletions(-)
-
-diff --git a/tools/libxc/xc_domain.c b/tools/libxc/xc_domain.c
-index 369c3f3..40ca771 100644
---- a/tools/libxc/xc_domain.c
-+++ b/tools/libxc/xc_domain.c
-@@ -1641,6 +1641,13 @@ failed:
-     return -1;
- }
- 
-+#ifndef min
-+#define min(X, Y) ({                             \
-+            const typeof (X) _x = (X);           \
-+            const typeof (Y) _y = (Y);           \
-+            (void) (&_x == &_y);                 \
-+            (_x < _y) ? _x : _y; })
-+#endif
- int xc_domain_memory_mapping(
-     xc_interface *xch,
-     uint32_t domid,
-@@ -1650,17 +1657,55 @@ int xc_domain_memory_mapping(
-     uint32_t add_mapping)
- {
-     DECLARE_DOMCTL;
-+    int ret = 0, err;
-+    unsigned long done = 0, nr, max_batch_sz;
-+
-+    if ( !nr_mfns )
-+        return 0;
- 
-     domctl.cmd = XEN_DOMCTL_memory_mapping;
-     domctl.domain = domid;
--    domctl.u.memory_mapping.first_gfn = first_gfn;
--    domctl.u.memory_mapping.first_mfn = first_mfn;
--    domctl.u.memory_mapping.nr_mfns = nr_mfns;
-     domctl.u.memory_mapping.add_mapping = add_mapping;
-+    max_batch_sz = nr_mfns;
-+    do
-+    {
-+        nr = min(nr_mfns - done, max_batch_sz);
-+        domctl.u.memory_mapping.nr_mfns = nr;
-+        domctl.u.memory_mapping.first_gfn = first_gfn + done;
-+        domctl.u.memory_mapping.first_mfn = first_mfn + done;
-+        err = do_domctl(xch, &domctl);
-+        if ( err && errno == E2BIG )
-+        {
-+            if ( max_batch_sz <= 1 )
-+                break;
-+            max_batch_sz >>= 1;
-+            continue;
-+        }
-+        /* Save the first error... */
-+        if ( !ret )
-+            ret = err;
-+        /* .. and ignore the rest of them when removing. */
-+        if ( err && add_mapping != DPCI_REMOVE_MAPPING )
-+            break;
- 
--    return do_domctl(xch, &domctl);
--}
-+        done += nr;
-+    } while ( done < nr_mfns );
- 
-+    /*
-+     * Undo what we have done unless unmapping, by unmapping the entire region.
-+     * Errors here are ignored.
-+     */
-+    if ( ret && add_mapping != DPCI_REMOVE_MAPPING )
-+        xc_domain_memory_mapping(xch, domid, first_gfn, first_mfn, nr_mfns,
-+                                 DPCI_REMOVE_MAPPING);
-+
-+    /* We might get E2BIG so many times that we never advance. */
-+    if ( !done && !ret )
-+        ret = -1;
-+
-+    return ret;
-+}
-+#undef min
- int xc_domain_ioport_mapping(
-     xc_interface *xch,
-     uint32_t domid,
-diff --git a/xen/arch/x86/domctl.c b/xen/arch/x86/domctl.c
-index f5e9e2c..ea76a4f 100644
---- a/xen/arch/x86/domctl.c
-+++ b/xen/arch/x86/domctl.c
-@@ -655,6 +655,11 @@ long arch_do_domctl(
-              (gfn + nr_mfns - 1) < gfn ) /* wrap? */
-             break;
- 
-+        ret = -E2BIG;
-+        /* Must break hypercall up as this could take a while. */
-+        if ( nr_mfns > 64 )
-+            break;
-+
-         ret = -EPERM;
-         if ( !iomem_access_permitted(current->domain, mfn, mfn + nr_mfns - 1) )
-             break;
-diff --git a/xen/include/public/domctl.h b/xen/include/public/domctl.h
-index 7e0b517..a151b29 100644
---- a/xen/include/public/domctl.h
-+++ b/xen/include/public/domctl.h
-@@ -519,6 +519,7 @@ DEFINE_XEN_GUEST_HANDLE(xen_domctl_bind_pt_irq_t);
- 
- 
- /* Bind machine I/O address range -> HVM address range. */
-+/* If this returns -E2BIG lower nr_mfns value. */
- /* XEN_DOMCTL_memory_mapping */
- #define DPCI_ADD_MAPPING         1
- #define DPCI_REMOVE_MAPPING      0
--- 
-1.9.1
-
-
-From 28c31f5a03835a594ff55664e5072ca89034b5d4 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:13 +0100
-Subject: [PATCH] domctl: don't allow a toolstack domain to call domain_pause()
- on itself
-
-These DOMCTL subops were accidentally declared safe for disaggregation
-in the wake of XSA-77.
-
-This is XSA-127.
-
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- xen/arch/x86/domctl.c | 8 ++++++++
- xen/common/domctl.c   | 6 ++++--
- 2 files changed, 12 insertions(+), 2 deletions(-)
-
-diff --git a/xen/arch/x86/domctl.c b/xen/arch/x86/domctl.c
-index ea76a4f..f01771d 100644
---- a/xen/arch/x86/domctl.c
-+++ b/xen/arch/x86/domctl.c
-@@ -960,6 +960,10 @@ long arch_do_domctl(
-     {
-         xen_guest_tsc_info_t info;
- 
-+        ret = -EINVAL;
-+        if ( d == current->domain ) /* no domain_pause() */
-+            break;
-+
-         domain_pause(d);
-         tsc_get_info(d, &info.tsc_mode,
-                         &info.elapsed_nsec,
-@@ -975,6 +979,10 @@ long arch_do_domctl(
- 
-     case XEN_DOMCTL_settscinfo:
-     {
-+        ret = -EINVAL;
-+        if ( d == current->domain ) /* no domain_pause() */
-+            break;
-+
-         domain_pause(d);
-         tsc_set_info(d, domctl->u.tsc_info.info.tsc_mode,
-                      domctl->u.tsc_info.info.elapsed_nsec,
-diff --git a/xen/common/domctl.c b/xen/common/domctl.c
-index 49e2c23..0e7ad3d 100644
---- a/xen/common/domctl.c
-+++ b/xen/common/domctl.c
-@@ -396,8 +396,10 @@ long do_domctl(XEN_GUEST_HANDLE_PARAM(xen_domctl_t) u_domctl)
- 
-     case XEN_DOMCTL_resumedomain:
-     {
--        domain_resume(d);
--        ret = 0;
-+        if ( d == current->domain ) /* no domain_pause() */
-+            ret = -EINVAL;
-+        else
-+            domain_resume(d);
-     }
-     break;
- 
--- 
-1.9.1
-
-
-From fba3d4f0d46b13002feb7f122b587ff855593e82 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:09:19 +0100
-Subject: [PATCH] domctl/sysctl: don't leak hypervisor stack to toolstacks
-
-This is XSA-132.
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/domctl.c | 2 +-
- xen/common/sysctl.c   | 2 +-
- 2 files changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/xen/arch/x86/domctl.c b/xen/arch/x86/domctl.c
-index f01771d..434dc59 100644
---- a/xen/arch/x86/domctl.c
-+++ b/xen/arch/x86/domctl.c
-@@ -958,7 +958,7 @@ long arch_do_domctl(
- 
-     case XEN_DOMCTL_gettscinfo:
-     {
--        xen_guest_tsc_info_t info;
-+        xen_guest_tsc_info_t info = { 0 };
- 
-         ret = -EINVAL;
-         if ( d == current->domain ) /* no domain_pause() */
-diff --git a/xen/common/sysctl.c b/xen/common/sysctl.c
-index 0cb6ee1..70202e8 100644
---- a/xen/common/sysctl.c
-+++ b/xen/common/sysctl.c
-@@ -76,7 +76,7 @@ long do_sysctl(XEN_GUEST_HANDLE_PARAM(xen_sysctl_t) u_sysctl)
-     case XEN_SYSCTL_getdomaininfolist:
-     { 
-         struct domain *d;
--        struct xen_domctl_getdomaininfo info;
-+        struct xen_domctl_getdomaininfo info = { 0 };
-         u32 num_domains = 0;
- 
-         rcu_read_lock(&domlist_read_lock);
--- 
-1.9.1
-
-
-From 8df95318fde4be67647c8ba557c9afdb91e74009 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Mon, 1 Jun 2015 11:47:24 +0100
-Subject: [PATCH] gnttab: add missing version check to GNTTABOP_swap_grant_ref
- handling
-
-... avoiding NULL derefs when the version to use wasn't set yet (via
-GNTTABOP_setup_table or GNTTABOP_set_version).
-
-This is XSA-134.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- xen/common/grant_table.c | 3 +++
- 1 file changed, 3 insertions(+)
-
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 107b000..34e1c25 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -2393,6 +2393,9 @@ __gnttab_swap_grant_ref(grant_ref_t ref_a, grant_ref_t ref_b)
- 
-     spin_lock(&gt->lock);
- 
-+    if ( gt->gt_version == 0 )
-+        PIN_FAIL(out, GNTST_general_error, "grant table not yet set up\n");
-+
-     /* Bounds check on the grant refs */
-     if ( unlikely(ref_a >= nr_grant_entries(d->grant_table)))
-         PIN_FAIL(out, GNTST_bad_gntref, "Bad ref-a (%d).\n", ref_a);
--- 
-1.9.1
-
-
-From b1d22106579832b31b496dd632ee4bf065a12d40 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 9 Jun 2015 12:07:14 +0100
-Subject: [PATCH] x86/traps: loop in the correct direction in compat_iret()
-
-This is XSA-136.
-
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/x86_64/compat/traps.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/xen/arch/x86/x86_64/compat/traps.c b/xen/arch/x86/x86_64/compat/traps.c
-index 5f0ea0a..0b78445 100644
---- a/xen/arch/x86/x86_64/compat/traps.c
-+++ b/xen/arch/x86/x86_64/compat/traps.c
-@@ -119,7 +119,7 @@ unsigned int compat_iret(void)
-         }
-         else if ( ksp > regs->_esp )
-         {
--            for (i = 9; i > 0; ++i)
-+            for ( i = 9; i > 0; --i )
-             {
-                 rc |= __get_user(x, (u32 *)regs->rsp + i);
-                 rc |= __put_user(x, (u32 *)(unsigned long)ksp + i);
--- 
-1.9.1
-
-
-From 29163aac514ea212ec912d417d2b2f13079d1148 Mon Sep 17 00:00:00 2001
-From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Mon, 15 Jun 2015 14:50:42 +0100
-Subject: [PATCH] From 593fe52faa1b85567a7ec20c69d8cfbc7368ae5b Mon Sep 17
- 00:00:00 2001 Subject: [PATCH] xl: Sane handling of extra config file
- arguments
-
-Various xl sub-commands take additional parameters containing = as
-additional config fragments.
-
-The handling of these config fragments has a number of bugs:
-
- 1. Use of a static 1024-byte buffer.  (If truncation would occur,
-    with semi-trusted input, a security risk arises due to quotes
-    being lost.)
-
- 2. Mishandling of the return value from snprintf, so that if
-    truncation occurs, the to-write pointer is updated with the
-    wanted-to-write length, resulting in stack corruption.  (This is
-    XSA-137.)
-
- 3. Clone-and-hack of the code for constructing the appended
-    config file.
-
-These are fixed here, by introducing a new function
-`string_realloc_append' and using it everywhere.  The `extra_info'
-buffers are replaced by pointers, which start off NULL and are
-explicitly freed on all return paths.
-
-The separate variable which will become dom_info.extra_config is
-abolished (which involves moving the clearing of dom_info).
-
-Additional bugs I observe, not fixed here:
-
- 4. The functions which now call string_realloc_append use ad-hoc
-    error returns, with multiple calls to `return'.  This currently
-    necessitates multiple new calls to `free'.
-
- 5. Many of the paths in xl call exit(-rc) where rc is a libxl status
-    code.  This is a ridiculous exit status `convention'.
-
- 6. The loops for handling extra config data are clone-and-hacks.
-
- 7. Once the extra config buffer is accumulated, it must be combined
-    with the appropriate main config file.  The code to do this
-    combining is clone-and-hacked too.
-
-Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
-Tested-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
-Acked-by: Ian Campbell <ian,campbell@citrix.com>
----
- tools/libxl/xl_cmdimpl.c | 64 ++++++++++++++++++++++++++++++------------------
- 1 file changed, 40 insertions(+), 24 deletions(-)
-
-diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
-index d1c45e4..f5c8656 100644
---- a/tools/libxl/xl_cmdimpl.c
-+++ b/tools/libxl/xl_cmdimpl.c
-@@ -151,7 +151,7 @@ struct domain_create {
-     int console_autoconnect;
-     int checkpointed_stream;
-     const char *config_file;
--    const char *extra_config; /* extra config string */
-+    char *extra_config; /* extra config string */
-     const char *restore_file;
-     int migrate_fd; /* -1 means none */
-     char **migration_domname_r; /* from malloc */
-@@ -4319,11 +4319,25 @@ int main_vm_list(int argc, char **argv)
-     return 0;
- }
- 
-+static void string_realloc_append(char **accumulate, const char *more)
-+{
-+    /* Appends more to accumulate.  Accumulate is either NULL, or
-+     * points (always) to a malloc'd nul-terminated string. */
-+
-+    size_t oldlen = *accumulate ? strlen(*accumulate) : 0;
-+    size_t morelen = strlen(more) + 1/*nul*/;
-+    if (oldlen > SSIZE_MAX || morelen > SSIZE_MAX - oldlen) {
-+        fprintf(stderr,"Additional config data far too large\n");
-+        exit(-ERROR_FAIL);
-+    }
-+
-+    *accumulate = xrealloc(*accumulate, oldlen + morelen);
-+    memcpy(*accumulate + oldlen, more, morelen);
-+}
-+
- int main_create(int argc, char **argv)
- {
-     const char *filename = NULL;
--    char *p;
--    char extra_config[1024];
-     struct domain_create dom_info;
-     int paused = 0, debug = 0, daemonize = 1, console_autoconnect = 0,
-         quiet = 0, monitor = 1, vnc = 0, vncautopass = 0;
-@@ -4338,6 +4352,8 @@ int main_create(int argc, char **argv)
-         {0, 0, 0, 0}
-     };
- 
-+    dom_info.extra_config = NULL;
-+
-     if (argv[1] && argv[1][0] != '-' && !strchr(argv[1], '=')) {
-         filename = argv[1];
-         argc--; argv++;
-@@ -4377,20 +4393,21 @@ int main_create(int argc, char **argv)
-         break;
-     }
- 
--    extra_config[0] = '\0';
--    for (p = extra_config; optind < argc; optind++) {
-+    memset(&dom_info, 0, sizeof(dom_info));
-+
-+    for (; optind < argc; optind++) {
-         if (strchr(argv[optind], '=') != NULL) {
--            p += snprintf(p, sizeof(extra_config) - (p - extra_config),
--                "%s\n", argv[optind]);
-+            string_realloc_append(&dom_info.extra_config, argv[optind]);
-+            string_realloc_append(&dom_info.extra_config, "\n");
-         } else if (!filename) {
-             filename = argv[optind];
-         } else {
-             help("create");
-+            free(dom_info.extra_config);
-             return 2;
-         }
-     }
- 
--    memset(&dom_info, 0, sizeof(dom_info));
-     dom_info.debug = debug;
-     dom_info.daemonize = daemonize;
-     dom_info.monitor = monitor;
-@@ -4398,16 +4415,18 @@ int main_create(int argc, char **argv)
-     dom_info.dryrun = dryrun_only;
-     dom_info.quiet = quiet;
-     dom_info.config_file = filename;
--    dom_info.extra_config = extra_config;
-     dom_info.migrate_fd = -1;
-     dom_info.vnc = vnc;
-     dom_info.vncautopass = vncautopass;
-     dom_info.console_autoconnect = console_autoconnect;
- 
-     rc = create_domain(&dom_info);
--    if (rc < 0)
-+    if (rc < 0) {
-+        free(dom_info.extra_config);
-         return -rc;
-+    }
- 
-+    free(dom_info.extra_config);
-     return 0;
- }
- 
-@@ -4415,8 +4434,7 @@ int main_config_update(int argc, char **argv)
- {
-     uint32_t domid;
-     const char *filename = NULL;
--    char *p;
--    char extra_config[1024];
-+    char *extra_config = NULL;
-     void *config_data = 0;
-     int config_len = 0;
-     libxl_domain_config d_config;
-@@ -4451,15 +4469,15 @@ int main_config_update(int argc, char **argv)
-         break;
-     }
- 
--    extra_config[0] = '\0';
--    for (p = extra_config; optind < argc; optind++) {
-+    for (; optind < argc; optind++) {
-         if (strchr(argv[optind], '=') != NULL) {
--            p += snprintf(p, sizeof(extra_config) - (p - extra_config),
--                "%s\n", argv[optind]);
-+            string_realloc_append(&extra_config, argv[optind]);
-+            string_realloc_append(&extra_config, "\n");
-         } else if (!filename) {
-             filename = argv[optind];
-         } else {
-             help("create");
-+            free(extra_config);
-             return 2;
-         }
-     }
-@@ -4468,7 +4486,8 @@ int main_config_update(int argc, char **argv)
-         rc = libxl_read_file_contents(ctx, filename,
-                                       &config_data, &config_len);
-         if (rc) { fprintf(stderr, "Failed to read config file: %s: %s\n",
--                           filename, strerror(errno)); return ERROR_FAIL; }
-+                           filename, strerror(errno));
-+                  free(extra_config); return ERROR_FAIL; }
-         if (strlen(extra_config)) {
-             if (config_len > INT_MAX - (strlen(extra_config) + 2 + 1)) {
-                 fprintf(stderr, "Failed to attach extra configration\n");
-@@ -4509,7 +4528,7 @@ int main_config_update(int argc, char **argv)
-     libxl_domain_config_dispose(&d_config);
- 
-     free(config_data);
--
-+    free(extra_config);
-     return 0;
- }
- 
-@@ -6558,7 +6577,7 @@ int main_cpupoolcreate(int argc, char **argv)
- {
-     const char *filename = NULL, *config_src=NULL;
-     const char *p;
--    char extra_config[1024];
-+    char *extra_config = NULL;
-     int opt;
-     static struct option opts[] = {
-         {"defconfig", 1, 0, 'f'},
-@@ -6592,13 +6611,10 @@ int main_cpupoolcreate(int argc, char **argv)
-         break;
-     }
- 
--    memset(extra_config, 0, sizeof(extra_config));
-     while (optind < argc) {
-         if ((p = strchr(argv[optind], '='))) {
--            if (strlen(extra_config) + 1 + strlen(argv[optind]) < sizeof(extra_config)) {
--                strcat(extra_config, "\n");
--                strcat(extra_config, argv[optind]);
--            }
-+            string_realloc_append(&extra_config, "\n");
-+            string_realloc_append(&extra_config, argv[optind]);
-         } else if (!filename) {
-             filename = argv[optind];
-         } else {
--- 
-1.9.1
-
-
-From f987dd961ef49b5f24e0b5748eef497e61c74db7 Mon Sep 17 00:00:00 2001
+From 8aece15798bcc7e6b57994a01e742a32439b7a41 Mon Sep 17 00:00:00 2001
 From: Wen Congyang <wency@cn.fujitsu.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] tools: libxl: pass correct file to qemu if we use blktap2
@@ -1201,10 +636,10 @@ Acked-by: Ian Campbell <ian.campbell@citrix.com>
  1 file changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
-index 4dbfddc..d855fc6 100644
+index d7d2d3b..00b6adf 100644
 --- a/tools/libxl/libxl_dm.c
 +++ b/tools/libxl/libxl_dm.c
-@@ -696,6 +696,7 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+@@ -698,6 +698,7 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
                  libxl__device_disk_dev_number(disks[i].vdev, &disk, &part);
              const char *format = qemu_disk_format_string(disks[i].format);
              char *drive;
@@ -1212,7 +647,7 @@ index 4dbfddc..d855fc6 100644
  
              if (dev_number == -1) {
                  LIBXL__LOG(ctx, LIBXL__LOG_WARNING, "unable to determine"
-@@ -725,6 +726,12 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+@@ -727,6 +728,12 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
                      continue;
                  }
  
@@ -1225,7 +660,7 @@ index 4dbfddc..d855fc6 100644
                  /*
                   * Explicit sd disks are passed through as is.
                   *
-@@ -734,11 +741,11 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+@@ -736,11 +743,11 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
                  if (strncmp(disks[i].vdev, "sd", 2) == 0)
                      drive = libxl__sprintf
                          (gc, "file=%s,if=scsi,bus=0,unit=%d,format=%s,cache=writeback",
@@ -1243,7 +678,7 @@ index 4dbfddc..d855fc6 100644
 1.9.1
 
 
-From bfa867b527e5610ec846061ee1e7b534ef5ad19f Mon Sep 17 00:00:00 2001
+From 1636ed66e6708d35b94a9302f20118376551f783 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] it: George Dunlap <george.dunlap@eu.citrix.com>
@@ -1290,10 +725,10 @@ release cycle.
  1 file changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
-index d855fc6..44c3db0 100644
+index 00b6adf..a799619 100644
 --- a/tools/libxl/libxl_dm.c
 +++ b/tools/libxl/libxl_dm.c
-@@ -726,11 +726,14 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+@@ -728,11 +728,14 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
                      continue;
                  }
  
@@ -1314,7 +749,7 @@ index d855fc6..44c3db0 100644
 1.9.1
 
 
-From 78bb4fadfb3171b532a2e7fabe7f037398201fa5 Mon Sep 17 00:00:00 2001
+From 53b97d8905dcafe9e21d19c8181f58fd9d9a58bf Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
@@ -1351,7 +786,7 @@ index 29ed547..0f9fe2d 100644
 1.9.1
 
 
-From e9c4f5d7e40163c9a8a3febcb0ad5a5d174f750e Mon Sep 17 00:00:00 2001
+From 0d486e4b6573ca5fac51e2fa918330a86d4ec79b Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -1376,7 +811,7 @@ index 6610a8d..86d8a58 100644
 1.9.1
 
 
-From 9fb513d9e6443e663e433e5172c1b53365cdc47c Mon Sep 17 00:00:00 2001
+From 2ae35fb019c10d9a5d7ad0de4968a990ed9c579c Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
@@ -1408,10 +843,10 @@ index 13d8fc1..df84f98 100644
  CFLAGS_libblktapctl =
  LDLIBS_libblktapctl =
 diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
-index 59e3292..5ff2bd6 100644
+index 24c3f6e..261184e 100644
 --- a/tools/libxl/libxl.c
 +++ b/tools/libxl/libxl.c
-@@ -2143,7 +2143,8 @@ static void device_disk_add(libxl__egc *egc, uint32_t domid,
+@@ -2149,7 +2149,8 @@ static void device_disk_add(libxl__egc *egc, uint32_t domid,
              case LIBXL_DISK_BACKEND_TAP:
                  if (dev == NULL) {
                      dev = libxl__blktap_devpath(gc, disk->pdev_path,
@@ -1421,7 +856,7 @@ index 59e3292..5ff2bd6 100644
                      if (!dev) {
                          LOG(ERROR, "failed to get blktap devpath for %p\n",
                              disk->pdev_path);
-@@ -2645,7 +2646,8 @@ void libxl__device_disk_local_initiate_attach(libxl__egc *egc,
+@@ -2651,7 +2652,8 @@ void libxl__device_disk_local_initiate_attach(libxl__egc *egc,
                  break;
              case LIBXL_DISK_FORMAT_VHD:
                  dev = libxl__blktap_devpath(gc, disk->pdev_path,
@@ -1539,10 +974,10 @@ index 2053403..24939d7 100644
      }
  
 diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
-index 44c3db0..579957a 100644
+index a799619..4d25ede 100644
 --- a/tools/libxl/libxl_dm.c
 +++ b/tools/libxl/libxl_dm.c
-@@ -729,7 +729,8 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+@@ -731,7 +731,8 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
                  if (disks[i].backend == LIBXL_DISK_BACKEND_TAP) {
                      format = qemu_disk_format_string(LIBXL_DISK_FORMAT_RAW);
                      pdev_path = libxl__blktap_devpath(gc, disks[i].pdev_path,
@@ -1553,10 +988,10 @@ index 44c3db0..579957a 100644
                      pdev_path = disks[i].pdev_path;
                  }
 diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
-index 9d17586..144d571 100644
+index 798b68d..a6cc100 100644
 --- a/tools/libxl/libxl_internal.h
 +++ b/tools/libxl/libxl_internal.h
-@@ -1394,7 +1394,8 @@ _hidden int libxl__blktap_enabled(libxl__gc *gc);
+@@ -1407,7 +1407,8 @@ _hidden int libxl__blktap_enabled(libxl__gc *gc);
   */
  _hidden char *libxl__blktap_devpath(libxl__gc *gc,
                                      const char *disk,
