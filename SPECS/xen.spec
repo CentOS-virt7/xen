@@ -8,18 +8,20 @@
 %define build_efi %{?_without_efi: 0} %{?!_without_efi: 1}
 # xen only supports efi boot images on x86_64
 
+%define _libexecdir %{_libdir}
+
 #for el6
 %define build_efi 0
 %define with_sysv 1
 %define with_systemd 0
 
 # Hypervisor ABI
-%define hv_abi  4.4
+%define hv_abi  4.6
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.4.2
-Release: 8%{?dist}
+Version: 4.6.0rc2x
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -34,14 +36,11 @@ Source13: pciutils-2.2.9.tar.bz2
 Source14: grub-0.97.tar.gz
 Source15: polarssl-1.1.4-gpl.tgz
 # init.d bits
-Source23: init.xend
 # sysconfig bits
-Source33: sysconfig.xend
 # systemd bits
 Source40: proc-xen.mount
 Source41: var-lib-xenstored.mount
 Source42: xenstored.service
-Source44: xend.service
 Source45: xenconsoled.service
 Source46: xen-watchdog.service
 Source47: xendomains.service
@@ -55,60 +54,12 @@ Patch1: xen-queue.am
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 
-Patch2001: xsa126-qemuu.patch
-Patch2002: xsa128-qemuu.patch
-Patch2003: xsa129-qemuu.patch
-Patch2004: xsa130-qemuu.patch
-Patch2005: xsa131-qemuu-4.4-1.patch
-Patch2006: xsa131-qemuu-2.patch
-Patch2007: xsa131-qemuu-3.patch
-Patch2008: xsa131-qemuu-4.patch
-Patch2009: xsa131-qemuu-5.patch
-Patch2010: xsa131-qemuu-6.patch
-Patch2011: xsa131-qemuu-7.patch
-Patch2012: xsa131-qemuu-8.patch
-Patch2013: xsa133-qemuu.patch
-Patch2014: xsa135-qemuu-4.5-1.patch
-Patch2015: xsa135-qemuu-4.5-2.patch
-Patch2016: xsa138-qemuu-1.patch
-Patch2017: xsa138-qemuu-2.patch
-Patch2018: xsa138-qemuu-3.patch
-Patch2019: xsa139-qemuu-4.5.patch
-Patch2020: xsa140-qemuu-unstable-1.patch
-Patch2021: xsa140-qemuu-unstable-2.patch
-Patch2022: xsa140-qemuu-unstable-3.patch
-Patch2023: xsa140-qemuu-unstable-4.patch
-Patch2024: xsa140-qemuu-unstable-5.patch
-Patch2025: xsa140-qemuu-unstable-6.patch
-Patch2026: xsa140-qemuu-unstable-7.patch
-
-Patch3001: xsa126-qemut.patch
-Patch3002: xsa128-qemut.patch
-Patch3003: xsa129-qemut.patch
-Patch3004: xsa130-qemut.patch
-Patch3005: xsa131-qemut-1.patch
-Patch3006: xsa131-qemut-2.patch
-Patch3007: xsa131-qemut-3.patch
-Patch3008: xsa131-qemut-4.patch
-Patch3009: xsa131-qemut-5.patch
-Patch3010: xsa131-qemut-6.patch
-Patch3011: xsa131-qemut-7.patch
-Patch3012: xsa131-qemut-8.patch
-Patch3013: xsa133-qemut.patch
-Patch3014: xsa135-qemut-1.patch
-Patch3015: xsa135-qemut-2.patch
-Patch3016: xsa138-qemut-1.patch
-Patch3017: xsa138-qemut-2.patch
-
-
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
 BuildRequires: libX11-devel python-devel ghostscript texlive-latex
 BuildRequires: ncurses-devel gtk2-devel libaio-devel libtool
 # for the docs
 BuildRequires: perl texinfo graphviz
-# so that the makefile knows to install udev rules
-BuildRequires: udev
 %ifnarch ia64
 # so that x86_64 builds pick up glibc32 correctly
 BuildRequires: /usr/include/gnu/stubs-32.h
@@ -135,7 +86,6 @@ BuildRequires: yajl-devel
 BuildRequires: git
 Requires: bridge-utils
 Requires: python-lxml
-Requires: udev >= 059
 Requires: pciutils
 Requires: xen-runtime = %{version}-%{release}
 # Not strictly a dependency, but kpartx is by far the most useful tool right
@@ -156,9 +106,8 @@ BuildRequires: mingw64-binutils
 %endif
 
 %description
-This package contains the XenD daemon and xm command line
-tools, needed to manage virtual machines running under the
-Xen hypervisor
+This package contains the xl command line tools, needed to manage
+virtual machines running under the Xen hypervisor
 
 %package libs
 Summary: Libraries for Xen tools
@@ -269,7 +218,7 @@ rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
 cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 ./autogen.sh
-XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/user --libexecdir=/usr/lib/xen/bin
+XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=%{_libexecdir}/xen/bin
 popd 
 %patch1001 -p1
 %patch1005 -p1
@@ -277,52 +226,9 @@ popd
 %define _default_patch_fuzz 2
 
 pushd tools/qemu-xen
-%patch2001 -p1
-%patch2002 -p1
-%patch2003 -p1
-%patch2004 -p1
-%patch2005 -p1
-%patch2006 -p1
-%patch2007 -p1
-%patch2008 -p1
-%patch2009 -p1
-%patch2010 -p1
-%patch2011 -p1
-%patch2012 -p1
-%patch2013 -p1
-%patch2014 -p1
-%patch2015 -p1
-%patch2016 -p1
-%patch2017 -p1
-%patch2018 -p1
-%patch2019 -p1
-%patch2020 -p1
-%patch2021 -p1
-%patch2022 -p1
-%patch2023 -p1
-%patch2024 -p1
-%patch2025 -p1
-%patch2026 -p1
 popd
 
 pushd tools/qemu-xen-traditional
-%patch3001 -p1
-%patch3002 -p1
-%patch3003 -p1
-%patch3004 -p1
-%patch3005 -p1
-%patch3006 -p1
-%patch3007 -p1
-%patch3008 -p1
-%patch3009 -p1
-%patch3010 -p1
-%patch3011 -p1
-%patch3012 -p1
-%patch3013 -p1
-%patch3014 -p1
-%patch3015 -p1
-%patch3016 -p1
-%patch3017 -p1
 popd
 
 # stubdom sources
@@ -340,10 +246,10 @@ mkdir -p dist/install/boot/efi/efi/fedora
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
 export CFLAGS="$RPM_OPT_FLAGS"
-make %{?_smp_mflags} %{?efi_flags} prefix=/usr dist-xen
-WGET=/bin/false ./configure --enable-xend --libdir=%{_libdir} --with-system-seabios=/usr/share/seabios/bios.bin
-make %{?_smp_mflags} %{?ocaml_flags} prefix=/usr dist-tools
-make                 prefix=/usr dist-docs
+WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-system-seabios=/usr/share/seabios/bios.bin --with-xenstored=xenstored
+make %{?_smp_mflags} %{?efi_flags} dist-xen
+make %{?_smp_mflags} %{?ocaml_flags} dist-tools
+make                 dist-docs
 unset CFLAGS
 make %{?ocaml_flags} dist-stubdom
 
@@ -382,6 +288,8 @@ rm -rf %{buildroot}/boot/xen-4.gz
 # silly doc dir fun
 rm -fr %{buildroot}%{_datadir}/doc/xen
 rm -rf %{buildroot}%{_datadir}/doc/qemu
+mkdir -p %{buildroot}%{_datadir}/%{name}
+mkdir -p %{buildroot}%{_datadir}/doc/%{name}-licenses-%{version}-%{release}
 
 # Pointless helper
 rm -f %{buildroot}%{_sbindir}/xen-python-path
@@ -421,10 +329,6 @@ rm -rf %{buildroot}/%{_libdir}/efi
 
 ############ fixup files in /etc ############
 
-# udev
-#rm -rf %{buildroot}/etc/udev/rules.d/xen*.rules
-#mv %{buildroot}/etc/udev/xen*.rules %{buildroot}/etc/udev/rules.d
-
 # modules
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig/modules
 install -m 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/sysconfig/modules/%{name}.modules
@@ -438,12 +342,11 @@ install -m 644 %{SOURCE2} %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 #mv %{buildroot}%{_sysconfdir}/init.d/* %{buildroot}%{_sysconfdir}/rc.d/init.d
 #rmdir %{buildroot}%{_sysconfdir}/init.d
 %if %with_sysv
-install -m 755 %{SOURCE23} %{buildroot}%{_sysconfdir}/rc.d/init.d/xend
 %else
 rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xen-watchdog
 rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xencommons
-rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xend
 rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xendomains
+rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xendriverdomain
 %endif
 
 # sysconfig
@@ -455,7 +358,6 @@ mkdir -p %{buildroot}%{_unitdir}
 install -m 644 %{SOURCE40} %{buildroot}%{_unitdir}/proc-xen.mount
 install -m 644 %{SOURCE41} %{buildroot}%{_unitdir}/var-lib-xenstored.mount
 install -m 644 %{SOURCE42} %{buildroot}%{_unitdir}/xenstored.service
-install -m 644 %{SOURCE44} %{buildroot}%{_unitdir}/xend.service
 install -m 644 %{SOURCE45} %{buildroot}%{_unitdir}/xenconsoled.service
 install -m 644 %{SOURCE46} %{buildroot}%{_unitdir}/xen-watchdog.service
 install -m 644 %{SOURCE47} %{buildroot}%{_unitdir}/xendomains.service
@@ -465,26 +367,11 @@ mkdir -p %{buildroot}/usr/lib/tmpfiles.d
 install -m 644 %{SOURCE49} %{buildroot}/usr/lib/tmpfiles.d/xen.conf
 %endif
 
-# config file only used for hotplug, Fedora uses udev instead
-rm -f %{buildroot}/%{_sysconfdir}/sysconfig/xend
-
-#add new sysconfig/xend
-install -m 644 %{SOURCE33} %{buildroot}%{_sysconfdir}/sysconfig/xend
-
 ############ create dirs in /var ############
 
-mkdir -p %{buildroot}%{_localstatedir}/lib/xen/xend-db/domain
-mkdir -p %{buildroot}%{_localstatedir}/lib/xen/xend-db/vnet
-mkdir -p %{buildroot}%{_localstatedir}/lib/xen/xend-db/migrate
 mkdir -p %{buildroot}%{_localstatedir}/lib/xen/images
 mkdir -p %{buildroot}%{_localstatedir}/log/xen/console
 mkdir -p %{buildroot}%{_localstatedir}/run/xenstored
-
-############ create symlink for x86_64 for compatibility with 3.4 ############
-
-%if "%{_libdir}" != "/usr/lib"
-ln -s /usr/lib/%{name}/bin/qemu-dm %{buildroot}/%{_libdir}/%{name}/bin/qemu-dm
-%endif
 
 ############ debug packaging: list files ############
 
@@ -503,6 +390,7 @@ find . -path licensedir -prune -o -path stubdom/ioemu -prune -o \
 done
 
 %ifarch x86_64
+mkdir -p %{buildroot}/usr/lib/xen/bin/
 pushd %{buildroot}/usr/lib/xen/bin/
 for f in libxl-save-helper xc_save xc_restore pygrub
   do
@@ -514,23 +402,15 @@ popd
 
 %post
 %if %with_sysv
-/sbin/chkconfig --add xend
 /sbin/chkconfig --add xendomains
 %endif
 %if %with_systemd
 /bin/systemctl enable xendomains.service
 %endif
 
-%if %with_sysv
-if [ $1 != 0 ]; then
-  service xend condrestart
-fi
-%endif
-
 %preun
 if [ $1 = 0 ]; then
 %if %with_sysv
-  /sbin/chkconfig --del xend
   /sbin/chkconfig --del xendomains
 %endif
 %if %with_systemd
@@ -587,62 +467,36 @@ fi
 %clean
 rm -rf %{buildroot}
 
-# Base package only contains XenD/xm python stuff
 #files -f xen-xm.lang
 %files
 %defattr(-,root,root)
 %doc COPYING README
 %{_bindir}/xencons
-%{_sbindir}/xend
-%{_sbindir}/xm
 %{python_sitearch}/%{name}
 %{python_sitearch}/xen-*.egg-info
-%{_mandir}/man1/xm.1*
-%{_mandir}/man5/xend-config.sxp.5*
-%{_mandir}/man5/xmdomain.cfg.5*
-%{_datadir}/%{name}/create.dtd
 
 # Startup script
 %if %with_sysv
-%{_sysconfdir}/rc.d/init.d/xend
 %{_sysconfdir}/rc.d/init.d/xendomains
+%{_sysconfdir}/rc.d/init.d/xendriverdomain
 %endif
-# Guest config files
-%config(noreplace) %{_sysconfdir}/%{name}/xmexample*
-# Daemon config
-%config(noreplace) %{_sysconfdir}/%{name}/xend-*
-# xm config
-%config(noreplace) %{_sysconfdir}/%{name}/xm-*
 # Guest autostart links
 %dir %attr(0700,root,root) %{_sysconfdir}/%{name}/auto
 # Autostart of guests
 %config(noreplace) %{_sysconfdir}/sysconfig/xendomains
-# xemd sysconfig file
-%config(noreplace) %{_sysconfdir}/sysconfig/xend
 
 %if %with_systemd
-%{_unitdir}/xend.service
 %{_unitdir}/xendomains.service
 %{_libexecdir}/xendomains
 %endif
-
-# Persistent state for XenD
-%dir %{_localstatedir}/lib/%{name}/xend-db/
-%dir %{_localstatedir}/lib/%{name}/xend-db/domain
-%dir %{_localstatedir}/lib/%{name}/xend-db/migrate
-%dir %{_localstatedir}/lib/%{name}/xend-db/vnet
 
 %files libs
 %defattr(-,root,root)
 %{_libdir}/*.so.*
 %{_libdir}/fs
 
-# All runtime stuff except for XenD/xm python stuff
 %files runtime
 %defattr(-,root,root)
-# Hotplug rules
-%config(noreplace) %{_sysconfdir}/udev/rules.d/*
-
 %dir %attr(0700,root,root) %{_sysconfdir}/%{name}
 %dir %attr(0700,root,root) %{_sysconfdir}/%{name}/scripts/
 %config %attr(0700,root,root) %{_sysconfdir}/%{name}/scripts/*
@@ -682,6 +536,7 @@ rm -rf %{buildroot}
 %{_datadir}/qemu-xen/*
 %dir %{_sysconfdir}/qemu/
 %{_sysconfdir}/qemu/target-%{_arch}.conf
+%{_datadir}/locale/*/LC_MESSAGES/qemu.mo
 
 # QEMU runtime files
 %dir %{_datadir}/%{name}/qemu
@@ -713,12 +568,12 @@ rm -rf %{buildroot}
 %dir /usr/lib/%{name}/bin
 /usr/lib/%{name}/bin/*
 %endif
-%dir /usr/lib/%{name}/boot
+%dir %{_libexecdir}/%{name}/boot
 # HVM loader is always in /usr/lib regardless of multilib
-/usr/lib/xen/boot/hvmloader
-/usr/lib/xen/boot/ioemu-stubdom.gz
-/usr/lib/xen/boot/xenstore-stubdom.gz
-/usr/lib/xen/boot/pv-grub*.gz
+%{_libexecdir}/xen/boot/hvmloader
+%{_libexecdir}/xen/boot/ioemu-stubdom.gz
+%{_libexecdir}/xen/boot/xenstore-stubdom.gz
+%{_libexecdir}/xen/boot/pv-grub*.gz
 %endif
 # General Xen state
 %dir %{_localstatedir}/lib/%{name}
@@ -728,18 +583,18 @@ rm -rf %{buildroot}
 %dir %{_localstatedir}/lib/xenstored
 # Xenstore runtime state
 %dir %attr(0700,root,root) %{_localstatedir}/run/xenstored
-# XenD runtime state
-%ghost %attr(0700,root,root) %{_localstatedir}/run/xend
-#%ghost %attr(0700,root,root) %{_localstatedir}/run/xend/boot
 
 # All xenstore CLI tools
 %{_bindir}/qemu-*-xen
 %{_bindir}/xenstore
 %{_bindir}/xenstore-*
 %{_bindir}/pygrub
-%{_bindir}/xentrace*
-%{_bindir}/remus
 %{_bindir}/xencov_split
+%{_sbindir}/xentrace
+%{_sbindir}/xentrace_setmask
+%{_sbindir}/xentrace_setsize
+%{_bindir}/xentrace_format
+%{_bindir}/xenalyze
 # Misc stuff
 %{_bindir}/xen-detect
 %{_sbindir}/gdbsx
@@ -756,7 +611,6 @@ rm -rf %{buildroot}
 %{_sbindir}/xenlockprof
 %{_sbindir}/xenmon.py*
 %{_sbindir}/xentop
-%{_sbindir}/xentrace_setmask
 %{_sbindir}/xenbaked
 %{_sbindir}/xenstored
 %{_sbindir}/xenpm
@@ -784,7 +638,7 @@ rm -rf %{buildroot}
 
 %files hypervisor
 %defattr(-,root,root)
-/boot/xen-syms-*
+#/boot/xen-syms-*
 /boot/xen-*.gz
 /boot/xen.gz
 %if %build_efi
@@ -811,6 +665,8 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 %{_libdir}/*.la
 
+%{_datadir}/pkgconfig/xenlight.pc
+%{_datadir}/pkgconfig/xlutil.pc
 
 %files licenses
 %defattr(-,root,root)
@@ -836,6 +692,12 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Sep 07 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0rc2x-2.el6.centos
+ - More 4.6-rc2 fixes
+
+* Tue Sep 01 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0rc2x-1.el6.centos
+ - Update to 4.6.0-rc2 (+change)
+
 * Mon Aug 03 2015 George Dunlap <george.dunlap@eu.citrix.com> - 4.4.2-8.el6.centos
  - Run grub-bootxen.sh on hypervisor post (un)install
 
