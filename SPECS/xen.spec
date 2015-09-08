@@ -12,8 +12,14 @@
 
 #for el6
 %define build_efi 0
+
+%if 0%{?centos_ver} == 6
 %define with_sysv 1
 %define with_systemd 0
+%else
+%define with_sysv 0
+%define with_systemd 1
+%endif
 
 # Hypervisor ABI
 %define hv_abi  4.6
@@ -21,7 +27,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.0rc2x
-Release: 2%{?dist}
+Release: 3%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -35,15 +41,7 @@ Source12: zlib-1.2.3.tar.gz
 Source13: pciutils-2.2.9.tar.bz2
 Source14: grub-0.97.tar.gz
 Source15: polarssl-1.1.4-gpl.tgz
-# init.d bits
-# sysconfig bits
 # systemd bits
-Source40: proc-xen.mount
-Source41: var-lib-xenstored.mount
-Source42: xenstored.service
-Source45: xenconsoled.service
-Source46: xen-watchdog.service
-Source47: xendomains.service
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
 
@@ -84,6 +82,9 @@ BuildRequires: e2fsprogs-devel
 # tools now require yajl
 BuildRequires: yajl-devel
 BuildRequires: git
+%if %with_systemd
+BuildRequires: pkgconfig(libsystemd-daemon)
+%endif
 Requires: bridge-utils
 Requires: python-lxml
 Requires: pciutils
@@ -246,7 +247,13 @@ mkdir -p dist/install/boot/efi/efi/fedora
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
 export CFLAGS="$RPM_OPT_FLAGS"
-WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-system-seabios=/usr/share/seabios/bios.bin --with-xenstored=xenstored
+%if %with_systemd
+%define extra_config_systemd --enable-systemd
+%else
+%define extra_config_systemd --disable-systemd
+%endif
+%define extra_config %{?extra_config_systemd} %{?extra_config_arch}
+WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-system-seabios=/usr/share/seabios/bios.bin --with-xenstored=xenstored %{?extra_config}
 make %{?_smp_mflags} %{?efi_flags} dist-xen
 make %{?_smp_mflags} %{?ocaml_flags} dist-tools
 make                 dist-docs
@@ -330,19 +337,15 @@ rm -rf %{buildroot}/%{_libdir}/efi
 ############ fixup files in /etc ############
 
 # modules
-mkdir -p %{buildroot}%{_sysconfdir}/sysconfig/modules
-install -m 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/sysconfig/modules/%{name}.modules
+#mkdir -p %{buildroot}%{_sysconfdir}/sysconfig/modules
+#install -m 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/sysconfig/modules/%{name}.modules
 
 # logrotate
 mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d/
 install -m 644 %{SOURCE2} %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 
 # init scripts
-#mkdir -p %{buildroot}%{_sysconfdir}/rc.d/init.d
-#mv %{buildroot}%{_sysconfdir}/init.d/* %{buildroot}%{_sysconfdir}/rc.d/init.d
-#rmdir %{buildroot}%{_sysconfdir}/init.d
-%if %with_sysv
-%else
+%if %with_systemd
 rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xen-watchdog
 rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xencommons
 rm %{buildroot}%{_sysconfdir}/rc.d/init.d/xendomains
@@ -354,15 +357,6 @@ mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 
 # systemd
 %if %with_systemd
-mkdir -p %{buildroot}%{_unitdir}
-install -m 644 %{SOURCE40} %{buildroot}%{_unitdir}/proc-xen.mount
-install -m 644 %{SOURCE41} %{buildroot}%{_unitdir}/var-lib-xenstored.mount
-install -m 644 %{SOURCE42} %{buildroot}%{_unitdir}/xenstored.service
-install -m 644 %{SOURCE45} %{buildroot}%{_unitdir}/xenconsoled.service
-install -m 644 %{SOURCE46} %{buildroot}%{_unitdir}/xen-watchdog.service
-install -m 644 %{SOURCE47} %{buildroot}%{_unitdir}/xendomains.service
-mkdir -p %{buildroot}%{_libexecdir}
-install -m 644 %{SOURCE48} %{buildroot}%{_libexecdir}/xendomains
 mkdir -p %{buildroot}/usr/lib/tmpfiles.d
 install -m 644 %{SOURCE49} %{buildroot}/usr/lib/tmpfiles.d/xen.conf
 %endif
@@ -400,32 +394,16 @@ popd
 %endif
 ############ all done now ############
 
-%post
-%if %with_sysv
-/sbin/chkconfig --add xendomains
-%endif
-%if %with_systemd
-/bin/systemctl enable xendomains.service
-%endif
-
-%preun
-if [ $1 = 0 ]; then
-%if %with_sysv
-  /sbin/chkconfig --del xendomains
-%endif
-%if %with_systemd
-/bin/systemctl enable xendomains.service
-%endif
-fi
-
 %post runtime
 %if %with_sysv
+/sbin/chkconfig --add xendomains
 /sbin/chkconfig --add xencommons
 %endif
 %if %with_systemd
-/bin/systemctl enable xenstored.service
-/bin/systemctl enable xenconsoled.service
-/bin/systemctl enable xencommons.service
+ /bin/systemctl enable xen-qemu-dom0-disk-backend.service
+ /bin/systemctl enable xen-init-dom0.service
+ /bin/systemctl enable xenconsoled.service
+# /bin/systemctl enable xendomains.service
 %endif
 
 %if %with_sysv
@@ -438,10 +416,13 @@ fi
 if [ $1 = 0 ]; then
 %if %with_sysv
   /sbin/chkconfig --del xencommons
+  /sbin/chkconfig --del xendomains
 %endif
 %if %with_systemd
-  /bin/systemctl disable xenstored.service
-  /bin/systemctl disable xenconsoled.service
+ /bin/systemctl disable xen-init-dom0.service
+ /bin/systemctl disable xen-qemu-dom0-disk-backend.service
+ /bin/systemctl disable xenconsoled.service
+# /bin/systemctl disable xendomains.service
 %endif
 fi
 
@@ -476,19 +457,10 @@ rm -rf %{buildroot}
 %{python_sitearch}/xen-*.egg-info
 
 # Startup script
-%if %with_sysv
-%{_sysconfdir}/rc.d/init.d/xendomains
-%{_sysconfdir}/rc.d/init.d/xendriverdomain
-%endif
 # Guest autostart links
 %dir %attr(0700,root,root) %{_sysconfdir}/%{name}/auto
 # Autostart of guests
 %config(noreplace) %{_sysconfdir}/sysconfig/xendomains
-
-%if %with_systemd
-%{_unitdir}/xendomains.service
-%{_libexecdir}/xendomains
-%endif
 
 %files libs
 %defattr(-,root,root)
@@ -502,6 +474,8 @@ rm -rf %{buildroot}
 %config %attr(0700,root,root) %{_sysconfdir}/%{name}/scripts/*
 
 %if %with_sysv
+%{_sysconfdir}/rc.d/init.d/xendomains
+%{_sysconfdir}/rc.d/init.d/xendriverdomain
 %{_sysconfdir}/rc.d/init.d/xen-watchdog
 %{_sysconfdir}/rc.d/init.d/xencommons
 %endif
@@ -513,6 +487,11 @@ rm -rf %{buildroot}
 %{_unitdir}/xenstored.service
 %{_unitdir}/xenconsoled.service
 %{_unitdir}/xen-watchdog.service
+%{_unitdir}/xen-init-dom0.service
+%{_unitdir}/xen-qemu-dom0-disk-backend.service
+%{_unitdir}/xenstored_ro.socket
+%{_unitdir}/xenstored.socket
+%{_unitdir}/xendomains.service
 /usr/lib/tmpfiles.d/xen.conf
 %endif
 
@@ -522,10 +501,11 @@ rm -rf %{buildroot}
 %config(noreplace) %{_sysconfdir}/xen/xlexample*
 
 # Auto-load xen backend drivers
-%attr(0755,root,root) %{_sysconfdir}/sysconfig/modules/%{name}.modules
+#%attr(0755,root,root) %{_sysconfdir}/sysconfig/modules/%{name}.modules
 
 # Rotate console log files
 %config(noreplace) %{_sysconfdir}/logrotate.d/xen
+%config(noreplace) /usr/lib/modules-load.d/xen.conf
 
 # Programs run by other programs
 %dir %{_libdir}/%{name}
@@ -692,6 +672,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Sep 08 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0rc2x-3.el6.centos
+ - Switch to systemd for CentOS 7
+
 * Mon Sep 07 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0rc2x-2.el6.centos
  - More 4.6-rc2 fixes
 

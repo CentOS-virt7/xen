@@ -86,7 +86,45 @@ index e4aedda..c062190 100755
 1.9.1
 
 
-From 5a98c1fce836714750f96bd6f416e0f70738725c Mon Sep 17 00:00:00 2001
+From a2c5497cf846d0db87b1fbab38801fd5164b60f0 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 8 Sep 2015 17:31:36 +0100
+Subject: [PATCH] Some fixes to help systemd service files run with selinux
+
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+---
+ tools/hotplug/Linux/systemd/var-lib-xenstored.mount.in | 2 +-
+ tools/hotplug/Linux/systemd/xenstored.service.in       | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/hotplug/Linux/systemd/var-lib-xenstored.mount.in b/tools/hotplug/Linux/systemd/var-lib-xenstored.mount.in
+index 11a7d50..ed8f4d0 100644
+--- a/tools/hotplug/Linux/systemd/var-lib-xenstored.mount.in
++++ b/tools/hotplug/Linux/systemd/var-lib-xenstored.mount.in
+@@ -9,4 +9,4 @@ RefuseManualStop=true
+ What=xenstore
+ Where=@XEN_LIB_STORED@
+ Type=tmpfs
+-Options=mode=755
++Options=mode=755,context="system_u:object_r:xenstored_var_lib_t:s0"
+diff --git a/tools/hotplug/Linux/systemd/xenstored.service.in b/tools/hotplug/Linux/systemd/xenstored.service.in
+index a5f836b..de349be 100644
+--- a/tools/hotplug/Linux/systemd/xenstored.service.in
++++ b/tools/hotplug/Linux/systemd/xenstored.service.in
+@@ -15,7 +15,7 @@ EnvironmentFile=-@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xencommons
+ ExecStartPre=/bin/grep -q control_d /proc/xen/capabilities
+ ExecStartPre=-/bin/rm -f @XEN_LIB_STORED@/tdb*
+ ExecStartPre=/bin/mkdir -p @XEN_RUN_DIR@
+-ExecStart=/bin/sh -c "exec $XENSTORED --no-fork $XENSTORED_ARGS"
++ExecStart=@XENSTORED@
+ 
+ [Install]
+ WantedBy=multi-user.target
+-- 
+1.9.1
+
+
+From 95015de9581678dca74680b7c87f1c7f82156829 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 2 Sep 2015 11:01:08 +0100
 Subject: [PATCH] xen.use.fedora.ipxe.patch
@@ -140,7 +178,7 @@ index 0560a7b..6610722 100644
 1.9.1
 
 
-From 312d7e847c4168dc327bc9aece6376d7d73c01fc Mon Sep 17 00:00:00 2001
+From e1f2dfed47913232077d8b4899ab674c3fe3718e Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 2 Sep 2015 11:01:08 +0100
 Subject: [PATCH] xen.fedora.efi.build.patch
@@ -207,7 +245,7 @@ index 1daa7ac..f5398c4 100644
 1.9.1
 
 
-From 8888c141b2ba522be5145a84c0db830353d626d5 Mon Sep 17 00:00:00 2001
+From 04f74677d3a7dcf4c8d3c906dd1778e3f3470bdd Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 2 Sep 2015 11:01:09 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
@@ -244,7 +282,7 @@ index bee5ed5..2635f0a 100644
 1.9.1
 
 
-From f74578b187716bef1f92f5a5c89bbe57f5eed6eb Mon Sep 17 00:00:00 2001
+From de2069facfd80496fd3dac29314e2c43a9cde13f Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 2 Sep 2015 11:01:09 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -269,7 +307,7 @@ index 2618559..4157edf 100644
 1.9.1
 
 
-From 7c8ed9d2328a2ee9a4bb10bccd5bb75033769622 Mon Sep 17 00:00:00 2001
+From 5499a93379acf60aa2223cd6eaf8a86780c621d3 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 2 Sep 2015 11:01:09 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
