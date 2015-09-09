@@ -178,26 +178,29 @@ index 0560a7b..6610722 100644
 1.9.1
 
 
-From e1f2dfed47913232077d8b4899ab674c3fe3718e Mon Sep 17 00:00:00 2001
+From 826f305abc1f1ea83e4d1353f97e9ed7105e586e Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 2 Sep 2015 11:01:08 +0100
-Subject: [PATCH] xen.fedora.efi.build.patch
+Subject: [PATCH] xen: Allow user to specify an alternate linker for EFI
+ binaries
 
+From the Fedora xen patchqueue.
+
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
 ---
- xen/Makefile              | 2 ++
+ xen/Makefile              | 1 +
  xen/arch/x86/Makefile     | 6 +++---
  xen/arch/x86/efi/Makefile | 2 +-
- 3 files changed, 6 insertions(+), 4 deletions(-)
+ 3 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/xen/Makefile b/xen/Makefile
-index 6088c9d..16ddf12 100644
+index 6088c9d..73811bb 100644
 --- a/xen/Makefile
 +++ b/xen/Makefile
-@@ -16,6 +16,8 @@ export BASEDIR := $(CURDIR)
+@@ -16,6 +16,7 @@ export BASEDIR := $(CURDIR)
  export XEN_ROOT := $(BASEDIR)/..
  
  EFI_MOUNTPOINT ?= $(BOOT_DIR)/efi
-+EFI_VENDOR=fedora
 +LD_EFI ?= $(LD)
  
  .PHONY: default
@@ -245,7 +248,7 @@ index 1daa7ac..f5398c4 100644
 1.9.1
 
 
-From 04f74677d3a7dcf4c8d3c906dd1778e3f3470bdd Mon Sep 17 00:00:00 2001
+From 63e1905b6c9db41b343c9acd1602f4114e745967 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 2 Sep 2015 11:01:09 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
@@ -282,7 +285,7 @@ index bee5ed5..2635f0a 100644
 1.9.1
 
 
-From de2069facfd80496fd3dac29314e2c43a9cde13f Mon Sep 17 00:00:00 2001
+From cd00f45dc1a67a2ad0011f2e04250c7d8ea32afb Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 2 Sep 2015 11:01:09 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -307,9 +310,9 @@ index 2618559..4157edf 100644
 1.9.1
 
 
-From 5499a93379acf60aa2223cd6eaf8a86780c621d3 Mon Sep 17 00:00:00 2001
+From b728aaa53bc4c7a98c09785adf700a7ea9a29a4a Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 2 Sep 2015 11:01:09 +0100
+Date: Wed, 9 Sep 2015 16:38:44 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
@@ -416,6 +419,241 @@ index 2053403..9a0641b 100644
          return ERROR_FAIL;
      }
  
+-- 
+1.9.1
+
+
+From f634512edd601a487507f70875729d951baebedd Mon Sep 17 00:00:00 2001
+From: Julien Grall <julien.grall@linaro.org>
+Date: Wed, 9 Sep 2015 16:36:17 +0100
+Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
+
+---
+ xen/include/public/arch-arm.h | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/xen/include/public/arch-arm.h b/xen/include/public/arch-arm.h
+index 9a96401..faad68d 100644
+--- a/xen/include/public/arch-arm.h
++++ b/xen/include/public/arch-arm.h
+@@ -364,6 +364,15 @@ typedef uint64_t xen_callback_t;
+ #define PSR_MODE_SYS 0x1f
+ 
+ /* 64 bit modes */
++#undef PSR_MODE_BIT
++#undef PSR_MODE_EL3h
++#undef PSR_MODE_EL3t
++#undef PSR_MODE_EL2h
++#undef PSR_MODE_EL2t
++#undef PSR_MODE_EL1h
++#undef PSR_MODE_EL1t
++#undef PSR_MODE_EL0t
++
+ #define PSR_MODE_BIT  0x10 /* Set iff AArch32 */
+ #define PSR_MODE_EL3h 0x0d
+ #define PSR_MODE_EL3t 0x0c
+-- 
+1.9.1
+
+
+From 0146d3d39f1f0f7442d72ebc4994b01f8364dc5d Mon Sep 17 00:00:00 2001
+From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
+Date: Wed, 9 Sep 2015 16:36:53 +0100
+Subject: [PATCH] xen/arm: support compressed kernels
+
+Signed-off-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
+---
+ xen/arch/arm/kernel.c | 156 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 156 insertions(+)
+
+diff --git a/xen/arch/arm/kernel.c b/xen/arch/arm/kernel.c
+index f641b12..35692e1 100644
+--- a/xen/arch/arm/kernel.c
++++ b/xen/arch/arm/kernel.c
+@@ -13,6 +13,7 @@
+ #include <asm/byteorder.h>
+ #include <asm/setup.h>
+ #include <xen/libfdt/libfdt.h>
++#include <xen/vmap.h>
+ 
+ #include "kernel.h"
+ 
+@@ -258,6 +259,122 @@ static int kernel_uimage_probe(struct kernel_info *info,
+ }
+ 
+ #ifdef CONFIG_ARM_64
++
++#define HEAPORDER 3
++
++static unsigned char *__initdata window;
++#define memptr long
++static memptr __initdata free_mem_ptr;
++static memptr __initdata free_mem_end_ptr;
++
++#define WSIZE           0x80000000
++
++static unsigned char *__initdata inbuf;
++static unsigned __initdata insize;
++
++/* Index of next byte to be processed in inbuf: */
++static unsigned __initdata inptr;
++
++/* Bytes in output buffer: */
++static unsigned __initdata outcnt;
++
++#define OF(args)        args
++#define STATIC          static
++
++#define memzero(s, n)   memset((s), 0, (n))
++
++typedef unsigned char   uch;
++typedef unsigned short  ush;
++typedef unsigned long   ulg;
++
++#define INIT            __init
++#define INITDATA        __initdata
++
++#define get_byte()      (inptr < insize ? inbuf[inptr++] : fill_inbuf())
++
++#ifdef DEBUG
++#  define Assert(cond, msg) do { if (!(cond)) error(msg); } while (0)
++#  define Trace(x)      do { fprintf x; } while (0)
++#  define Tracev(x)     do { if (verbose) fprintf x ; } while (0)
++#  define Tracevv(x)    do { if (verbose > 1) fprintf x ; } while (0)
++#  define Tracec(c, x)  do { if (verbose && (c)) fprintf x ; } while (0)
++#  define Tracecv(c, x) do { if (verbose > 1 && (c)) fprintf x ; } while (0)
++#else
++#  define Assert(cond, msg)
++#  define Trace(x)
++#  define Tracev(x)
++#  define Tracevv(x)
++#  define Tracec(c, x)
++#  define Tracecv(c, x)
++#endif
++
++static long __initdata bytes_out;
++static void flush_window(void);
++
++static __init void error(char *x)
++{
++    panic("%s", x);
++}
++
++static __init int fill_inbuf(void)
++{
++        error("ran out of input data");
++        return 0;
++}
++
++#include "../../common/inflate.c"
++
++static __init void flush_window(void)
++{
++    /*
++     * The window is equal to the output buffer therefore only need to
++     * compute the crc.
++     */
++    unsigned long c = crc;
++    unsigned n;
++    unsigned char *in, ch;
++
++    in = window;
++    for ( n = 0; n < outcnt; n++ )
++    {
++        ch = *in++;
++        c = crc_32_tab[((int)c ^ ch) & 0xff] ^ (c >> 8);
++    }
++    crc = c;
++
++    bytes_out += (unsigned long)outcnt;
++    outcnt = 0;
++}
++
++static __init int perform_gunzip(char *output, char *image, unsigned long image_len)
++{
++    int rc;
++
++    window = (unsigned char *)output;
++
++    free_mem_ptr = (unsigned long)alloc_xenheap_pages(HEAPORDER, 0);
++    free_mem_end_ptr = free_mem_ptr + (PAGE_SIZE << HEAPORDER);
++
++    inbuf = (unsigned char *)image;
++    insize = image_len;
++    inptr = 0;
++
++    makecrc();
++
++    if ( gunzip() < 0 )
++    {
++        rc = -EINVAL;
++    }
++    else
++    {
++        rc = 0;
++    }
++
++    free_xenheap_pages((void *)free_mem_ptr, HEAPORDER);
++
++    return rc;
++}
++
+ /*
+  * Check if the image is a 64-bit Image.
+  */
+@@ -310,6 +427,43 @@ static int kernel_zimage64_probe(struct kernel_info *info,
+ 
+     return 0;
+ }
++
++static unsigned long output_length(char *image, unsigned long image_len)
++{
++    return *(uint32_t *)&image[image_len - 4];
++}
++
++static int kernel_zimage64_compressed_probe(struct kernel_info *info,
++                                 paddr_t addr, paddr_t size)
++{
++    char *output, *input;
++    unsigned char magic[2];
++    int rc;
++    unsigned kernel_order_in;
++    unsigned kernel_order_out;
++    paddr_t output_size;
++    
++    copy_from_paddr(magic, addr, sizeof(magic));
++
++    if (!((magic[0] == 0x1f) && ((magic[1] == 0x8b) || (magic[1] == 0x9e))))
++        return -EINVAL;
++
++    kernel_order_in = get_order_from_bytes(size);
++    input = (char *)ioremap_cache(addr, size);
++
++    output_size = output_length(input, size);
++    kernel_order_out = get_order_from_bytes(output_size);
++    output = (char *)alloc_xenheap_pages(kernel_order_out, 0);
++
++    rc = perform_gunzip(output, input, size);
++    clean_dcache_va_range(output, output_size);
++    iounmap(input);
++
++    if (rc != 0)
++        return rc;
++
++    return kernel_zimage64_probe(info, virt_to_maddr(output), output_size);
++}
+ #endif
+ 
+ /*
+@@ -466,6 +620,8 @@ int kernel_probe(struct kernel_info *info)
+ #ifdef CONFIG_ARM_64
+     rc = kernel_zimage64_probe(info, start, size);
+     if (rc < 0)
++        rc = kernel_zimage64_compressed_probe(info, start, size);
++    if (rc < 0)
+ #endif
+         rc = kernel_uimage_probe(info, start, size);
+     if (rc < 0)
 -- 
 1.9.1
 

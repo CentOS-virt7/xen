@@ -1,17 +1,12 @@
 %{!?python_sitearch: %define python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
-# Build ocaml bits unless rpmbuild was run with --without ocaml 
-# or ocamlopt is missing (the xen makefile doesn't build ocaml bits if it isn't there)
-%define with_ocaml  1
-%define build_ocaml %(test -x %{_bindir}/ocamlopt && echo %{with_ocaml} || echo 0)
-# build an efi boot image (where supported) unless rpmbuild was run with
-# --without efi
-%define build_efi %{?_without_efi: 0} %{?!_without_efi: 1}
-# xen only supports efi boot images on x86_64
+
+
 
 %define _libexecdir %{_libdir}
 
-#for el6
-%define build_efi 0
+# build an efi boot image (where supported) unless rpmbuild was run with
+# --without efi
+%define build_efi %{?_without_efi: 0} %{?!_without_efi: 1}
 
 %if 0%{?centos_ver} == 6
 %define with_sysv 1
@@ -21,13 +16,34 @@
 %define with_systemd 1
 %endif
 
+%define xen_efi_vendor Xen
+
+%ifarch aarch64
+%define with_ocaml 0
+%define with_stubdom 0
+%define with_blktap 0
+%else
+%define with_ocaml  1
+%define with_stubdom 1
+%define with_blktap 1
+# FIXME
+%define build_efi 0
+%endif
+
+# Build ocaml bits unless rpmbuild was run with --without ocaml 
+# or ocamlopt is missing (the xen makefile doesn't build ocaml bits if it isn't there)
+%define build_ocaml %(test -x %{_bindir}/ocamlopt && echo %{with_ocaml} || echo 0)
+# xen only supports efi boot images on x86_64
+
+
+
 # Hypervisor ABI
 %define hv_abi  4.6
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.0rc2x
-Release: 3%{?dist}
+Release: 4%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -35,22 +51,40 @@ Source0: http://bits.xensource.com/oss-xen/release/%{version}/xen-%{version}.tar
 Source1: %{name}.modules
 Source2: %{name}.logrotate
 # used by stubdoms
+%if %{with_stubdom}
 Source10: lwip-1.3.0.tar.gz
 Source11: newlib-1.16.0.tar.gz
 Source12: zlib-1.2.3.tar.gz
 Source13: pciutils-2.2.9.tar.bz2
 Source14: grub-0.97.tar.gz
 Source15: polarssl-1.1.4-gpl.tgz
+%endif
 # systemd bits
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
 
+%if %{build_efi}
+# This might need to be generated in postinstall
+# FIXME: Include one for x86_64
+%ifarch aarch64
+Source50: efi-xen.cfg.aarch64
+%endif
+%endif
+
+%if %{with_blktap}
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
+%endif
 
 Patch1: xen-queue.am
 
+%if %{with_blktap}
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
+%endif
+
+%ifarch aarch64
+Patch2027: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
+%endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -58,11 +92,15 @@ BuildRequires: libX11-devel python-devel ghostscript texlive-latex
 BuildRequires: ncurses-devel gtk2-devel libaio-devel libtool
 # for the docs
 BuildRequires: perl texinfo graphviz
-%ifnarch ia64
+%ifarch x86_64
 # so that x86_64 builds pick up glibc32 correctly
 BuildRequires: /usr/include/gnu/stubs-32.h
 # for the VMX "bios"
 BuildRequires: dev86
+# build using Fedora seabios and ipxe packages for roms
+BuildRequires: seabios ipxe-roms-qemu
+# iasl needed to build hvmloader
+BuildRequires: iasl
 %endif
 BuildRequires: gettext
 BuildRequires: gnutls-devel
@@ -71,10 +109,6 @@ BuildRequires: openssl-devel
 BuildRequires: pciutils-devel
 # Several tools now use uuid
 BuildRequires: libuuid-devel
-# iasl needed to build hvmloader
-BuildRequires: iasl
-# build using Fedora seabios and ipxe packages for roms
-BuildRequires: seabios ipxe-roms-qemu
 # modern compressed kernels
 BuildRequires: bzip2-devel xz-devel
 # libfsimage
@@ -97,13 +131,15 @@ Requires: chkconfig
 Requires: module-init-tools
 Requires: gawk
 Requires: grep
-ExclusiveArch: x86_64
+ExclusiveArch: x86_64 aarch64
 %if %with_ocaml
 BuildRequires: ocaml, ocaml-findlib
 %endif
 # efi image needs an ld that has -mi386pep option
 %if %build_efi
+%ifarch x86_64
 BuildRequires: mingw64-binutils
+%endif
 %endif
 
 %description
@@ -126,7 +162,9 @@ which manage Xen virtual machines.
 Summary: Core Xen runtime environment
 Group: Development/Libraries
 Requires: xen-libs = %{version}-%{release}
+%ifarch x86_64
 Requires: /usr/bin/qemu-img
+%endif
 # Ensure we at least have a suitable kernel installed, though we can't
 # force user to actually boot it.
 Requires: xen-hypervisor-abi = %{hv_abi}
@@ -214,6 +252,7 @@ git am %{PATCH1}
 
 # Now apply patches to things not in the core Xen repo
 
+%if %{with_blktap}
 pushd `pwd`
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
@@ -223,17 +262,23 @@ XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --
 popd 
 %patch1001 -p1
 %patch1005 -p1
+%endif
 
 %define _default_patch_fuzz 2
 
 pushd tools/qemu-xen
+%ifarch aarch64
+%patch2027 -p1
+%endif
 popd
 
 pushd tools/qemu-xen-traditional
 popd
 
+%if %{with_stubdom}
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} stubdom
+%endif
 
 
 %build
@@ -241,24 +286,44 @@ cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} st
 %define ocaml_flags OCAML_TOOLS=n
 %endif
 %if %build_efi
+%ifarch x86_64
 %define efi_flags LD_EFI=/usr/x86_64-w64-mingw32/bin/ld
-mkdir -p dist/install/boot/efi/efi/fedora
+%endif
+mkdir -p dist/install/boot/efi/efi/%{xen_efi_vendor}
 %endif
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
 export CFLAGS="$RPM_OPT_FLAGS"
+
+%if %{with_blktap}
+%else
+%define extra_config_blktap --disable-blktap2
+%endif
+
 %if %with_systemd
 %define extra_config_systemd --enable-systemd
 %else
 %define extra_config_systemd --disable-systemd
 %endif
-%define extra_config %{?extra_config_systemd} %{?extra_config_arch}
-WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-system-seabios=/usr/share/seabios/bios.bin --with-xenstored=xenstored %{?extra_config}
-make %{?_smp_mflags} %{?efi_flags} dist-xen
+
+%ifarch x86_64
+%define extra_config_arch --with-system-seabios=/usr/share/seabios/bios.bin
+%endif
+
+%define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch}
+
+WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-xenstored=xenstored %{?extra_config}
+
+export EFI_VENDOR="%{xen_efi_vendor}"
+make %{?_smp_mflags} %{?efi_flags}   dist-xen
 make %{?_smp_mflags} %{?ocaml_flags} dist-tools
-make                 dist-docs
+make                                 dist-docs
+
 unset CFLAGS
+
+%if %{with_stubdom}
 make %{?ocaml_flags} dist-stubdom
+%endif
 
 
 %install
@@ -267,15 +332,20 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}%{_libdir}/ocaml/stublibs
 %endif
 %if %build_efi
-mkdir -p %{buildroot}/boot/efi/efi/fedora
+mkdir -p %{buildroot}/boot/efi/efi/%{xen_efi_vendor}
 %endif
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
+export EFI_VENDOR="%{xen_efi_vendor}"
 make DESTDIR=%{buildroot} %{?efi_flags}  prefix=/usr install-xen
 make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-tools
 make DESTDIR=%{buildroot} prefix=/usr install-docs
+%if %{with_stubdom}
 make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-stubdom
+%endif
+
 %if %build_efi
+install -m 644 %{SOURCE50} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}${XEN_VENDORVERSION}.cfg.sample
 mv %{buildroot}/boot/efi/efi %{buildroot}/boot/efi/EFI
 %endif
 
@@ -305,8 +375,10 @@ rm -f %{buildroot}%{_sbindir}/xen-python-path
 rm -rf %{buildroot}/usr/share/xen/man
 rm -rf %{buildroot}/usr/bin/qemu-*-xen
 rm %{buildroot}/usr/libexec/qemu-bridge-helper
+%ifarch x86_64
 ln -s qemu-img %{buildroot}/%{_bindir}/qemu-img-xen
 ln -s qemu-img %{buildroot}/%{_bindir}/qemu-nbd-xen
+%endif
 for file in bios.bin openbios-sparc32 openbios-sparc64 ppc_rom.bin \
          pxe-e1000.bin pxe-ne2k_pci.bin pxe-pcnet.bin pxe-rtl8139.bin \
          vgabios.bin vgabios-cirrus.bin video.x openbios-ppc bamboo.dtb
@@ -361,6 +433,11 @@ mkdir -p %{buildroot}/usr/lib/tmpfiles.d
 install -m 644 %{SOURCE49} %{buildroot}/usr/lib/tmpfiles.d/xen.conf
 %endif
 
+# Not sure why qemu makes an x86_64 file when building on aarch64...
+%ifarch aarch64
+rm -f %{buildroot}%{_sysconfdir}/qemu/target-x86_64.conf
+%endif
+
 ############ create dirs in /var ############
 
 mkdir -p %{buildroot}%{_localstatedir}/lib/xen/images
@@ -374,7 +451,7 @@ diff -u f1.list f2.list || true
 
 ############ assemble license files ############
 
-mkdir licensedir
+mkdir -p licensedir
 # avoid licensedir to avoid recursion, also stubdom/ioemu and dist
 # which are copies of files elsewhere
 find . -path licensedir -prune -o -path stubdom/ioemu -prune -o \
@@ -515,13 +592,15 @@ rm -rf %{buildroot}
 %dir %{_datadir}/qemu-xen
 %{_datadir}/qemu-xen/*
 %dir %{_sysconfdir}/qemu/
-%{_sysconfdir}/qemu/target-%{_arch}.conf
 %{_datadir}/locale/*/LC_MESSAGES/qemu.mo
 
+%ifarch x86_64
 # QEMU runtime files
+%{_sysconfdir}/qemu/target-%{_arch}.conf
 %dir %{_datadir}/%{name}/qemu
 %dir %{_datadir}/%{name}/qemu/keymaps
 %{_datadir}/%{name}/qemu/keymaps/*
+%endif
 
 # man pages
 %{_mandir}/man1/xentop.1*
@@ -541,8 +620,8 @@ rm -rf %{buildroot}
 %{python_sitearch}/pygrub-*.egg-info
 
 # The firmware
-%ifnarch ia64
 # Avoid owning /usr/lib twice on i386
+%ifarch x86_64
 %if "%{_libdir}" != "/usr/lib"
 %dir /usr/lib/%{name}
 %dir /usr/lib/%{name}/bin
@@ -555,6 +634,7 @@ rm -rf %{buildroot}
 %{_libexecdir}/xen/boot/xenstore-stubdom.gz
 %{_libexecdir}/xen/boot/pv-grub*.gz
 %endif
+
 # General Xen state
 %dir %{_localstatedir}/lib/%{name}
 %dir %{_localstatedir}/lib/%{name}/dump
@@ -565,7 +645,6 @@ rm -rf %{buildroot}
 %dir %attr(0700,root,root) %{_localstatedir}/run/xenstored
 
 # All xenstore CLI tools
-%{_bindir}/qemu-*-xen
 %{_bindir}/xenstore
 %{_bindir}/xenstore-*
 %{_bindir}/pygrub
@@ -574,18 +653,9 @@ rm -rf %{buildroot}
 %{_sbindir}/xentrace_setmask
 %{_sbindir}/xentrace_setsize
 %{_bindir}/xentrace_format
-%{_bindir}/xenalyze
 # Misc stuff
-%{_bindir}/xen-detect
-%{_sbindir}/gdbsx
 %{_sbindir}/gtrace*
-%{_sbindir}/kdd
-%{_sbindir}/tap-ctl
-%{_sbindir}/td-util
 %{_sbindir}/xen-bugtool
-%{_sbindir}/xen-hptool
-%{_sbindir}/xen-hvmcrash
-%{_sbindir}/xen-hvmctx
 %{_sbindir}/xen-tmem-list-parse
 %{_sbindir}/xenconsoled
 %{_sbindir}/xenlockprof
@@ -598,11 +668,25 @@ rm -rf %{buildroot}
 %{_sbindir}/xenperf
 %{_sbindir}/xenwatchdogd
 %{_sbindir}/xl
-%{_sbindir}/xen-lowmemd
 %{_sbindir}/xen-ringwatch
 %{_sbindir}/xencov
+#x86-only stuff
+%ifarch x86_64
+%{_bindir}/qemu-*-xen
+%{_bindir}/xen-detect
+%{_sbindir}/gdbsx
+%{_sbindir}/kdd
+%{_sbindir}/td-util
+%{_sbindir}/xen-hptool
+%{_sbindir}/xen-hvmcrash
+%{_sbindir}/xen-hvmctx
+%{_sbindir}/xen-lowmemd
 %{_sbindir}/xen-mfndump
+%{_bindir}/xenalyze
+%endif
 #blktap
+%if %{with_blktap}
+%{_sbindir}/tap-ctl
 %{_bindir}/vhd-index
 %{_bindir}/vhd-update
 %{_bindir}/vhd-util
@@ -610,6 +694,7 @@ rm -rf %{buildroot}
 %{_sbindir}/part-util
 %{_sbindir}/td-rated
 %{_sbindir}/vhdpartx
+%endif
 
 # Xen logfiles
 %dir %attr(0700,root,root) %{_localstatedir}/log/xen
@@ -618,11 +703,20 @@ rm -rf %{buildroot}
 
 %files hypervisor
 %defattr(-,root,root)
+%ifarch x86_64
 #/boot/xen-syms-*
 /boot/xen-*.gz
 /boot/xen.gz
+%endif
+%ifarch aarch64
+# fixme, what is this on arch?
+#/boot/xen-%{version}-1.el7.centos
+/boot/xen-*
+/boot/xen
+%endif
 %if %build_efi
-/boot/efi/EFI/fedora/*.efi
+/boot/efi/EFI/%{xen_efi_vendor}/*.efi
+/boot/efi/EFI/%{xen_efi_vendor}/*.cfg.sample
 %endif
 
 %files doc
@@ -637,13 +731,18 @@ rm -rf %{buildroot}
 %{_includedir}/xen/*
 %dir %{_includedir}/xenstore-compat
 %{_includedir}/xenstore-compat/*
+
+%if %{with_blktap}
 %dir %{_includedir}/blktap
 %{_includedir}/blktap/*
 %dir %{_includedir}/vhd
 %{_includedir}/vhd/*
+%endif
 
 %{_libdir}/*.so
+%ifarch x86_64
 %{_libdir}/*.la
+%endif
 
 %{_datadir}/pkgconfig/xenlight.pc
 %{_datadir}/pkgconfig/xlutil.pc
@@ -672,6 +771,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Sep 09 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0rc2x-4.el6.centos
+ - Add aarch64
+
 * Tue Sep 08 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0rc2x-3.el6.centos
  - Switch to systemd for CentOS 7
 

@@ -1,0 +1,6 @@
+[global] default=Xen
+
+[Xen]
+options=conswitch=x dom0_mem=2G dom0_max_vcpus=4 console=dtuart dtuart=/soc/serial@1c020000 no-bootscrub
+kernel=vmlinuz-3.19.0-0.79.aa7a.aarch64 loglevel=9 root=/dev/sda4 ro xencons=hvc console=hvc0 earlyprintk=uart8250-32bit,0x1c020000
+ramdisk=initramfs-3.19.0-0.79.aa7a.aarch64.img
