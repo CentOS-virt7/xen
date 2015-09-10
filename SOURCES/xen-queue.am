@@ -1,53 +1,209 @@
-From 0bbfa67ccc1eff2ac50d7057fd498cc9a42d2dc7 Mon Sep 17 00:00:00 2001
+From b697810574e5d6362f7fc4d79c01f6e259580554 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 2 Sep 2015 11:01:08 +0100
-Subject: [PATCH] Disable iptables on the bridge
+Date: Tue, 15 Sep 2015 15:08:24 +0100
+Subject: [PATCH] tools/hotplug: Before running xenstored, run restorecon if
+ available to reset selinux labels
 
+Mounting tmpfs at /var/lib/xenstored is critical to performance for
+cxenstored, but clobbers the selinux labels there, causing xenstored
+to fail because it is then prevented from creating a database there.
+
+The old solution to this was to manually add mount options to
+var-lib-xenstored.mount with the appropriate context.  Unfortinately this
+was bad for several reasons:
+* It broke non-SELinux systems, which had no context
+* It is fragile even on SELinux systems, as it requires the mount option to be
+kept in sync with the SELinux policy for that system
+
+Observing the scripts on CentOS, standard practice seems to be to run
+"restorecon -R $mountpoint" after mounting a tmpfs.  restorecon will read the
+SELinux policy and automatically set permissions appropriately.
+
+Ideally we would cause restorecon to be run as part of var-lib-xenstored.mount,
+but I haven't yet found a way to do that.
+
+Instead, check to see if restorecon exists, and if so, run it on
+@XEN_LIB_XENSTORED@.  Use of '=-' here will allow the service to
+continue even if /usr/sbin/restorecon doesn't exist or if it fails.
+
+Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
 ---
- tools/hotplug/Linux/vif-bridge            | 2 --
- tools/hotplug/Linux/xen-network-common.sh | 7 +++++++
- 2 files changed, 7 insertions(+), 2 deletions(-)
 
-diff --git a/tools/hotplug/Linux/vif-bridge b/tools/hotplug/Linux/vif-bridge
-index 3d72ca4..79220d3 100644
---- a/tools/hotplug/Linux/vif-bridge
-+++ b/tools/hotplug/Linux/vif-bridge
-@@ -93,8 +93,6 @@ case "$command" in
-         ;;
- esac
- 
--handle_iptable
--
- call_hooks vif post
- 
- log debug "Successful vif-bridge $command for $dev, bridge $bridge."
-diff --git a/tools/hotplug/Linux/xen-network-common.sh b/tools/hotplug/Linux/xen-network-common.sh
-index 92ffa60..0b1fde9 100644
---- a/tools/hotplug/Linux/xen-network-common.sh
-+++ b/tools/hotplug/Linux/xen-network-common.sh
-@@ -114,6 +114,13 @@ create_bridge () {
- 	brctl addbr ${bridge}
- 	brctl stp ${bridge} off
- 	brctl setfd ${bridge} 0
-+	# Setting these to zero stops guest<->LAN traffic
-+	# traversing the bridge from hitting the *tables
-+	# rulesets. guest<->host traffic still gets processed
-+	# by the host's iptables rules so this isn't a hole
-+	sysctl -q -w "net.bridge.bridge-nf-call-arptables=0"
-+	sysctl -q -w "net.bridge.bridge-nf-call-ip6tables=0"
-+	sysctl -q -w "net.bridge.bridge-nf-call-iptables=0"
-     fi
- }
- 
+Use of =- will allow things to succeed, but will also produce some
+scary messages about failure in the log.  I've also tested the
+following, and it seems to work; it's just a bit more ugly:
+
+ExecStartPre=-/bin/sh -c "if test -e /usr/sbin/restorecon ; then /usr/sbin/xenstorecon -R @XEN_LIB_STORED@ || true ; fi"
+
+One potential concern with this approach would be if it opened up a
+race condition where an attacker was able to place something in
+/var/lib/xenstored, and then get it re-labeled by the
+xenstored.service.  But I'm pretty sure the race condition itself
+exists between mounting and relabelling anyway, and I can't see the
+value of having something with a restricted label anyway.
+
+CC: Ian Campbell <ian.campbell@citrix.com>
+CC: Ian Jackson <ian.jackson@citrix.com>
+CC: Wei Liu <wei.liu2@citrix.com>
+CC: Olaf Hering <olaf@aepfle.de>
+CC: M A Young <m.a.young@durham.ac.uk>
+CC: Konrad Wilk <konrad.wilk@oracle.com>
+---
+ tools/hotplug/Linux/systemd/xenstored.service.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tools/hotplug/Linux/systemd/xenstored.service.in b/tools/hotplug/Linux/systemd/xenstored.service.in
+index a5f836b..9d61024 100644
+--- a/tools/hotplug/Linux/systemd/xenstored.service.in
++++ b/tools/hotplug/Linux/systemd/xenstored.service.in
+@@ -13,6 +13,7 @@ Environment=XENSTORED_ARGS=
+ Environment=XENSTORED=@XENSTORED@
+ EnvironmentFile=-@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xencommons
+ ExecStartPre=/bin/grep -q control_d /proc/xen/capabilities
++ExecStartPre=-/usr/sbin/restorecon -R @XEN_LIB_STORED@
+ ExecStartPre=-/bin/rm -f @XEN_LIB_STORED@/tdb*
+ ExecStartPre=/bin/mkdir -p @XEN_RUN_DIR@
+ ExecStart=/bin/sh -c "exec $XENSTORED --no-fork $XENSTORED_ARGS"
 -- 
 1.9.1
 
 
-From aa6b2ebafcd73dfe49b1d2d8d8b90135dc6f038f Mon Sep 17 00:00:00 2001
+From 36a8c13468d122534c33e6fa3a01acaf60830aa3 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 2 Sep 2015 11:01:08 +0100
-Subject: [PATCH] pygrubfix.patch
+Date: Tue, 15 Sep 2015 15:08:24 +0100
+Subject: [PATCH] tools/hotplug: Call xenstored directly rather than via sh
 
+Using sh to exec xenstored breaks on selinux systems (at least, on
+CentOS 7).
+
+The problem seems to be that the selinux permissions on the socket
+that xenstored gets are incorrect, and selinux prevents it from
+calling accept() on it.  From the audit.log:
+
+type=AVC msg=audit(1442320892.988:6206): avc:  denied  { accept } for  pid=613 comm="xenstored" path="/run/xenstored/socket" scontext=system_u:system_r:xenstored_t:s0 tcontext=system_u:system_r:initrc_t:s0 tclass=unix_stream_socket permissive=0
+type=SYSCALL msg=audit(1442320892.988:6206): arch=c000003e syscall=43 success=no exit=-13 a0=3 a1=0 a2=0 a3=0 items=0 ppid=1 pid=613 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="xenstored" exe="/usr/sbin/xenstored" subj=system_u:system_r:xenstored_t:s0 key=(null)
+
+The only purpose of running sh was to be able to expand the $XENSTORED
+variable, so that the user could modify
+@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xencommons to determine wheter to run
+xenstored or oxenstored, rather than modifying the xenstored.service
+file directly.
+
+(systemd generally will expand variables, but refuses to do so for the
+executable listed in ExecStart.)
+
+"Works on SELinux systems" is more important than "can select
+xenstored without directly modifying xenstored.service file".  For
+now, directly call the configured version of xenstored (i.e., the one
+selected with the --with-xenstored configure option).
+
+An alternate suggestion was to use /usr/bin/env to run $XENSTORED,
+thus:
+
+ExecStart=/usr/bin/env $XENSTORED --no-fork $XENSTORED_ARGS
+
+Unfortunately, results in discarding the selinux restrictions on
+xenstored entirely:
+
+# ps axZ | grep xenstored
+system_u:system_r:unconfined_service_t:s0 612 ? Ss    0:00 /usr/sbin/xenstored --no-fork
+
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+---
+This should be considered for backporting to 4.6 and 4.5.
+
+CC: Ian Campbell <ian.campbell@citrix.com>
+CC: Ian Jackson <ian.jackson@citrix.com>
+CC: Wei Liu <wei.liu2@citrix.com>
+CC: Olaf Hering <olaf@aepfle.de>
+CC: M A Young <m.a.young@durham.ac.uk>
+CC: Konrad Wilk <konrad.wilk@oracle.com>
+---
+ tools/hotplug/Linux/systemd/xenstored.service.in | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/tools/hotplug/Linux/systemd/xenstored.service.in b/tools/hotplug/Linux/systemd/xenstored.service.in
+index 9d61024..15defbe 100644
+--- a/tools/hotplug/Linux/systemd/xenstored.service.in
++++ b/tools/hotplug/Linux/systemd/xenstored.service.in
+@@ -10,13 +10,12 @@ ConditionPathExists=/proc/xen/capabilities
+ Type=notify
+ KillMode=none
+ Environment=XENSTORED_ARGS=
+-Environment=XENSTORED=@XENSTORED@
+ EnvironmentFile=-@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xencommons
+ ExecStartPre=/bin/grep -q control_d /proc/xen/capabilities
+ ExecStartPre=-/usr/sbin/restorecon -R @XEN_LIB_STORED@
+ ExecStartPre=-/bin/rm -f @XEN_LIB_STORED@/tdb*
+ ExecStartPre=/bin/mkdir -p @XEN_RUN_DIR@
+-ExecStart=/bin/sh -c "exec $XENSTORED --no-fork $XENSTORED_ARGS"
++ExecStart=@XENSTORED@ --no-fork $XENSTORED_ARGS
+ 
+ [Install]
+ WantedBy=multi-user.target
+-- 
+1.9.1
+
+
+From 3cfda7beff1fa1fc63526485060ead3f19ff3a0c Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 15 Sep 2015 17:09:41 +0100
+Subject: [PATCH] tools/Linux: Fix blktap module name in default module list
+
+The name of the blktap2 kernel module is... blktap.
+
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+---
+cc'ing the XenServer team to make sure I'm not crazy here...
+
+CC: Ian Campbell <ian.campbell@citrix.com>
+CC: Ian Jackson <ian.jackson@citrix.com>
+CC: Wei Liu <wei.liu2@citrix.com>
+CC: Dave Scott <Dave.Scott@eu.citrix.com>
+CC: Jonathan Ludlam <Jonathan.Ludlam@eu.citrix.com>
+CC: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ tools/configure    | 2 +-
+ tools/configure.ac | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/configure b/tools/configure
+index 884ce0a..cd84b56 100755
+--- a/tools/configure
++++ b/tools/configure
+@@ -4133,7 +4133,7 @@ xen-scsibk
+ usbbk
+ pciback
+ xen-acpi-processor
+-blktap2
++blktap
+ "
+ ;;
+ *)
+diff --git a/tools/configure.ac b/tools/configure.ac
+index 6c70040..6d1e9dd 100644
+--- a/tools/configure.ac
++++ b/tools/configure.ac
+@@ -105,7 +105,7 @@ xen-scsibk
+ usbbk
+ pciback
+ xen-acpi-processor
+-blktap2
++blktap
+ "
+ ;;
+ *)
+-- 
+1.9.1
+
+
+From 2cea139f4f623c4abeef6a883d9449775af4d9b6 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 15 Sep 2015 15:08:24 +0100
+Subject: [PATCH] RFC: Check for grub boot sectors pretending to be an MBR
+
+Found this in the CentOS patchqueue -- haven't tracked down where it
+came from yet.
 ---
  tools/pygrub/src/pygrub | 5 +++++
  1 file changed, 5 insertions(+)
@@ -86,101 +242,9 @@ index e4aedda..c062190 100755
 1.9.1
 
 
-From a2c5497cf846d0db87b1fbab38801fd5164b60f0 Mon Sep 17 00:00:00 2001
+From 1e41de2dcc06e2776426deb0acbf82326027c616 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 17:31:36 +0100
-Subject: [PATCH] Some fixes to help systemd service files run with selinux
-
-Signed-off-by: George Dunlap <george.dunlap@citrix.com>
----
- tools/hotplug/Linux/systemd/var-lib-xenstored.mount.in | 2 +-
- tools/hotplug/Linux/systemd/xenstored.service.in       | 2 +-
- 2 files changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/tools/hotplug/Linux/systemd/var-lib-xenstored.mount.in b/tools/hotplug/Linux/systemd/var-lib-xenstored.mount.in
-index 11a7d50..ed8f4d0 100644
---- a/tools/hotplug/Linux/systemd/var-lib-xenstored.mount.in
-+++ b/tools/hotplug/Linux/systemd/var-lib-xenstored.mount.in
-@@ -9,4 +9,4 @@ RefuseManualStop=true
- What=xenstore
- Where=@XEN_LIB_STORED@
- Type=tmpfs
--Options=mode=755
-+Options=mode=755,context="system_u:object_r:xenstored_var_lib_t:s0"
-diff --git a/tools/hotplug/Linux/systemd/xenstored.service.in b/tools/hotplug/Linux/systemd/xenstored.service.in
-index a5f836b..de349be 100644
---- a/tools/hotplug/Linux/systemd/xenstored.service.in
-+++ b/tools/hotplug/Linux/systemd/xenstored.service.in
-@@ -15,7 +15,7 @@ EnvironmentFile=-@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xencommons
- ExecStartPre=/bin/grep -q control_d /proc/xen/capabilities
- ExecStartPre=-/bin/rm -f @XEN_LIB_STORED@/tdb*
- ExecStartPre=/bin/mkdir -p @XEN_RUN_DIR@
--ExecStart=/bin/sh -c "exec $XENSTORED --no-fork $XENSTORED_ARGS"
-+ExecStart=@XENSTORED@
- 
- [Install]
- WantedBy=multi-user.target
--- 
-1.9.1
-
-
-From 95015de9581678dca74680b7c87f1c7f82156829 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 2 Sep 2015 11:01:08 +0100
-Subject: [PATCH] xen.use.fedora.ipxe.patch
-
----
- Config.mk                         | 2 +-
- tools/firmware/Makefile           | 2 +-
- tools/firmware/hvmloader/Makefile | 2 +-
- 3 files changed, 3 insertions(+), 3 deletions(-)
-
-diff --git a/Config.mk b/Config.mk
-index 4d95f3b..2297fce 100644
---- a/Config.mk
-+++ b/Config.mk
-@@ -263,7 +263,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.8.2
- # Tue Mar 17 10:52:16 2015 -0400
- # vgabios: On bda_save_restore() the saved vbe_mode also has flags in it
- 
--ETHERBOOT_NICS ?= rtl8139 8086100e
-+ETHERBOOT_NICS ?= 10ec8139 8086100e
- 
- 
- QEMU_TRADITIONAL_REVISION ?= xen-4.6.0-rc1
-diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
-index 6cc86ce..1b54335 100644
---- a/tools/firmware/Makefile
-+++ b/tools/firmware/Makefile
-@@ -14,7 +14,7 @@ SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
- endif
- SUBDIRS-$(CONFIG_ROMBIOS) += rombios
- SUBDIRS-$(CONFIG_ROMBIOS) += vgabios
--SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
-+#SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
- SUBDIRS-y += hvmloader
- 
- LD32BIT-$(CONFIG_FreeBSD) := LD32BIT_FLAG=-melf_i386_fbsd
-diff --git a/tools/firmware/hvmloader/Makefile b/tools/firmware/hvmloader/Makefile
-index 0560a7b..6610722 100644
---- a/tools/firmware/hvmloader/Makefile
-+++ b/tools/firmware/hvmloader/Makefile
-@@ -54,7 +54,7 @@ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.debug.bin
- else
- CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.bin
- endif
--ETHERBOOT_ROMS := $(addprefix ../etherboot/ipxe/src/bin/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
-+ETHERBOOT_ROMS := $(addprefix /usr/share/ipxe/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
- endif
- 
- ROMS := 
--- 
-1.9.1
-
-
-From 826f305abc1f1ea83e4d1353f97e9ed7105e586e Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 2 Sep 2015 11:01:08 +0100
+Date: Tue, 15 Sep 2015 15:08:24 +0100
 Subject: [PATCH] xen: Allow user to specify an alternate linker for EFI
  binaries
 
@@ -248,9 +312,108 @@ index 1daa7ac..f5398c4 100644
 1.9.1
 
 
-From 63e1905b6c9db41b343c9acd1602f4114e745967 Mon Sep 17 00:00:00 2001
+From f5f6eecbf77dfa4286f326ccdb2c93617b05128e Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 2 Sep 2015 11:01:09 +0100
+Date: Tue, 15 Sep 2015 15:08:25 +0100
+Subject: [PATCH] Disable iptables on the bridge
+
+---
+ tools/hotplug/Linux/vif-bridge            | 2 --
+ tools/hotplug/Linux/xen-network-common.sh | 7 +++++++
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/tools/hotplug/Linux/vif-bridge b/tools/hotplug/Linux/vif-bridge
+index 3d72ca4..79220d3 100644
+--- a/tools/hotplug/Linux/vif-bridge
++++ b/tools/hotplug/Linux/vif-bridge
+@@ -93,8 +93,6 @@ case "$command" in
+         ;;
+ esac
+ 
+-handle_iptable
+-
+ call_hooks vif post
+ 
+ log debug "Successful vif-bridge $command for $dev, bridge $bridge."
+diff --git a/tools/hotplug/Linux/xen-network-common.sh b/tools/hotplug/Linux/xen-network-common.sh
+index 92ffa60..0b1fde9 100644
+--- a/tools/hotplug/Linux/xen-network-common.sh
++++ b/tools/hotplug/Linux/xen-network-common.sh
+@@ -114,6 +114,13 @@ create_bridge () {
+ 	brctl addbr ${bridge}
+ 	brctl stp ${bridge} off
+ 	brctl setfd ${bridge} 0
++	# Setting these to zero stops guest<->LAN traffic
++	# traversing the bridge from hitting the *tables
++	# rulesets. guest<->host traffic still gets processed
++	# by the host's iptables rules so this isn't a hole
++	sysctl -q -w "net.bridge.bridge-nf-call-arptables=0"
++	sysctl -q -w "net.bridge.bridge-nf-call-ip6tables=0"
++	sysctl -q -w "net.bridge.bridge-nf-call-iptables=0"
+     fi
+ }
+ 
+-- 
+1.9.1
+
+
+From 5a221e92db4ab6cd3db6d546f2b689800afea4ea Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 15 Sep 2015 15:08:25 +0100
+Subject: [PATCH] xen.use.fedora.ipxe.patch
+
+---
+ Config.mk                         | 2 +-
+ tools/firmware/Makefile           | 2 +-
+ tools/firmware/hvmloader/Makefile | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Config.mk b/Config.mk
+index 59607b4..90b94a8 100644
+--- a/Config.mk
++++ b/Config.mk
+@@ -263,7 +263,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.8.2
+ # Tue Mar 17 10:52:16 2015 -0400
+ # vgabios: On bda_save_restore() the saved vbe_mode also has flags in it
+ 
+-ETHERBOOT_NICS ?= rtl8139 8086100e
++ETHERBOOT_NICS ?= 10ec8139 8086100e
+ 
+ 
+ QEMU_TRADITIONAL_REVISION ?= 5cdde31eacdd288359746019ad05cac8ed5d9f70
+diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
+index 6cc86ce..1b54335 100644
+--- a/tools/firmware/Makefile
++++ b/tools/firmware/Makefile
+@@ -14,7 +14,7 @@ SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
+ endif
+ SUBDIRS-$(CONFIG_ROMBIOS) += rombios
+ SUBDIRS-$(CONFIG_ROMBIOS) += vgabios
+-SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
++#SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
+ SUBDIRS-y += hvmloader
+ 
+ LD32BIT-$(CONFIG_FreeBSD) := LD32BIT_FLAG=-melf_i386_fbsd
+diff --git a/tools/firmware/hvmloader/Makefile b/tools/firmware/hvmloader/Makefile
+index 0560a7b..6610722 100644
+--- a/tools/firmware/hvmloader/Makefile
++++ b/tools/firmware/hvmloader/Makefile
+@@ -54,7 +54,7 @@ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.debug.bin
+ else
+ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.bin
+ endif
+-ETHERBOOT_ROMS := $(addprefix ../etherboot/ipxe/src/bin/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
++ETHERBOOT_ROMS := $(addprefix /usr/share/ipxe/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
+ endif
+ 
+ ROMS := 
+-- 
+1.9.1
+
+
+From 7f276da8d27fa60ef94ea96780d176c8be08a801 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 15 Sep 2015 15:08:25 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
  backend"
 
@@ -285,9 +448,9 @@ index bee5ed5..2635f0a 100644
 1.9.1
 
 
-From cd00f45dc1a67a2ad0011f2e04250c7d8ea32afb Mon Sep 17 00:00:00 2001
+From c933249d741ea8ec27588a26946cd25cf0ad7ea8 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 2 Sep 2015 11:01:09 +0100
+Date: Tue, 15 Sep 2015 15:08:25 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
 
 ---
@@ -310,9 +473,9 @@ index 2618559..4157edf 100644
 1.9.1
 
 
-From b728aaa53bc4c7a98c09785adf700a7ea9a29a4a Mon Sep 17 00:00:00 2001
+From 7911dd833ca218660c8ae01b7b42fdc195e47b22 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 9 Sep 2015 16:38:44 +0100
+Date: Tue, 15 Sep 2015 15:08:25 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
@@ -423,9 +586,9 @@ index 2053403..9a0641b 100644
 1.9.1
 
 
-From f634512edd601a487507f70875729d951baebedd Mon Sep 17 00:00:00 2001
+From 7c04656731ac69ab0c142d17f48e723e44831b53 Mon Sep 17 00:00:00 2001
 From: Julien Grall <julien.grall@linaro.org>
-Date: Wed, 9 Sep 2015 16:36:17 +0100
+Date: Tue, 15 Sep 2015 15:08:25 +0100
 Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
 
 ---
@@ -456,9 +619,9 @@ index 9a96401..faad68d 100644
 1.9.1
 
 
-From 0146d3d39f1f0f7442d72ebc4994b01f8364dc5d Mon Sep 17 00:00:00 2001
+From 3494eb44f8f90bbb086d28856787e6204d0b7b7c Mon Sep 17 00:00:00 2001
 From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
-Date: Wed, 9 Sep 2015 16:36:53 +0100
+Date: Tue, 15 Sep 2015 15:08:25 +0100
 Subject: [PATCH] xen/arm: support compressed kernels
 
 Signed-off-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>

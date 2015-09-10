@@ -42,8 +42,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.6.0rc2x
-Release: 4%{?dist}
+Version: 4.6rc3
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -325,6 +325,7 @@ mkdir -p dist/install/boot/efi/efi/%{xen_efi_vendor}
 %endif
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
+export debug="n"
 export CFLAGS="$RPM_OPT_FLAGS"
 
 %if %{with_blktap}
@@ -803,6 +804,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Sep 09 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc3-1.el6.centos
+ - Update to 4.6.0-rc3
+ - Upstreamable systemd / selinux fixes
+
 * Wed Sep 09 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0rc2x-4.el6.centos
  - Add aarch64
 
