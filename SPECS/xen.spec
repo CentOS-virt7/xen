@@ -142,6 +142,9 @@ BuildRequires: ocaml, ocaml-findlib
 BuildRequires: mingw64-binutils
 %endif
 %endif
+%ifarch aarch64
+BuildRequires: libfdt-devel
+%endif
 
 %description
 This package contains the xl command line tools, needed to manage
