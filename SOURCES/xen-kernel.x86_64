@@ -1,0 +1,3 @@
+BOOT_XEN_AS_DEFAULT="yes"
+XEN_KERNEL_ARGS="dom0_mem=1024M,max:1024M cpuinfo com1=115200,8n1 console=com1,tty loglvl=all guest_loglvl=all"
+LINUX_XEN_KERNEL_ARGS="console=hvc0 earlyprintk=xen nomodeset"
