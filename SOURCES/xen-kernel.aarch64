@@ -1,0 +1,6 @@
+BOOT_XEN_AS_DEFAULT="yes"
+XEN_KERNEL_ARGS="conswitch=x dom0_mem=2G dom0_max_vcpus=4 console=dtuart no-bootscrub"
+LINUX_XEN_KERNEL_ARGS="xencons=hvc console=hvc0"
+
+
+

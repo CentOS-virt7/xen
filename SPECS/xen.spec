@@ -43,7 +43,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6rc3
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -62,6 +62,7 @@ Source15: polarssl-1.1.4-gpl.tgz
 # systemd bits
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
+Source50: xen-kernel.%{_arch}
 
 %if %{build_efi}
 # This might need to be generated in postinstall
@@ -381,6 +382,8 @@ make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-stubdom
 install -m 644 %{SOURCE50} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}${XEN_VENDORVERSION}.cfg.sample
 mv %{buildroot}/boot/efi/efi %{buildroot}/boot/efi/EFI
 %endif
+
+install -m 644 %{SOURCE50} $RPM_BUILD_ROOT/etc/sysconfig/xen-kernel
 
 ############ debug packaging: list files ############
 
@@ -736,8 +739,8 @@ rm -rf %{buildroot}
 
 %files hypervisor
 %defattr(-,root,root)
+%config(noreplace) /etc/sysconfig/xen-kernel
 %ifarch x86_64
-#/boot/xen-syms-*
 /boot/xen-*.gz
 /boot/xen.gz
 %endif
@@ -804,6 +807,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Sep 16 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc3-2.el6.centos
+ - Include xen-kernel
+
 * Wed Sep 09 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc3-1.el6.centos
  - Update to 4.6.0-rc3
  - Upstreamable systemd / selinux fixes
