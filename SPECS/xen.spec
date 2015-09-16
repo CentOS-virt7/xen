@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.3
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -47,6 +47,7 @@ Source46: xen-watchdog.service
 Source47: xendomains.service
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
+Source50: xen-kernel.%{_arch}
 
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
@@ -308,6 +309,8 @@ make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-stubdom
 %if %build_efi
 mv %{buildroot}/boot/efi/efi %{buildroot}/boot/efi/EFI
 %endif
+
+install -m 644 %{SOURCE50} $RPM_BUILD_ROOT/etc/sysconfig/xen-kernel
 
 ############ debug packaging: list files ############
 
@@ -727,6 +730,7 @@ rm -rf %{buildroot}
 
 %files hypervisor
 %defattr(-,root,root)
+%config(noreplace) /etc/sysconfig/xen-kernel
 /boot/xen-syms-*
 /boot/xen-*.gz
 /boot/xen.gz
@@ -779,6 +783,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Sep 16 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-2.el6.centos
+ - Include xen-kernel
+
 * Tue Sep 8 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-1.el6.centos
  - Update to Xen 4.4.3
 
