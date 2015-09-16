@@ -205,6 +205,38 @@ manage Xen virtual machines.
 %prep
 %setup -q
 
+########################
+# To manipulate the am patchqueue (using 4.4.3 as an example):
+# 
+# * Clone the upstream xen.git repository:
+#
+# $ git clone git://xenbits.xenproject.org/xen.git xen.git
+# $ cd xen.git
+#
+# * Make a branch based on the target baseline version
+#
+# $ git checkout -b centos/pq/4.4.3 RELEASE-4.4.3
+#
+# 2. Import SOURCES/xen-queue.am
+# 
+# $ git am ${path_to_package_repo}/SOURCES/xen-queue.am
+#
+# OR using stackgit (recommended):
+#
+# $ stg init
+# $ stg import -M ${path_to_package_repo}/SOURCES/xen-queue.am
+#
+# (Note the -M -- if you don't specify this, it will only import the
+# first patch.)
+#
+# 3. Manipulate the patchqueue using normal git (or stackgit) commands
+#
+# 4. Export the queue again:
+#
+# git format-patch --stdout -N RELEASE-4.4.3 > ${path_to_package_repo}/SOURCES/xen-queue.am
+#
+########################
+
 # Create a git repo within the expanded tarball.
 git init
 git config user.email "..."
