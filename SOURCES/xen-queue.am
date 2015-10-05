@@ -1,6 +1,6 @@
-From b697810574e5d6362f7fc4d79c01f6e259580554 Mon Sep 17 00:00:00 2001
+From f1bcd97ebead6cfd91cb23c6a8164cbdf9346df5 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 15 Sep 2015 15:08:24 +0100
+Date: Tue, 29 Sep 2015 10:13:34 +0100
 Subject: [PATCH] tools/hotplug: Before running xenstored, run restorecon if
  available to reset selinux labels
 
@@ -65,12 +65,12 @@ index a5f836b..9d61024 100644
  ExecStartPre=/bin/mkdir -p @XEN_RUN_DIR@
  ExecStart=/bin/sh -c "exec $XENSTORED --no-fork $XENSTORED_ARGS"
 -- 
-1.9.1
+2.1.4
 
 
-From 36a8c13468d122534c33e6fa3a01acaf60830aa3 Mon Sep 17 00:00:00 2001
+From 6acf92c66ffae0f45fd60bbe52707a2b7e2a8ae4 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 15 Sep 2015 15:08:24 +0100
+Date: Tue, 29 Sep 2015 10:13:34 +0100
 Subject: [PATCH] tools/hotplug: Call xenstored directly rather than via sh
 
 Using sh to exec xenstored breaks on selinux systems (at least, on
@@ -142,12 +142,12 @@ index 9d61024..15defbe 100644
  [Install]
  WantedBy=multi-user.target
 -- 
-1.9.1
+2.1.4
 
 
-From 3cfda7beff1fa1fc63526485060ead3f19ff3a0c Mon Sep 17 00:00:00 2001
+From 5752422bac0cf255498d685fb6b437013016491e Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 15 Sep 2015 17:09:41 +0100
+Date: Tue, 29 Sep 2015 10:13:34 +0100
 Subject: [PATCH] tools/Linux: Fix blktap module name in default module list
 
 The name of the blktap2 kernel module is... blktap.
@@ -168,7 +168,7 @@ CC: Andrew Cooper <andrew.cooper3@citrix.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/configure b/tools/configure
-index 884ce0a..cd84b56 100755
+index aa66876..40efc29 100755
 --- a/tools/configure
 +++ b/tools/configure
 @@ -4133,7 +4133,7 @@ xen-scsibk
@@ -194,12 +194,12 @@ index 6c70040..6d1e9dd 100644
  ;;
  *)
 -- 
-1.9.1
+2.1.4
 
 
-From 2cea139f4f623c4abeef6a883d9449775af4d9b6 Mon Sep 17 00:00:00 2001
+From 972a43f3b40a5cc9007d1d86bf966012eaaca073 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 15 Sep 2015 15:08:24 +0100
+Date: Tue, 29 Sep 2015 10:13:34 +0100
 Subject: [PATCH] RFC: Check for grub boot sectors pretending to be an MBR
 
 Found this in the CentOS patchqueue -- haven't tracked down where it
@@ -239,12 +239,12 @@ index e4aedda..c062190 100755
  
  class GrubLineEditor(curses.textpad.Textbox):
 -- 
-1.9.1
+2.1.4
 
 
-From 1e41de2dcc06e2776426deb0acbf82326027c616 Mon Sep 17 00:00:00 2001
+From 107576b58d2d449f2330c013f79f9912bac392af Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 15 Sep 2015 15:08:24 +0100
+Date: Tue, 29 Sep 2015 10:13:35 +0100
 Subject: [PATCH] xen: Allow user to specify an alternate linker for EFI
  binaries
 
@@ -309,12 +309,12 @@ index 1daa7ac..f5398c4 100644
  
  extra-$(efi) += boot.init.o relocs-dummy.o runtime.o compat.o
 -- 
-1.9.1
+2.1.4
 
 
-From f5f6eecbf77dfa4286f326ccdb2c93617b05128e Mon Sep 17 00:00:00 2001
+From 22f01f6a8315ab3bede9979bbdb875562db2888e Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 15 Sep 2015 15:08:25 +0100
+Date: Tue, 29 Sep 2015 10:13:35 +0100
 Subject: [PATCH] Disable iptables on the bridge
 
 ---
@@ -354,12 +354,12 @@ index 92ffa60..0b1fde9 100644
  }
  
 -- 
-1.9.1
+2.1.4
 
 
-From 5a221e92db4ab6cd3db6d546f2b689800afea4ea Mon Sep 17 00:00:00 2001
+From 33e7bdc295ae97352e1a3a0b4bdc8fe26c5daf18 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 15 Sep 2015 15:08:25 +0100
+Date: Tue, 29 Sep 2015 10:13:35 +0100
 Subject: [PATCH] xen.use.fedora.ipxe.patch
 
 ---
@@ -369,7 +369,7 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index 59607b4..90b94a8 100644
+index 77f83a2..5ab37bb 100644
 --- a/Config.mk
 +++ b/Config.mk
 @@ -263,7 +263,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.8.2
@@ -380,7 +380,7 @@ index 59607b4..90b94a8 100644
 +ETHERBOOT_NICS ?= 10ec8139 8086100e
  
  
- QEMU_TRADITIONAL_REVISION ?= 5cdde31eacdd288359746019ad05cac8ed5d9f70
+ QEMU_TRADITIONAL_REVISION ?= 1c8d43cbdf0fc01a8f05acfbf55b805a83da34bb
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
 index 6cc86ce..1b54335 100644
 --- a/tools/firmware/Makefile
@@ -408,12 +408,12 @@ index 0560a7b..6610722 100644
  
  ROMS := 
 -- 
-1.9.1
+2.1.4
 
 
-From 7f276da8d27fa60ef94ea96780d176c8be08a801 Mon Sep 17 00:00:00 2001
+From 1224dcbbc9a077c997b8e144dbe094f8720d9cb9 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 15 Sep 2015 15:08:25 +0100
+Date: Tue, 29 Sep 2015 10:13:35 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
  backend"
 
@@ -430,7 +430,7 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
-index bee5ed5..2635f0a 100644
+index 8bb5e93..68823e3 100644
 --- a/tools/libxl/libxl_device.c
 +++ b/tools/libxl/libxl_device.c
 @@ -290,8 +290,8 @@ int libxl__device_disk_set_backend(libxl__gc *gc, libxl_device_disk *disk) {
@@ -445,12 +445,12 @@ index bee5ed5..2635f0a 100644
              LOG(DEBUG, "Disk vdev=%s, using backend %s",
                         disk->vdev,
 -- 
-1.9.1
+2.1.4
 
 
-From c933249d741ea8ec27588a26946cd25cf0ad7ea8 Mon Sep 17 00:00:00 2001
+From cd4d77c4a576af58a944164264da190b6391618e Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 15 Sep 2015 15:08:25 +0100
+Date: Tue, 29 Sep 2015 10:13:35 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
 
 ---
@@ -470,12 +470,12 @@ index 2618559..4157edf 100644
  		$(QEMU_XEN_ENABLE_DEBUG) \
  		--prefix=$(LIBEXEC) \
 -- 
-1.9.1
+2.1.4
 
 
-From 7911dd833ca218660c8ae01b7b42fdc195e47b22 Mon Sep 17 00:00:00 2001
+From 55cd1ae5d39db6e0d56a5fd5095ec0ed0d7001aa Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 15 Sep 2015 15:08:25 +0100
+Date: Tue, 29 Sep 2015 10:13:35 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
@@ -583,12 +583,12 @@ index 2053403..9a0641b 100644
      }
  
 -- 
-1.9.1
+2.1.4
 
 
-From 7c04656731ac69ab0c142d17f48e723e44831b53 Mon Sep 17 00:00:00 2001
+From 752d057707f02665546ecb053744390ede43830b Mon Sep 17 00:00:00 2001
 From: Julien Grall <julien.grall@linaro.org>
-Date: Tue, 15 Sep 2015 15:08:25 +0100
+Date: Tue, 29 Sep 2015 10:13:35 +0100
 Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
 
 ---
@@ -616,12 +616,12 @@ index 9a96401..faad68d 100644
  #define PSR_MODE_EL3h 0x0d
  #define PSR_MODE_EL3t 0x0c
 -- 
-1.9.1
+2.1.4
 
 
-From 3494eb44f8f90bbb086d28856787e6204d0b7b7c Mon Sep 17 00:00:00 2001
+From df34a68c2517becc3683f4d9b1885c1490957b78 Mon Sep 17 00:00:00 2001
 From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
-Date: Tue, 15 Sep 2015 15:08:25 +0100
+Date: Tue, 29 Sep 2015 10:13:35 +0100
 Subject: [PATCH] xen/arm: support compressed kernels
 
 Signed-off-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
@@ -818,5 +818,5 @@ index f641b12..35692e1 100644
          rc = kernel_uimage_probe(info, start, size);
      if (rc < 0)
 -- 
-1.9.1
+2.1.4
 
