@@ -22,10 +22,12 @@
 %define with_ocaml 0
 %define with_stubdom 0
 %define with_blktap 0
+%define with_spice 0
 %else
 %define with_ocaml  1
 %define with_stubdom 1
 %define with_blktap 1
+%define with_spice 1
 # FIXME
 %define build_efi 0
 %endif
@@ -43,7 +45,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6rc4
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -135,6 +137,9 @@ Requires: grep
 ExclusiveArch: x86_64 aarch64
 %if %with_ocaml
 BuildRequires: ocaml, ocaml-findlib
+%endif
+%if %with_spice
+BuildRequires: spice-server-devel usbredir-devel
 %endif
 # efi image needs an ld that has -mi386pep option
 %if %build_efi
@@ -343,11 +348,15 @@ export CFLAGS="$RPM_OPT_FLAGS"
 %define extra_config_systemd --disable-systemd
 %endif
 
+%if %with_spice
+%define extra_config_spice --with-extra-qemuu-configure-args="--enable-spice --enable-usb-redir"
+%endif
+
 %ifarch x86_64
 %define extra_config_arch --with-system-seabios=/usr/share/seabios/bios.bin
 %endif
 
-%define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch}
+%define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_spice}
 
 WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-xenstored=xenstored %{?extra_config}
 
@@ -470,6 +479,12 @@ mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 %if %with_systemd
 mkdir -p %{buildroot}/usr/lib/tmpfiles.d
 install -m 644 %{SOURCE49} %{buildroot}/usr/lib/tmpfiles.d/xen.conf
+%endif
+
+# Not sure why qemu wants to put these here either...
+%if %{with_spice}
+rm -rf %{buildroot}%{_libdir}/xen/include
+rm -rf %{buildroot}%{_libdir}/xen/lib
 %endif
 
 # Not sure why qemu makes an x86_64 file when building on aarch64...
@@ -810,7 +825,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
-* Mon Sep 29 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-1.el6.centos
+* Tue Oct 06 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-2.el6.centos
+ - Enable spice
+
+ * Mon Sep 29 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-1.el6.centos
  - Rebase to rc4
 
  * Mon Sep 21 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc3-4.el6.centos
