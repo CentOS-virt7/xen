@@ -23,6 +23,8 @@
 %define with_stubdom 0
 %define with_blktap 0
 %define with_spice 0
+%define with_tianocore 1
+%define build_efi 1
 %else
 %define with_ocaml  1
 %define with_stubdom 1
@@ -30,6 +32,7 @@
 %define with_spice 1
 # FIXME
 %define build_efi 0
+%define with_tianocore 0
 %endif
 
 # Build ocaml bits unless rpmbuild was run with --without ocaml 
@@ -45,7 +48,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6rc4
-Release: 2%{?dist}
+Release: 3%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -70,8 +73,12 @@ Source50: xen-kernel.%{_arch}
 # This might need to be generated in postinstall
 # FIXME: Include one for x86_64
 %ifarch aarch64
-Source50: efi-xen.cfg.aarch64
+Source51: efi-xen.cfg.aarch64
 %endif
+%endif
+
+%if %{with_tianocore}
+Source52: tianocore-20150820-0cebfe8.tar.gz
 %endif
 
 %if %{with_blktap}
@@ -321,6 +328,12 @@ popd
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} stubdom
 %endif
 
+%if %with_tianocore
+rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/tianocore
+mkdir ${RPM_BUILD_DIR}/%{name}-%{version}/tools/tianocore
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/tianocore -zxf %{SOURCE52}
+%endif
+
 
 %build
 %if !%build_ocaml
@@ -371,6 +384,18 @@ unset CFLAGS
 make %{?ocaml_flags} dist-stubdom
 %endif
 
+%if %{with_tianocore}
+%ifarch aarch64
+pushd `pwd`
+cd tools/tianocore
+make -C BaseTools
+export GCC48_AARCH64_PREFIX=
+bash -c "source edksetup.sh && build -a AARCH64 -t GCC48 -p ArmVirtPkg/ArmVirtXen.dsc -b RELEASE"
+popd
+%else
+echo "No tianocore available" && false
+%endif
+%endif
 
 %install
 rm -rf %{buildroot}
@@ -391,8 +416,14 @@ make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-stubdom
 %endif
 
 %if %build_efi
-install -m 644 %{SOURCE50} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}${XEN_VENDORVERSION}.cfg.sample
+install -m 644 %{SOURCE51} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}${XEN_VENDORVERSION}.cfg.sample
 mv %{buildroot}/boot/efi/efi %{buildroot}/boot/efi/EFI
+%endif
+
+%if %with_tianocore
+%ifarch aarch64
+install -D -m 644 tools/tianocore/Build/ArmVirtXen-AARCH64/RELEASE_GCC48/FV/XEN_EFI.fd %{buildroot}/%{_libexecdir}/xen/boot/XEN_EFI.fd
+%endif
 %endif
 
 install -m 644 %{SOURCE50} $RPM_BUILD_ROOT/etc/sysconfig/xen-kernel
@@ -689,6 +720,12 @@ rm -rf %{buildroot}
 %{_libexecdir}/xen/boot/pv-grub*.gz
 %endif
 
+%if %{with_tianocore}
+%ifarch aarch64
+%{_libexecdir}/xen/boot/XEN_EFI.fd
+%endif
+%endif
+
 # General Xen state
 %dir %{_localstatedir}/lib/%{name}
 %dir %{_localstatedir}/lib/%{name}/dump
@@ -825,13 +862,16 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
-* Tue Oct 06 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-2.el6.centos
+* Mon Oct 19 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-3.el6.centos
+ - Add guest efi bootloader support.  To use set kernel=/usr/lib64/xen/boot/XEN_EFI.fd
+
+ * Tue Oct 06 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-2.el6.centos
  - Enable spice
 
  * Mon Sep 29 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-1.el6.centos
  - Rebase to rc4
 
- * Mon Sep 21 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc3-4.el6.centos
+* Mon Sep 21 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc3-4.el6.centos
  - Gratuitous bump to re-build with new version of dev86 (0.16.21-5)
 
 * Wed Sep 16 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc3-2.el6.centos
