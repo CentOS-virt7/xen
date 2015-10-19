@@ -47,8 +47,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.6rc4
-Release: 3%{?dist}
+Version: 4.6.0
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -862,6 +862,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Oct 19 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0-1.el6.centos
+ - Update to 4.6.0 release
+
 * Mon Oct 19 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-3.el6.centos
  - Add guest efi bootloader support.  To use set kernel=/usr/lib64/xen/boot/XEN_EFI.fd
 
