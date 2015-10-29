@@ -1088,9 +1088,9 @@ index b6601a3..19e8470 100644
 2.1.4
 
 
-From f7f318b315ce8e116894e47c5cf0e2522b947289 Mon Sep 17 00:00:00 2001
+From 4f13373c418687a79b587b25283380fc27f7cfec Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:13:36 +0100
+Date: Thu, 29 Oct 2015 11:31:24 +0000
 Subject: [PATCH] x86/PoD: Eager sweep for zeroed pages
 
 Based on the contents of a guests phyiscal address space,
@@ -1109,35 +1109,67 @@ it is shattered if 4K pages of zeros can be reclaimed.  This is unfortunate
 but matches the previous behaviour, and is required to avoid regressions
 (domain crash from PoD exhaustion) with VMs configured close to the limit.
 
-This is XSA-150.
+This is CVE-2015-7970 / XSA-150.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
 ---
- xen/arch/x86/mm/p2m-pod.c | 114 +++++++++++++++++-----------------------------
- xen/arch/x86/mm/p2m.c     |   4 ++
- xen/include/asm-x86/p2m.h |  18 ++++++--
- 3 files changed, 60 insertions(+), 76 deletions(-)
+ xen/arch/x86/mm/p2m-pod.c | 86 +++++++++++++++++++++++++++++++----------------
+ xen/arch/x86/mm/p2m.c     |  4 +++
+ xen/include/asm-x86/p2m.h | 18 +++++++---
+ 3 files changed, 75 insertions(+), 33 deletions(-)
 
 diff --git a/xen/arch/x86/mm/p2m-pod.c b/xen/arch/x86/mm/p2m-pod.c
-index d14565d..97c5c75 100644
+index d14565d..d97b4a3 100644
 --- a/xen/arch/x86/mm/p2m-pod.c
 +++ b/xen/arch/x86/mm/p2m-pod.c
-@@ -898,79 +898,56 @@ p2m_pod_zero_check(struct p2m_domain *p2m, unsigned long *gfns, int count)
-     
+@@ -899,28 +899,6 @@ p2m_pod_zero_check(struct p2m_domain *p2m, unsigned long *gfns, int count)
  }
  
--#define POD_SWEEP_LIMIT 1024
+ #define POD_SWEEP_LIMIT 1024
 -
 -/* When populating a new superpage, look at recently populated superpages
 - * hoping that they've been zeroed.  This will snap up zeroed pages as soon as 
 - * the guest OS is done with them. */
 -static void
 -p2m_pod_check_last_super(struct p2m_domain *p2m, unsigned long gfn_aligned)
-+static void pod_eager_reclaim(struct p2m_domain *p2m)
- {
+-{
 -    unsigned long check_gfn;
+-
+-    ASSERT(p2m->pod.last_populated_index < POD_HISTORY_MAX);
+-
+-    check_gfn = p2m->pod.last_populated[p2m->pod.last_populated_index];
+-
+-    p2m->pod.last_populated[p2m->pod.last_populated_index] = gfn_aligned;
+-
+-    p2m->pod.last_populated_index =
+-        ( p2m->pod.last_populated_index + 1 ) % POD_HISTORY_MAX;
+-
+-    p2m_pod_zero_check_superpage(p2m, check_gfn);
+-}
+-
+-
+ #define POD_SWEEP_STRIDE  16
+ static void
+ p2m_pod_emergency_sweep(struct p2m_domain *p2m)
+@@ -961,7 +939,7 @@ p2m_pod_emergency_sweep(struct p2m_domain *p2m)
+          * NB that this is a zero-sum game; we're increasing our cache size
+          * by re-increasing our 'debt'.  Since we hold the pod lock,
+          * (entry_count - count) must remain the same. */
+-        if ( p2m->pod.count > 0 && i < limit )
++        if ( i < limit && (p2m->pod.count > 0 || hypercall_preempt_check()) )
+             break;
+     }
+ 
+@@ -973,6 +951,58 @@ p2m_pod_emergency_sweep(struct p2m_domain *p2m)
+ 
+ }
+ 
++static void pod_eager_reclaim(struct p2m_domain *p2m)
++{
 +    struct pod_mrp_list *mrp = &p2m->pod.mrp;
 +    unsigned int i = 0;
- 
--    ASSERT(p2m->pod.last_populated_index < POD_HISTORY_MAX);
++
 +    /*
 +     * Always check one page for reclaimation.
 +     *
@@ -1154,104 +1186,50 @@ index d14565d..97c5c75 100644
 +            if ( gfn & POD_LAST_SUPERPAGE )
 +            {
 +                gfn &= ~POD_LAST_SUPERPAGE;
- 
--    check_gfn = p2m->pod.last_populated[p2m->pod.last_populated_index];
++
 +                if ( p2m_pod_zero_check_superpage(p2m, gfn) == 0 )
 +                {
 +                    unsigned int x;
- 
--    p2m->pod.last_populated[p2m->pod.last_populated_index] = gfn_aligned;
++
 +                    for ( x = 0; x < SUPERPAGE_PAGES; ++x, ++gfn )
 +                        p2m_pod_zero_check(p2m, &gfn, 1);
 +                }
 +            }
 +            else
 +                p2m_pod_zero_check(p2m, &gfn, 1);
- 
--    p2m->pod.last_populated_index =
--        ( p2m->pod.last_populated_index + 1 ) % POD_HISTORY_MAX;
++
 +            mrp->list[idx] = INVALID_GFN;
 +        }
- 
--    p2m_pod_zero_check_superpage(p2m, check_gfn);
++
 +    } while ( (p2m->pod.count == 0) && (i < ARRAY_SIZE(mrp->list)) );
- }
- 
--
--#define POD_SWEEP_STRIDE  16
--static void
--p2m_pod_emergency_sweep(struct p2m_domain *p2m)
++}
++
 +static void pod_eager_record(struct p2m_domain *p2m,
 +                             unsigned long gfn, unsigned int order)
- {
--    unsigned long gfns[POD_SWEEP_STRIDE];
--    unsigned long i, j=0, start, limit;
--    p2m_type_t t;
--
--
--    if ( p2m->pod.reclaim_single == 0 )
--        p2m->pod.reclaim_single = p2m->pod.max_guest;
++{
 +    struct pod_mrp_list *mrp = &p2m->pod.mrp;
- 
--    start = p2m->pod.reclaim_single;
--    limit = (start > POD_SWEEP_LIMIT) ? (start - POD_SWEEP_LIMIT) : 0;
--
--    /* FIXME: Figure out how to avoid superpages */
--    /* NOTE: Promote to globally locking the p2m. This will get complicated
--     * in a fine-grained scenario. If we lock each gfn individually we must be
--     * careful about spinlock recursion limits and POD_SWEEP_STRIDE. */
--    p2m_lock(p2m);
--    for ( i=p2m->pod.reclaim_single; i > 0 ; i-- )
--    {
--        p2m_access_t a;
--        (void)p2m->get_entry(p2m, i, &t, &a, 0, NULL);
--        if ( p2m_is_ram(t) )
--        {
--            gfns[j] = i;
--            j++;
--            BUG_ON(j > POD_SWEEP_STRIDE);
--            if ( j == POD_SWEEP_STRIDE )
--            {
--                p2m_pod_zero_check(p2m, gfns, j);
--                j = 0;
--            }
--        }
--        /* Stop if we're past our limit and we have found *something*.
--         *
--         * NB that this is a zero-sum game; we're increasing our cache size
--         * by re-increasing our 'debt'.  Since we hold the pod lock,
--         * (entry_count - count) must remain the same. */
--        if ( p2m->pod.count > 0 && i < limit )
--            break;
--    }
--
--    if ( j )
--        p2m_pod_zero_check(p2m, gfns, j);
--
--    p2m_unlock(p2m);
--    p2m->pod.reclaim_single = i ? i - 1 : i;
++
 +    ASSERT(mrp->list[mrp->idx] == INVALID_GFN);
 +    ASSERT(gfn != INVALID_GFN);
- 
++
 +    mrp->list[mrp->idx++] =
 +        gfn | (order == PAGE_ORDER_2M ? POD_LAST_SUPERPAGE : 0);
 +    mrp->idx %= ARRAY_SIZE(mrp->list);
- }
- 
++}
++
  int
-@@ -1013,10 +990,7 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
+ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
+                         unsigned int order,
+@@ -1013,6 +1043,8 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
          return 0;
      }
  
--    /* Only sweep if we're actually out of memory.  Doing anything else
--     * causes unnecessary time and fragmentation of superpages in the p2m. */
--    if ( p2m->pod.count == 0 )
--        p2m_pod_emergency_sweep(p2m);
 +    pod_eager_reclaim(p2m);
- 
-     /* If the sweep failed, give up. */
++
+     /* Only sweep if we're actually out of memory.  Doing anything else
+      * causes unnecessary time and fragmentation of superpages in the p2m. */
      if ( p2m->pod.count == 0 )
-@@ -1048,6 +1022,8 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
+@@ -1048,6 +1080,8 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
      p2m->pod.entry_count -= (1 << order);
      BUG_ON(p2m->pod.entry_count < 0);
  
@@ -1260,7 +1238,7 @@ index d14565d..97c5c75 100644
      if ( tb_init_done )
      {
          struct {
-@@ -1063,12 +1039,6 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
+@@ -1063,12 +1097,6 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
          __trace_var(TRC_MEM_POD_POPULATE, 0, sizeof(t), &t);
      }
  
@@ -1328,7 +1306,7 @@ index a2cb1b7..9d70d6c 100644
 2.1.4
 
 
-From 882abbe5e0b8ea8639a51cf0a7df25be6eac1fc7 Mon Sep 17 00:00:00 2001
+From 152e3cd93a06a0d836983fdecdc76c77727b7581 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 21 Oct 2015 11:13:43 +0100
 Subject: [PATCH] xenoprof: free domain's vcpu array
@@ -1368,7 +1346,7 @@ index 52ab00d..4703142 100644
 2.1.4
 
 
-From d9658882d739c7e1e9a76795c188bfb35f56f41f Mon Sep 17 00:00:00 2001
+From 6b41f174fca884d453d80884511bb28c194aad5b Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 21 Oct 2015 11:13:48 +0100
 Subject: [PATCH] x86: rate-limit logging in do_xen{oprof,pmu}_op()
@@ -1421,12 +1399,10 @@ index 4703142..abcb947 100644
 2.1.4
 
 
-From 082927542bbd4214960e86125daea49f28a992d4 Mon Sep 17 00:00:00 2001
+From f6cd4b9e3719985c71d1c56fe73d819d1ac2b58f Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Wed, 21 Oct 2015 16:18:30 +0100
-Subject: [PATCH] From 27593ec62bdad8621df910931349d964a6dbaa8c Mon Sep 17
- 00:00:00 2001 Subject: [PATCH XSA-153 v3] libxl: adjust PoD target by memory
- fudge, too
+Subject: [PATCH] libxl: adjust PoD target by memory fudge, too
 
 PoD guests need to balloon at least as far as required by PoD, or risk
 crashing.  Currently they don't necessarily know what the right value
