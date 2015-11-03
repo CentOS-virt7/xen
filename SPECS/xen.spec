@@ -29,7 +29,11 @@
 %define with_ocaml  1
 %define with_stubdom 1
 %define with_blktap 1
+%if 0%{?centos_ver} <= 6
+%define with_spice 0
+%else
 %define with_spice 1
+%endif
 # FIXME
 %define build_efi 0
 %define with_tianocore 0
@@ -48,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -67,34 +71,21 @@ Source15: polarssl-1.1.4-gpl.tgz
 # systemd bits
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
-Source50: xen-kernel.%{_arch}
+Source50: xen-kernel.x86_64
+Source51: xen-kernel.aarch64
+Source52: efi-xen.cfg.aarch64
+Source53: tianocore-20150820-0cebfe8.tar.gz
 
-%if %{build_efi}
-# This might need to be generated in postinstall
-# FIXME: Include one for x86_64
-%ifarch aarch64
-Source51: efi-xen.cfg.aarch64
-%endif
-%endif
-
-%if %{with_tianocore}
-Source52: tianocore-20150820-0cebfe8.tar.gz
-%endif
-
-%if %{with_blktap}
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
-%endif
 
 Patch1: xen-queue.am
 
-%if %{with_blktap}
+# blktap-only
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
-%endif
 
-%ifarch aarch64
+# aarch64-only
 Patch2027: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
-%endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -331,7 +322,7 @@ cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} st
 %if %with_tianocore
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/tianocore
 mkdir ${RPM_BUILD_DIR}/%{name}-%{version}/tools/tianocore
-%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/tianocore -zxf %{SOURCE52}
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/tianocore -zxf %{SOURCE53}
 %endif
 
 
@@ -416,7 +407,7 @@ make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-stubdom
 %endif
 
 %if %build_efi
-install -m 644 %{SOURCE51} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}${XEN_VENDORVERSION}.cfg.sample
+install -m 644 %{SOURCE52} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}${XEN_VENDORVERSION}.cfg.sample
 mv %{buildroot}/boot/efi/efi %{buildroot}/boot/efi/EFI
 %endif
 
@@ -426,7 +417,13 @@ install -D -m 644 tools/tianocore/Build/ArmVirtXen-AARCH64/RELEASE_GCC48/FV/XEN_
 %endif
 %endif
 
+%ifarch x86_64
 install -m 644 %{SOURCE50} $RPM_BUILD_ROOT/etc/sysconfig/xen-kernel
+%endif
+
+%ifarch aarch64
+install -m 644 %{SOURCE51} $RPM_BUILD_ROOT/etc/sysconfig/xen-kernel
+%endif
 
 ############ debug packaging: list files ############
 
@@ -488,8 +485,10 @@ rm -rf %{buildroot}/%{_libdir}/efi
 ############ fixup files in /etc ############
 
 # modules
-#mkdir -p %{buildroot}%{_sysconfdir}/sysconfig/modules
-#install -m 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/sysconfig/modules/%{name}.modules
+%if %with_sysv
+mkdir -p %{buildroot}%{_sysconfdir}/sysconfig/modules
+install -m 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/sysconfig/modules/%{name}.modules
+%endif
 
 # logrotate
 mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d/
@@ -663,11 +662,16 @@ rm -rf %{buildroot}
 %config(noreplace) %{_sysconfdir}/xen/xlexample*
 
 # Auto-load xen backend drivers
-#%attr(0755,root,root) %{_sysconfdir}/sysconfig/modules/%{name}.modules
+%if %with_sysv
+%attr(0755,root,root) %{_sysconfdir}/sysconfig/modules/%{name}.modules
+%endif
+
+%if %with_systemd
+%config(noreplace) /usr/lib/modules-load.d/xen.conf
+%endif
 
 # Rotate console log files
 %config(noreplace) %{_sysconfdir}/logrotate.d/xen
-%config(noreplace) /usr/lib/modules-load.d/xen.conf
 
 # Programs run by other programs
 %dir %{_libdir}/%{name}
@@ -862,16 +866,19 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Nov  3 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0-2.el6.centos
+ - Allow same srpm to build on all platforms (no ifs in Source or Patch sections)
+
 * Mon Oct 19 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0-1.el6.centos
  - Update to 4.6.0 release
 
 * Mon Oct 19 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-3.el6.centos
  - Add guest efi bootloader support.  To use set kernel=/usr/lib64/xen/boot/XEN_EFI.fd
 
- * Tue Oct 06 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-2.el6.centos
+* Tue Oct 06 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-2.el6.centos
  - Enable spice
 
- * Mon Sep 29 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-1.el6.centos
+* Tue Sep 29 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc4-1.el6.centos
  - Rebase to rc4
 
 * Mon Sep 21 2015 George Dunlap <george.dunlap@citrix.com> - 4.6rc3-4.el6.centos
