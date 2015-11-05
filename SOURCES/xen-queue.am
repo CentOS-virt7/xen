@@ -820,3 +820,695 @@ index f641b12..35692e1 100644
 -- 
 2.1.4
 
+
+From c7af85fd9783280dd09431e444f2026a1fd74b36 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Nov 2015 12:12:03 +0000
+Subject: [PATCH] xen/arm: Support hypercall_create_continuation for multicall
+
+Multicall for ARM has been supported since commit f0dbdc6 "xen: arm: fully
+implement multicall interface.". Although, if an hypercall in multicall
+requires preemption, it will crash the host:
+
+(XEN) Xen BUG at domain.c:347
+(XEN) ----[ Xen-4.7-unstable  arm64  debug=y  Tainted:    C ]----
+[...]
+(XEN) Xen call trace:
+(XEN)    [<00000000002420cc>] hypercall_create_continuation+0x64/0x380 (PC)
+(XEN)    [<0000000000217274>] do_memory_op+0x1b00/0x2334 (LR)
+(XEN)    [<0000000000250d2c>] do_multicall_call+0x114/0x124
+(XEN)    [<0000000000217ff0>] do_multicall+0x17c/0x23c
+(XEN)    [<000000000024f97c>] do_trap_hypercall+0x90/0x12c
+(XEN)    [<0000000000251ca8>] do_trap_hypervisor+0xd2c/0x1ba4
+(XEN)    [<00000000002582cc>] guest_sync+0x88/0xb8
+(XEN)
+(XEN)
+(XEN) ****************************************
+(XEN) Panic on CPU 5:
+(XEN) Xen BUG at domain.c:347
+(XEN) ****************************************
+(XEN)
+(XEN) Manual reset required ('noreboot' specified)
+
+Looking to the code, the support of multicall looks valid to me, as we only
+need to fill call.args[...]. So drop the BUG();
+
+This is XSA-145.
+
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/arch/arm/domain.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/xen/arch/arm/domain.c b/xen/arch/arm/domain.c
+index b2bfc7d..b9a4226 100644
+--- a/xen/arch/arm/domain.c
++++ b/xen/arch/arm/domain.c
+@@ -344,8 +344,6 @@ unsigned long hypercall_create_continuation(
+ 
+     if ( test_bit(_MCSF_in_multicall, &mcs->flags) )
+     {
+-        BUG(); /* XXX multicalls not implemented yet. */
+-
+         __set_bit(_MCSF_call_preempted, &mcs->flags);
+ 
+         for ( i = 0; *p != '\0'; i++ )
+-- 
+2.1.4
+
+
+From 2a7723b7e7cb8943b27c4e0b8f446d8bf6755d40 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Nov 2015 12:12:26 +0000
+Subject: [PATCH] xen: arm: rate-limit logging from unimplemented PHYSDEVOP and
+ HVMOP.
+
+These are guest accessible and should therefore be rate-limited.
+Moreover, include them only in debug builds.
+
+This is XSA-146.
+
+Signed-off-by: Ian Campbell <ian.campbell@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/arm/hvm.c     | 2 +-
+ xen/arch/arm/physdev.c | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/arm/hvm.c b/xen/arch/arm/hvm.c
+index 471c4cd..5fd0753 100644
+--- a/xen/arch/arm/hvm.c
++++ b/xen/arch/arm/hvm.c
+@@ -57,7 +57,7 @@ long do_hvm_op(unsigned long op, XEN_GUEST_HANDLE_PARAM(void) arg)
+ 
+     default:
+     {
+-        printk("%s: Bad HVM op %ld.\n", __func__, op);
++        gdprintk(XENLOG_DEBUG, "HVMOP op=%lu: not implemented\n", op);
+         rc = -ENOSYS;
+         break;
+     }
+diff --git a/xen/arch/arm/physdev.c b/xen/arch/arm/physdev.c
+index 61b4a18..27bbbda 100644
+--- a/xen/arch/arm/physdev.c
++++ b/xen/arch/arm/physdev.c
+@@ -8,12 +8,13 @@
+ #include <xen/types.h>
+ #include <xen/lib.h>
+ #include <xen/errno.h>
++#include <xen/sched.h>
+ #include <asm/hypercall.h>
+ 
+ 
+ int do_physdev_op(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
+ {
+-    printk("%s %d cmd=%d: not implemented yet\n", __func__, __LINE__, cmd);
++    gdprintk(XENLOG_DEBUG, "PHYSDEVOP cmd=%d: not implemented\n", cmd);
+     return -ENOSYS;
+ }
+ 
+-- 
+2.1.4
+
+
+From 20320061e2b03ee54dc3c65916521f82392611d8 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Nov 2015 12:12:38 +0000
+Subject: [PATCH] xen: arm: handle races between relinquish_memory and
+ free_domheap_pages
+
+Primarily this means XENMEM_decrease_reservation from a toolstack
+domain.
+
+Unlike x86 we have no requirement right now to queue such pages onto
+a separate list, if we hit this race then the other code has already
+fully accepted responsibility for freeing this page and therefore
+there is no more for relinquish_memory to do.
+
+This is XSA-147.
+
+Signed-off-by: Ian Campbell <ian.campbell@citrix.com>
+Reviewed-by: Julien Grall <julien.grall@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/arm/domain.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/arm/domain.c b/xen/arch/arm/domain.c
+index b9a4226..20cc772 100644
+--- a/xen/arch/arm/domain.c
++++ b/xen/arch/arm/domain.c
+@@ -768,8 +768,15 @@ static int relinquish_memory(struct domain *d, struct page_list_head *list)
+     {
+         /* Grab a reference to the page so it won't disappear from under us. */
+         if ( unlikely(!get_page(page, d)) )
+-            /* Couldn't get a reference -- someone is freeing this page. */
+-            BUG();
++            /*
++             * Couldn't get a reference -- someone is freeing this page and
++             * has already committed to doing so, so no more to do here.
++             *
++             * Note that the page must be left on the list, a list_del
++             * here will clash with the list_del done by the other
++             * party in the race and corrupt the list head.
++             */
++            continue;
+ 
+         if ( test_and_clear_bit(_PGC_allocated, &page->count_info) )
+             put_page(page);
+-- 
+2.1.4
+
+
+From de2cf8874a8d3ea94cd9912bdab1b51c4471e157 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Nov 2015 12:12:51 +0000
+Subject: [PATCH] x86: guard against undue super page PTE creation
+
+When optional super page support got added (commit bd1cd81d64 "x86: PV
+support for hugepages"), two adjustments were missed: mod_l2_entry()
+needs to consider the PSE and RW bits when deciding whether to use the
+fast path, and the PSE bit must not be removed from L2_DISALLOW_MASK
+unconditionally.
+
+This is XSA-148.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 202ff76..fc65982 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -160,7 +160,10 @@ static void put_superpage(unsigned long mfn);
+ static uint32_t base_disallow_mask;
+ /* Global bit is allowed to be set on L1 PTEs. Intended for user mappings. */
+ #define L1_DISALLOW_MASK ((base_disallow_mask | _PAGE_GNTTAB) & ~_PAGE_GLOBAL)
+-#define L2_DISALLOW_MASK (base_disallow_mask & ~_PAGE_PSE)
++
++#define L2_DISALLOW_MASK (unlikely(opt_allow_superpage) \
++                          ? base_disallow_mask & ~_PAGE_PSE \
++                          : base_disallow_mask)
+ 
+ #define l3_disallow_mask(d) (!is_pv_32bit_domain(d) ? \
+                              base_disallow_mask : 0xFFFFF198U)
+@@ -1839,7 +1842,10 @@ static int mod_l2_entry(l2_pgentry_t *pl2e,
+         }
+ 
+         /* Fast path for identical mapping and presence. */
+-        if ( !l2e_has_changed(ol2e, nl2e, _PAGE_PRESENT) )
++        if ( !l2e_has_changed(ol2e, nl2e,
++                              unlikely(opt_allow_superpage)
++                              ? _PAGE_PSE | _PAGE_RW | _PAGE_PRESENT
++                              : _PAGE_PRESENT) )
+         {
+             adjust_guest_l2e(nl2e, d);
+             if ( UPDATE_ENTRY(l2, pl2e, ol2e, nl2e, pfn, vcpu, preserve_ad) )
+-- 
+2.1.4
+
+
+From 11b527eadccef55b1ff05e3ee03993269d322d43 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Nov 2015 12:13:04 +0000
+Subject: [PATCH] xen: free domain's vcpu array
+
+This was overlooked in fb442e2171 ("x86_64: allow more vCPU-s per
+guest").
+
+This is XSA-149.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/common/domain.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/xen/common/domain.c b/xen/common/domain.c
+index 1b9fcfc..796c492 100644
+--- a/xen/common/domain.c
++++ b/xen/common/domain.c
+@@ -833,6 +833,7 @@ static void complete_domain_destroy(struct rcu_head *head)
+ 
+     xsm_free_security_domain(d);
+     free_cpumask_var(d->domain_dirty_cpumask);
++    xfree(d->vcpu);
+     free_domain_struct(d);
+ 
+     send_global_virq(VIRQ_DOM_EXC);
+-- 
+2.1.4
+
+
+From f1d8e9b5b8985b82aab68899ce55af79c6e75984 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Nov 2015 12:13:13 +0000
+Subject: [PATCH] x86/PoD: Eager sweep for zeroed pages
+
+Based on the contents of a guests phyiscal address space,
+p2m_pod_emergency_sweep() could degrade into a linear memcmp() from 0 to
+max_gfn, which runs non-preemptibly.
+
+As p2m_pod_emergency_sweep() runs behind the scenes in a number of contexts,
+making it preemptible is not feasible.
+
+Instead, a different approach is taken.  Recently-populated pages are eagerly
+checked for reclaimation, which amortises the p2m_pod_emergency_sweep()
+operation across each p2m_pod_demand_populate() operation.
+
+Note that in the case that a 2M superpage can't be reclaimed as a superpage,
+it is shattered if 4K pages of zeros can be reclaimed.  This is unfortunate
+but matches the previous behaviour, and is required to avoid regressions
+(domain crash from PoD exhaustion) with VMs configured close to the limit.
+
+This is XSA-150.
+---
+ xen/arch/x86/mm/p2m-pod.c | 114 +++++++++++++++++-----------------------------
+ xen/arch/x86/mm/p2m.c     |   4 ++
+ xen/include/asm-x86/p2m.h |  18 ++++++--
+ 3 files changed, 60 insertions(+), 76 deletions(-)
+
+diff --git a/xen/arch/x86/mm/p2m-pod.c b/xen/arch/x86/mm/p2m-pod.c
+index 8156525..194c775 100644
+--- a/xen/arch/x86/mm/p2m-pod.c
++++ b/xen/arch/x86/mm/p2m-pod.c
+@@ -900,79 +900,56 @@ p2m_pod_zero_check(struct p2m_domain *p2m, unsigned long *gfns, int count)
+     
+ }
+ 
+-#define POD_SWEEP_LIMIT 1024
+-
+-/* When populating a new superpage, look at recently populated superpages
+- * hoping that they've been zeroed.  This will snap up zeroed pages as soon as 
+- * the guest OS is done with them. */
+-static void
+-p2m_pod_check_last_super(struct p2m_domain *p2m, unsigned long gfn_aligned)
++static void pod_eager_reclaim(struct p2m_domain *p2m)
+ {
+-    unsigned long check_gfn;
++    struct pod_mrp_list *mrp = &p2m->pod.mrp;
++    unsigned int i = 0;
+ 
+-    ASSERT(p2m->pod.last_populated_index < POD_HISTORY_MAX);
++    /*
++     * Always check one page for reclaimation.
++     *
++     * If the PoD pool is empty, keep checking some space is found, or all
++     * entries have been exhaused.
++     */
++    do
++    {
++        unsigned int idx = (mrp->idx + i++) % ARRAY_SIZE(mrp->list);
++        unsigned long gfn = mrp->list[idx];
++
++        if ( gfn != INVALID_GFN )
++        {
++            if ( gfn & POD_LAST_SUPERPAGE )
++            {
++                gfn &= ~POD_LAST_SUPERPAGE;
+ 
+-    check_gfn = p2m->pod.last_populated[p2m->pod.last_populated_index];
++                if ( p2m_pod_zero_check_superpage(p2m, gfn) == 0 )
++                {
++                    unsigned int x;
+ 
+-    p2m->pod.last_populated[p2m->pod.last_populated_index] = gfn_aligned;
++                    for ( x = 0; x < SUPERPAGE_PAGES; ++x, ++gfn )
++                        p2m_pod_zero_check(p2m, &gfn, 1);
++                }
++            }
++            else
++                p2m_pod_zero_check(p2m, &gfn, 1);
+ 
+-    p2m->pod.last_populated_index =
+-        ( p2m->pod.last_populated_index + 1 ) % POD_HISTORY_MAX;
++            mrp->list[idx] = INVALID_GFN;
++        }
+ 
+-    p2m_pod_zero_check_superpage(p2m, check_gfn);
++    } while ( (p2m->pod.count == 0) && (i < ARRAY_SIZE(mrp->list)) );
+ }
+ 
+-
+-#define POD_SWEEP_STRIDE  16
+-static void
+-p2m_pod_emergency_sweep(struct p2m_domain *p2m)
++static void pod_eager_record(struct p2m_domain *p2m,
++                             unsigned long gfn, unsigned int order)
+ {
+-    unsigned long gfns[POD_SWEEP_STRIDE];
+-    unsigned long i, j=0, start, limit;
+-    p2m_type_t t;
+-
+-
+-    if ( p2m->pod.reclaim_single == 0 )
+-        p2m->pod.reclaim_single = p2m->pod.max_guest;
++    struct pod_mrp_list *mrp = &p2m->pod.mrp;
+ 
+-    start = p2m->pod.reclaim_single;
+-    limit = (start > POD_SWEEP_LIMIT) ? (start - POD_SWEEP_LIMIT) : 0;
+-
+-    /* FIXME: Figure out how to avoid superpages */
+-    /* NOTE: Promote to globally locking the p2m. This will get complicated
+-     * in a fine-grained scenario. If we lock each gfn individually we must be
+-     * careful about spinlock recursion limits and POD_SWEEP_STRIDE. */
+-    p2m_lock(p2m);
+-    for ( i=p2m->pod.reclaim_single; i > 0 ; i-- )
+-    {
+-        p2m_access_t a;
+-        (void)p2m->get_entry(p2m, i, &t, &a, 0, NULL, NULL);
+-        if ( p2m_is_ram(t) )
+-        {
+-            gfns[j] = i;
+-            j++;
+-            BUG_ON(j > POD_SWEEP_STRIDE);
+-            if ( j == POD_SWEEP_STRIDE )
+-            {
+-                p2m_pod_zero_check(p2m, gfns, j);
+-                j = 0;
+-            }
+-        }
+-        /* Stop if we're past our limit and we have found *something*.
+-         *
+-         * NB that this is a zero-sum game; we're increasing our cache size
+-         * by re-increasing our 'debt'.  Since we hold the pod lock,
+-         * (entry_count - count) must remain the same. */
+-        if ( p2m->pod.count > 0 && i < limit )
+-            break;
+-    }
+-
+-    if ( j )
+-        p2m_pod_zero_check(p2m, gfns, j);
+-
+-    p2m_unlock(p2m);
+-    p2m->pod.reclaim_single = i ? i - 1 : i;
++    ASSERT(mrp->list[mrp->idx] == INVALID_GFN);
++    ASSERT(gfn != INVALID_GFN);
+ 
++    mrp->list[mrp->idx++] =
++        gfn | (order == PAGE_ORDER_2M ? POD_LAST_SUPERPAGE : 0);
++    mrp->idx %= ARRAY_SIZE(mrp->list);
+ }
+ 
+ int
+@@ -1015,10 +992,7 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
+         return 0;
+     }
+ 
+-    /* Only sweep if we're actually out of memory.  Doing anything else
+-     * causes unnecessary time and fragmentation of superpages in the p2m. */
+-    if ( p2m->pod.count == 0 )
+-        p2m_pod_emergency_sweep(p2m);
++    pod_eager_reclaim(p2m);
+ 
+     /* If the sweep failed, give up. */
+     if ( p2m->pod.count == 0 )
+@@ -1051,6 +1025,8 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
+     p2m->pod.entry_count -= (1 << order);
+     BUG_ON(p2m->pod.entry_count < 0);
+ 
++    pod_eager_record(p2m, gfn_aligned, order);
++
+     if ( tb_init_done )
+     {
+         struct {
+@@ -1066,12 +1042,6 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
+         __trace_var(TRC_MEM_POD_POPULATE, 0, sizeof(t), &t);
+     }
+ 
+-    /* Check the last guest demand-populate */
+-    if ( p2m->pod.entry_count > p2m->pod.count 
+-         && (order == PAGE_ORDER_2M)
+-         && (q & P2M_ALLOC) )
+-        p2m_pod_check_last_super(p2m, gfn_aligned);
+-
+     pod_unlock(p2m);
+     return 0;
+ out_of_memory:
+diff --git a/xen/arch/x86/mm/p2m.c b/xen/arch/x86/mm/p2m.c
+index c6b883d..cbe3f24 100644
+--- a/xen/arch/x86/mm/p2m.c
++++ b/xen/arch/x86/mm/p2m.c
+@@ -60,6 +60,7 @@ boolean_param("hap_2mb", opt_hap_2mb);
+ /* Init the datastructures for later use by the p2m code */
+ static int p2m_initialise(struct domain *d, struct p2m_domain *p2m)
+ {
++    unsigned int i;
+     int ret = 0;
+ 
+     mm_rwlock_init(&p2m->lock);
+@@ -75,6 +76,9 @@ static int p2m_initialise(struct domain *d, struct p2m_domain *p2m)
+ 
+     p2m->np2m_base = P2M_BASE_EADDR;
+ 
++    for ( i = 0; i < ARRAY_SIZE(p2m->pod.mrp.list); ++i )
++        p2m->pod.mrp.list[i] = INVALID_GFN;
++
+     if ( hap_enabled(d) && cpu_has_vmx )
+         ret = ept_p2m_init(p2m);
+     else
+diff --git a/xen/include/asm-x86/p2m.h b/xen/include/asm-x86/p2m.h
+index 5e99ac6..e91a875 100644
+--- a/xen/include/asm-x86/p2m.h
++++ b/xen/include/asm-x86/p2m.h
+@@ -292,10 +292,20 @@ struct p2m_domain {
+                          entry_count;  /* # of pages in p2m marked pod      */
+         unsigned long    reclaim_single; /* Last gpfn of a scan */
+         unsigned long    max_guest;    /* gpfn of max guest demand-populate */
+-#define POD_HISTORY_MAX 128
+-        /* gpfn of last guest superpage demand-populated */
+-        unsigned long    last_populated[POD_HISTORY_MAX]; 
+-        unsigned int     last_populated_index;
++
++        /*
++         * Tracking of the most recently populated PoD pages, for eager
++         * reclamation.
++         */
++        struct pod_mrp_list {
++#define NR_POD_MRP_ENTRIES 32
++
++/* Encode ORDER_2M superpage in top bit of GFN */
++#define POD_LAST_SUPERPAGE (INVALID_GFN & ~(INVALID_GFN >> 1))
++
++            unsigned long list[NR_POD_MRP_ENTRIES];
++            unsigned int idx;
++        } mrp;
+         mm_lock_t        lock;         /* Locking of private pod structs,   *
+                                         * not relying on the p2m lock.      */
+     } pod;
+-- 
+2.1.4
+
+
+From 61b116c67d2890a5264ac3bb4e39ef28af0cefc1 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Nov 2015 12:13:17 +0000
+Subject: [PATCH] xenoprof: free domain's vcpu array
+
+This was overlooked in fb442e2171 ("x86_64: allow more vCPU-s per
+guest").
+
+This is XSA-151.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/common/xenoprof.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/xen/common/xenoprof.c b/xen/common/xenoprof.c
+index 1061323..53a803a 100644
+--- a/xen/common/xenoprof.c
++++ b/xen/common/xenoprof.c
+@@ -239,6 +239,7 @@ static int alloc_xenoprof_struct(
+     d->xenoprof->rawbuf = alloc_xenheap_pages(get_order_from_pages(npages), 0);
+     if ( d->xenoprof->rawbuf == NULL )
+     {
++        xfree(d->xenoprof->vcpu);
+         xfree(d->xenoprof);
+         d->xenoprof = NULL;
+         return -ENOMEM;
+@@ -286,6 +287,7 @@ void free_xenoprof_pages(struct domain *d)
+         free_xenheap_pages(x->rawbuf, order);
+     }
+ 
++    xfree(x->vcpu);
+     xfree(x);
+     d->xenoprof = NULL;
+ }
+-- 
+2.1.4
+
+
+From 92f1974c5a8b61a249bcd4f496d1975df84e9682 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 5 Nov 2015 12:13:20 +0000
+Subject: [PATCH] x86: rate-limit logging in do_xen{oprof,pmu}_op()
+
+Some of the sub-ops are acessible to all guests, and hence should be
+rate-limited. In the xenoprof case, just like for XSA-146, include them
+only in debug builds. Since the vPMU code is rather new, allow them to
+be always present, but downgrade them to (rate limited) guest messages.
+
+This is XSA-152.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/arch/x86/cpu/vpmu.c | 8 ++++----
+ xen/common/xenoprof.c   | 9 +++------
+ 2 files changed, 7 insertions(+), 10 deletions(-)
+
+diff --git a/xen/arch/x86/cpu/vpmu.c b/xen/arch/x86/cpu/vpmu.c
+index 8af3df1..2f5156a 100644
+--- a/xen/arch/x86/cpu/vpmu.c
++++ b/xen/arch/x86/cpu/vpmu.c
+@@ -682,8 +682,8 @@ long do_xenpmu_op(unsigned int op, XEN_GUEST_HANDLE_PARAM(xen_pmu_params_t) arg)
+             vpmu_mode = pmu_params.val;
+         else if ( vpmu_mode != pmu_params.val )
+         {
+-            printk(XENLOG_WARNING
+-                   "VPMU: Cannot change mode while active VPMUs exist\n");
++            gprintk(XENLOG_WARNING,
++                    "VPMU: Cannot change mode while active VPMUs exist\n");
+             ret = -EBUSY;
+         }
+ 
+@@ -714,8 +714,8 @@ long do_xenpmu_op(unsigned int op, XEN_GUEST_HANDLE_PARAM(xen_pmu_params_t) arg)
+             vpmu_features = pmu_params.val;
+         else
+         {
+-            printk(XENLOG_WARNING "VPMU: Cannot change features while"
+-                                  " active VPMUs exist\n");
++            gprintk(XENLOG_WARNING,
++                    "VPMU: Cannot change features while active VPMUs exist\n");
+             ret = -EBUSY;
+         }
+ 
+diff --git a/xen/common/xenoprof.c b/xen/common/xenoprof.c
+index 53a803a..19b4605 100644
+--- a/xen/common/xenoprof.c
++++ b/xen/common/xenoprof.c
+@@ -676,15 +676,13 @@ ret_t do_xenoprof_op(int op, XEN_GUEST_HANDLE_PARAM(void) arg)
+     
+     if ( (op < 0) || (op > XENOPROF_last_op) )
+     {
+-        printk("xenoprof: invalid operation %d for domain %d\n",
+-               op, current->domain->domain_id);
++        gdprintk(XENLOG_DEBUG, "invalid operation %d\n", op);
+         return -EINVAL;
+     }
+ 
+     if ( !NONPRIV_OP(op) && (current->domain != xenoprof_primary_profiler) )
+     {
+-        printk("xenoprof: dom %d denied privileged operation %d\n",
+-               current->domain->domain_id, op);
++        gdprintk(XENLOG_DEBUG, "denied privileged operation %d\n", op);
+         return -EPERM;
+     }
+ 
+@@ -907,8 +905,7 @@ ret_t do_xenoprof_op(int op, XEN_GUEST_HANDLE_PARAM(void) arg)
+     spin_unlock(&xenoprof_lock);
+ 
+     if ( ret < 0 )
+-        printk("xenoprof: operation %d failed for dom %d (status : %d)\n",
+-               op, current->domain->domain_id, ret);
++        gdprintk(XENLOG_DEBUG, "operation %d failed: %d\n", op, ret);
+ 
+     return ret;
+ }
+-- 
+2.1.4
+
+
+From bd3c2ddc88b5b39ee68fda9a762e6863576788ce Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Wed, 21 Oct 2015 16:18:30 +0100
+Subject: [PATCH] From 27593ec62bdad8621df910931349d964a6dbaa8c Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH XSA-153 v3] libxl: adjust PoD target by memory
+ fudge, too
+
+PoD guests need to balloon at least as far as required by PoD, or risk
+crashing.  Currently they don't necessarily know what the right value
+is, because our memory accounting is (at the very least) confusing.
+
+Apply the memory limit fudge factor to the in-hypervisor PoD memory
+target, too.  This will increase the size of the guest's PoD cache by
+the fudge factor LIBXL_MAXMEM_CONSTANT (currently 1Mby).  This ensures
+that even with a slightly-off balloon driver, the guest will be
+stable even under memory pressure.
+
+There are two call sites of xc_domain_set_pod_target that need fixing:
+
+The one in libxl_set_memory_target is straightforward.
+
+The one in xc_hvm_build_x86.c:setup_guest is more awkward.  Simply
+setting the PoD target differently does not work because the various
+amounts of memory during domain construction no longer match up.
+Instead, we adjust the guest memory target in xenstore (but only for
+PoD guests).
+
+This introduces a 1Mby discrepancy between the balloon target of a PoD
+guest at boot, and the target set by an apparently-equivalent `xl
+mem-set' (or similar) later.  This approach is low-risk for a security
+fix but we need to fix this up properly in xen.git#staging and
+probably also in stable trees.
+
+This is XSA-153.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+---
+ tools/libxl/libxl.c     | 2 +-
+ tools/libxl/libxl_dom.c | 9 ++++++++-
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index d38d0c7..1366177 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -4815,7 +4815,7 @@ retry_transaction:
+     }
+ 
+     rc = xc_domain_set_pod_target(ctx->xch, domid,
+-            new_target_memkb / 4, NULL, NULL, NULL);
++            (new_target_memkb + LIBXL_MAXMEM_CONSTANT) / 4, NULL, NULL, NULL);
+     if (rc != 0) {
+         LIBXL__LOG_ERRNO(ctx, LIBXL__LOG_ERROR,
+                 "xc_domain_set_pod_target domid=%d, memkb=%d "
+diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
+index b514377..8019f4e 100644
+--- a/tools/libxl/libxl_dom.c
++++ b/tools/libxl/libxl_dom.c
+@@ -486,6 +486,7 @@ int libxl__build_post(libxl__gc *gc, uint32_t domid,
+     xs_transaction_t t;
+     char **ents;
+     int i, rc;
++    int64_t mem_target_fudge;
+ 
+     if (info->num_vnuma_nodes && !info->num_vcpu_soft_affinity) {
+         rc = set_vnuma_affinity(gc, domid, info);
+@@ -518,11 +519,17 @@ int libxl__build_post(libxl__gc *gc, uint32_t domid,
+         }
+     }
+ 
++    mem_target_fudge =
++        (info->type == LIBXL_DOMAIN_TYPE_HVM &&
++         info->max_memkb > info->target_memkb)
++        ? LIBXL_MAXMEM_CONSTANT : 0;
++
+     ents = libxl__calloc(gc, 12 + (info->max_vcpus * 2) + 2, sizeof(char *));
+     ents[0] = "memory/static-max";
+     ents[1] = GCSPRINTF("%"PRId64, info->max_memkb);
+     ents[2] = "memory/target";
+-    ents[3] = GCSPRINTF("%"PRId64, info->target_memkb - info->video_memkb);
++    ents[3] = GCSPRINTF("%"PRId64, info->target_memkb - info->video_memkb
++                        - mem_target_fudge);
+     ents[4] = "memory/videoram";
+     ents[5] = GCSPRINTF("%"PRId64, info->video_memkb);
+     ents[6] = "domid";
+-- 
+2.1.4
+
