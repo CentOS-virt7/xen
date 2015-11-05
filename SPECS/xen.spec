@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -74,13 +74,18 @@ Source49: tmpfiles.d.xen.conf
 Source50: xen-kernel.x86_64
 Source51: xen-kernel.aarch64
 Source52: efi-xen.cfg.aarch64
-Source53: tianocore-20150820-0cebfe8.tar.gz
+Source53: edk2-0cebfe81f94be36116af66d0a3134ce18d89eec1.tar.gz
 
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
 Patch1: xen-queue.am
 
-# blktap-only
+# Out-of-tree patches.  
+#
+# Use the following patch numbers:
+# 1000+: blktap
+# 2000+: qemu-xen
+# 3000+: qemu-traditional
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 
@@ -298,7 +303,8 @@ rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 ./autogen.sh
 XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=%{_libexecdir}/xen/bin
-popd 
+popd
+# Add blktap-related patches here
 %patch1001 -p1
 %patch1005 -p1
 %endif
@@ -306,12 +312,14 @@ popd
 %define _default_patch_fuzz 2
 
 pushd tools/qemu-xen
+# Add qemu-xen (aka "qemu upstream") -related patches here
 %ifarch aarch64
 %patch2027 -p1
 %endif
 popd
 
 pushd tools/qemu-xen-traditional
+# Add qemu-traditional-related patches here
 popd
 
 %if %{with_stubdom}
@@ -320,9 +328,8 @@ cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} st
 %endif
 
 %if %with_tianocore
-rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/tianocore
-mkdir ${RPM_BUILD_DIR}/%{name}-%{version}/tools/tianocore
-%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/tianocore -zxf %{SOURCE53}
+rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/edk2
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE53}
 %endif
 
 
@@ -378,7 +385,7 @@ make %{?ocaml_flags} dist-stubdom
 %if %{with_tianocore}
 %ifarch aarch64
 pushd `pwd`
-cd tools/tianocore
+cd tools/edk2
 make -C BaseTools
 export GCC48_AARCH64_PREFIX=
 bash -c "source edksetup.sh && build -a AARCH64 -t GCC48 -p ArmVirtPkg/ArmVirtXen.dsc -b RELEASE"
@@ -413,7 +420,7 @@ mv %{buildroot}/boot/efi/efi %{buildroot}/boot/efi/EFI
 
 %if %with_tianocore
 %ifarch aarch64
-install -D -m 644 tools/tianocore/Build/ArmVirtXen-AARCH64/RELEASE_GCC48/FV/XEN_EFI.fd %{buildroot}/%{_libexecdir}/xen/boot/XEN_EFI.fd
+install -D -m 644 tools/edk2/Build/ArmVirtXen-AARCH64/RELEASE_GCC48/FV/XEN_EFI.fd %{buildroot}/%{_libexecdir}/xen/boot/XEN_EFI.fd
 %endif
 %endif
 
@@ -866,6 +873,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Nov  5 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0-3.el6.centos
+ - Rework specfile to make download and contribution easier
+
 * Tue Nov  3 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0-2.el6.centos
  - Allow same srpm to build on all platforms (no ifs in Source or Patch sections)
 
