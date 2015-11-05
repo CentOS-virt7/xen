@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.3
-Release: 4%{?dist}
+Release: 5%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -53,6 +53,12 @@ Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
 Patch1: xen-queue.am
 
+# Out-of-tree patches.  
+#
+# Use the following patch numbers:
+# 1000+: blktap
+# 2000+: qemu-xen
+# 3000+: qemu-traditional
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 
@@ -256,17 +262,20 @@ rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
 cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 ./autogen.sh
-XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/user --libexecdir=/usr/lib/xen/bin
-popd 
+XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=%{_libexecdir}/xen/bin
+popd
+# Add blktap-related patches here
 %patch1001 -p1
 %patch1005 -p1
 
 %define _default_patch_fuzz 2
 
 pushd tools/qemu-xen
+# Add qemu-xen (aka "qemu upstream") -related patches here
 popd
 
 pushd tools/qemu-xen-traditional
+# Add qemu-traditional-related patches here
 popd
 
 # stubdom sources
@@ -783,6 +792,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Nov 05 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-4.el6.centos
+ - Rework specfile to make download and contribution easier
+
 * Tue Nov 03 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-4.el6.centos
  - Include xen-kernel
 
