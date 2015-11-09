@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.3
-Release: 5%{?dist}
+Release: 6%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -262,7 +262,7 @@ rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
 cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 ./autogen.sh
-XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=%{_libexecdir}/xen/bin
+XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=/usr/lib/xen/bin
 popd
 # Add blktap-related patches here
 %patch1001 -p1
@@ -792,7 +792,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
-* Thu Nov 05 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-4.el6.centos
+* Mon Nov 09 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-6.el6.centos
+- Import XSA-156
+
+* Thu Nov 05 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-5.el6.centos
  - Rework specfile to make download and contribution easier
 
 * Tue Nov 03 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-4.el6.centos

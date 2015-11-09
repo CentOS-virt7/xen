@@ -1,6 +1,6 @@
-From 3c6c39d40f5eca706d04c4f68f4ac8c30f31216d Mon Sep 17 00:00:00 2001
+From a86e958631b6d321cfda9c945177ad769dd35c70 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:21 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] Fix up xend init scripts
 
 ---
@@ -156,9 +156,9 @@ index 9ef0210..0876ee2 100644
 2.1.4
 
 
-From 2d708e917d58bb2ae14eda0af82c43f22d2dcb6a Mon Sep 17 00:00:00 2001
+From 51965c28a1067f10463ad2d8d8d1f414b28615a1 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:21 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] Change dumpdir to /var/lib/xen
 
 ---
@@ -205,9 +205,9 @@ index 8d4ff5c..895fc01 100644
 2.1.4
 
 
-From 8b3c8c3877500b6f14cac4d5852c26d7a583bd2a Mon Sep 17 00:00:00 2001
+From 01331ef849d39e380756cd533b025960940cb9d8 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:21 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] Disable iptables on the bridge
 
 ---
@@ -252,9 +252,9 @@ index 3c63c55..f74de3d 100644
 2.1.4
 
 
-From 6309e0988c0ad62fdbbc17c66b6136503d6acdb0 Mon Sep 17 00:00:00 2001
+From 763e5473dede3bb16945fc95ac3d95800b666c64 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:21 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] pygrubfix.patch
 
 ---
@@ -295,9 +295,9 @@ index c7b6aa7..8ff6964 100755
 2.1.4
 
 
-From b67f5e6bdf31b02a5a8f0d57251e5a39702461a6 Mon Sep 17 00:00:00 2001
+From 78a501e834a8a15902d4f4722e830787f9785651 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:21 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] xend.catchbt.patch
 
 ---
@@ -343,9 +343,9 @@ index 832c168..161aeb5 100644
 2.1.4
 
 
-From 745b14e59d0fc10dad26fe33b8b11edb39c7c93f Mon Sep 17 00:00:00 2001
+From 6d12b97a3724d0467cea1f646eb4c4b0d6846d9f Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:21 +0100
+Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] xend-pci-loop.patch # Don't crash due to weird PCI cards (Bug
  767742)
 
@@ -375,9 +375,9 @@ index adeca4b..94326b3 100644
 2.1.4
 
 
-From 28d7d002c3a0117714bf06223bec44f736889acb Mon Sep 17 00:00:00 2001
+From 2411f463df7900e73a4c0256be827b8ce04c3399 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:22 +0100
+Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xend.selinux.fixes.patch
 
 ---
@@ -413,9 +413,9 @@ index 0876ee2..05afc0e 100644
 2.1.4
 
 
-From 3f9c43ef8efcb4f65067d0fe2a5133047cc1e496 Mon Sep 17 00:00:00 2001
+From 06263641b43e6401e7f44cb08d978f99dbbe20b8 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:22 +0100
+Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen.use.fedora.ipxe.patch
 
 ---
@@ -467,9 +467,9 @@ index 00ee952..b0c6f37 100644
 2.1.4
 
 
-From 52ee6da18deea9a2893ab03d24cf944d7541cb28 Mon Sep 17 00:00:00 2001
+From fb7d7f34bfdf3ed28e8591dfb391789af2a1a4db Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:22 +0100
+Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen.fedora.efi.build.patch
 
 ---
@@ -534,9 +534,9 @@ index 1daa7ac..f5398c4 100644
 2.1.4
 
 
-From ce02e99b48f5eab2379bc8eabf42f9bf4ef24473 Mon Sep 17 00:00:00 2001
+From a410962f52212fa58e6cc625054697edb9023bd9 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:22 +0100
+Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen.fedora19.buildfix.patch
 
 ---
@@ -569,9 +569,9 @@ index 0fc3f82..0d43727 100644
 2.1.4
 
 
-From bb8d7a258327d65892d2d42b1d8f18802b00a7d0 Mon Sep 17 00:00:00 2001
+From 8cfbc328dc60dfbcca9855f41877229be38f17cb Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:12:22 +0100
+Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen-configure-xend.patch
 
 ---
@@ -620,7 +620,7 @@ index 0896a27..cea12e1 100644
 2.1.4
 
 
-From 0323113b20206baf694a8b38e0808694808cd2f9 Mon Sep 17 00:00:00 2001
+From 8aece15798bcc7e6b57994a01e742a32439b7a41 Mon Sep 17 00:00:00 2001
 From: Wen Congyang <wency@cn.fujitsu.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] tools: libxl: pass correct file to qemu if we use blktap2
@@ -678,7 +678,7 @@ index d7d2d3b..00b6adf 100644
 2.1.4
 
 
-From 062d1938878e4f1d76eb8f00c09d541ad4453955 Mon Sep 17 00:00:00 2001
+From 1636ed66e6708d35b94a9302f20118376551f783 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] it: George Dunlap <george.dunlap@eu.citrix.com>
@@ -749,7 +749,7 @@ index 00b6adf..a799619 100644
 2.1.4
 
 
-From 084b7a4214ac6664dd565b1f112fb11c1c8a4302 Mon Sep 17 00:00:00 2001
+From 53b97d8905dcafe9e21d19c8181f58fd9d9a58bf Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
@@ -786,7 +786,7 @@ index 29ed547..0f9fe2d 100644
 2.1.4
 
 
-From c9204bc824eb104e08f1d666125d566cc6ed63a7 Mon Sep 17 00:00:00 2001
+From 0d486e4b6573ca5fac51e2fa918330a86d4ec79b Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -811,7 +811,7 @@ index 6610a8d..86d8a58 100644
 2.1.4
 
 
-From 018a7672fee7e2e47da54df937cbd7cd906cf989 Mon Sep 17 00:00:00 2001
+From 2ae35fb019c10d9a5d7ad0de4968a990ed9c579c Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
@@ -1005,9 +1005,9 @@ index 798b68d..a6cc100 100644
 2.1.4
 
 
-From 2f4fdc519265694ae54ca31a1552ff5e33dba2aa Mon Sep 17 00:00:00 2001
+From 6a29c44bc17973eae253db6ea22b4f969864c072 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:13:24 +0100
+Date: Wed, 4 Nov 2015 17:05:45 +0000
 Subject: [PATCH] x86: guard against undue super page PTE creation
 
 When optional super page support got added (commit bd1cd81d64 "x86: PV
@@ -1056,9 +1056,9 @@ index 68cc33b..b14ba81 100644
 2.1.4
 
 
-From 862d02db9b861b8843a7a6eef8375ef98adca219 Mon Sep 17 00:00:00 2001
+From 6b061dac0bfc1eb11c7c3ae2e03b105bc13eed88 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:13:29 +0100
+Date: Wed, 4 Nov 2015 17:05:52 +0000
 Subject: [PATCH] xen: free domain's vcpu array
 
 This was overlooked in fb442e2171 ("x86_64: allow more vCPU-s per
@@ -1088,9 +1088,9 @@ index b6601a3..19e8470 100644
 2.1.4
 
 
-From 4f13373c418687a79b587b25283380fc27f7cfec Mon Sep 17 00:00:00 2001
+From bad6ba473117f1d9089f89da761ec799a0b52ac6 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 29 Oct 2015 11:31:24 +0000
+Date: Wed, 4 Nov 2015 17:06:25 +0000
 Subject: [PATCH] x86/PoD: Eager sweep for zeroed pages
 
 Based on the contents of a guests phyiscal address space,
@@ -1306,9 +1306,9 @@ index a2cb1b7..9d70d6c 100644
 2.1.4
 
 
-From 152e3cd93a06a0d836983fdecdc76c77727b7581 Mon Sep 17 00:00:00 2001
+From aca4da05713495581d4a5178a847ec1da845632d Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:13:43 +0100
+Date: Wed, 4 Nov 2015 17:06:26 +0000
 Subject: [PATCH] xenoprof: free domain's vcpu array
 
 This was overlooked in fb442e2171 ("x86_64: allow more vCPU-s per
@@ -1346,9 +1346,9 @@ index 52ab00d..4703142 100644
 2.1.4
 
 
-From 6b41f174fca884d453d80884511bb28c194aad5b Mon Sep 17 00:00:00 2001
+From b02660ae38257b4311878fc92fc1a9873023b75a Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 21 Oct 2015 11:13:48 +0100
+Date: Wed, 4 Nov 2015 17:06:26 +0000
 Subject: [PATCH] x86: rate-limit logging in do_xen{oprof,pmu}_op()
 
 Some of the sub-ops are acessible to all guests, and hence should be
@@ -1399,9 +1399,9 @@ index 4703142..abcb947 100644
 2.1.4
 
 
-From f6cd4b9e3719985c71d1c56fe73d819d1ac2b58f Mon Sep 17 00:00:00 2001
+From 749bcda7ea93c15dba995f7236b10f8555abf4f0 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Wed, 21 Oct 2015 16:18:30 +0100
+Date: Wed, 4 Nov 2015 17:06:26 +0000
 Subject: [PATCH] libxl: adjust PoD target by memory fudge, too
 
 PoD guests need to balloon at least as far as required by PoD, or risk
@@ -1482,6 +1482,150 @@ index 69e6088..bb5b5a7 100644
      ents[4] = "memory/videoram";
      ents[5] = GCSPRINTF("%"PRId64, info->video_memkb);
      ents[6] = "domid";
+-- 
+2.1.4
+
+
+From 3b2673bd6079fb7daba105eb2ef7fc15f0595449 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Mon, 9 Nov 2015 16:55:19 +0000
+Subject: [PATCH] x86/HVM: always intercept #AC and #DB
+
+Both being benign exceptions, and both being possible to get triggered
+by exception delivery, this is required to prevent a guest from locking
+up a CPU (resulting from no other VM exits occurring once getting into
+such a loop).
+
+The specific scenarios:
+
+1) #AC may be raised during exception delivery if the handler is set to
+be a ring-3 one by a 32-bit guest, and the stack is misaligned.
+
+2) #DB may be raised during exception delivery when a breakpoint got
+placed on a data structure involved in delivering the exception. This
+can result in an endless loop when a 64-bit guest uses a non-zero IST
+for the vector 1 IDT entry, but even without use of IST the time it
+takes until a contributory fault would get raised (results depending
+on the handler) may be quite long.
+
+This is XSA-156.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Tested-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/hvm/svm/svm.c    | 15 +++++++++++----
+ xen/arch/x86/hvm/vmx/vmx.c    | 22 +++++++++++-----------
+ xen/include/asm-x86/hvm/hvm.h |  5 ++++-
+ 3 files changed, 26 insertions(+), 16 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
+index db40c84..e21084d 100644
+--- a/xen/arch/x86/hvm/svm/svm.c
++++ b/xen/arch/x86/hvm/svm/svm.c
+@@ -941,10 +941,11 @@ static void svm_do_resume(struct vcpu *v)
+         unlikely(v->arch.hvm_vcpu.debug_state_latch != debug_state) )
+     {
+         uint32_t intercepts = vmcb_get_exception_intercepts(vmcb);
+-        uint32_t mask = (1U << TRAP_debug) | (1U << TRAP_int3);
++
+         v->arch.hvm_vcpu.debug_state_latch = debug_state;
+         vmcb_set_exception_intercepts(
+-            vmcb, debug_state ? (intercepts | mask) : (intercepts & ~mask));
++            vmcb, debug_state ? (intercepts | (1U << TRAP_int3))
++                              : (intercepts & ~(1U << TRAP_int3)));
+     }
+ 
+     if ( v->arch.hvm_svm.launch_core != smp_processor_id() )
+@@ -2225,8 +2226,9 @@ void svm_vmexit_handler(struct cpu_user_regs *regs)
+ 
+     case VMEXIT_EXCEPTION_DB:
+         if ( !v->domain->debugger_attached )
+-            goto unexpected_exit_type;
+-        domain_pause_for_debugger();
++            hvm_inject_hw_exception(TRAP_debug, HVM_DELIVER_NO_ERROR_CODE);
++        else
++            domain_pause_for_debugger();
+         break;
+ 
+     case VMEXIT_EXCEPTION_BP:
+@@ -2274,6 +2276,11 @@ void svm_vmexit_handler(struct cpu_user_regs *regs)
+         break;
+     }
+ 
++    case VMEXIT_EXCEPTION_AC:
++        HVMTRACE_1D(TRAP, TRAP_alignment_check);
++        hvm_inject_hw_exception(TRAP_alignment_check, vmcb->exitinfo1);
++        break;
++
+     case VMEXIT_EXCEPTION_UD:
+         svm_vmexit_ud_intercept(regs);
+         break;
+diff --git a/xen/arch/x86/hvm/vmx/vmx.c b/xen/arch/x86/hvm/vmx/vmx.c
+index 35b4935..ced3092 100644
+--- a/xen/arch/x86/hvm/vmx/vmx.c
++++ b/xen/arch/x86/hvm/vmx/vmx.c
+@@ -1132,16 +1132,10 @@ static void vmx_update_host_cr3(struct vcpu *v)
+ 
+ void vmx_update_debug_state(struct vcpu *v)
+ {
+-    unsigned long mask;
+-
+-    mask = 1u << TRAP_int3;
+-    if ( !cpu_has_monitor_trap_flag )
+-        mask |= 1u << TRAP_debug;
+-
+     if ( v->arch.hvm_vcpu.debug_state_latch )
+-        v->arch.hvm_vmx.exception_bitmap |= mask;
++        v->arch.hvm_vmx.exception_bitmap |= 1U << TRAP_int3;
+     else
+-        v->arch.hvm_vmx.exception_bitmap &= ~mask;
++        v->arch.hvm_vmx.exception_bitmap &= ~(1U << TRAP_int3);
+ 
+     vmx_vmcs_enter(v);
+     vmx_update_exception_bitmap(v);
+@@ -2678,9 +2672,10 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
+             __vmread(EXIT_QUALIFICATION, &exit_qualification);
+             HVMTRACE_1D(TRAP_DEBUG, exit_qualification);
+             write_debugreg(6, exit_qualification | 0xffff0ff0);
+-            if ( !v->domain->debugger_attached || cpu_has_monitor_trap_flag )
+-                goto exit_and_crash;
+-            domain_pause_for_debugger();
++            if ( !v->domain->debugger_attached )
++                hvm_inject_hw_exception(vector, HVM_DELIVER_NO_ERROR_CODE);
++            else
++                domain_pause_for_debugger();
+             break;
+         case TRAP_int3: 
+         {
+@@ -2745,6 +2740,11 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
+ 
+             hvm_inject_page_fault(regs->error_code, exit_qualification);
+             break;
++        case TRAP_alignment_check:
++            HVMTRACE_1D(TRAP, vector);
++            __vmread(VM_EXIT_INTR_ERROR_CODE, &ecode);
++            hvm_inject_hw_exception(vector, ecode);
++            break;
+         case TRAP_nmi:
+             if ( (intr_info & INTR_INFO_INTR_TYPE_MASK) !=
+                  (X86_EVENTTYPE_NMI << 8) )
+diff --git a/xen/include/asm-x86/hvm/hvm.h b/xen/include/asm-x86/hvm/hvm.h
+index 974bcc0..d22c419 100644
+--- a/xen/include/asm-x86/hvm/hvm.h
++++ b/xen/include/asm-x86/hvm/hvm.h
+@@ -393,7 +393,10 @@ static inline bool_t hvm_vcpu_has_smep(void)
+ })
+ 
+ /* These exceptions must always be intercepted. */
+-#define HVM_TRAP_MASK ((1U << TRAP_machine_check) | (1U << TRAP_invalid_op))
++#define HVM_TRAP_MASK ((1U << TRAP_debug)           | \
++                       (1U << TRAP_invalid_op)      | \
++                       (1U << TRAP_alignment_check) | \
++                       (1U << TRAP_machine_check))
+ 
+ /*
+  * x86 event types. This enumeration is valid for:
 -- 
 2.1.4
 
