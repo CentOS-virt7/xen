@@ -1629,3 +1629,450 @@ index 974bcc0..d22c419 100644
 -- 
 2.1.4
 
+
+From af8133674467f6227bf024158565f2e9e58f9327 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 25 Nov 2015 14:32:55 +0000
+Subject: [PATCH] memory: split and tighten maximum order permitted in memops
+
+Introduce and enforce separate limits for ordinary DomU, DomU with
+pass-through device(s), control domain, and hardware domain.
+
+The DomU defaults were determined based on what so far was allowed by
+multipage_allocation_permitted().
+
+The x86 hwdom default was chosen based on linux-2.6.18-xen.hg c/s
+1102:82782f1361a9 indicating 2Mb is not enough, plus some slack.
+
+The ARM hwdom default was chosen to allow 2Mb (order-9) mappings, plus
+a little bit of slack.
+
+This is XSA-158.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ docs/misc/xen-command-line.markdown | 11 ++++++
+ xen/common/memory.c                 | 72 ++++++++++++++++++++++++++++---------
+ xen/include/asm-arm/config.h        |  4 +++
+ xen/include/asm-arm/iocap.h         |  4 ---
+ xen/include/asm-x86/config.h        |  5 ++-
+ xen/include/asm-x86/iocap.h         |  5 ---
+ 6 files changed, 74 insertions(+), 27 deletions(-)
+
+diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
+index 2ebb7c6..3d2ebc7 100644
+--- a/docs/misc/xen-command-line.markdown
++++ b/docs/misc/xen-command-line.markdown
+@@ -653,6 +653,17 @@ which data structures should be deliberately allocated in low memory,
+ so the crash kernel may find find them.  Should be used in combination
+ with **crashinfo_maxaddr**.
+ 
++### memop-max-order
++> `= [<domU>][,[<ctldom>][,[<hwdom>][,<ptdom>]]]`
++
++> x86 default: `9,18,12,12`
++> ARM default: `9,18,10,10`
++
++Change the maximum order permitted for allocation (or allocation-like)
++requests issued by the various kinds of domains (in this order:
++ordinary DomU, control domain, hardware domain, and - when supported
++by the platform - DomU with pass-through device assigned).
++
+ ### max\_cstate
+ > `= <integer>`
+ 
+diff --git a/xen/common/memory.c b/xen/common/memory.c
+index 38f79b3..86d7bf9 100644
+--- a/xen/common/memory.c
++++ b/xen/common/memory.c
+@@ -46,6 +46,50 @@ struct memop_args {
+     int          preempted;  /* Was the hypercall preempted? */
+ };
+ 
++#ifndef CONFIG_CTLDOM_MAX_ORDER
++#define CONFIG_CTLDOM_MAX_ORDER CONFIG_PAGEALLOC_MAX_ORDER
++#endif
++#ifndef CONFIG_PTDOM_MAX_ORDER
++#define CONFIG_PTDOM_MAX_ORDER CONFIG_HWDOM_MAX_ORDER
++#endif
++
++static unsigned int __read_mostly domu_max_order = CONFIG_DOMU_MAX_ORDER;
++static unsigned int __read_mostly ctldom_max_order = CONFIG_CTLDOM_MAX_ORDER;
++static unsigned int __read_mostly hwdom_max_order = CONFIG_HWDOM_MAX_ORDER;
++#ifdef HAS_PASSTHROUGH
++static unsigned int __read_mostly ptdom_max_order = CONFIG_PTDOM_MAX_ORDER;
++#else
++# define ptdom_max_order domu_max_order
++#endif
++static void __init parse_max_order(const char *s)
++{
++    if ( *s != ',' )
++        domu_max_order = simple_strtoul(s, &s, 0);
++    if ( *s == ',' && *++s != ',' )
++        ctldom_max_order = simple_strtoul(s, &s, 0);
++    if ( *s == ',' && *++s != ',' )
++        hwdom_max_order = simple_strtoul(s, &s, 0);
++#ifdef HAS_PASSTHROUGH
++    if ( *s == ',' && *++s != ',' )
++        ptdom_max_order = simple_strtoul(s, &s, 0);
++#endif
++}
++custom_param("memop-max-order", parse_max_order);
++
++static unsigned int max_order(const struct domain *d)
++{
++    unsigned int order = cache_flush_permitted(d) ? domu_max_order
++                                                  : ptdom_max_order;
++
++    if ( is_control_domain(d) && order < ctldom_max_order )
++        order = ctldom_max_order;
++
++    if ( is_hardware_domain(d) && order < hwdom_max_order )
++        order = hwdom_max_order;
++
++    return min(order, MAX_ORDER + 0U);
++}
++
+ static void increase_reservation(struct memop_args *a)
+ {
+     struct page_info *page;
+@@ -58,7 +102,7 @@ static void increase_reservation(struct memop_args *a)
+                                      a->nr_extents-1) )
+         return;
+ 
+-    if ( !multipage_allocation_permitted(current->domain, a->extent_order) )
++    if ( a->extent_order > max_order(current->domain) )
+         return;
+ 
+     for ( i = a->nr_done; i < a->nr_extents; i++ )
+@@ -103,8 +147,8 @@ static void populate_physmap(struct memop_args *a)
+                                      a->nr_extents-1) )
+         return;
+ 
+-    if ( a->memflags & MEMF_populate_on_demand ? a->extent_order > MAX_ORDER :
+-         !multipage_allocation_permitted(current->domain, a->extent_order) )
++    if ( a->extent_order > (a->memflags & MEMF_populate_on_demand ? MAX_ORDER :
++                            max_order(current->domain)) )
+         return;
+ 
+     for ( i = a->nr_done; i < a->nr_extents; i++ )
+@@ -263,7 +307,7 @@ static void decrease_reservation(struct memop_args *a)
+ 
+     if ( !guest_handle_subrange_okay(a->extent_list, a->nr_done,
+                                      a->nr_extents-1) ||
+-         a->extent_order > MAX_ORDER )
++         a->extent_order > max_order(current->domain) )
+         return;
+ 
+     for ( i = a->nr_done; i < a->nr_extents; i++ )
+@@ -328,13 +372,17 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+     if ( copy_from_guest(&exch, arg, 1) )
+         return -EFAULT;
+ 
++    if ( max(exch.in.extent_order, exch.out.extent_order) >
++         max_order(current->domain) )
++    {
++        rc = -EPERM;
++        goto fail_early;
++    }
++
+     /* Various sanity checks. */
+     if ( (exch.nr_exchanged > exch.in.nr_extents) ||
+          /* Input and output domain identifiers match? */
+          (exch.in.domid != exch.out.domid) ||
+-         /* Extent orders are sensible? */
+-         (exch.in.extent_order > MAX_ORDER) ||
+-         (exch.out.extent_order > MAX_ORDER) ||
+          /* Sizes of input and output lists do not overflow a long? */
+          ((~0UL >> exch.in.extent_order) < exch.in.nr_extents) ||
+          ((~0UL >> exch.out.extent_order) < exch.out.nr_extents) ||
+@@ -353,16 +401,6 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+         goto fail_early;
+     }
+ 
+-    /* Only privileged guests can allocate multi-page contiguous extents. */
+-    if ( !multipage_allocation_permitted(current->domain,
+-                                         exch.in.extent_order) ||
+-         !multipage_allocation_permitted(current->domain,
+-                                         exch.out.extent_order) )
+-    {
+-        rc = -EPERM;
+-        goto fail_early;
+-    }
+-
+     if ( exch.in.extent_order <= exch.out.extent_order )
+     {
+         in_chunk_order  = exch.out.extent_order - exch.in.extent_order;
+diff --git a/xen/include/asm-arm/config.h b/xen/include/asm-arm/config.h
+index 5b7b1a8..26805cb 100644
+--- a/xen/include/asm-arm/config.h
++++ b/xen/include/asm-arm/config.h
+@@ -37,6 +37,10 @@
+ 
+ #define CONFIG_VIDEO 1
+ 
++#define CONFIG_PAGEALLOC_MAX_ORDER 18
++#define CONFIG_DOMU_MAX_ORDER      9
++#define CONFIG_HWDOM_MAX_ORDER     10
++
+ #define OPT_CONSOLE_STR "dtuart"
+ 
+ #ifdef MAX_PHYS_CPUS
+diff --git a/xen/include/asm-arm/iocap.h b/xen/include/asm-arm/iocap.h
+index 22cfa41..276fefb 100644
+--- a/xen/include/asm-arm/iocap.h
++++ b/xen/include/asm-arm/iocap.h
+@@ -4,10 +4,6 @@
+ #define cache_flush_permitted(d)                        \
+     (!rangeset_is_empty((d)->iomem_caps))
+ 
+-#define multipage_allocation_permitted(d, order)        \
+-    (((order) <= 9) || /* allow 2MB superpages */       \
+-     !rangeset_is_empty((d)->iomem_caps))
+-
+ #endif
+ 
+ /*
+diff --git a/xen/include/asm-x86/config.h b/xen/include/asm-x86/config.h
+index 3f7f852..1fdcb5b 100644
+--- a/xen/include/asm-x86/config.h
++++ b/xen/include/asm-x86/config.h
+@@ -29,9 +29,12 @@
+ #define CONFIG_NUMA 1
+ #define CONFIG_DISCONTIGMEM 1
+ #define CONFIG_NUMA_EMU 1
+-#define CONFIG_PAGEALLOC_MAX_ORDER (2 * PAGETABLE_ORDER)
+ #define CONFIG_DOMAIN_PAGE 1
+ 
++#define CONFIG_PAGEALLOC_MAX_ORDER (2 * PAGETABLE_ORDER)
++#define CONFIG_DOMU_MAX_ORDER      PAGETABLE_ORDER
++#define CONFIG_HWDOM_MAX_ORDER     12
++
+ /* Intel P4 currently has largest cache line (L2 line size is 128 bytes). */
+ #define CONFIG_X86_L1_CACHE_SHIFT 7
+ 
+diff --git a/xen/include/asm-x86/iocap.h b/xen/include/asm-x86/iocap.h
+index 591ae17..eee4722 100644
+--- a/xen/include/asm-x86/iocap.h
++++ b/xen/include/asm-x86/iocap.h
+@@ -18,9 +18,4 @@
+     (!rangeset_is_empty((d)->iomem_caps) ||             \
+      !rangeset_is_empty((d)->arch.ioport_caps))
+ 
+-#define multipage_allocation_permitted(d, order)        \
+-    (((order) <= 9) || /* allow 2MB superpages */       \
+-     !rangeset_is_empty((d)->iomem_caps) ||             \
+-     !rangeset_is_empty((d)->arch.ioport_caps))
+-
+ #endif /* __X86_IOCAP_H__ */
+-- 
+2.1.4
+
+
+From 88a46932c62bda53ae0ae35985a7648c831d9994 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 25 Nov 2015 14:33:04 +0000
+Subject: [PATCH] memory: fix XENMEM_exchange error handling
+
+assign_pages() can fail due to the domain getting killed in parallel,
+which should not result in a hypervisor crash.
+
+Also delete a redundant put_gfn() - all relevant paths leading to the
+"fail" label already do this (and there are also paths where it was
+plain wrong). All of the put_gfn()-s got introduced by 51032ca058
+("Modify naming of queries into the p2m"), including the otherwise
+unneeded initializer for k (with even a kind of misleading comment -
+the compiler warning could actually have served as a hint that the use
+is wrong).
+
+This is XSA-159.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/common/memory.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/xen/common/memory.c b/xen/common/memory.c
+index 86d7bf9..ed91188 100644
+--- a/xen/common/memory.c
++++ b/xen/common/memory.c
+@@ -363,7 +363,7 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+     PAGE_LIST_HEAD(out_chunk_list);
+     unsigned long in_chunk_order, out_chunk_order;
+     xen_pfn_t     gpfn, gmfn, mfn;
+-    unsigned long i, j, k = 0; /* gcc ... */
++    unsigned long i, j, k;
+     unsigned int  memflags = 0;
+     long          rc = 0;
+     struct domain *d;
+@@ -594,11 +594,12 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+  fail:
+     /* Reassign any input pages we managed to steal. */
+     while ( (page = page_list_remove_head(&in_chunk_list)) )
+-    {
+-        put_gfn(d, gmfn + k--);
+         if ( assign_pages(d, page, 0, MEMF_no_refcount) )
+-            BUG();
+-    }
++        {
++            BUG_ON(!d->is_dying);
++            if ( test_and_clear_bit(_PGC_allocated, &page->count_info) )
++                put_page(page);
++        }
+ 
+  dying:
+     rcu_unlock_domain(d);
+-- 
+2.1.4
+
+
+From 42d59fc60583cce5bba0969a857cd53543da21a3 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 18 Nov 2015 17:05:11 +0000
+Subject: [PATCH] libxl: Fix bootloader-related virtual memory leak on pv build
+ failure
+
+The bootloader may call libxl__file_reference_map(), which mmap's the
+pv_kernel and pv_ramdisk into process memory.  This was only unmapped,
+however, on the success path of libxl__build_pv().  If there were a
+failure anywhere between libxl_bootloader.c:parse_bootloader_result()
+and the end of libxl__build_pv(), the calls to
+libxl__file_reference_unmap() would be skipped, leaking the mapped
+virtual memory.
+
+Ideally this would be fixed by adding the unmap calls to the
+destruction path for libxl__domain_build_state.  Unfortunately the
+lifetime of the libxl__domain_build_state is opaque, and it doesn't
+have a proper destruction path.  But, the only thing in it that isn't
+from the gc are these bootloader references, and they are only ever
+set for one libxl__domain_build_state, the one which is
+libxl__domain_create_state.build_state.
+
+So we can clean up in the exit path from libxl__domain_create_*, which
+always comes through domcreate_complete.
+
+Remove the now-redundant unmaps in libxl__build_pv's success path.
+
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_create.c | 8 +++-----
+ tools/libxl/libxl_dom.c    | 3 ---
+ 2 files changed, 3 insertions(+), 8 deletions(-)
+
+diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
+index e3350d5..6328adc 100644
+--- a/tools/libxl/libxl_create.c
++++ b/tools/libxl/libxl_create.c
+@@ -986,11 +986,6 @@ void libxl__xc_domain_restore_done(libxl__egc *egc, void *dcs_void,
+     }
+ 
+ out:
+-    if (info->type == LIBXL_DOMAIN_TYPE_PV) {
+-        libxl__file_reference_unmap(&state->pv_kernel);
+-        libxl__file_reference_unmap(&state->pv_ramdisk);
+-    }
+-
+     esave = errno;
+ 
+     flags = fcntl(fd, F_GETFL);
+@@ -1295,6 +1290,9 @@ static void domcreate_complete(libxl__egc *egc,
+     STATE_AO_GC(dcs->ao);
+     libxl_domain_config *const d_config = dcs->guest_config;
+ 
++    libxl__file_reference_unmap(&dcs->build_state.pv_kernel);
++    libxl__file_reference_unmap(&dcs->build_state.pv_ramdisk);
++    
+     if (!rc && d_config->b_info.exec_ssidref)
+         rc = xc_flask_relabel_domain(CTX->xch, dcs->guest_domid, d_config->b_info.exec_ssidref);
+ 
+diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
+index bb5b5a7..62a394f3 100644
+--- a/tools/libxl/libxl_dom.c
++++ b/tools/libxl/libxl_dom.c
+@@ -451,9 +451,6 @@ int libxl__build_pv(libxl__gc *gc, uint32_t domid,
+         state->store_mfn = xc_dom_p2m_host(dom, dom->xenstore_pfn);
+     }
+ 
+-    libxl__file_reference_unmap(&state->pv_kernel);
+-    libxl__file_reference_unmap(&state->pv_ramdisk);
+-
+     ret = 0;
+ out:
+     xc_dom_release(dom);
+-- 
+2.1.4
+
+
+From 9a0d056936ca30ac2cade1d500ab375e8eb1b695 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Wed, 25 Nov 2015 14:33:22 +0000
+Subject: [PATCH] Subject: x86/SVM: XSETBV intercept needs to check CPL
+
+Other than most (all?) other intercepts, basic checks - namely the CPL
+one - don't get done before checking for the intercept to be enabled.
+
+This is XSA-161.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/svm/svm.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
+index e21084d..df2bcf8 100644
+--- a/xen/arch/x86/hvm/svm/svm.c
++++ b/xen/arch/x86/hvm/svm/svm.c
+@@ -2437,10 +2437,11 @@ void svm_vmexit_handler(struct cpu_user_regs *regs)
+         break;
+ 
+     case VMEXIT_XSETBV:
+-        if ( (inst_len = __get_instruction_length(current, INSTR_XSETBV))==0 )
+-            break;
+-        if ( hvm_handle_xsetbv(regs->ecx,
+-                               (regs->rdx << 32) | regs->_eax) == 0 )
++        if ( vmcb_get_cpl(vmcb) )
++            hvm_inject_hw_exception(TRAP_gp_fault, 0);
++        else if ( (inst_len = __get_instruction_length(v, INSTR_XSETBV)) &&
++                  hvm_handle_xsetbv(regs->ecx,
++                                    (regs->rdx << 32) | regs->_eax) == 0 )
+             __update_guest_eip(regs, inst_len);
+         break;
+ 
+-- 
+2.1.4
+
+
+From 20ab47196550316c09a19fb733a22ed597de47f9 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 25 Nov 2015 14:35:43 +0000
+Subject: [PATCH] x86/vPMU: document as unsupported
+
+This is XSA-163.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ docs/misc/xen-command-line.markdown | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
+index 3d2ebc7..74999e3 100644
+--- a/docs/misc/xen-command-line.markdown
++++ b/docs/misc/xen-command-line.markdown
+@@ -1041,8 +1041,9 @@ feature is switched on on Intel processors supporting this feature.
+ Note that if **watchdog** option is also specified vpmu will be turned off.
+ 
+ *Warning:*
+-As the BTS virtualisation is not 100% safe and because of the nehalem quirk
+-don't use the vpmu flag on production systems with Intel cpus!
++As the virtualisation is not 100% safe, don't use the vpmu flag on
++production systems (see Xen Security Advisory 163,
++http://xenbits.xen.org/xsa/advisory-163.html)!
+ 
+ ### watchdog
+ > `= force | <boolean>`
+-- 
+2.1.4
+
