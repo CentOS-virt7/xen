@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.0
-Release: 5%{?dist}
+Release: 6%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -90,7 +90,10 @@ Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 
 # aarch64-only
-Patch2027: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
+Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
+Patch2002: xsa162-qemuu.patch
+
+Patch3002: xsa162-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -314,12 +317,14 @@ popd
 pushd tools/qemu-xen
 # Add qemu-xen (aka "qemu upstream") -related patches here
 %ifarch aarch64
-%patch2027 -p1
+%patch2001 -p1
 %endif
+%patch2002 -p1
 popd
 
 pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
+%patch3002 -p1
 popd
 
 %if %{with_stubdom}
@@ -873,6 +878,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Nov 25 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0-6.el6.centos
+ - Import XSAs 159-163
+
 * Wed Nov 11 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0-5.el6.centos
  - Import XSA 156
 
