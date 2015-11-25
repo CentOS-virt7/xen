@@ -2021,46 +2021,7 @@ index 8019f4e..2da3ac4 100644
 2.1.4
 
 
-From 2b697019957bbffa43302accf72b635e31bbecde Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Wed, 25 Nov 2015 14:58:11 +0000
-Subject: [PATCH] Subject: x86/SVM: XSETBV intercept needs to check CPL
-
-Other than most (all?) other intercepts, basic checks - namely the CPL
-one - don't get done before checking for the intercept to be enabled.
-
-This is XSA-161.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/hvm/svm/svm.c | 9 +++++----
- 1 file changed, 5 insertions(+), 4 deletions(-)
-
-diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
-index 364185a..5f5e461 100644
---- a/xen/arch/x86/hvm/svm/svm.c
-+++ b/xen/arch/x86/hvm/svm/svm.c
-@@ -2646,10 +2646,11 @@ void svm_vmexit_handler(struct cpu_user_regs *regs)
-         break;
- 
-     case VMEXIT_XSETBV:
--        if ( (inst_len = __get_instruction_length(current, INSTR_XSETBV))==0 )
--            break;
--        if ( hvm_handle_xsetbv(regs->ecx,
--                               (regs->rdx << 32) | regs->_eax) == 0 )
-+        if ( vmcb_get_cpl(vmcb) )
-+            hvm_inject_hw_exception(TRAP_gp_fault, 0);
-+        else if ( (inst_len = __get_instruction_length(v, INSTR_XSETBV)) &&
-+                  hvm_handle_xsetbv(regs->ecx,
-+                                    (regs->rdx << 32) | regs->_eax) == 0 )
-             __update_guest_eip(regs, inst_len);
-         break;
- 
--- 
-2.1.4
-
-
-From 69f774ec3c1b0c69f6858b4eee07b9302dd966d9 Mon Sep 17 00:00:00 2001
+From c1ed3008cd08bff5f1ab872f41b30c10f794fc1f Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 25 Nov 2015 14:58:15 +0000
 Subject: [PATCH] x86/vPMU: document as unsupported
