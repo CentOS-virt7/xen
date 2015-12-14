@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.0
-Release: 7%{?dist}
+Release: 8%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -88,12 +88,19 @@ Patch1: xen-queue.am
 # 3000+: qemu-traditional
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
+Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 # aarch64-only
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
-Patch2002: xsa162-qemuu.patch
+Patch2002: xsa155-qemu-qdisk-double-access.patch
+Patch2003: xsa155-qemu-xenfb.patch
+Patch2004: xsa162-qemuu.patch
 
-Patch3002: xsa162-qemut.patch
+Patch3002: xsa155-qemut-qdisk-double-access.patch
+Patch3003: xsa155-qemut-xenfb.patch
+Patch3004: xsa162-qemut.patch
+Patch3005: xsa164.patch
+
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -310,6 +317,7 @@ popd
 # Add blktap-related patches here
 %patch1001 -p1
 %patch1005 -p1
+%patch1006 -p1
 %endif
 
 %define _default_patch_fuzz 2
@@ -320,11 +328,16 @@ pushd tools/qemu-xen
 %patch2001 -p1
 %endif
 %patch2002 -p1
+%patch2003 -p1
+%patch2004 -p1
 popd
 
 pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
 %patch3002 -p1
+%patch3003 -p1
+%patch3004 -p1
+%patch3005 -p1
 popd
 
 %if %{with_stubdom}
@@ -878,6 +891,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Dec 14 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0-8.el6.centos
+- Add XSAs 155, 164-166
+
 * Wed Nov 25 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0-7.el6.centos
  - Remove XSA-161 (withdrawn)
 
