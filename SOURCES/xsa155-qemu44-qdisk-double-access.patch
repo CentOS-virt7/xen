@@ -1,0 +1,55 @@
+>From 612b55f73b664a43438d457a7ad9eeb1413a557e Mon Sep 17 00:00:00 2001
+From: "Sarah R. Newman" <srn@prgmr.com>
+Date: Wed, 9 Dec 2015 14:00:49 -0800
+Subject: [PATCH] xen/blkif: Avoid double access to src->nr_segments
+
+src is stored in shared memory and src->nr_segments is dereferenced
+twice at the end of the function.  If a compiler decides to compile this
+into two separate memory accesses then the size limitation could be
+bypassed.
+
+Fix it by removing the double access to src->nr_segments.
+
+This is part of XSA-155.
+
+This patch is modified from xsa155-qemu-qdisk-double-access.patch to apply to
+qemu-4.4.
+
+Signed-off-by: Sarah R. Newman <srn@prgmr.com>
+---
+ tools/qemu-xen/hw/block/xen_blkif.h | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/tools/qemu-xen/hw/block/xen_blkif.h b/tools/qemu-xen/hw/block/xen_blkif.h
+index c0f4136..24188f4 100644
+--- a/hw/block/xen_blkif.h
++++ b/hw/block/xen_blkif.h
+@@ -79,8 +79,10 @@ static inline void blkif_get_x86_32_req(blkif_request_t *dst, blkif_x86_32_reque
+ 	dst->handle = src->handle;
+ 	dst->id = src->id;
+ 	dst->sector_number = src->sector_number;
+-	if (n > src->nr_segments)
+-		n = src->nr_segments;
++	/* prevent the compiler from optimizing the code and using src->nr_segments instead */
++	barrier();
++	if (n > dst->nr_segments)
++		n = dst->nr_segments;
+ 	for (i = 0; i < n; i++)
+ 		dst->seg[i] = src->seg[i];
+ }
+@@ -94,8 +96,10 @@ static inline void blkif_get_x86_64_req(blkif_request_t *dst, blkif_x86_64_reque
+ 	dst->handle = src->handle;
+ 	dst->id = src->id;
+ 	dst->sector_number = src->sector_number;
+-	if (n > src->nr_segments)
+-		n = src->nr_segments;
++	/* prevent the compiler from optimizing the code and using src->nr_segments instead */
++	barrier();
++	if (n > dst->nr_segments)
++		n = dst->nr_segments;
+ 	for (i = 0; i < n; i++)
+ 		dst->seg[i] = src->seg[i];
+ }
+-- 
+1.9.1
+

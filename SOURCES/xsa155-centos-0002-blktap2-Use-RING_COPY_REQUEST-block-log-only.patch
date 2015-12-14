@@ -1,0 +1,38 @@
+>From fdd6f8cd7553e7ae8922637cb3b93eb7fcade207 Mon Sep 17 00:00:00 2001
+From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Date: Fri, 20 Nov 2015 12:16:02 -0500
+Subject: [PATCH 2/3] blktap2: Use RING_COPY_REQUEST
+
+Instead of RING_GET_REQUEST. Using a local copy of the
+ring (and also with proper memory barriers) will mean
+we can do not have to worry about the compiler optimizing
+the code and doing a double-fetch in the shared memory space.
+
+This is part of XSA155.
+
+Conflicts:
+ tools/blktap2/drivers/tapdisk-vbd.c
+
+Signed-off-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+---
+ tools/blktap2/drivers/block-log.c   | 3 ++-
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/tools/blktap2/drivers/block-log.c b/tools/blktap2/drivers/block-log.c
+index 5d93b92..b0336a1 100644
+--- a/tools/blktap2/drivers/block-log.c
++++ b/tools/blktap2/drivers/block-log.c
+@@ -510,11 +510,12 @@ static int ctl_kick(struct tdlog_state* s, int fd)
+   reqstart = s->bring.req_cons;
+   reqend = s->sring->req_prod;
+ 
++  xen_mb();
+   BDPRINTF("ctl: ring kicked (start = %u, end = %u)", reqstart, reqend);
+ 
+   while (reqstart != reqend) {
+     /* XXX actually submit these! */
+-    memcpy(&req, RING_GET_REQUEST(&s->bring, reqstart), sizeof(req));
++    RING_COPY_REQUEST(&s->bring, reqstart, &req);
+     BDPRINTF("ctl: read request %"PRIu64":%u", req.sector, req.count);
+     s->bring.req_cons = ++reqstart;
+ 

@@ -1005,7 +1005,62 @@ index 798b68d..a6cc100 100644
 2.1.4
 
 
-From 6a29c44bc17973eae253db6ea22b4f969864c072 Mon Sep 17 00:00:00 2001
+From 72be99a17ea4e8f424a1f9730908604bf20701f9 Mon Sep 17 00:00:00 2001
+From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
+Date: Mon, 14 Dec 2015 12:08:57 +0000
+Subject: [PATCH] libxl: handle read-only drives with qemu-xen
+
+The current libxl code doesn't deal with read-only drives at all.
+
+Upstream QEMU and qemu-xen only support read-only cdrom drives: make
+sure to specify "readonly=on" for cdrom drives and return error in case
+the user requested a non-cdrom read-only drive.
+
+This is XSA-142, discovered by Lin Liu
+(https://bugzilla.redhat.com/show_bug.cgi?id=1257893).
+
+Signed-off-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
+
+Backport to Xen 4.5 and earlier, apropos of report and review from
+Michael Young.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_dm.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index 4d25ede..97b13c8 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -709,13 +709,18 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+             if (disks[i].is_cdrom) {
+                 if (disks[i].format == LIBXL_DISK_FORMAT_EMPTY)
+                     drive = libxl__sprintf
+-                        (gc, "if=ide,index=%d,media=cdrom,cache=writeback,id=ide-%i",
+-                         disk, dev_number);
++                        (gc, "if=ide,index=%d,readonly=%s,media=cdrom,cache=writeback,id=ide-%i",
++                         disk, disks[i].readwrite ? "off" : "on", dev_number);
+                 else
+                     drive = libxl__sprintf
+-                        (gc, "file=%s,if=ide,index=%d,media=cdrom,format=%s,cache=writeback,id=ide-%i",
+-                         disks[i].pdev_path, disk, format, dev_number);
++                        (gc, "file=%s,if=ide,index=%d,readonly=%s,media=cdrom,format=%s,cache=writeback,id=ide-%i",
++                         disks[i].pdev_path, disk, disks[i].readwrite ? "off" : "on", format, dev_number);
+             } else {
++                if (!disks[i].readwrite) {
++                    LIBXL__LOG(ctx, LIBXL__LOG_ERROR, "qemu-xen doesn't support read-only disk drivers");
++                    return NULL;
++                }
++
+                 if (disks[i].format == LIBXL_DISK_FORMAT_EMPTY) {
+                     LIBXL__LOG(ctx, LIBXL__LOG_WARNING, "cannot support"
+                                " empty disk format for %s", disks[i].vdev);
+-- 
+2.1.4
+
+
+From 2b59c50bb06f33b5ba90dd22b346d8c35f94f0b9 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:05:45 +0000
 Subject: [PATCH] x86: guard against undue super page PTE creation
@@ -1056,7 +1111,7 @@ index 68cc33b..b14ba81 100644
 2.1.4
 
 
-From 6b061dac0bfc1eb11c7c3ae2e03b105bc13eed88 Mon Sep 17 00:00:00 2001
+From a104ff39b14c4483f072d7254868fa4e2825fddc Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:05:52 +0000
 Subject: [PATCH] xen: free domain's vcpu array
@@ -1088,7 +1143,7 @@ index b6601a3..19e8470 100644
 2.1.4
 
 
-From bad6ba473117f1d9089f89da761ec799a0b52ac6 Mon Sep 17 00:00:00 2001
+From aa867402f4652400087d1843cc6b80c7874d4076 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:06:25 +0000
 Subject: [PATCH] x86/PoD: Eager sweep for zeroed pages
@@ -1306,7 +1361,7 @@ index a2cb1b7..9d70d6c 100644
 2.1.4
 
 
-From aca4da05713495581d4a5178a847ec1da845632d Mon Sep 17 00:00:00 2001
+From 5eecc877d3a44df9943241720c481510b0324646 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:06:26 +0000
 Subject: [PATCH] xenoprof: free domain's vcpu array
@@ -1346,7 +1401,7 @@ index 52ab00d..4703142 100644
 2.1.4
 
 
-From b02660ae38257b4311878fc92fc1a9873023b75a Mon Sep 17 00:00:00 2001
+From b6594e1b3b0aad5487eb47024c4bc92a9f9f94b6 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:06:26 +0000
 Subject: [PATCH] x86: rate-limit logging in do_xen{oprof,pmu}_op()
@@ -1399,7 +1454,7 @@ index 4703142..abcb947 100644
 2.1.4
 
 
-From 749bcda7ea93c15dba995f7236b10f8555abf4f0 Mon Sep 17 00:00:00 2001
+From 0a758301482250a5901795aeaa11a77aeb9d4e9d Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:06:26 +0000
 Subject: [PATCH] libxl: adjust PoD target by memory fudge, too
@@ -1486,7 +1541,137 @@ index 69e6088..bb5b5a7 100644
 2.1.4
 
 
-From 3b2673bd6079fb7daba105eb2ef7fc15f0595449 Mon Sep 17 00:00:00 2001
+From d79e8e5199201f0cd26d3184f7e0c71b38fd0a47 Mon Sep 17 00:00:00 2001
+From: David Vrabel <david.vrabel@citrix.com>
+Date: Fri, 20 Nov 2015 11:59:05 -0500
+Subject: [PATCH] xen: Add RING_COPY_REQUEST()
+
+Using RING_GET_REQUEST() on a shared ring is easy to use incorrectly
+(i.e., by not considering that the other end may alter the data in the
+shared ring while it is being inspected).  Safe usage of a request
+generally requires taking a local copy.
+
+Provide a RING_COPY_REQUEST() macro to use instead of
+RING_GET_REQUEST() and an open-coded memcpy().  This takes care of
+ensuring that the copy is done correctly regardless of any possible
+compiler optimizations.
+
+Use a volatile source to prevent the compiler from reordering or
+omitting the copy.
+
+This is part of XSA155.
+
+Signed-off-by: David Vrabel <david.vrabel@citrix.com>
+Signed-off-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+---
+ xen/include/public/io/ring.h | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/xen/include/public/io/ring.h b/xen/include/public/io/ring.h
+index 73e13d7..a9fb394 100644
+--- a/xen/include/public/io/ring.h
++++ b/xen/include/public/io/ring.h
+@@ -212,6 +212,20 @@ typedef struct __name##_back_ring __name##_back_ring_t
+ #define RING_GET_REQUEST(_r, _idx)                                      \
+     (&((_r)->sring->ring[((_idx) & (RING_SIZE(_r) - 1))].req))
+ 
++/*
++ * Get a local copy of a request.
++ *
++ * Use this in preference to RING_GET_REQUEST() so all processing is
++ * done on a local copy that cannot be modified by the other end.
++ *
++ * Note that https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58145 may cause this
++ * to be ineffective where _req is a struct which consists of only bitfields.
++ */
++#define RING_COPY_REQUEST(_r, _idx, _req) do {				\
++	/* Use volatile to force the copy into _req. */			\
++	*(_req) = *(volatile typeof(_req))RING_GET_REQUEST(_r, _idx);	\
++} while (0)
++
+ #define RING_GET_RESPONSE(_r, _idx)                                     \
+     (&((_r)->sring->ring[((_idx) & (RING_SIZE(_r) - 1))].rsp))
+ 
+-- 
+2.1.4
+
+
+From 7b2d8f4d36d2131b01317918174e98ca95668176 Mon Sep 17 00:00:00 2001
+From: Jason Andryuk <andryuk@aero.org>
+Date: Fri, 16 May 2014 16:48:16 -0400
+Subject: [PATCH] libvchan: Make raw_get_{data_ready, buffer_space} match
+
+For writing into a vchan, raw_get_buffer_space used >, allowing the full
+ring size to be written.  On the read side, raw_get_data_ready compared
+the ring size with >=.  This mismatch means a completely filled buffer
+cannot be read.  Fix this by making the size checks identical.
+
+Signed-off-by: Jason Andryuk <andryuk@aero.org>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ tools/libvchan/io.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/libvchan/io.c b/tools/libvchan/io.c
+index 804c63c..6e6e239 100644
+--- a/tools/libvchan/io.c
++++ b/tools/libvchan/io.c
+@@ -118,7 +118,7 @@ static inline int send_notify(struct libxenvchan *ctrl, uint8_t bit)
+ static inline int raw_get_data_ready(struct libxenvchan *ctrl)
+ {
+ 	uint32_t ready = rd_prod(ctrl) - rd_cons(ctrl);
+-	if (ready >= rd_ring_size(ctrl))
++	if (ready > rd_ring_size(ctrl))
+ 		/* We have no way to return errors.  Locking up the ring is
+ 		 * better than the alternatives. */
+ 		return 0;
+-- 
+2.1.4
+
+
+From b08d8b2ff92e5b67496c300c3cc643f703df75bc Mon Sep 17 00:00:00 2001
+From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Date: Fri, 20 Nov 2015 12:22:14 -0500
+Subject: [PATCH] libvchan: Read prod/cons only once.
+
+We must ensure that the prod/cons are only read once and that
+the compiler won't try to optimize the reads. That is split
+the read of these in multiple instructions influencing later
+branch code. As such insert barriers when fetching the cons
+and prod index.
+
+This is part of XSA155.
+
+Signed-off-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+---
+ tools/libvchan/io.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/tools/libvchan/io.c b/tools/libvchan/io.c
+index 6e6e239..bcb29dd 100644
+--- a/tools/libvchan/io.c
++++ b/tools/libvchan/io.c
+@@ -118,6 +118,7 @@ static inline int send_notify(struct libxenvchan *ctrl, uint8_t bit)
+ static inline int raw_get_data_ready(struct libxenvchan *ctrl)
+ {
+ 	uint32_t ready = rd_prod(ctrl) - rd_cons(ctrl);
++	xen_mb(); /* Ensure 'ready' is read only once. */
+ 	if (ready > rd_ring_size(ctrl))
+ 		/* We have no way to return errors.  Locking up the ring is
+ 		 * better than the alternatives. */
+@@ -159,6 +160,7 @@ int libxenvchan_data_ready(struct libxenvchan *ctrl)
+ static inline int raw_get_buffer_space(struct libxenvchan *ctrl)
+ {
+ 	uint32_t ready = wr_ring_size(ctrl) - (wr_prod(ctrl) - wr_cons(ctrl));
++	xen_mb(); /* Ensure 'ready' is read only once. */
+ 	if (ready > wr_ring_size(ctrl))
+ 		/* We have no way to return errors.  Locking up the ring is
+ 		 * better than the alternatives. */
+-- 
+2.1.4
+
+
+From 2d5890b91e2d157f8d86693986c698b337826fec Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 9 Nov 2015 16:55:19 +0000
 Subject: [PATCH] x86/HVM: always intercept #AC and #DB
@@ -1630,7 +1815,7 @@ index 974bcc0..d22c419 100644
 2.1.4
 
 
-From af8133674467f6227bf024158565f2e9e58f9327 Mon Sep 17 00:00:00 2001
+From 7f7bcab8c1d3bf557cdfa93b538389164af0befa Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 25 Nov 2015 14:32:55 +0000
 Subject: [PATCH] memory: split and tighten maximum order permitted in memops
@@ -1870,170 +2055,213 @@ index 591ae17..eee4722 100644
 2.1.4
 
 
-From 88a46932c62bda53ae0ae35985a7648c831d9994 Mon Sep 17 00:00:00 2001
+From 75463cbd9c2f5bd282725a04f128d725b42660d4 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 25 Nov 2015 14:33:04 +0000
-Subject: [PATCH] memory: fix XENMEM_exchange error handling
+Date: Mon, 14 Dec 2015 12:21:02 +0000
+Subject: [PATCH] memory: fix XSA-158 fix
 
-assign_pages() can fail due to the domain getting killed in parallel,
-which should not result in a hypervisor crash.
+For one the uses of domu_max_order and ptdom_max_order were swapped.
 
-Also delete a redundant put_gfn() - all relevant paths leading to the
-"fail" label already do this (and there are also paths where it was
-plain wrong). All of the put_gfn()-s got introduced by 51032ca058
-("Modify naming of queries into the p2m"), including the otherwise
-unneeded initializer for k (with even a kind of misleading comment -
-the compiler warning could actually have served as a hint that the use
-is wrong).
-
-This is XSA-159.
+And then gcc warns about an unused result of a __must_check function
+in the control part of a conditional expression when both other
+expressions can be determined by the compiler to produce the same value
+(see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68039), which happens
+when HAS_PASSTHROUGH is undefined (i.e. for ARM on 4.4 and older).
 
 Signed-off-by: Jan Beulich <jbeulich@suse.com>
 Acked-by: Ian Campbell <ian.campbell@citrix.com>
 ---
- xen/common/memory.c | 11 ++++++-----
- 1 file changed, 6 insertions(+), 5 deletions(-)
+ xen/common/memory.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
 
 diff --git a/xen/common/memory.c b/xen/common/memory.c
-index 86d7bf9..ed91188 100644
+index 86d7bf9..ed3f481 100644
 --- a/xen/common/memory.c
 +++ b/xen/common/memory.c
-@@ -363,7 +363,7 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
-     PAGE_LIST_HEAD(out_chunk_list);
-     unsigned long in_chunk_order, out_chunk_order;
-     xen_pfn_t     gpfn, gmfn, mfn;
--    unsigned long i, j, k = 0; /* gcc ... */
-+    unsigned long i, j, k;
-     unsigned int  memflags = 0;
-     long          rc = 0;
-     struct domain *d;
-@@ -594,11 +594,12 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
-  fail:
-     /* Reassign any input pages we managed to steal. */
-     while ( (page = page_list_remove_head(&in_chunk_list)) )
--    {
--        put_gfn(d, gmfn + k--);
-         if ( assign_pages(d, page, 0, MEMF_no_refcount) )
--            BUG();
--    }
-+        {
-+            BUG_ON(!d->is_dying);
-+            if ( test_and_clear_bit(_PGC_allocated, &page->count_info) )
-+                put_page(page);
-+        }
+@@ -58,8 +58,6 @@ static unsigned int __read_mostly ctldom_max_order = CONFIG_CTLDOM_MAX_ORDER;
+ static unsigned int __read_mostly hwdom_max_order = CONFIG_HWDOM_MAX_ORDER;
+ #ifdef HAS_PASSTHROUGH
+ static unsigned int __read_mostly ptdom_max_order = CONFIG_PTDOM_MAX_ORDER;
+-#else
+-# define ptdom_max_order domu_max_order
+ #endif
+ static void __init parse_max_order(const char *s)
+ {
+@@ -78,8 +76,12 @@ custom_param("memop-max-order", parse_max_order);
  
-  dying:
-     rcu_unlock_domain(d);
+ static unsigned int max_order(const struct domain *d)
+ {
+-    unsigned int order = cache_flush_permitted(d) ? domu_max_order
+-                                                  : ptdom_max_order;
++    unsigned int order = domu_max_order;
++
++#ifdef HAS_PASSTHROUGH
++    if ( cache_flush_permitted(d) && order < ptdom_max_order )
++        order = ptdom_max_order;
++#endif
+ 
+     if ( is_control_domain(d) && order < ctldom_max_order )
+         order = ctldom_max_order;
 -- 
 2.1.4
 
 
-From 42d59fc60583cce5bba0969a857cd53543da21a3 Mon Sep 17 00:00:00 2001
+From be42a669a71ebd0eca554457213c020b91637ed7 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 18 Nov 2015 17:05:11 +0000
-Subject: [PATCH] libxl: Fix bootloader-related virtual memory leak on pv build
- failure
+Date: Mon, 14 Dec 2015 12:27:06 +0000
+Subject: [PATCH] x86: don't leak ST(n)/XMMn values to domains first using them
 
-The bootloader may call libxl__file_reference_map(), which mmap's the
-pv_kernel and pv_ramdisk into process memory.  This was only unmapped,
-however, on the success path of libxl__build_pv().  If there were a
-failure anywhere between libxl_bootloader.c:parse_bootloader_result()
-and the end of libxl__build_pv(), the calls to
-libxl__file_reference_unmap() would be skipped, leaking the mapped
-virtual memory.
+FNINIT doesn't alter these registers, and hence using it is
+insufficient to initialize a guest's initial state.
 
-Ideally this would be fixed by adding the unmap calls to the
-destruction path for libxl__domain_build_state.  Unfortunately the
-lifetime of the libxl__domain_build_state is opaque, and it doesn't
-have a proper destruction path.  But, the only thing in it that isn't
-from the gc are these bootloader references, and they are only ever
-set for one libxl__domain_build_state, the one which is
-libxl__domain_create_state.build_state.
-
-So we can clean up in the exit path from libxl__domain_create_*, which
-always comes through domcreate_complete.
-
-Remove the now-redundant unmaps in libxl__build_pv's success path.
-
-Signed-off-by: George Dunlap <george.dunlap@citrix.com>
-Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
----
- tools/libxl/libxl_create.c | 8 +++-----
- tools/libxl/libxl_dom.c    | 3 ---
- 2 files changed, 3 insertions(+), 8 deletions(-)
-
-diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
-index e3350d5..6328adc 100644
---- a/tools/libxl/libxl_create.c
-+++ b/tools/libxl/libxl_create.c
-@@ -986,11 +986,6 @@ void libxl__xc_domain_restore_done(libxl__egc *egc, void *dcs_void,
-     }
- 
- out:
--    if (info->type == LIBXL_DOMAIN_TYPE_PV) {
--        libxl__file_reference_unmap(&state->pv_kernel);
--        libxl__file_reference_unmap(&state->pv_ramdisk);
--    }
--
-     esave = errno;
- 
-     flags = fcntl(fd, F_GETFL);
-@@ -1295,6 +1290,9 @@ static void domcreate_complete(libxl__egc *egc,
-     STATE_AO_GC(dcs->ao);
-     libxl_domain_config *const d_config = dcs->guest_config;
- 
-+    libxl__file_reference_unmap(&dcs->build_state.pv_kernel);
-+    libxl__file_reference_unmap(&dcs->build_state.pv_ramdisk);
-+    
-     if (!rc && d_config->b_info.exec_ssidref)
-         rc = xc_flask_relabel_domain(CTX->xch, dcs->guest_domid, d_config->b_info.exec_ssidref);
- 
-diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
-index bb5b5a7..62a394f3 100644
---- a/tools/libxl/libxl_dom.c
-+++ b/tools/libxl/libxl_dom.c
-@@ -451,9 +451,6 @@ int libxl__build_pv(libxl__gc *gc, uint32_t domid,
-         state->store_mfn = xc_dom_p2m_host(dom, dom->xenstore_pfn);
-     }
- 
--    libxl__file_reference_unmap(&state->pv_kernel);
--    libxl__file_reference_unmap(&state->pv_ramdisk);
--
-     ret = 0;
- out:
-     xc_dom_release(dom);
--- 
-2.1.4
-
-
-From 92a54f99552b0b78d819362d9e9274c9216bc79c Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 25 Nov 2015 14:35:43 +0000
-Subject: [PATCH] x86/vPMU: document as unsupported
-
-This is XSA-163.
+This is XSA-165.
 
 Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
 ---
- docs/misc/xen-command-line.markdown | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
+ xen/arch/x86/domain.c | 11 +++++++++++
+ xen/arch/x86/i387.c   | 31 +++++++++----------------------
+ 2 files changed, 20 insertions(+), 22 deletions(-)
 
-diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
-index 3d2ebc7..74999e3 100644
---- a/docs/misc/xen-command-line.markdown
-+++ b/docs/misc/xen-command-line.markdown
-@@ -1041,8 +1041,9 @@ feature is switched on on Intel processors supporting this feature.
- Note that if **watchdog** option is also specified vpmu will be turned off.
+diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
+index 062cff0..4efef9a 100644
+--- a/xen/arch/x86/domain.c
++++ b/xen/arch/x86/domain.c
+@@ -751,6 +751,17 @@ int arch_set_info_guest(
+         if ( v->arch.xsave_area )
+              v->arch.xsave_area->xsave_hdr.xstate_bv = XSTATE_FP_SSE;
+     }
++    else if ( v->arch.xsave_area )
++        memset(&v->arch.xsave_area->xsave_hdr, 0,
++               sizeof(v->arch.xsave_area->xsave_hdr));
++    else
++    {
++        typeof(v->arch.xsave_area->fpu_sse) *fpu_sse = v->arch.fpu_ctxt;
++
++        memset(fpu_sse, 0, sizeof(*fpu_sse));
++        fpu_sse->fcw = FCW_DEFAULT;
++        fpu_sse->mxcsr = MXCSR_DEFAULT;
++    }
  
- *Warning:*
--As the BTS virtualisation is not 100% safe and because of the nehalem quirk
--don't use the vpmu flag on production systems with Intel cpus!
-+As the virtualisation is not 100% safe, don't use the vpmu flag on
-+production systems (see Xen Security Advisory 163,
-+http://xenbits.xen.org/xsa/advisory-163.html)!
+     if ( !compat )
+     {
+diff --git a/xen/arch/x86/i387.c b/xen/arch/x86/i387.c
+index a372e0b..58fb7b7 100644
+--- a/xen/arch/x86/i387.c
++++ b/xen/arch/x86/i387.c
+@@ -17,19 +17,6 @@
+ #include <asm/xstate.h>
+ #include <asm/asm_defns.h>
  
- ### watchdog
- > `= force | <boolean>`
+-static void fpu_init(void)
+-{
+-    unsigned long val;
+-    
+-    asm volatile ( "fninit" );
+-    if ( cpu_has_xmm )
+-    {
+-        /* load default value into MXCSR control/status register */
+-        val = MXCSR_DEFAULT;
+-        asm volatile ( "ldmxcsr %0" : : "m" (val) );
+-    }
+-}
+-
+ /*******************************/
+ /*     FPU Restore Functions   */
+ /*******************************/
+@@ -248,15 +235,8 @@ void vcpu_restore_fpu_lazy(struct vcpu *v)
+ 
+     if ( cpu_has_xsave )
+         fpu_xrstor(v, XSTATE_LAZY);
+-    else if ( v->fpu_initialised )
+-    {
+-        if ( cpu_has_fxsr )
+-            fpu_fxrstor(v);
+-        else
+-            fpu_frstor(v);
+-    }
+     else
+-        fpu_init();
++        fpu_fxrstor(v);
+ 
+     v->fpu_initialised = 1;
+     v->fpu_dirtied = 1;
+@@ -317,7 +297,14 @@ int vcpu_init_fpu(struct vcpu *v)
+     else
+     {
+         v->arch.fpu_ctxt = _xzalloc(sizeof(v->arch.xsave_area->fpu_sse), 16);
+-        if ( !v->arch.fpu_ctxt )
++        if ( v->arch.fpu_ctxt )
++        {
++            typeof(v->arch.xsave_area->fpu_sse) *fpu_sse = v->arch.fpu_ctxt;
++
++            fpu_sse->fcw = FCW_DEFAULT;
++            fpu_sse->mxcsr = MXCSR_DEFAULT;
++        }
++        else
+         {
+             rc = -ENOMEM;
+             goto done;
+-- 
+2.1.4
+
+
+From 3da10464a6fecde6bf1e6f5d596c1a3b1d55f687 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Mon, 14 Dec 2015 12:28:23 +0000
+Subject: [PATCH] x86/HVM: avoid reading ioreq state more than once
+
+Otherwise, especially when the compiler chooses to translate the
+switch() to a jump table, unpredictable behavior (and in the jump table
+case arbitrary code execution) can result.
+
+This is XSA-166.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/arch/x86/hvm/hvm.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index 86ae18a..26a5927 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -348,6 +348,7 @@ void hvm_migrate_pirqs(struct vcpu *v)
+ void hvm_do_resume(struct vcpu *v)
+ {
+     ioreq_t *p;
++    unsigned int state;
+ 
+     check_wakeup_from_wait();
+ 
+@@ -358,9 +359,10 @@ void hvm_do_resume(struct vcpu *v)
+     if ( !(p = get_ioreq(v)) )
+         goto check_inject_trap;
+ 
+-    while ( p->state != STATE_IOREQ_NONE )
++    while ( (state = p->state) != STATE_IOREQ_NONE )
+     {
+-        switch ( p->state )
++        rmb();
++        switch ( state )
+         {
+         case STATE_IORESP_READY: /* IORESP_READY -> NONE */
+             hvm_io_assist(p);
+@@ -368,11 +370,10 @@ void hvm_do_resume(struct vcpu *v)
+         case STATE_IOREQ_READY:  /* IOREQ_{READY,INPROCESS} -> IORESP_READY */
+         case STATE_IOREQ_INPROCESS:
+             wait_on_xen_event_channel(v->arch.hvm_vcpu.xen_port,
+-                                      (p->state != STATE_IOREQ_READY) &&
+-                                      (p->state != STATE_IOREQ_INPROCESS));
++                                      p->state != state);
+             break;
+         default:
+-            gdprintk(XENLOG_ERR, "Weird HVM iorequest state %d.\n", p->state);
++            gdprintk(XENLOG_ERR, "Weird HVM iorequest state %u\n", state);
+             domain_crash(v->domain);
+             return; /* bail */
+         }
 -- 
 2.1.4
 
