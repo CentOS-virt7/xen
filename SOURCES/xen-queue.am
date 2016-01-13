@@ -2265,3 +2265,177 @@ index 86ae18a..26a5927 100644
 -- 
 2.1.4
 
+
+From e6a2a2439d7a1b31fc1ce4dcefbd5aa19c79bc6b Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 13 Jan 2016 15:35:58 +0000
+Subject: [PATCH] x86/mm: PV superpage handling lacks sanity checks
+
+MMUEXT_{,UN}MARK_SUPER fail to check the input MFN for validity before
+dereferencing pointers into the superpage frame table.
+
+get_superpage() has a similar issue.
+
+This is XSA-167.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/arch/x86/mm.c | 29 +++++++----------------------
+ 1 file changed, 7 insertions(+), 22 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index b14ba81..37b3ec1 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -2566,6 +2566,9 @@ int get_superpage(unsigned long mfn, struct domain *d)
+ 
+     ASSERT(opt_allow_superpage);
+ 
++    if ( !mfn_valid(mfn | (L1_PAGETABLE_ENTRIES - 1)) )
++        return -EINVAL;
++
+     spage = mfn_to_spage(mfn);
+     y = spage->type_info;
+     do {
+@@ -3320,14 +3323,6 @@ long do_mmuext_op(
+             unsigned long mfn;
+             struct spage_info *spage;
+ 
+-            mfn = op.arg1.mfn;
+-            if ( mfn & (L1_PAGETABLE_ENTRIES-1) )
+-            {
+-                MEM_LOG("Unaligned superpage reference mfn %lx", mfn);
+-                okay = 0;
+-                break;
+-            }
+-
+             if ( !opt_allow_superpage )
+             {
+                 MEM_LOG("Superpages disallowed");
+@@ -3336,16 +3331,6 @@ long do_mmuext_op(
+                 break;
+             }
+ 
+-            spage = mfn_to_spage(mfn);
+-            okay = (mark_superpage(spage, d) >= 0);
+-            break;
+-        }
+-
+-        case MMUEXT_UNMARK_SUPER:
+-        {
+-            unsigned long mfn;
+-            struct spage_info *spage;
+-
+             mfn = op.arg1.mfn;
+             if ( mfn & (L1_PAGETABLE_ENTRIES-1) )
+             {
+@@ -3354,16 +3339,16 @@ long do_mmuext_op(
+                 break;
+             }
+ 
+-            if ( !opt_allow_superpage )
++            if ( !mfn_valid(mfn | (L1_PAGETABLE_ENTRIES - 1)) )
+             {
+-                MEM_LOG("Superpages disallowed");
+                 okay = 0;
+-                rc = -ENOSYS;
+                 break;
+             }
+ 
+             spage = mfn_to_spage(mfn);
+-            okay = (unmark_superpage(spage) >= 0);
++            okay = ((op.cmd == MMUEXT_MARK_SUPER
++                    ? mark_superpage(spage, d)
++                    : unmark_superpage(spage)) >= 0);
+             break;
+         }
+ 
+-- 
+2.1.4
+
+
+From 53bddb47dad6fd7f96a0df8f62ff0b2b8908ce25 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 13 Jan 2016 15:36:49 +0000
+Subject: [PATCH] x86/VMX: prevent INVVPID failure due to non-canonical guest
+ address
+
+While INVLPG (and on SVM INVLPGA) don't fault on non-canonical
+addresses, INVVPID fails (in the "individual address" case) when passed
+such an address.
+
+Since such intercepted INVLPG are effectively no-ops anyway, don't fix
+this in vmx_invlpg_intercept(), but instead have paging_invlpg() never
+return true in such a case.
+
+This is XSA-168.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/include/asm-x86/paging.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/xen/include/asm-x86/paging.h b/xen/include/asm-x86/paging.h
+index 0a7c73c..ef14d52 100644
+--- a/xen/include/asm-x86/paging.h
++++ b/xen/include/asm-x86/paging.h
+@@ -239,7 +239,7 @@ paging_fault(unsigned long va, struct cpu_user_regs *regs)
+  * or 0 if it's safe not to do so. */
+ static inline int paging_invlpg(struct vcpu *v, unsigned long va)
+ {
+-    return paging_get_hostmode(v)->invlpg(v, va);
++    return is_canonical_address(va) && paging_get_hostmode(v)->invlpg(v, va);
+ }
+ 
+ /* Translate a guest virtual address to the frame number that the
+-- 
+2.1.4
+
+
+From 111c035693e9b6e5fcc1d805c422bbbb2d63cd73 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 13 Jan 2016 15:37:03 +0000
+Subject: [PATCH] x86: make debug output consistent in hvm_set_callback_via
+
+The unconditional printks in the switch statement of the
+hvm_set_callback_via function results in Xen log spam in non debug
+versions of Xen. The printks are for debug output only so conditionally
+compile the entire switch statement on debug versions of Xen only.
+
+This is XSA-169.
+
+Signed-off-by: Malcolm Crossley <malcolm.crossley@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/arch/x86/hvm/irq.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/hvm/irq.c b/xen/arch/x86/hvm/irq.c
+index 5048c29..d39f246 100644
+--- a/xen/arch/x86/hvm/irq.c
++++ b/xen/arch/x86/hvm/irq.c
+@@ -370,7 +370,8 @@ void hvm_set_callback_via(struct domain *d, uint64_t via)
+ 
+     spin_unlock(&d->arch.hvm_domain.irq_lock);
+ 
+-    dprintk(XENLOG_G_INFO, "Dom%u callback via changed to ", d->domain_id);
++#ifndef NDEBUG
++    printk(XENLOG_G_INFO "Dom%u callback via changed to ", d->domain_id);
+     switch ( via_type )
+     {
+     case HVMIRQ_callback_gsi:
+@@ -386,6 +387,7 @@ void hvm_set_callback_via(struct domain *d, uint64_t via)
+         printk("None\n");
+         break;
+     }
++#endif
+ }
+ 
+ struct hvm_intack hvm_vcpu_has_pending_irq(struct vcpu *v)
+-- 
+2.1.4
+
