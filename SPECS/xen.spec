@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.0
-Release: 8%{?dist}
+Release: 9%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -891,6 +891,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jan 14 2016 George Dunlap <george.dunlap@citrix.com> - 4.6.0-9.el6.centos
+- Add XSAs 167-169
+
 * Mon Dec 14 2015 George Dunlap <george.dunlap@citrix.com> - 4.6.0-8.el6.centos
 - Add XSAs 155, 164-166
 

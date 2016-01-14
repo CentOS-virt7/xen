@@ -197,7 +197,7 @@ index 6c70040..6d1e9dd 100644
 2.1.4
 
 
-From 1d129a49fba00d860abf5206cda6ea003cb7b7c8 Mon Sep 17 00:00:00 2001
+From cca7ba7dc0f9725cf6f9291a0836b028d2250c3c Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 19 Oct 2015 12:05:20 +0100
 Subject: [PATCH] RFC: Check for grub boot sectors pretending to be an MBR
@@ -242,7 +242,7 @@ index e4aedda..c062190 100755
 2.1.4
 
 
-From 1d3860fe0aa208b6f903200ba2fcaf686fa8affb Mon Sep 17 00:00:00 2001
+From 2696996d37d6fd33d740f1b647bf4c00d2babe16 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 19 Oct 2015 12:05:20 +0100
 Subject: [PATCH] xen: Allow user to specify an alternate linker for EFI
@@ -312,7 +312,7 @@ index 1daa7ac..f5398c4 100644
 2.1.4
 
 
-From c8de7874e4e2fcbecafde8d10f2e1e8969d542b5 Mon Sep 17 00:00:00 2001
+From c1be7a32a40aa1ae6c05232346af0cda1360b183 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 19 Oct 2015 12:05:20 +0100
 Subject: [PATCH] Disable iptables on the bridge
@@ -357,7 +357,7 @@ index 92ffa60..0b1fde9 100644
 2.1.4
 
 
-From 871322d0b3ddee2db114deacc9240f43b7b3194a Mon Sep 17 00:00:00 2001
+From 2f5e088c540311ff2b3938db7d57fd96470ec480 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 19 Oct 2015 12:05:21 +0100
 Subject: [PATCH] xen.use.fedora.ipxe.patch
@@ -411,7 +411,7 @@ index 0560a7b..6610722 100644
 2.1.4
 
 
-From 274609545d9b9363cf09703cf7df449b99607c7b Mon Sep 17 00:00:00 2001
+From e3c55c12d72c906b25dc754163117f9d39a1d9b5 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 19 Oct 2015 12:05:21 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
@@ -448,7 +448,7 @@ index 8bb5e93..68823e3 100644
 2.1.4
 
 
-From 01e1f6828565aebe742c1f14bfe8ecd6a41b3061 Mon Sep 17 00:00:00 2001
+From 0f71d6ef9dc423be847d8a62ac1c2f84ae684502 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 19 Oct 2015 12:05:21 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -473,7 +473,7 @@ index 2618559..4157edf 100644
 2.1.4
 
 
-From f72a967d6fa6473f117176cd9f5f766966ed981a Mon Sep 17 00:00:00 2001
+From f24abcf9b6b2239af5462815edf37ca4365b5605 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 19 Oct 2015 12:05:21 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
@@ -586,7 +586,7 @@ index 2053403..9a0641b 100644
 2.1.4
 
 
-From 8e7d291327a5f94a442b728aa6b806bf8b899f60 Mon Sep 17 00:00:00 2001
+From 2ca928ed7ba7b262d616afb865a07a79c082c81d Mon Sep 17 00:00:00 2001
 From: Julien Grall <julien.grall@linaro.org>
 Date: Mon, 19 Oct 2015 12:05:21 +0100
 Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
@@ -619,7 +619,7 @@ index 9a96401..faad68d 100644
 2.1.4
 
 
-From 2a5d13fc964bcf051b9626f7d44893e8416b17f6 Mon Sep 17 00:00:00 2001
+From 321a0248cfb102265ae875b2855bb66569ef8f69 Mon Sep 17 00:00:00 2001
 From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
 Date: Mon, 19 Oct 2015 12:05:21 +0100
 Subject: [PATCH] xen/arm: support compressed kernels
@@ -821,7 +821,7 @@ index f641b12..35692e1 100644
 2.1.4
 
 
-From c7af85fd9783280dd09431e444f2026a1fd74b36 Mon Sep 17 00:00:00 2001
+From d9a62695e91c8cbd7a3f80fc80d6123468284cef Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 5 Nov 2015 12:12:03 +0000
 Subject: [PATCH] xen/arm: Support hypercall_create_continuation for multicall
@@ -877,7 +877,7 @@ index b2bfc7d..b9a4226 100644
 2.1.4
 
 
-From 2a7723b7e7cb8943b27c4e0b8f446d8bf6755d40 Mon Sep 17 00:00:00 2001
+From e2a3e43e5576c47e34c4e37cf26b1fb8f22d3aa1 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 5 Nov 2015 12:12:26 +0000
 Subject: [PATCH] xen: arm: rate-limit logging from unimplemented PHYSDEVOP and
@@ -931,7 +931,7 @@ index 61b4a18..27bbbda 100644
 2.1.4
 
 
-From 20320061e2b03ee54dc3c65916521f82392611d8 Mon Sep 17 00:00:00 2001
+From be7654069dc9487d5dbe9624a74d5c18b55b1728 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 5 Nov 2015 12:12:38 +0000
 Subject: [PATCH] xen: arm: handle races between relinquish_memory and
@@ -980,7 +980,7 @@ index b9a4226..20cc772 100644
 2.1.4
 
 
-From de2cf8874a8d3ea94cd9912bdab1b51c4471e157 Mon Sep 17 00:00:00 2001
+From b83651151b3c1792cf0287e760aad8270d0ad1e8 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 5 Nov 2015 12:12:51 +0000
 Subject: [PATCH] x86: guard against undue super page PTE creation
@@ -1031,7 +1031,7 @@ index 202ff76..fc65982 100644
 2.1.4
 
 
-From 11b527eadccef55b1ff05e3ee03993269d322d43 Mon Sep 17 00:00:00 2001
+From 8fdd942db338fb14b8897d7ff75d4574cc82f889 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 5 Nov 2015 12:13:04 +0000
 Subject: [PATCH] xen: free domain's vcpu array
@@ -1063,7 +1063,7 @@ index 1b9fcfc..796c492 100644
 2.1.4
 
 
-From f1d8e9b5b8985b82aab68899ce55af79c6e75984 Mon Sep 17 00:00:00 2001
+From 9600e840bf4d17c555fb0eb3439a605f69f9c2ca Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 5 Nov 2015 12:13:13 +0000
 Subject: [PATCH] x86/PoD: Eager sweep for zeroed pages
@@ -1303,7 +1303,7 @@ index 5e99ac6..e91a875 100644
 2.1.4
 
 
-From 61b116c67d2890a5264ac3bb4e39ef28af0cefc1 Mon Sep 17 00:00:00 2001
+From 9a3246a52921d166a154760bdb07b552a5786abd Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 5 Nov 2015 12:13:17 +0000
 Subject: [PATCH] xenoprof: free domain's vcpu array
@@ -1343,7 +1343,7 @@ index 1061323..53a803a 100644
 2.1.4
 
 
-From 92f1974c5a8b61a249bcd4f496d1975df84e9682 Mon Sep 17 00:00:00 2001
+From 754ccbba0aff0b8f69f85df566eed2a0d924fad7 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 5 Nov 2015 12:13:20 +0000
 Subject: [PATCH] x86: rate-limit logging in do_xen{oprof,pmu}_op()
@@ -1424,7 +1424,7 @@ index 53a803a..19b4605 100644
 2.1.4
 
 
-From bd3c2ddc88b5b39ee68fda9a762e6863576788ce Mon Sep 17 00:00:00 2001
+From 36e6c46635b9056555055d363dfa885fff9e51bb Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Wed, 21 Oct 2015 16:18:30 +0100
 Subject: [PATCH] From 27593ec62bdad8621df910931349d964a6dbaa8c Mon Sep 17
@@ -1513,7 +1513,7 @@ index b514377..8019f4e 100644
 2.1.4
 
 
-From 0c78c5ccc8a9db865cb2e884daf068b60205f7f9 Mon Sep 17 00:00:00 2001
+From 4bfd66426230811b4287aaaf0cc16a469bfa9713 Mon Sep 17 00:00:00 2001
 From: David Vrabel <david.vrabel@citrix.com>
 Date: Fri, 20 Nov 2015 11:59:05 -0500
 Subject: [PATCH] xen: Add RING_COPY_REQUEST()
@@ -1568,7 +1568,7 @@ index ba9401b..801c0da 100644
 2.1.4
 
 
-From c10bacffd62eae0d1cb3c3812b801b1a15715db1 Mon Sep 17 00:00:00 2001
+From 89586809904b47ddde030593829202073aad2ea2 Mon Sep 17 00:00:00 2001
 From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
 Date: Fri, 20 Nov 2015 12:22:14 -0500
 Subject: [PATCH] libvchan: Read prod/cons only once.
@@ -1610,7 +1610,7 @@ index 8a9629b..381cc05 100644
 2.1.4
 
 
-From 6bc724960a73da547cd005cbc4fe25b4408f3a6c Mon Sep 17 00:00:00 2001
+From 4ae997a28ce5986bd3eafedb465efcdbf47f7bba Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 11 Nov 2015 15:41:12 +0000
 Subject: [PATCH] x86/HVM: always intercept #AC and #DB
@@ -1754,7 +1754,7 @@ index 68b216c..a2c366d 100644
 2.1.4
 
 
-From 105cb31b26d8e178b2cd80a273684ed60d4f758e Mon Sep 17 00:00:00 2001
+From 83ab1ecfe053971fc2d0632e031d46810c740c8e Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 25 Nov 2015 14:57:58 +0000
 Subject: [PATCH] memory: split and tighten maximum order permitted in memops
@@ -1994,7 +1994,7 @@ index 591ae17..eee4722 100644
 2.1.4
 
 
-From 090aea1c9f4a3e0d35c9dc5fab2e3b0eeb99c1dd Mon Sep 17 00:00:00 2001
+From 3c2ab03901965a1e16c838c79b57bf49ae34112f Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 14 Dec 2015 17:02:44 +0000
 Subject: [PATCH] memory: fix XSA-158 fix
@@ -2045,7 +2045,7 @@ index 7bffc88..6f41307 100644
 2.1.4
 
 
-From 8a8d926767f1078075597979915385be2a655c28 Mon Sep 17 00:00:00 2001
+From e50c2e9dcf51dcbfcb3655b0f6f76925dae1bf68 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 25 Nov 2015 14:58:03 +0000
 Subject: [PATCH] memory: fix XENMEM_exchange error handling
@@ -2103,7 +2103,7 @@ index 6f41307..8baed72 100644
 2.1.4
 
 
-From a6579f1b04c529f2249b76e5604f3cd9d9108b56 Mon Sep 17 00:00:00 2001
+From 7e6431928d2bd1187852b193f5127f52f215d9dc Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 18 Nov 2015 17:05:11 +0000
 Subject: [PATCH] [PATCH] libxl: Fix bootloader-related virtual memory leak on
@@ -2169,7 +2169,7 @@ index 8019f4e..2da3ac4 100644
 2.1.4
 
 
-From 63871e40f80158df8ce7a4f7a59c926fecacfc8d Mon Sep 17 00:00:00 2001
+From cc08d6ae20630498ff8106d975920584864652be Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 25 Nov 2015 14:58:15 +0000
 Subject: [PATCH] x86/vPMU: document as unsupported
@@ -2201,7 +2201,7 @@ index 26ee8e0..27ddeab 100644
 2.1.4
 
 
-From fce012a8ce7e956509b01cd363305ea7d06a6d21 Mon Sep 17 00:00:00 2001
+From 17b2e497be43c378cd84015be5b0d6a06c840297 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 14 Dec 2015 17:03:27 +0000
 Subject: [PATCH] x86: don't leak ST(n)/XMMn values to domains first using them
@@ -2301,7 +2301,7 @@ index 14f2a79..57eae28 100644
 2.1.4
 
 
-From fee2b51ad975257ad2591b89d11bbb2003cdab9a Mon Sep 17 00:00:00 2001
+From 76623ee30ec7eb9e841a3d8bd0ae111a788c6326 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 14 Dec 2015 17:03:37 +0000
 Subject: [PATCH] x86/HVM: avoid reading ioreq state more than once
@@ -2355,6 +2355,179 @@ index 615fa89..186e01e 100644
              sv->pending = 0;
              domain_crash(sv->vcpu->domain);
              return 0; /* bail */
+-- 
+2.1.4
+
+
+From a84181b645cccc1e81bfe962497227cb61eb0c67 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 14 Jan 2016 15:29:58 +0000
+Subject: [PATCH] x86/mm: PV superpage handling lacks sanity checks
+
+MMUEXT_{,UN}MARK_SUPER fail to check the input MFN for validity before
+dereferencing pointers into the superpage frame table.
+
+get_superpage() has a similar issue.
+
+This is XSA-167.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/arch/x86/mm.c | 37 ++++++++++++-------------------------
+ 1 file changed, 12 insertions(+), 25 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index fc65982..06f973a 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -2624,6 +2624,9 @@ int get_superpage(unsigned long mfn, struct domain *d)
+ 
+     ASSERT(opt_allow_superpage);
+ 
++    if ( !mfn_valid(mfn | (L1_PAGETABLE_ENTRIES - 1)) )
++        return -EINVAL;
++
+     spage = mfn_to_spage(mfn);
+     y = spage->type_info;
+     do {
+@@ -3401,42 +3404,26 @@ long do_mmuext_op(
+         }
+ 
+         case MMUEXT_MARK_SUPER:
++        case MMUEXT_UNMARK_SUPER:
+         {
+             unsigned long mfn = op.arg1.mfn;
+ 
+-            if ( unlikely(d != pg_owner) )
+-                rc = -EPERM;
+-            else if ( mfn & (L1_PAGETABLE_ENTRIES-1) )
+-            {
+-                MEM_LOG("Unaligned superpage reference mfn %lx", mfn);
+-                okay = 0;
+-            }
+-            else if ( !opt_allow_superpage )
++            if ( !opt_allow_superpage )
+             {
+                 MEM_LOG("Superpages disallowed");
+                 rc = -ENOSYS;
+             }
+-            else
+-                rc = mark_superpage(mfn_to_spage(mfn), d);
+-            break;
+-        }
+-
+-        case MMUEXT_UNMARK_SUPER:
+-        {
+-            unsigned long mfn = op.arg1.mfn;
+-
+-            if ( unlikely(d != pg_owner) )
++            else if ( unlikely(d != pg_owner) )
+                 rc = -EPERM;
+-            else if ( mfn & (L1_PAGETABLE_ENTRIES-1) )
++            else if ( mfn & (L1_PAGETABLE_ENTRIES - 1) )
+             {
+                 MEM_LOG("Unaligned superpage reference mfn %lx", mfn);
+-                okay = 0;
+-            }
+-            else if ( !opt_allow_superpage )
+-            {
+-                MEM_LOG("Superpages disallowed");
+-                rc = -ENOSYS;
++                rc = -EINVAL;
+             }
++            else if ( !mfn_valid(mfn | (L1_PAGETABLE_ENTRIES - 1)) )
++                rc = -EINVAL;
++            else if ( op.cmd == MMUEXT_MARK_SUPER )
++                rc = mark_superpage(mfn_to_spage(mfn), d);
+             else
+                 rc = unmark_superpage(mfn_to_spage(mfn));
+             break;
+-- 
+2.1.4
+
+
+From 109bc280469597143d0784a8cd120cbf39e3ce9f Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 14 Jan 2016 15:30:10 +0000
+Subject: [PATCH] x86/VMX: prevent INVVPID failure due to non-canonical guest
+ address
+
+While INVLPG (and on SVM INVLPGA) don't fault on non-canonical
+addresses, INVVPID fails (in the "individual address" case) when passed
+such an address.
+
+Since such intercepted INVLPG are effectively no-ops anyway, don't fix
+this in vmx_invlpg_intercept(), but instead have paging_invlpg() never
+return true in such a case.
+
+This is XSA-168.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/include/asm-x86/paging.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/xen/include/asm-x86/paging.h b/xen/include/asm-x86/paging.h
+index 483b2d7..6215f57 100644
+--- a/xen/include/asm-x86/paging.h
++++ b/xen/include/asm-x86/paging.h
+@@ -245,7 +245,7 @@ paging_fault(unsigned long va, struct cpu_user_regs *regs)
+  * or 0 if it's safe not to do so. */
+ static inline int paging_invlpg(struct vcpu *v, unsigned long va)
+ {
+-    return paging_get_hostmode(v)->invlpg(v, va);
++    return is_canonical_address(va) && paging_get_hostmode(v)->invlpg(v, va);
+ }
+ 
+ /* Translate a guest virtual address to the frame number that the
+-- 
+2.1.4
+
+
+From 46a8b29535a7c4b5b37cf8b7c7d334f10bebbdfb Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Thu, 14 Jan 2016 15:35:35 +0000
+Subject: [PATCH] x86: make debug output consistent in hvm_set_callback_via
+
+The unconditional printks in the switch statement of the
+hvm_set_callback_via function results in Xen log spam in non debug
+versions of Xen. The printks are for debug output only so conditionally
+compile the entire switch statement on debug versions of Xen only.
+
+This is XSA-169.
+
+Signed-off-by: Malcolm Crossley <malcolm.crossley@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ xen/arch/x86/hvm/irq.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/hvm/irq.c b/xen/arch/x86/hvm/irq.c
+index 50fcf73..ed05970 100644
+--- a/xen/arch/x86/hvm/irq.c
++++ b/xen/arch/x86/hvm/irq.c
+@@ -382,7 +382,8 @@ void hvm_set_callback_via(struct domain *d, uint64_t via)
+ 
+     spin_unlock(&d->arch.hvm_domain.irq_lock);
+ 
+-    dprintk(XENLOG_G_INFO, "Dom%u callback via changed to ", d->domain_id);
++#ifndef NDEBUG
++    printk(XENLOG_G_INFO "Dom%u callback via changed to ", d->domain_id);
+     switch ( via_type )
+     {
+     case HVMIRQ_callback_gsi:
+@@ -398,6 +399,7 @@ void hvm_set_callback_via(struct domain *d, uint64_t via)
+         printk("None\n");
+         break;
+     }
++#endif
+ }
+ 
+ struct hvm_intack hvm_vcpu_has_pending_irq(struct vcpu *v)
 -- 
 2.1.4
 
