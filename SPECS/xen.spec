@@ -51,8 +51,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.6.0
-Release: 9%{?dist}
+Version: 4.6.1
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -92,15 +92,7 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 # aarch64-only
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
-Patch2002: xsa155-qemu-qdisk-double-access.patch
-Patch2003: xsa155-qemu-xenfb.patch
 Patch2004: xsa162-qemuu.patch
-
-Patch3002: xsa155-qemut-qdisk-double-access.patch
-Patch3003: xsa155-qemut-xenfb.patch
-Patch3004: xsa162-qemut.patch
-Patch3005: xsa164.patch
-
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -306,6 +298,18 @@ git am %{PATCH1}
 
 # Now apply patches to things not in the core Xen repo
 
+pushd tools/qemu-xen
+# Add qemu-xen (aka "qemu upstream") -related patches here
+%ifarch aarch64
+%patch2001 -p1
+%endif
+%patch2004 -p1
+popd
+
+pushd tools/qemu-xen-traditional
+# Add qemu-traditional-related patches here
+popd
+
 %if %{with_blktap}
 pushd `pwd`
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
@@ -319,26 +323,6 @@ popd
 %patch1005 -p1
 %patch1006 -p1
 %endif
-
-%define _default_patch_fuzz 2
-
-pushd tools/qemu-xen
-# Add qemu-xen (aka "qemu upstream") -related patches here
-%ifarch aarch64
-%patch2001 -p1
-%endif
-%patch2002 -p1
-%patch2003 -p1
-%patch2004 -p1
-popd
-
-pushd tools/qemu-xen-traditional
-# Add qemu-traditional-related patches here
-%patch3002 -p1
-%patch3003 -p1
-%patch3004 -p1
-%patch3005 -p1
-popd
 
 %if %{with_stubdom}
 # stubdom sources
@@ -891,6 +875,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Feb 11 2016 George Dunlap <george.dunlap@citrix.com> - 4.6.1-10.el6.centos
+- Update to 4.6.1
+- Retain two xsa-155 related patches to xen missing from the release
+- Retain an xsa-162 related patch to qemu-upstream missing from the release
+
 * Thu Jan 14 2016 George Dunlap <george.dunlap@citrix.com> - 4.6.0-9.el6.centos
 - Add XSAs 167-169
 

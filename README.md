@@ -122,13 +122,17 @@ rid of these like this:
 
 Now export the patchqueue:
 
-    git format-patch --stdout -N RELEASE-4.6.0 > ${path_to_package_repo}/SOURCES/xen-queue.am
+    git format-patch --stdout -N RELEASE-4.6.1 > ${path_to_package_repo}/SOURCES/xen-queue.am
 
-Go back to your xen tree and download the new version of Xen:
+Update `get_sources.sh` with the new version:
 
-    wget -P SOURCES/ http://bits.xensource.com/oss-xen/release/4.6.1/xen-4.6.1.tar.gz
+    XEN_VERSION=4.6.1
 
-Update the spec file, and build.
+And run it again to fetch the new version (and make sure it still works properly):
 
-And don't forget to update `get_sources.sh`.
+    ./get_sources.sh
 
+Update `SPECS/xen.spec` with the new version and changelog, and build.
+
+You may need to remove qemu-related patches from `xen.spec` as well
+(See "Adding qemu patches" for more information.)
