@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.1
-Release: 2%{?dist}
+Release: 4%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -554,11 +554,21 @@ find . -path licensedir -prune -o -path stubdom/ioemu -prune -o \
 done
 
 %ifarch x86_64
+# Make backwards-compatibility links to /usr/lib/xen/bin
 mkdir -p %{buildroot}/usr/lib/xen/bin/
 pushd %{buildroot}/usr/lib/xen/bin/
 for f in libxl-save-helper xc_save xc_restore pygrub
   do
     ln -sf ../../../lib64/xen/bin/$f .
+  done
+popd
+
+# ...and /usr/lib/xen/boot
+mkdir -p %{buildroot}/usr/lib/xen/boot/
+pushd %{buildroot}/usr/lib/xen/boot/
+for f in pv-grub-x86_32.gz pv-grub-x86_64.gz ioemu-stubdom.gz xenstore-stubdom.gz
+  do
+    ln -sf ../../../lib64/xen/boot/$f .
   done
 popd
 %endif
@@ -723,14 +733,22 @@ rm -rf %{buildroot}
 %if "%{_libdir}" != "/usr/lib"
 %dir /usr/lib/%{name}
 %dir /usr/lib/%{name}/bin
-/usr/lib/%{name}/bin/*
+/usr/lib/%{name}/bin/libxl-save-helper
+/usr/lib/%{name}/bin/xc_save
+/usr/lib/%{name}/bin/xc_restore
+/usr/lib/%{name}/bin/pygrub
+%dir /usr/lib/%{name}/boot
+/usr/lib/%{name}/boot/pv-grub-x86_32.gz
+/usr/lib/%{name}/boot/pv-grub-x86_64.gz
+/usr/lib/%{name}/boot/ioemu-stubdom.gz
+/usr/lib/%{name}/boot/xenstore-stubdom.gz
 %endif
 %dir %{_libexecdir}/%{name}/boot
-# HVM loader is always in /usr/lib regardless of multilib
 %{_libexecdir}/xen/boot/hvmloader
 %{_libexecdir}/xen/boot/ioemu-stubdom.gz
 %{_libexecdir}/xen/boot/xenstore-stubdom.gz
-%{_libexecdir}/xen/boot/pv-grub*.gz
+%{_libexecdir}/xen/boot/pv-grub-x86_32.gz
+%{_libexecdir}/xen/boot/pv-grub-x86_64.gz
 %endif
 
 %if %{with_tianocore}
@@ -875,6 +893,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Feb 22 2016 George Dunlap <george.dunlap@citrix.com> - 4.6.1-4.el6.centos
+- Add links for stubdom images from /usr/lib into /usr/lib64 for backwards compatibility
+
 * Mon Feb 15 2016 George Dunlap <george.dunlap@citrix.com> - 4.6.1-2.el6.centos
 - Add XSAs 154, 170
 
