@@ -1,4 +1,4 @@
-From a86e958631b6d321cfda9c945177ad769dd35c70 Mon Sep 17 00:00:00 2001
+From ae6aa116257166b3f592b5610cb9179afd688e9f Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] Fix up xend init scripts
@@ -153,10 +153,10 @@ index 9ef0210..0876ee2 100644
  if __name__ == '__main__':
      sys.exit(main())
 -- 
-2.1.4
+1.8.3.1
 
 
-From 51965c28a1067f10463ad2d8d8d1f414b28615a1 Mon Sep 17 00:00:00 2001
+From 987db476114a266072b2f3a9fc2ebf5163d566f7 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] Change dumpdir to /var/lib/xen
@@ -167,7 +167,7 @@ Subject: [PATCH] Change dumpdir to /var/lib/xen
  2 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/tools/Makefile b/tools/Makefile
-index d548e5e..6610a8d 100644
+index 00c69ee..125acee 100644
 --- a/tools/Makefile
 +++ b/tools/Makefile
 @@ -60,7 +60,7 @@ all: subdirs-all
@@ -202,10 +202,10 @@ index 8d4ff5c..895fc01 100644
              this_time = time.strftime("%Y-%m%d-%H%M.%S", time.localtime())
              corefile = "%s/%s-%s.%s.core" % (coredir, this_time,
 -- 
-2.1.4
+1.8.3.1
 
 
-From 01331ef849d39e380756cd533b025960940cb9d8 Mon Sep 17 00:00:00 2001
+From 8e20431c4ed2b5481204e6e6b832c6d63cd03687 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] Disable iptables on the bridge
@@ -249,10 +249,10 @@ index 3c63c55..f74de3d 100644
  }
  
 -- 
-2.1.4
+1.8.3.1
 
 
-From 763e5473dede3bb16945fc95ac3d95800b666c64 Mon Sep 17 00:00:00 2001
+From 9f1b7498049b3e5ce902d80878f572c8579caf73 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] pygrubfix.patch
@@ -292,10 +292,10 @@ index c7b6aa7..8ff6964 100755
  
  class GrubLineEditor(curses.textpad.Textbox):
 -- 
-2.1.4
+1.8.3.1
 
 
-From 78a501e834a8a15902d4f4722e830787f9785651 Mon Sep 17 00:00:00 2001
+From c2e4f9cb78797587e04a77c957c1cfd74c5b58ae Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] xend.catchbt.patch
@@ -340,10 +340,10 @@ index 832c168..161aeb5 100644
  MAX_GUEST_CMDLINE = 1024
  
 -- 
-2.1.4
+1.8.3.1
 
 
-From 6d12b97a3724d0467cea1f646eb4c4b0d6846d9f Mon Sep 17 00:00:00 2001
+From e29148f61e7c125ce3381191b60523e7e98b8416 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:39 +0100
 Subject: [PATCH] xend-pci-loop.patch # Don't crash due to weird PCI cards (Bug
@@ -372,10 +372,10 @@ index adeca4b..94326b3 100644
          if sysfs_mnt == None:
              return False
 -- 
-2.1.4
+1.8.3.1
 
 
-From 2411f463df7900e73a4c0256be827b8ce04c3399 Mon Sep 17 00:00:00 2001
+From 70be198ff72ffa9e52bb02b1d55315648c94c943 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xend.selinux.fixes.patch
@@ -410,10 +410,10 @@ index 0876ee2..05afc0e 100644
  #============================================================================
  # Copyright (C) 2004 Mike Wray <mike.wray@hp.com>
 -- 
-2.1.4
+1.8.3.1
 
 
-From 06263641b43e6401e7f44cb08d978f99dbbe20b8 Mon Sep 17 00:00:00 2001
+From e96a6a6e7330b3bc338ac48bf93c8e4d1e3950c7 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen.use.fedora.ipxe.patch
@@ -438,7 +438,7 @@ index 06768f6..b8dde44 100644
  # Specify which qemu-dm to use. This may be `ioemu' to use the old
  # Mercurial in-tree version, or a local directory, or a git URL.
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
-index 97de642..118dd75 100644
+index cb13212..428045b 100644
 --- a/tools/firmware/Makefile
 +++ b/tools/firmware/Makefile
 @@ -14,7 +14,7 @@ SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
@@ -464,10 +464,10 @@ index 00ee952..b0c6f37 100644
  
  ROMS := 
 -- 
-2.1.4
+1.8.3.1
 
 
-From fb7d7f34bfdf3ed28e8591dfb391789af2a1a4db Mon Sep 17 00:00:00 2001
+From 4a2f6ea2c620cbea25214ae130dfdb25a15bca4e Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen.fedora.efi.build.patch
@@ -531,10 +531,10 @@ index 1daa7ac..f5398c4 100644
  
  extra-$(efi) += boot.init.o relocs-dummy.o runtime.o compat.o
 -- 
-2.1.4
+1.8.3.1
 
 
-From a410962f52212fa58e6cc625054697edb9023bd9 Mon Sep 17 00:00:00 2001
+From deda1409deb7e9462dba49a26b7147f380d5e01a Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen.fedora19.buildfix.patch
@@ -566,10 +566,10 @@ index 0fc3f82..0d43727 100644
      XGTRC("XENCAPS:%s\n", xen_caps);
  
 -- 
-2.1.4
+1.8.3.1
 
 
-From 8cfbc328dc60dfbcca9855f41877229be38f17cb Mon Sep 17 00:00:00 2001
+From 748dcb67a495166c13adacc04c12a7bda831184d Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Tue, 8 Sep 2015 12:50:40 +0100
 Subject: [PATCH] xen-configure-xend.patch
@@ -617,10 +617,10 @@ index 0896a27..cea12e1 100644
  # Whether to enable auto-ballooning of dom0 to allow domUs to be created.
  # If enable-dom0-ballooning = no, dom0 will never balloon out.
 -- 
-2.1.4
+1.8.3.1
 
 
-From 8aece15798bcc7e6b57994a01e742a32439b7a41 Mon Sep 17 00:00:00 2001
+From 8cfbdf0c3e89482106f0ebfef43ab88bf81b2301 Mon Sep 17 00:00:00 2001
 From: Wen Congyang <wency@cn.fujitsu.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] tools: libxl: pass correct file to qemu if we use blktap2
@@ -675,10 +675,10 @@ index d7d2d3b..00b6adf 100644
                      continue; /* Do not emulate this disk */
              }
 -- 
-2.1.4
+1.8.3.1
 
 
-From 1636ed66e6708d35b94a9302f20118376551f783 Mon Sep 17 00:00:00 2001
+From 13d8c812166f99f1cc9a36147b0745d66468cea6 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] it: George Dunlap <george.dunlap@eu.citrix.com>
@@ -698,28 +698,6 @@ Instead, if we're using a tapdisk backend, tell qemu to use a raw file
 format.
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
----
-CC: Ian Campbell <ian.campbell@citrix.com>
-CC: Ian Jackson <ian.jackson@citrix.com>
-CC: Wei Liu <wei.liu2@citrix.com>
-CC: Konrad Wilk <konrad.wilk@oracle.com>
-
-Release exception justification: This fixes a bug in functionality, in
-that at the moment HVM guests cannot boot with tapdisk and vhd format.
-
-This is not a regression in xl functionality per se, since (AFAICT)
-this has never worked.  However, given that 4.5 is the first release
-without xend, this *does* represent a regression in functionality for
-Xen as a whole (since before people using hvm guest with vhd on blktap
-could use xend).
-
-The fix is very simple and should only affect codepaths that already
-don't work, so the risk of regressions should be very low.
-
-While preparing this patch, I also noticed that cdroms will ignore the
-backend parameter and treat everything as a file.  This is a bug but I
-think it's a much less important one to address this late in the
-release cycle.
 ---
  tools/libxl/libxl_dm.c | 7 +++++--
  1 file changed, 5 insertions(+), 2 deletions(-)
@@ -746,10 +724,10 @@ index 00b6adf..a799619 100644
                  /*
                   * Explicit sd disks are passed through as is.
 -- 
-2.1.4
+1.8.3.1
 
 
-From 53b97d8905dcafe9e21d19c8181f58fd9d9a58bf Mon Sep 17 00:00:00 2001
+From 1e3eba001c3d72a60c067b30e603601caeb3dd81 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
@@ -783,10 +761,10 @@ index 29ed547..0f9fe2d 100644
              LOG(DEBUG, "Disk vdev=%s, using backend %s",
                         disk->vdev,
 -- 
-2.1.4
+1.8.3.1
 
 
-From 0d486e4b6573ca5fac51e2fa918330a86d4ec79b Mon Sep 17 00:00:00 2001
+From c3a21acb1f3c8c7269bef05ba8ab664fe5a93023 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -796,7 +774,7 @@ Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
  1 file changed, 1 insertion(+)
 
 diff --git a/tools/Makefile b/tools/Makefile
-index 6610a8d..86d8a58 100644
+index 125acee..ce752b0 100644
 --- a/tools/Makefile
 +++ b/tools/Makefile
 @@ -186,6 +186,7 @@ subdir-all-qemu-xen-dir: qemu-xen-dir-find
@@ -808,10 +786,10 @@ index 6610a8d..86d8a58 100644
  		$(QEMU_XEN_ENABLE_DEBUG) \
  		--prefix=$(PREFIX) \
 -- 
-2.1.4
+1.8.3.1
 
 
-From 2ae35fb019c10d9a5d7ad0de4968a990ed9c579c Mon Sep 17 00:00:00 2001
+From b5aab69ea474458aa0e372ada86792ac4cb864c3 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 23 Apr 2015 15:06:13 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
@@ -1002,10 +980,10 @@ index 798b68d..a6cc100 100644
  /* libxl__device_destroy_tapdisk:
   *   Destroys any tapdisk process associated with the backend represented
 -- 
-2.1.4
+1.8.3.1
 
 
-From 72be99a17ea4e8f424a1f9730908604bf20701f9 Mon Sep 17 00:00:00 2001
+From 1083cd0acb49909b36cf82733698bfc39cb5142a Mon Sep 17 00:00:00 2001
 From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
 Date: Mon, 14 Dec 2015 12:08:57 +0000
 Subject: [PATCH] libxl: handle read-only drives with qemu-xen
@@ -1057,10 +1035,10 @@ index 4d25ede..97b13c8 100644
                      LIBXL__LOG(ctx, LIBXL__LOG_WARNING, "cannot support"
                                 " empty disk format for %s", disks[i].vdev);
 -- 
-2.1.4
+1.8.3.1
 
 
-From 2b59c50bb06f33b5ba90dd22b346d8c35f94f0b9 Mon Sep 17 00:00:00 2001
+From 60bfa9f9f4900a9eca1f04c2f9d3f77454fc5bf0 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:05:45 +0000
 Subject: [PATCH] x86: guard against undue super page PTE creation
@@ -1108,10 +1086,10 @@ index 68cc33b..b14ba81 100644
              adjust_guest_l2e(nl2e, d);
              if ( UPDATE_ENTRY(l2, pl2e, ol2e, nl2e, pfn, vcpu, preserve_ad) )
 -- 
-2.1.4
+1.8.3.1
 
 
-From a104ff39b14c4483f072d7254868fa4e2825fddc Mon Sep 17 00:00:00 2001
+From 886c075034bcf57d50c6e0f51894efc869c317fd Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:05:52 +0000
 Subject: [PATCH] xen: free domain's vcpu array
@@ -1140,10 +1118,10 @@ index b6601a3..19e8470 100644
  
      send_global_virq(VIRQ_DOM_EXC);
 -- 
-2.1.4
+1.8.3.1
 
 
-From aa867402f4652400087d1843cc6b80c7874d4076 Mon Sep 17 00:00:00 2001
+From 1c08c17d67ef3e8c04f34355bfc0ac71dd9ce5ea Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:06:25 +0000
 Subject: [PATCH] x86/PoD: Eager sweep for zeroed pages
@@ -1358,10 +1336,10 @@ index a2cb1b7..9d70d6c 100644
                                          * not relying on the p2m lock.      */
      } pod;
 -- 
-2.1.4
+1.8.3.1
 
 
-From 5eecc877d3a44df9943241720c481510b0324646 Mon Sep 17 00:00:00 2001
+From 537ba2b86d7ee555a4794086e205c101d3619043 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:06:26 +0000
 Subject: [PATCH] xenoprof: free domain's vcpu array
@@ -1398,10 +1376,10 @@ index 52ab00d..4703142 100644
      d->xenoprof = NULL;
  }
 -- 
-2.1.4
+1.8.3.1
 
 
-From b6594e1b3b0aad5487eb47024c4bc92a9f9f94b6 Mon Sep 17 00:00:00 2001
+From 93b91ae0ccfe7479badea6a222f466b322290240 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:06:26 +0000
 Subject: [PATCH] x86: rate-limit logging in do_xen{oprof,pmu}_op()
@@ -1451,10 +1429,10 @@ index 4703142..abcb947 100644
      return ret;
  }
 -- 
-2.1.4
+1.8.3.1
 
 
-From 0a758301482250a5901795aeaa11a77aeb9d4e9d Mon Sep 17 00:00:00 2001
+From 653776037d24f56c3f44f6ae6e1a60bc907dc0ff Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Wed, 4 Nov 2015 17:06:26 +0000
 Subject: [PATCH] libxl: adjust PoD target by memory fudge, too
@@ -1538,10 +1516,10 @@ index 69e6088..bb5b5a7 100644
      ents[5] = GCSPRINTF("%"PRId64, info->video_memkb);
      ents[6] = "domid";
 -- 
-2.1.4
+1.8.3.1
 
 
-From d79e8e5199201f0cd26d3184f7e0c71b38fd0a47 Mon Sep 17 00:00:00 2001
+From 4d2dfd4358a1569878ba00b9d82be0c5fcff5932 Mon Sep 17 00:00:00 2001
 From: David Vrabel <david.vrabel@citrix.com>
 Date: Fri, 20 Nov 2015 11:59:05 -0500
 Subject: [PATCH] xen: Add RING_COPY_REQUEST()
@@ -1593,10 +1571,10 @@ index 73e13d7..a9fb394 100644
      (&((_r)->sring->ring[((_idx) & (RING_SIZE(_r) - 1))].rsp))
  
 -- 
-2.1.4
+1.8.3.1
 
 
-From 7b2d8f4d36d2131b01317918174e98ca95668176 Mon Sep 17 00:00:00 2001
+From 3f2b6ffc9e229f029687e8efdac973a7ad92af28 Mon Sep 17 00:00:00 2001
 From: Jason Andryuk <andryuk@aero.org>
 Date: Fri, 16 May 2014 16:48:16 -0400
 Subject: [PATCH] libvchan: Make raw_get_{data_ready, buffer_space} match
@@ -1626,10 +1604,10 @@ index 804c63c..6e6e239 100644
  		 * better than the alternatives. */
  		return 0;
 -- 
-2.1.4
+1.8.3.1
 
 
-From b08d8b2ff92e5b67496c300c3cc643f703df75bc Mon Sep 17 00:00:00 2001
+From a4a59d5343821d4e3709e840ef2931df3ffa9279 Mon Sep 17 00:00:00 2001
 From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
 Date: Fri, 20 Nov 2015 12:22:14 -0500
 Subject: [PATCH] libvchan: Read prod/cons only once.
@@ -1668,10 +1646,10 @@ index 6e6e239..bcb29dd 100644
  		/* We have no way to return errors.  Locking up the ring is
  		 * better than the alternatives. */
 -- 
-2.1.4
+1.8.3.1
 
 
-From 2d5890b91e2d157f8d86693986c698b337826fec Mon Sep 17 00:00:00 2001
+From d7b9027d5ce3043e8ad76891333f5ea51ba239a9 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 9 Nov 2015 16:55:19 +0000
 Subject: [PATCH] x86/HVM: always intercept #AC and #DB
@@ -1812,10 +1790,10 @@ index 974bcc0..d22c419 100644
  /*
   * x86 event types. This enumeration is valid for:
 -- 
-2.1.4
+1.8.3.1
 
 
-From 7f7bcab8c1d3bf557cdfa93b538389164af0befa Mon Sep 17 00:00:00 2001
+From 11c8b78a3a4123ccb8ca52e6c876e3fdcc40c99c Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 25 Nov 2015 14:32:55 +0000
 Subject: [PATCH] memory: split and tighten maximum order permitted in memops
@@ -2052,10 +2030,10 @@ index 591ae17..eee4722 100644
 -
  #endif /* __X86_IOCAP_H__ */
 -- 
-2.1.4
+1.8.3.1
 
 
-From 75463cbd9c2f5bd282725a04f128d725b42660d4 Mon Sep 17 00:00:00 2001
+From e3c496f2142112b696ddd4531da4aa40bbf30786 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 14 Dec 2015 12:21:02 +0000
 Subject: [PATCH] memory: fix XSA-158 fix
@@ -2103,10 +2081,10 @@ index 86d7bf9..ed3f481 100644
      if ( is_control_domain(d) && order < ctldom_max_order )
          order = ctldom_max_order;
 -- 
-2.1.4
+1.8.3.1
 
 
-From be42a669a71ebd0eca554457213c020b91637ed7 Mon Sep 17 00:00:00 2001
+From d3e6abc564ff618a76095483145bbc7eed34b0eb Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 14 Dec 2015 12:27:06 +0000
 Subject: [PATCH] x86: don't leak ST(n)/XMMn values to domains first using them
@@ -2203,10 +2181,10 @@ index a372e0b..58fb7b7 100644
              rc = -ENOMEM;
              goto done;
 -- 
-2.1.4
+1.8.3.1
 
 
-From 3da10464a6fecde6bf1e6f5d596c1a3b1d55f687 Mon Sep 17 00:00:00 2001
+From e492e8c1792bc693d5a1a65ecd855d5f2a145a69 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Mon, 14 Dec 2015 12:28:23 +0000
 Subject: [PATCH] x86/HVM: avoid reading ioreq state more than once
@@ -2263,10 +2241,10 @@ index 86ae18a..26a5927 100644
              return; /* bail */
          }
 -- 
-2.1.4
+1.8.3.1
 
 
-From e6a2a2439d7a1b31fc1ce4dcefbd5aa19c79bc6b Mon Sep 17 00:00:00 2001
+From b4b82dd7f48ae9ae449dcd20f499ff0454711e8a Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 13 Jan 2016 15:35:58 +0000
 Subject: [PATCH] x86/mm: PV superpage handling lacks sanity checks
@@ -2352,10 +2330,10 @@ index b14ba81..37b3ec1 100644
          }
  
 -- 
-2.1.4
+1.8.3.1
 
 
-From 53bddb47dad6fd7f96a0df8f62ff0b2b8908ce25 Mon Sep 17 00:00:00 2001
+From 29887f66faa1423c800d5c041b388066ba8aae55 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 13 Jan 2016 15:36:49 +0000
 Subject: [PATCH] x86/VMX: prevent INVVPID failure due to non-canonical guest
@@ -2392,10 +2370,10 @@ index 0a7c73c..ef14d52 100644
  
  /* Translate a guest virtual address to the frame number that the
 -- 
-2.1.4
+1.8.3.1
 
 
-From 111c035693e9b6e5fcc1d805c422bbbb2d63cd73 Mon Sep 17 00:00:00 2001
+From fad235f04756fdf6d8cbc224b86b868762d7de42 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 13 Jan 2016 15:37:03 +0000
 Subject: [PATCH] x86: make debug output consistent in hvm_set_callback_via
@@ -2437,10 +2415,10 @@ index 5048c29..d39f246 100644
  
  struct hvm_intack hvm_vcpu_has_pending_irq(struct vcpu *v)
 -- 
-2.1.4
+1.8.3.1
 
 
-From a9809c107ac439bc67ddc417265cc35d07049c2d Mon Sep 17 00:00:00 2001
+From a42522404183e2885d71d6e9df02a89647eb5396 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 25 Nov 2015 14:33:04 +0000
 Subject: [PATCH] memory: fix XENMEM_exchange error handling
@@ -2495,10 +2473,10 @@ index ed3f481..63c0c99 100644
   dying:
      rcu_unlock_domain(d);
 -- 
-2.1.4
+1.8.3.1
 
 
-From f762dd4d7258d8e02f1ea919dfaa19bb06d0ee17 Mon Sep 17 00:00:00 2001
+From 024db261c1ecb1f804dec06c76663a81cde562c6 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 18 Nov 2015 17:05:11 +0000
 Subject: [PATCH] libxl: Fix bootloader-related virtual memory leak on pv build
@@ -2573,10 +2551,10 @@ index bb5b5a7..62a394f3 100644
  out:
      xc_dom_release(dom);
 -- 
-2.1.4
+1.8.3.1
 
 
-From a0e3a35e766599f8a5696d540fef162f1dec610e Mon Sep 17 00:00:00 2001
+From 33a04ec384cde95cf079cd5c8966459880b7efe5 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 25 Nov 2015 14:35:43 +0000
 Subject: [PATCH] x86/vPMU: document as unsupported
@@ -2605,10 +2583,10 @@ index 3d2ebc7..74999e3 100644
  ### watchdog
  > `= force | <boolean>`
 -- 
-2.1.4
+1.8.3.1
 
 
-From 5b7d3c46e2ccbef5af491ffe9538496d839085ec Mon Sep 17 00:00:00 2001
+From d2e1499ac82f09cc650b631dc5e773b44c44f551 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Feb 2016 11:11:58 +0000
 Subject: [PATCH] x86/VMX: sanitize rIP before re-entering guest
@@ -2695,10 +2673,10 @@ index ced3092..4cef768 100644
  
  void vmx_vmenter_helper(const struct cpu_user_regs *regs)
 -- 
-2.1.4
+1.8.3.1
 
 
-From 80c628833f0a69080f1ed43cd43b0df4de24fa58 Mon Sep 17 00:00:00 2001
+From 8975ac3d091fbceb09792688ac44c32f27e92807 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Wed, 17 Feb 2016 12:38:38 +0000
 Subject: [PATCH] x86: enforce consistent cachability of MMIO mappings
@@ -3053,5 +3031,59 @@ index 91e9e92..dca0504 100644
  #define l1e_has_changed(x,y,flags) \
      ( !!(((x).l1 ^ (y).l1) & ((PADDR_MASK&PAGE_MASK)|put_pte_flags(flags))) )
 -- 
-2.1.4
+1.8.3.1
+
+
+From 51c536f0548fe33b5601869903a3bc2f7c64f647 Mon Sep 17 00:00:00 2001
+From: Johnny Hughes <johnny@centos.org>
+Date: Tue, 29 Mar 2016 10:25:28 -0500
+Subject: [PATCH] x86: fix information leak on AMD CPUs
+
+The fix for XSA-52 was wrong, and so was the change synchronizing that
+new behavior to the FXRSTOR logic: AMD's manuals explictly state that
+writes to the ES bit are ignored, and it instead gets calculated from
+the exception and mask bits (it gets set whenever there is an unmasked
+exception, and cleared otherwise). Hence we need to follow that model
+in our workaround.
+
+This is XSA-172.
+
+The first hunk (xen/arch/x86/i387.c:fpu_fxrstor) is CVE-2016-3159.
+The second hunk (xen/arch/x86/xstate.c:xrstor) is CVE-2016-3158.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/i387.c   | 2 +-
+ xen/arch/x86/xstate.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/x86/i387.c b/xen/arch/x86/i387.c
+index 58fb7b7..6567e80 100644
+--- a/xen/arch/x86/i387.c
++++ b/xen/arch/x86/i387.c
+@@ -49,7 +49,7 @@ static inline void fpu_fxrstor(struct vcpu *v)
+      * sometimes new user value. Both should be ok. Use the FPU saved
+      * data block as a safe address because it should be in L1.
+      */
+-    if ( !(fpu_ctxt->fsw & 0x0080) &&
++    if ( !(fpu_ctxt->fsw & ~fpu_ctxt->fcw & 0x003f) &&
+          boot_cpu_data.x86_vendor == X86_VENDOR_AMD )
+     {
+         asm volatile ( "fnclex\n\t"
+diff --git a/xen/arch/x86/xstate.c b/xen/arch/x86/xstate.c
+index 421e351..2f20880 100644
+--- a/xen/arch/x86/xstate.c
++++ b/xen/arch/x86/xstate.c
+@@ -158,7 +158,7 @@ void xrstor(struct vcpu *v, uint64_t mask)
+      * data block as a safe address because it should be in L1.
+      */
+     if ( (mask & ptr->xsave_hdr.xstate_bv & XSTATE_FP) &&
+-         !(ptr->fpu_sse.fsw & 0x0080) &&
++         !(ptr->fpu_sse.fsw & ~ptr->fpu_sse.fcw & 0x003f) &&
+          boot_cpu_data.x86_vendor == X86_VENDOR_AMD )
+         asm volatile ( "fnclex\n\t"        /* clear exceptions */
+                        "ffree %%st(7)\n\t" /* clear stack tag */
+-- 
+1.8.3.1
 
