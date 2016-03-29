@@ -1342,3 +1342,54 @@ index 404dcfe..d75d024 100644
 -- 
 2.1.4
 
+
+From 7928ff4fe6532e68e5c01a99a9f256507bff957f Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Tue, 29 Mar 2016 11:02:43 +0100
+Subject: [PATCH] x86: fix information leak on AMD CPUs
+
+The fix for XSA-52 was wrong, and so was the change synchronizing that
+new behavior to the FXRSTOR logic: AMD's manuals explictly state that
+writes to the ES bit are ignored, and it instead gets calculated from
+the exception and mask bits (it gets set whenever there is an unmasked
+exception, and cleared otherwise). Hence we need to follow that model
+in our workaround.
+
+This is XSA-172.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/i387.c   | 2 +-
+ xen/arch/x86/xstate.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/x86/i387.c b/xen/arch/x86/i387.c
+index 57eae28..39b8456 100644
+--- a/xen/arch/x86/i387.c
++++ b/xen/arch/x86/i387.c
+@@ -49,7 +49,7 @@ static inline void fpu_fxrstor(struct vcpu *v)
+      * sometimes new user value. Both should be ok. Use the FPU saved
+      * data block as a safe address because it should be in L1.
+      */
+-    if ( !(fpu_ctxt->fsw & 0x0080) &&
++    if ( !(fpu_ctxt->fsw & ~fpu_ctxt->fcw & 0x003f) &&
+          boot_cpu_data.x86_vendor == X86_VENDOR_AMD )
+     {
+         asm volatile ( "fnclex\n\t"
+diff --git a/xen/arch/x86/xstate.c b/xen/arch/x86/xstate.c
+index d5f5e3b..d66fc3b 100644
+--- a/xen/arch/x86/xstate.c
++++ b/xen/arch/x86/xstate.c
+@@ -158,7 +158,7 @@ void xrstor(struct vcpu *v, uint64_t mask)
+      * data block as a safe address because it should be in L1.
+      */
+     if ( (mask & ptr->xsave_hdr.xstate_bv & XSTATE_FP) &&
+-         !(ptr->fpu_sse.fsw & 0x0080) &&
++         !(ptr->fpu_sse.fsw & ~ptr->fpu_sse.fcw & 0x003f) &&
+          boot_cpu_data.x86_vendor == X86_VENDOR_AMD )
+         asm volatile ( "fnclex\n\t"        /* clear exceptions */
+                        "ffree %%st(7)\n\t" /* clear stack tag */
+-- 
+2.1.4
+
