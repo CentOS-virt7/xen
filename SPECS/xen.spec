@@ -810,6 +810,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Mar 29 2016 Johnny Hughes <johnny@centos.org> - 4.4.3-14.el6.centos
+- Add XSA-172
+
 * Wed Feb 17 2016 George Dunlap <george.dunlap@citrix.com> - 4.4.3-12.el6.centos
 - Add XSA-154
 
