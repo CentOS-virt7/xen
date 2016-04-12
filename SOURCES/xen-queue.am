@@ -1,6 +1,6 @@
-From a86e958631b6d321cfda9c945177ad769dd35c70 Mon Sep 17 00:00:00 2001
+From 45cd8c1cbce58217873ff7530f9b03ffa47319c1 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:39 +0100
+Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] Fix up xend init scripts
 
 ---
@@ -153,12 +153,12 @@ index 9ef0210..0876ee2 100644
  if __name__ == '__main__':
      sys.exit(main())
 -- 
-2.1.4
+1.8.3.1
 
 
-From 51965c28a1067f10463ad2d8d8d1f414b28615a1 Mon Sep 17 00:00:00 2001
+From 048a0c1f88ed293e401f6c1beb05f1684a2dfaf5 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:39 +0100
+Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] Change dumpdir to /var/lib/xen
 
 ---
@@ -167,7 +167,7 @@ Subject: [PATCH] Change dumpdir to /var/lib/xen
  2 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/tools/Makefile b/tools/Makefile
-index d548e5e..6610a8d 100644
+index 00c69ee..125acee 100644
 --- a/tools/Makefile
 +++ b/tools/Makefile
 @@ -60,7 +60,7 @@ all: subdirs-all
@@ -202,12 +202,12 @@ index 8d4ff5c..895fc01 100644
              this_time = time.strftime("%Y-%m%d-%H%M.%S", time.localtime())
              corefile = "%s/%s-%s.%s.core" % (coredir, this_time,
 -- 
-2.1.4
+1.8.3.1
 
 
-From 01331ef849d39e380756cd533b025960940cb9d8 Mon Sep 17 00:00:00 2001
+From fa3ee1ba431aec5fb0a1036edf49f9abeb8af980 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:39 +0100
+Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] Disable iptables on the bridge
 
 ---
@@ -249,12 +249,12 @@ index 3c63c55..f74de3d 100644
  }
  
 -- 
-2.1.4
+1.8.3.1
 
 
-From 763e5473dede3bb16945fc95ac3d95800b666c64 Mon Sep 17 00:00:00 2001
+From dfe6f420066c6fbcea8a1bfb6c1d1876f9616919 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:39 +0100
+Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] pygrubfix.patch
 
 ---
@@ -292,12 +292,12 @@ index c7b6aa7..8ff6964 100755
  
  class GrubLineEditor(curses.textpad.Textbox):
 -- 
-2.1.4
+1.8.3.1
 
 
-From 78a501e834a8a15902d4f4722e830787f9785651 Mon Sep 17 00:00:00 2001
+From 71f725566c54b39d7ae8eaf259d8c3f4d7055228 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:39 +0100
+Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] xend.catchbt.patch
 
 ---
@@ -340,12 +340,12 @@ index 832c168..161aeb5 100644
  MAX_GUEST_CMDLINE = 1024
  
 -- 
-2.1.4
+1.8.3.1
 
 
-From 6d12b97a3724d0467cea1f646eb4c4b0d6846d9f Mon Sep 17 00:00:00 2001
+From 277db8f94c5f9b9c6f6a3dd0fd3fc6162314e4d5 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:39 +0100
+Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] xend-pci-loop.patch # Don't crash due to weird PCI cards (Bug
  767742)
 
@@ -372,12 +372,12 @@ index adeca4b..94326b3 100644
          if sysfs_mnt == None:
              return False
 -- 
-2.1.4
+1.8.3.1
 
 
-From 2411f463df7900e73a4c0256be827b8ce04c3399 Mon Sep 17 00:00:00 2001
+From c748ecf14b21a1d9e3b0717075f486a8e31a7045 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:40 +0100
+Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] xend.selinux.fixes.patch
 
 ---
@@ -410,12 +410,12 @@ index 0876ee2..05afc0e 100644
  #============================================================================
  # Copyright (C) 2004 Mike Wray <mike.wray@hp.com>
 -- 
-2.1.4
+1.8.3.1
 
 
-From 06263641b43e6401e7f44cb08d978f99dbbe20b8 Mon Sep 17 00:00:00 2001
+From cd5472ff4d341bd0a3ee99acfc1dd385867f2643 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:40 +0100
+Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen.use.fedora.ipxe.patch
 
 ---
@@ -425,7 +425,7 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index 06768f6..b8dde44 100644
+index bc024fd..2c6b0a5 100644
 --- a/Config.mk
 +++ b/Config.mk
 @@ -239,7 +239,7 @@ SEABIOS_UPSTREAM_TAG ?= rel-1.7.3.1
@@ -438,7 +438,7 @@ index 06768f6..b8dde44 100644
  # Specify which qemu-dm to use. This may be `ioemu' to use the old
  # Mercurial in-tree version, or a local directory, or a git URL.
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
-index 97de642..118dd75 100644
+index cb13212..428045b 100644
 --- a/tools/firmware/Makefile
 +++ b/tools/firmware/Makefile
 @@ -14,7 +14,7 @@ SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
@@ -464,12 +464,12 @@ index 00ee952..b0c6f37 100644
  
  ROMS := 
 -- 
-2.1.4
+1.8.3.1
 
 
-From fb7d7f34bfdf3ed28e8591dfb391789af2a1a4db Mon Sep 17 00:00:00 2001
+From 805a5e54908f26f7abdf9d62cc96b60c11b77d2f Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:40 +0100
+Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen.fedora.efi.build.patch
 
 ---
@@ -479,7 +479,7 @@ Subject: [PATCH] xen.fedora.efi.build.patch
  3 files changed, 6 insertions(+), 4 deletions(-)
 
 diff --git a/xen/Makefile b/xen/Makefile
-index dccc47d..ac7c113 100644
+index 6cf6ccd..c0baa3e 100644
 --- a/xen/Makefile
 +++ b/xen/Makefile
 @@ -13,6 +13,8 @@ export BASEDIR := $(CURDIR)
@@ -531,12 +531,12 @@ index 1daa7ac..f5398c4 100644
  
  extra-$(efi) += boot.init.o relocs-dummy.o runtime.o compat.o
 -- 
-2.1.4
+1.8.3.1
 
 
-From a410962f52212fa58e6cc625054697edb9023bd9 Mon Sep 17 00:00:00 2001
+From 885d37a7e4a7cdb6364dbe455a5bfcd159371bfa Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:40 +0100
+Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen.fedora19.buildfix.patch
 
 ---
@@ -566,12 +566,12 @@ index 0fc3f82..0d43727 100644
      XGTRC("XENCAPS:%s\n", xen_caps);
  
 -- 
-2.1.4
+1.8.3.1
 
 
-From 8cfbc328dc60dfbcca9855f41877229be38f17cb Mon Sep 17 00:00:00 2001
+From f62e91d57043a0753827d64027b129500f9a264b Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Tue, 8 Sep 2015 12:50:40 +0100
+Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen-configure-xend.patch
 
 ---
@@ -617,12 +617,12 @@ index 0896a27..cea12e1 100644
  # Whether to enable auto-ballooning of dom0 to allow domUs to be created.
  # If enable-dom0-ballooning = no, dom0 will never balloon out.
 -- 
-2.1.4
+1.8.3.1
 
 
-From 8aece15798bcc7e6b57994a01e742a32439b7a41 Mon Sep 17 00:00:00 2001
+From 2049e55c8b93ec169bcbd58aaca9948170f8aa61 Mon Sep 17 00:00:00 2001
 From: Wen Congyang <wency@cn.fujitsu.com>
-Date: Thu, 23 Apr 2015 15:06:13 +0100
+Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] tools: libxl: pass correct file to qemu if we use blktap2
 
 If we use blktap2, the correct file should be blktap device
@@ -636,7 +636,7 @@ Acked-by: Ian Campbell <ian.campbell@citrix.com>
  1 file changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
-index d7d2d3b..00b6adf 100644
+index d7e199f..d6ba1a2 100644
 --- a/tools/libxl/libxl_dm.c
 +++ b/tools/libxl/libxl_dm.c
 @@ -698,6 +698,7 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
@@ -647,7 +647,7 @@ index d7d2d3b..00b6adf 100644
  
              if (dev_number == -1) {
                  LIBXL__LOG(ctx, LIBXL__LOG_WARNING, "unable to determine"
-@@ -727,6 +728,12 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+@@ -732,6 +733,12 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
                      continue;
                  }
  
@@ -660,7 +660,7 @@ index d7d2d3b..00b6adf 100644
                  /*
                   * Explicit sd disks are passed through as is.
                   *
-@@ -736,11 +743,11 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+@@ -741,11 +748,11 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
                  if (strncmp(disks[i].vdev, "sd", 2) == 0)
                      drive = libxl__sprintf
                          (gc, "file=%s,if=scsi,bus=0,unit=%d,format=%s,cache=writeback",
@@ -675,12 +675,12 @@ index d7d2d3b..00b6adf 100644
                      continue; /* Do not emulate this disk */
              }
 -- 
-2.1.4
+1.8.3.1
 
 
-From 1636ed66e6708d35b94a9302f20118376551f783 Mon Sep 17 00:00:00 2001
+From dc3c48a99361ad9106a453eb4a30828a97978a6b Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:13 +0100
+Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] it: George Dunlap <george.dunlap@eu.citrix.com>
 
 libxl: Tell qemu to use raw format when using a tapdisk
@@ -699,36 +699,14 @@ format.
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
 ---
-CC: Ian Campbell <ian.campbell@citrix.com>
-CC: Ian Jackson <ian.jackson@citrix.com>
-CC: Wei Liu <wei.liu2@citrix.com>
-CC: Konrad Wilk <konrad.wilk@oracle.com>
-
-Release exception justification: This fixes a bug in functionality, in
-that at the moment HVM guests cannot boot with tapdisk and vhd format.
-
-This is not a regression in xl functionality per se, since (AFAICT)
-this has never worked.  However, given that 4.5 is the first release
-without xend, this *does* represent a regression in functionality for
-Xen as a whole (since before people using hvm guest with vhd on blktap
-could use xend).
-
-The fix is very simple and should only affect codepaths that already
-don't work, so the risk of regressions should be very low.
-
-While preparing this patch, I also noticed that cdroms will ignore the
-backend parameter and treat everything as a file.  This is a bug but I
-think it's a much less important one to address this late in the
-release cycle.
----
  tools/libxl/libxl_dm.c | 7 +++++--
  1 file changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
-index 00b6adf..a799619 100644
+index d6ba1a2..2b4bebd 100644
 --- a/tools/libxl/libxl_dm.c
 +++ b/tools/libxl/libxl_dm.c
-@@ -728,11 +728,14 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+@@ -733,11 +733,14 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
                      continue;
                  }
  
@@ -746,12 +724,12 @@ index 00b6adf..a799619 100644
                  /*
                   * Explicit sd disks are passed through as is.
 -- 
-2.1.4
+1.8.3.1
 
 
-From 53b97d8905dcafe9e21d19c8181f58fd9d9a58bf Mon Sep 17 00:00:00 2001
+From 32ba9a7098b894c183c54faede2ff4032b664dc7 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:13 +0100
+Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
  backend"
 
@@ -783,12 +761,12 @@ index 29ed547..0f9fe2d 100644
              LOG(DEBUG, "Disk vdev=%s, using backend %s",
                         disk->vdev,
 -- 
-2.1.4
+1.8.3.1
 
 
-From 0d486e4b6573ca5fac51e2fa918330a86d4ec79b Mon Sep 17 00:00:00 2001
+From 3b5d531bf262b1f973448c0a23616b331ccacfa8 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:13 +0100
+Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
 
 ---
@@ -796,7 +774,7 @@ Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
  1 file changed, 1 insertion(+)
 
 diff --git a/tools/Makefile b/tools/Makefile
-index 6610a8d..86d8a58 100644
+index 125acee..ce752b0 100644
 --- a/tools/Makefile
 +++ b/tools/Makefile
 @@ -186,6 +186,7 @@ subdir-all-qemu-xen-dir: qemu-xen-dir-find
@@ -808,12 +786,12 @@ index 6610a8d..86d8a58 100644
  		$(QEMU_XEN_ENABLE_DEBUG) \
  		--prefix=$(PREFIX) \
 -- 
-2.1.4
+1.8.3.1
 
 
-From 2ae35fb019c10d9a5d7ad0de4968a990ed9c579c Mon Sep 17 00:00:00 2001
+From f4e383dc6eaa3e3f9d0f140aee6d6981347e231e Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 23 Apr 2015 15:06:13 +0100
+Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
@@ -843,7 +821,7 @@ index 13d8fc1..df84f98 100644
  CFLAGS_libblktapctl =
  LDLIBS_libblktapctl =
 diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
-index 24c3f6e..261184e 100644
+index e2a5be3..17afae5 100644
 --- a/tools/libxl/libxl.c
 +++ b/tools/libxl/libxl.c
 @@ -2149,7 +2149,8 @@ static void device_disk_add(libxl__egc *egc, uint32_t domid,
@@ -974,10 +952,10 @@ index 2053403..24939d7 100644
      }
  
 diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
-index a799619..4d25ede 100644
+index 2b4bebd..97b13c8 100644
 --- a/tools/libxl/libxl_dm.c
 +++ b/tools/libxl/libxl_dm.c
-@@ -731,7 +731,8 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
+@@ -736,7 +736,8 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
                  if (disks[i].backend == LIBXL_DISK_BACKEND_TAP) {
                      format = qemu_disk_format_string(LIBXL_DISK_FORMAT_RAW);
                      pdev_path = libxl__blktap_devpath(gc, disks[i].pdev_path,
@@ -988,10 +966,10 @@ index a799619..4d25ede 100644
                      pdev_path = disks[i].pdev_path;
                  }
 diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
-index 798b68d..a6cc100 100644
+index f6d469b..1bee9e7 100644
 --- a/tools/libxl/libxl_internal.h
 +++ b/tools/libxl/libxl_internal.h
-@@ -1407,7 +1407,8 @@ _hidden int libxl__blktap_enabled(libxl__gc *gc);
+@@ -1409,7 +1409,8 @@ _hidden int libxl__blktap_enabled(libxl__gc *gc);
   */
  _hidden char *libxl__blktap_devpath(libxl__gc *gc,
                                      const char *disk,
@@ -1002,461 +980,12 @@ index 798b68d..a6cc100 100644
  /* libxl__device_destroy_tapdisk:
   *   Destroys any tapdisk process associated with the backend represented
 -- 
-2.1.4
+1.8.3.1
 
 
-From 72be99a17ea4e8f424a1f9730908604bf20701f9 Mon Sep 17 00:00:00 2001
-From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
-Date: Mon, 14 Dec 2015 12:08:57 +0000
-Subject: [PATCH] libxl: handle read-only drives with qemu-xen
-
-The current libxl code doesn't deal with read-only drives at all.
-
-Upstream QEMU and qemu-xen only support read-only cdrom drives: make
-sure to specify "readonly=on" for cdrom drives and return error in case
-the user requested a non-cdrom read-only drive.
-
-This is XSA-142, discovered by Lin Liu
-(https://bugzilla.redhat.com/show_bug.cgi?id=1257893).
-
-Signed-off-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
-
-Backport to Xen 4.5 and earlier, apropos of report and review from
-Michael Young.
-
-Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
----
- tools/libxl/libxl_dm.c | 13 +++++++++----
- 1 file changed, 9 insertions(+), 4 deletions(-)
-
-diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
-index 4d25ede..97b13c8 100644
---- a/tools/libxl/libxl_dm.c
-+++ b/tools/libxl/libxl_dm.c
-@@ -709,13 +709,18 @@ static char ** libxl__build_device_model_args_new(libxl__gc *gc,
-             if (disks[i].is_cdrom) {
-                 if (disks[i].format == LIBXL_DISK_FORMAT_EMPTY)
-                     drive = libxl__sprintf
--                        (gc, "if=ide,index=%d,media=cdrom,cache=writeback,id=ide-%i",
--                         disk, dev_number);
-+                        (gc, "if=ide,index=%d,readonly=%s,media=cdrom,cache=writeback,id=ide-%i",
-+                         disk, disks[i].readwrite ? "off" : "on", dev_number);
-                 else
-                     drive = libxl__sprintf
--                        (gc, "file=%s,if=ide,index=%d,media=cdrom,format=%s,cache=writeback,id=ide-%i",
--                         disks[i].pdev_path, disk, format, dev_number);
-+                        (gc, "file=%s,if=ide,index=%d,readonly=%s,media=cdrom,format=%s,cache=writeback,id=ide-%i",
-+                         disks[i].pdev_path, disk, disks[i].readwrite ? "off" : "on", format, dev_number);
-             } else {
-+                if (!disks[i].readwrite) {
-+                    LIBXL__LOG(ctx, LIBXL__LOG_ERROR, "qemu-xen doesn't support read-only disk drivers");
-+                    return NULL;
-+                }
-+
-                 if (disks[i].format == LIBXL_DISK_FORMAT_EMPTY) {
-                     LIBXL__LOG(ctx, LIBXL__LOG_WARNING, "cannot support"
-                                " empty disk format for %s", disks[i].vdev);
--- 
-2.1.4
-
-
-From 2b59c50bb06f33b5ba90dd22b346d8c35f94f0b9 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 4 Nov 2015 17:05:45 +0000
-Subject: [PATCH] x86: guard against undue super page PTE creation
-
-When optional super page support got added (commit bd1cd81d64 "x86: PV
-support for hugepages"), two adjustments were missed: mod_l2_entry()
-needs to consider the PSE and RW bits when deciding whether to use the
-fast path, and the PSE bit must not be removed from L2_DISALLOW_MASK
-unconditionally.
-
-This is XSA-148.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Tim Deegan <tim@xen.org>
----
- xen/arch/x86/mm.c | 10 ++++++++--
- 1 file changed, 8 insertions(+), 2 deletions(-)
-
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index 68cc33b..b14ba81 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -163,7 +163,10 @@ static void put_superpage(unsigned long mfn);
- 
- static uint32_t base_disallow_mask;
- #define L1_DISALLOW_MASK (base_disallow_mask | _PAGE_GNTTAB)
--#define L2_DISALLOW_MASK (base_disallow_mask & ~_PAGE_PSE)
-+
-+#define L2_DISALLOW_MASK (unlikely(opt_allow_superpage) \
-+                          ? base_disallow_mask & ~_PAGE_PSE \
-+                          : base_disallow_mask)
- 
- #define l3_disallow_mask(d) (!is_pv_32on64_domain(d) ?  \
-                              base_disallow_mask :       \
-@@ -1786,7 +1789,10 @@ static int mod_l2_entry(l2_pgentry_t *pl2e,
-         }
- 
-         /* Fast path for identical mapping and presence. */
--        if ( !l2e_has_changed(ol2e, nl2e, _PAGE_PRESENT) )
-+        if ( !l2e_has_changed(ol2e, nl2e,
-+                              unlikely(opt_allow_superpage)
-+                              ? _PAGE_PSE | _PAGE_RW | _PAGE_PRESENT
-+                              : _PAGE_PRESENT) )
-         {
-             adjust_guest_l2e(nl2e, d);
-             if ( UPDATE_ENTRY(l2, pl2e, ol2e, nl2e, pfn, vcpu, preserve_ad) )
--- 
-2.1.4
-
-
-From a104ff39b14c4483f072d7254868fa4e2825fddc Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 4 Nov 2015 17:05:52 +0000
-Subject: [PATCH] xen: free domain's vcpu array
-
-This was overlooked in fb442e2171 ("x86_64: allow more vCPU-s per
-guest").
-
-This is XSA-149.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Ian Campbell <ian.campbell@citrix.com>
----
- xen/common/domain.c | 1 +
- 1 file changed, 1 insertion(+)
-
-diff --git a/xen/common/domain.c b/xen/common/domain.c
-index b6601a3..19e8470 100644
---- a/xen/common/domain.c
-+++ b/xen/common/domain.c
-@@ -744,6 +744,7 @@ static void complete_domain_destroy(struct rcu_head *head)
- 
-     xsm_free_security_domain(d);
-     free_cpumask_var(d->domain_dirty_cpumask);
-+    xfree(d->vcpu);
-     free_domain_struct(d);
- 
-     send_global_virq(VIRQ_DOM_EXC);
--- 
-2.1.4
-
-
-From aa867402f4652400087d1843cc6b80c7874d4076 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 4 Nov 2015 17:06:25 +0000
-Subject: [PATCH] x86/PoD: Eager sweep for zeroed pages
-
-Based on the contents of a guests phyiscal address space,
-p2m_pod_emergency_sweep() could degrade into a linear memcmp() from 0 to
-max_gfn, which runs non-preemptibly.
-
-As p2m_pod_emergency_sweep() runs behind the scenes in a number of contexts,
-making it preemptible is not feasible.
-
-Instead, a different approach is taken.  Recently-populated pages are eagerly
-checked for reclaimation, which amortises the p2m_pod_emergency_sweep()
-operation across each p2m_pod_demand_populate() operation.
-
-Note that in the case that a 2M superpage can't be reclaimed as a superpage,
-it is shattered if 4K pages of zeros can be reclaimed.  This is unfortunate
-but matches the previous behaviour, and is required to avoid regressions
-(domain crash from PoD exhaustion) with VMs configured close to the limit.
-
-This is CVE-2015-7970 / XSA-150.
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/mm/p2m-pod.c | 86 +++++++++++++++++++++++++++++++----------------
- xen/arch/x86/mm/p2m.c     |  4 +++
- xen/include/asm-x86/p2m.h | 18 +++++++---
- 3 files changed, 75 insertions(+), 33 deletions(-)
-
-diff --git a/xen/arch/x86/mm/p2m-pod.c b/xen/arch/x86/mm/p2m-pod.c
-index d14565d..d97b4a3 100644
---- a/xen/arch/x86/mm/p2m-pod.c
-+++ b/xen/arch/x86/mm/p2m-pod.c
-@@ -899,28 +899,6 @@ p2m_pod_zero_check(struct p2m_domain *p2m, unsigned long *gfns, int count)
- }
- 
- #define POD_SWEEP_LIMIT 1024
--
--/* When populating a new superpage, look at recently populated superpages
-- * hoping that they've been zeroed.  This will snap up zeroed pages as soon as 
-- * the guest OS is done with them. */
--static void
--p2m_pod_check_last_super(struct p2m_domain *p2m, unsigned long gfn_aligned)
--{
--    unsigned long check_gfn;
--
--    ASSERT(p2m->pod.last_populated_index < POD_HISTORY_MAX);
--
--    check_gfn = p2m->pod.last_populated[p2m->pod.last_populated_index];
--
--    p2m->pod.last_populated[p2m->pod.last_populated_index] = gfn_aligned;
--
--    p2m->pod.last_populated_index =
--        ( p2m->pod.last_populated_index + 1 ) % POD_HISTORY_MAX;
--
--    p2m_pod_zero_check_superpage(p2m, check_gfn);
--}
--
--
- #define POD_SWEEP_STRIDE  16
- static void
- p2m_pod_emergency_sweep(struct p2m_domain *p2m)
-@@ -961,7 +939,7 @@ p2m_pod_emergency_sweep(struct p2m_domain *p2m)
-          * NB that this is a zero-sum game; we're increasing our cache size
-          * by re-increasing our 'debt'.  Since we hold the pod lock,
-          * (entry_count - count) must remain the same. */
--        if ( p2m->pod.count > 0 && i < limit )
-+        if ( i < limit && (p2m->pod.count > 0 || hypercall_preempt_check()) )
-             break;
-     }
- 
-@@ -973,6 +951,58 @@ p2m_pod_emergency_sweep(struct p2m_domain *p2m)
- 
- }
- 
-+static void pod_eager_reclaim(struct p2m_domain *p2m)
-+{
-+    struct pod_mrp_list *mrp = &p2m->pod.mrp;
-+    unsigned int i = 0;
-+
-+    /*
-+     * Always check one page for reclaimation.
-+     *
-+     * If the PoD pool is empty, keep checking some space is found, or all
-+     * entries have been exhaused.
-+     */
-+    do
-+    {
-+        unsigned int idx = (mrp->idx + i++) % ARRAY_SIZE(mrp->list);
-+        unsigned long gfn = mrp->list[idx];
-+
-+        if ( gfn != INVALID_GFN )
-+        {
-+            if ( gfn & POD_LAST_SUPERPAGE )
-+            {
-+                gfn &= ~POD_LAST_SUPERPAGE;
-+
-+                if ( p2m_pod_zero_check_superpage(p2m, gfn) == 0 )
-+                {
-+                    unsigned int x;
-+
-+                    for ( x = 0; x < SUPERPAGE_PAGES; ++x, ++gfn )
-+                        p2m_pod_zero_check(p2m, &gfn, 1);
-+                }
-+            }
-+            else
-+                p2m_pod_zero_check(p2m, &gfn, 1);
-+
-+            mrp->list[idx] = INVALID_GFN;
-+        }
-+
-+    } while ( (p2m->pod.count == 0) && (i < ARRAY_SIZE(mrp->list)) );
-+}
-+
-+static void pod_eager_record(struct p2m_domain *p2m,
-+                             unsigned long gfn, unsigned int order)
-+{
-+    struct pod_mrp_list *mrp = &p2m->pod.mrp;
-+
-+    ASSERT(mrp->list[mrp->idx] == INVALID_GFN);
-+    ASSERT(gfn != INVALID_GFN);
-+
-+    mrp->list[mrp->idx++] =
-+        gfn | (order == PAGE_ORDER_2M ? POD_LAST_SUPERPAGE : 0);
-+    mrp->idx %= ARRAY_SIZE(mrp->list);
-+}
-+
- int
- p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
-                         unsigned int order,
-@@ -1013,6 +1043,8 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
-         return 0;
-     }
- 
-+    pod_eager_reclaim(p2m);
-+
-     /* Only sweep if we're actually out of memory.  Doing anything else
-      * causes unnecessary time and fragmentation of superpages in the p2m. */
-     if ( p2m->pod.count == 0 )
-@@ -1048,6 +1080,8 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
-     p2m->pod.entry_count -= (1 << order);
-     BUG_ON(p2m->pod.entry_count < 0);
- 
-+    pod_eager_record(p2m, gfn_aligned, order);
-+
-     if ( tb_init_done )
-     {
-         struct {
-@@ -1063,12 +1097,6 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
-         __trace_var(TRC_MEM_POD_POPULATE, 0, sizeof(t), &t);
-     }
- 
--    /* Check the last guest demand-populate */
--    if ( p2m->pod.entry_count > p2m->pod.count 
--         && (order == PAGE_ORDER_2M)
--         && (q & P2M_ALLOC) )
--        p2m_pod_check_last_super(p2m, gfn_aligned);
--
-     pod_unlock(p2m);
-     return 0;
- out_of_memory:
-diff --git a/xen/arch/x86/mm/p2m.c b/xen/arch/x86/mm/p2m.c
-index 26dd79a..dbd6a94 100644
---- a/xen/arch/x86/mm/p2m.c
-+++ b/xen/arch/x86/mm/p2m.c
-@@ -59,6 +59,7 @@ boolean_param("hap_2mb", opt_hap_2mb);
- /* Init the datastructures for later use by the p2m code */
- static int p2m_initialise(struct domain *d, struct p2m_domain *p2m)
- {
-+    unsigned int i;
-     int ret = 0;
- 
-     mm_rwlock_init(&p2m->lock);
-@@ -73,6 +74,9 @@ static int p2m_initialise(struct domain *d, struct p2m_domain *p2m)
- 
-     p2m->np2m_base = P2M_BASE_EADDR;
- 
-+    for ( i = 0; i < ARRAY_SIZE(p2m->pod.mrp.list); ++i )
-+        p2m->pod.mrp.list[i] = INVALID_GFN;
-+
-     if ( hap_enabled(d) && cpu_has_vmx )
-         ret = ept_p2m_init(p2m);
-     else
-diff --git a/xen/include/asm-x86/p2m.h b/xen/include/asm-x86/p2m.h
-index a2cb1b7..9d70d6c 100644
---- a/xen/include/asm-x86/p2m.h
-+++ b/xen/include/asm-x86/p2m.h
-@@ -270,10 +270,20 @@ struct p2m_domain {
-                          entry_count;  /* # of pages in p2m marked pod      */
-         unsigned long    reclaim_single; /* Last gpfn of a scan */
-         unsigned long    max_guest;    /* gpfn of max guest demand-populate */
--#define POD_HISTORY_MAX 128
--        /* gpfn of last guest superpage demand-populated */
--        unsigned long    last_populated[POD_HISTORY_MAX]; 
--        unsigned int     last_populated_index;
-+
-+        /*
-+         * Tracking of the most recently populated PoD pages, for eager
-+         * reclamation.
-+         */
-+        struct pod_mrp_list {
-+#define NR_POD_MRP_ENTRIES 32
-+
-+/* Encode ORDER_2M superpage in top bit of GFN */
-+#define POD_LAST_SUPERPAGE (INVALID_GFN & ~(INVALID_GFN >> 1))
-+
-+            unsigned long list[NR_POD_MRP_ENTRIES];
-+            unsigned int idx;
-+        } mrp;
-         mm_lock_t        lock;         /* Locking of private pod structs,   *
-                                         * not relying on the p2m lock.      */
-     } pod;
--- 
-2.1.4
-
-
-From 5eecc877d3a44df9943241720c481510b0324646 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 4 Nov 2015 17:06:26 +0000
-Subject: [PATCH] xenoprof: free domain's vcpu array
-
-This was overlooked in fb442e2171 ("x86_64: allow more vCPU-s per
-guest").
-
-This is XSA-151.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Ian Campbell <ian.campbell@citrix.com>
----
- xen/common/xenoprof.c | 2 ++
- 1 file changed, 2 insertions(+)
-
-diff --git a/xen/common/xenoprof.c b/xen/common/xenoprof.c
-index 52ab00d..4703142 100644
---- a/xen/common/xenoprof.c
-+++ b/xen/common/xenoprof.c
-@@ -239,6 +239,7 @@ static int alloc_xenoprof_struct(
-     d->xenoprof->rawbuf = alloc_xenheap_pages(get_order_from_pages(npages), 0);
-     if ( d->xenoprof->rawbuf == NULL )
-     {
-+        xfree(d->xenoprof->vcpu);
-         xfree(d->xenoprof);
-         d->xenoprof = NULL;
-         return -ENOMEM;
-@@ -286,6 +287,7 @@ void free_xenoprof_pages(struct domain *d)
-         free_xenheap_pages(x->rawbuf, order);
-     }
- 
-+    xfree(x->vcpu);
-     xfree(x);
-     d->xenoprof = NULL;
- }
--- 
-2.1.4
-
-
-From b6594e1b3b0aad5487eb47024c4bc92a9f9f94b6 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 4 Nov 2015 17:06:26 +0000
-Subject: [PATCH] x86: rate-limit logging in do_xen{oprof,pmu}_op()
-
-Some of the sub-ops are acessible to all guests, and hence should be
-rate-limited. In the xenoprof case, just like for XSA-146, include them
-only in debug builds. Since the vPMU code is rather new, allow them to
-be always present, but downgrade them to (rate limited) guest messages.
-
-This is XSA-152.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
----
- xen/common/xenoprof.c | 9 +++------
- 1 file changed, 3 insertions(+), 6 deletions(-)
-
-diff --git a/xen/common/xenoprof.c b/xen/common/xenoprof.c
-index 4703142..abcb947 100644
---- a/xen/common/xenoprof.c
-+++ b/xen/common/xenoprof.c
-@@ -670,15 +670,13 @@ ret_t do_xenoprof_op(int op, XEN_GUEST_HANDLE_PARAM(void) arg)
-     
-     if ( (op < 0) || (op > XENOPROF_last_op) )
-     {
--        printk("xenoprof: invalid operation %d for domain %d\n",
--               op, current->domain->domain_id);
-+        gdprintk(XENLOG_DEBUG, "invalid operation %d\n", op);
-         return -EINVAL;
-     }
- 
-     if ( !NONPRIV_OP(op) && (current->domain != xenoprof_primary_profiler) )
-     {
--        printk("xenoprof: dom %d denied privileged operation %d\n",
--               current->domain->domain_id, op);
-+        gdprintk(XENLOG_DEBUG, "denied privileged operation %d\n", op);
-         return -EPERM;
-     }
- 
-@@ -901,8 +899,7 @@ ret_t do_xenoprof_op(int op, XEN_GUEST_HANDLE_PARAM(void) arg)
-     spin_unlock(&xenoprof_lock);
- 
-     if ( ret < 0 )
--        printk("xenoprof: operation %d failed for dom %d (status : %d)\n",
--               op, current->domain->domain_id, ret);
-+        gdprintk(XENLOG_DEBUG, "operation %d failed: %d\n", op, ret);
- 
-     return ret;
- }
--- 
-2.1.4
-
-
-From 0a758301482250a5901795aeaa11a77aeb9d4e9d Mon Sep 17 00:00:00 2001
+From 7ac6742207efff87df9331f681d86175c0ed01c6 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Wed, 4 Nov 2015 17:06:26 +0000
+Date: Thu, 7 Apr 2016 09:42:41 -0500
 Subject: [PATCH] libxl: adjust PoD target by memory fudge, too
 
 PoD guests need to balloon at least as far as required by PoD, or risk
@@ -1489,1569 +1018,22 @@ This is XSA-153.
 
 Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
 ---
- tools/libxl/libxl.c     | 2 +-
- tools/libxl/libxl_dom.c | 9 ++++++++-
- 2 files changed, 9 insertions(+), 2 deletions(-)
+ tools/libxl/libxl_dom.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
-index 261184e..17afae5 100644
---- a/tools/libxl/libxl.c
-+++ b/tools/libxl/libxl.c
-@@ -4134,7 +4134,7 @@ retry_transaction:
- 
-     new_target_memkb -= videoram;
-     rc = xc_domain_set_pod_target(ctx->xch, domid,
--            new_target_memkb / 4, NULL, NULL, NULL);
-+            (new_target_memkb + LIBXL_MAXMEM_CONSTANT) / 4, NULL, NULL, NULL);
-     if (rc != 0) {
-         LIBXL__LOG_ERRNO(ctx, LIBXL__LOG_ERROR,
-                 "xc_domain_set_pod_target domid=%d, memkb=%d "
 diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
-index 69e6088..bb5b5a7 100644
+index 978a1eb..62a394f3 100644
 --- a/tools/libxl/libxl_dom.c
 +++ b/tools/libxl/libxl_dom.c
-@@ -270,6 +270,7 @@ int libxl__build_post(libxl__gc *gc, uint32_t domid,
-     xs_transaction_t t;
-     char **ents, **hvm_ents;
-     int i, rc;
-+    int64_t mem_target_fudge;
- 
-     rc = libxl_domain_sched_params_set(CTX, domid, &info->sched_params);
-     if (rc)
-@@ -286,11 +287,17 @@ int libxl__build_post(libxl__gc *gc, uint32_t domid,
-     if (info->cpuid != NULL)
-         libxl_cpuid_set(ctx, domid, info->cpuid);
- 
-+    mem_target_fudge =
-+        (info->type == LIBXL_DOMAIN_TYPE_HVM &&
-+         info->max_memkb > info->target_memkb)
-+        ? LIBXL_MAXMEM_CONSTANT : 0;
+@@ -291,7 +291,7 @@ int libxl__build_post(libxl__gc *gc, uint32_t domid,
+         (info->type == LIBXL_DOMAIN_TYPE_HVM &&
+          info->max_memkb > info->target_memkb)
+         ? LIBXL_MAXMEM_CONSTANT : 0;
+-
 +    
      ents = libxl__calloc(gc, 12 + (info->max_vcpus * 2) + 2, sizeof(char *));
      ents[0] = "memory/static-max";
      ents[1] = GCSPRINTF("%"PRId64, info->max_memkb);
-     ents[2] = "memory/target";
--    ents[3] = GCSPRINTF("%"PRId64, info->target_memkb - info->video_memkb);
-+    ents[3] = GCSPRINTF("%"PRId64, info->target_memkb - info->video_memkb
-+                        - mem_target_fudge);
-     ents[4] = "memory/videoram";
-     ents[5] = GCSPRINTF("%"PRId64, info->video_memkb);
-     ents[6] = "domid";
 -- 
-2.1.4
-
-
-From d79e8e5199201f0cd26d3184f7e0c71b38fd0a47 Mon Sep 17 00:00:00 2001
-From: David Vrabel <david.vrabel@citrix.com>
-Date: Fri, 20 Nov 2015 11:59:05 -0500
-Subject: [PATCH] xen: Add RING_COPY_REQUEST()
-
-Using RING_GET_REQUEST() on a shared ring is easy to use incorrectly
-(i.e., by not considering that the other end may alter the data in the
-shared ring while it is being inspected).  Safe usage of a request
-generally requires taking a local copy.
-
-Provide a RING_COPY_REQUEST() macro to use instead of
-RING_GET_REQUEST() and an open-coded memcpy().  This takes care of
-ensuring that the copy is done correctly regardless of any possible
-compiler optimizations.
-
-Use a volatile source to prevent the compiler from reordering or
-omitting the copy.
-
-This is part of XSA155.
-
-Signed-off-by: David Vrabel <david.vrabel@citrix.com>
-Signed-off-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
----
- xen/include/public/io/ring.h | 14 ++++++++++++++
- 1 file changed, 14 insertions(+)
-
-diff --git a/xen/include/public/io/ring.h b/xen/include/public/io/ring.h
-index 73e13d7..a9fb394 100644
---- a/xen/include/public/io/ring.h
-+++ b/xen/include/public/io/ring.h
-@@ -212,6 +212,20 @@ typedef struct __name##_back_ring __name##_back_ring_t
- #define RING_GET_REQUEST(_r, _idx)                                      \
-     (&((_r)->sring->ring[((_idx) & (RING_SIZE(_r) - 1))].req))
- 
-+/*
-+ * Get a local copy of a request.
-+ *
-+ * Use this in preference to RING_GET_REQUEST() so all processing is
-+ * done on a local copy that cannot be modified by the other end.
-+ *
-+ * Note that https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58145 may cause this
-+ * to be ineffective where _req is a struct which consists of only bitfields.
-+ */
-+#define RING_COPY_REQUEST(_r, _idx, _req) do {				\
-+	/* Use volatile to force the copy into _req. */			\
-+	*(_req) = *(volatile typeof(_req))RING_GET_REQUEST(_r, _idx);	\
-+} while (0)
-+
- #define RING_GET_RESPONSE(_r, _idx)                                     \
-     (&((_r)->sring->ring[((_idx) & (RING_SIZE(_r) - 1))].rsp))
- 
--- 
-2.1.4
-
-
-From 7b2d8f4d36d2131b01317918174e98ca95668176 Mon Sep 17 00:00:00 2001
-From: Jason Andryuk <andryuk@aero.org>
-Date: Fri, 16 May 2014 16:48:16 -0400
-Subject: [PATCH] libvchan: Make raw_get_{data_ready, buffer_space} match
-
-For writing into a vchan, raw_get_buffer_space used >, allowing the full
-ring size to be written.  On the read side, raw_get_data_ready compared
-the ring size with >=.  This mismatch means a completely filled buffer
-cannot be read.  Fix this by making the size checks identical.
-
-Signed-off-by: Jason Andryuk <andryuk@aero.org>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- tools/libvchan/io.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/tools/libvchan/io.c b/tools/libvchan/io.c
-index 804c63c..6e6e239 100644
---- a/tools/libvchan/io.c
-+++ b/tools/libvchan/io.c
-@@ -118,7 +118,7 @@ static inline int send_notify(struct libxenvchan *ctrl, uint8_t bit)
- static inline int raw_get_data_ready(struct libxenvchan *ctrl)
- {
- 	uint32_t ready = rd_prod(ctrl) - rd_cons(ctrl);
--	if (ready >= rd_ring_size(ctrl))
-+	if (ready > rd_ring_size(ctrl))
- 		/* We have no way to return errors.  Locking up the ring is
- 		 * better than the alternatives. */
- 		return 0;
--- 
-2.1.4
-
-
-From b08d8b2ff92e5b67496c300c3cc643f703df75bc Mon Sep 17 00:00:00 2001
-From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-Date: Fri, 20 Nov 2015 12:22:14 -0500
-Subject: [PATCH] libvchan: Read prod/cons only once.
-
-We must ensure that the prod/cons are only read once and that
-the compiler won't try to optimize the reads. That is split
-the read of these in multiple instructions influencing later
-branch code. As such insert barriers when fetching the cons
-and prod index.
-
-This is part of XSA155.
-
-Signed-off-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
----
- tools/libvchan/io.c | 2 ++
- 1 file changed, 2 insertions(+)
-
-diff --git a/tools/libvchan/io.c b/tools/libvchan/io.c
-index 6e6e239..bcb29dd 100644
---- a/tools/libvchan/io.c
-+++ b/tools/libvchan/io.c
-@@ -118,6 +118,7 @@ static inline int send_notify(struct libxenvchan *ctrl, uint8_t bit)
- static inline int raw_get_data_ready(struct libxenvchan *ctrl)
- {
- 	uint32_t ready = rd_prod(ctrl) - rd_cons(ctrl);
-+	xen_mb(); /* Ensure 'ready' is read only once. */
- 	if (ready > rd_ring_size(ctrl))
- 		/* We have no way to return errors.  Locking up the ring is
- 		 * better than the alternatives. */
-@@ -159,6 +160,7 @@ int libxenvchan_data_ready(struct libxenvchan *ctrl)
- static inline int raw_get_buffer_space(struct libxenvchan *ctrl)
- {
- 	uint32_t ready = wr_ring_size(ctrl) - (wr_prod(ctrl) - wr_cons(ctrl));
-+	xen_mb(); /* Ensure 'ready' is read only once. */
- 	if (ready > wr_ring_size(ctrl))
- 		/* We have no way to return errors.  Locking up the ring is
- 		 * better than the alternatives. */
--- 
-2.1.4
-
-
-From 2d5890b91e2d157f8d86693986c698b337826fec Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Mon, 9 Nov 2015 16:55:19 +0000
-Subject: [PATCH] x86/HVM: always intercept #AC and #DB
-
-Both being benign exceptions, and both being possible to get triggered
-by exception delivery, this is required to prevent a guest from locking
-up a CPU (resulting from no other VM exits occurring once getting into
-such a loop).
-
-The specific scenarios:
-
-1) #AC may be raised during exception delivery if the handler is set to
-be a ring-3 one by a 32-bit guest, and the stack is misaligned.
-
-2) #DB may be raised during exception delivery when a breakpoint got
-placed on a data structure involved in delivering the exception. This
-can result in an endless loop when a 64-bit guest uses a non-zero IST
-for the vector 1 IDT entry, but even without use of IST the time it
-takes until a contributory fault would get raised (results depending
-on the handler) may be quite long.
-
-This is XSA-156.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Tested-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/arch/x86/hvm/svm/svm.c    | 15 +++++++++++----
- xen/arch/x86/hvm/vmx/vmx.c    | 22 +++++++++++-----------
- xen/include/asm-x86/hvm/hvm.h |  5 ++++-
- 3 files changed, 26 insertions(+), 16 deletions(-)
-
-diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
-index db40c84..e21084d 100644
---- a/xen/arch/x86/hvm/svm/svm.c
-+++ b/xen/arch/x86/hvm/svm/svm.c
-@@ -941,10 +941,11 @@ static void svm_do_resume(struct vcpu *v)
-         unlikely(v->arch.hvm_vcpu.debug_state_latch != debug_state) )
-     {
-         uint32_t intercepts = vmcb_get_exception_intercepts(vmcb);
--        uint32_t mask = (1U << TRAP_debug) | (1U << TRAP_int3);
-+
-         v->arch.hvm_vcpu.debug_state_latch = debug_state;
-         vmcb_set_exception_intercepts(
--            vmcb, debug_state ? (intercepts | mask) : (intercepts & ~mask));
-+            vmcb, debug_state ? (intercepts | (1U << TRAP_int3))
-+                              : (intercepts & ~(1U << TRAP_int3)));
-     }
- 
-     if ( v->arch.hvm_svm.launch_core != smp_processor_id() )
-@@ -2225,8 +2226,9 @@ void svm_vmexit_handler(struct cpu_user_regs *regs)
- 
-     case VMEXIT_EXCEPTION_DB:
-         if ( !v->domain->debugger_attached )
--            goto unexpected_exit_type;
--        domain_pause_for_debugger();
-+            hvm_inject_hw_exception(TRAP_debug, HVM_DELIVER_NO_ERROR_CODE);
-+        else
-+            domain_pause_for_debugger();
-         break;
- 
-     case VMEXIT_EXCEPTION_BP:
-@@ -2274,6 +2276,11 @@ void svm_vmexit_handler(struct cpu_user_regs *regs)
-         break;
-     }
- 
-+    case VMEXIT_EXCEPTION_AC:
-+        HVMTRACE_1D(TRAP, TRAP_alignment_check);
-+        hvm_inject_hw_exception(TRAP_alignment_check, vmcb->exitinfo1);
-+        break;
-+
-     case VMEXIT_EXCEPTION_UD:
-         svm_vmexit_ud_intercept(regs);
-         break;
-diff --git a/xen/arch/x86/hvm/vmx/vmx.c b/xen/arch/x86/hvm/vmx/vmx.c
-index 35b4935..ced3092 100644
---- a/xen/arch/x86/hvm/vmx/vmx.c
-+++ b/xen/arch/x86/hvm/vmx/vmx.c
-@@ -1132,16 +1132,10 @@ static void vmx_update_host_cr3(struct vcpu *v)
- 
- void vmx_update_debug_state(struct vcpu *v)
- {
--    unsigned long mask;
--
--    mask = 1u << TRAP_int3;
--    if ( !cpu_has_monitor_trap_flag )
--        mask |= 1u << TRAP_debug;
--
-     if ( v->arch.hvm_vcpu.debug_state_latch )
--        v->arch.hvm_vmx.exception_bitmap |= mask;
-+        v->arch.hvm_vmx.exception_bitmap |= 1U << TRAP_int3;
-     else
--        v->arch.hvm_vmx.exception_bitmap &= ~mask;
-+        v->arch.hvm_vmx.exception_bitmap &= ~(1U << TRAP_int3);
- 
-     vmx_vmcs_enter(v);
-     vmx_update_exception_bitmap(v);
-@@ -2678,9 +2672,10 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
-             __vmread(EXIT_QUALIFICATION, &exit_qualification);
-             HVMTRACE_1D(TRAP_DEBUG, exit_qualification);
-             write_debugreg(6, exit_qualification | 0xffff0ff0);
--            if ( !v->domain->debugger_attached || cpu_has_monitor_trap_flag )
--                goto exit_and_crash;
--            domain_pause_for_debugger();
-+            if ( !v->domain->debugger_attached )
-+                hvm_inject_hw_exception(vector, HVM_DELIVER_NO_ERROR_CODE);
-+            else
-+                domain_pause_for_debugger();
-             break;
-         case TRAP_int3: 
-         {
-@@ -2745,6 +2740,11 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
- 
-             hvm_inject_page_fault(regs->error_code, exit_qualification);
-             break;
-+        case TRAP_alignment_check:
-+            HVMTRACE_1D(TRAP, vector);
-+            __vmread(VM_EXIT_INTR_ERROR_CODE, &ecode);
-+            hvm_inject_hw_exception(vector, ecode);
-+            break;
-         case TRAP_nmi:
-             if ( (intr_info & INTR_INFO_INTR_TYPE_MASK) !=
-                  (X86_EVENTTYPE_NMI << 8) )
-diff --git a/xen/include/asm-x86/hvm/hvm.h b/xen/include/asm-x86/hvm/hvm.h
-index 974bcc0..d22c419 100644
---- a/xen/include/asm-x86/hvm/hvm.h
-+++ b/xen/include/asm-x86/hvm/hvm.h
-@@ -393,7 +393,10 @@ static inline bool_t hvm_vcpu_has_smep(void)
- })
- 
- /* These exceptions must always be intercepted. */
--#define HVM_TRAP_MASK ((1U << TRAP_machine_check) | (1U << TRAP_invalid_op))
-+#define HVM_TRAP_MASK ((1U << TRAP_debug)           | \
-+                       (1U << TRAP_invalid_op)      | \
-+                       (1U << TRAP_alignment_check) | \
-+                       (1U << TRAP_machine_check))
- 
- /*
-  * x86 event types. This enumeration is valid for:
--- 
-2.1.4
-
-
-From 7f7bcab8c1d3bf557cdfa93b538389164af0befa Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 25 Nov 2015 14:32:55 +0000
-Subject: [PATCH] memory: split and tighten maximum order permitted in memops
-
-Introduce and enforce separate limits for ordinary DomU, DomU with
-pass-through device(s), control domain, and hardware domain.
-
-The DomU defaults were determined based on what so far was allowed by
-multipage_allocation_permitted().
-
-The x86 hwdom default was chosen based on linux-2.6.18-xen.hg c/s
-1102:82782f1361a9 indicating 2Mb is not enough, plus some slack.
-
-The ARM hwdom default was chosen to allow 2Mb (order-9) mappings, plus
-a little bit of slack.
-
-This is XSA-158.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- docs/misc/xen-command-line.markdown | 11 ++++++
- xen/common/memory.c                 | 72 ++++++++++++++++++++++++++++---------
- xen/include/asm-arm/config.h        |  4 +++
- xen/include/asm-arm/iocap.h         |  4 ---
- xen/include/asm-x86/config.h        |  5 ++-
- xen/include/asm-x86/iocap.h         |  5 ---
- 6 files changed, 74 insertions(+), 27 deletions(-)
-
-diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
-index 2ebb7c6..3d2ebc7 100644
---- a/docs/misc/xen-command-line.markdown
-+++ b/docs/misc/xen-command-line.markdown
-@@ -653,6 +653,17 @@ which data structures should be deliberately allocated in low memory,
- so the crash kernel may find find them.  Should be used in combination
- with **crashinfo_maxaddr**.
- 
-+### memop-max-order
-+> `= [<domU>][,[<ctldom>][,[<hwdom>][,<ptdom>]]]`
-+
-+> x86 default: `9,18,12,12`
-+> ARM default: `9,18,10,10`
-+
-+Change the maximum order permitted for allocation (or allocation-like)
-+requests issued by the various kinds of domains (in this order:
-+ordinary DomU, control domain, hardware domain, and - when supported
-+by the platform - DomU with pass-through device assigned).
-+
- ### max\_cstate
- > `= <integer>`
- 
-diff --git a/xen/common/memory.c b/xen/common/memory.c
-index 38f79b3..86d7bf9 100644
---- a/xen/common/memory.c
-+++ b/xen/common/memory.c
-@@ -46,6 +46,50 @@ struct memop_args {
-     int          preempted;  /* Was the hypercall preempted? */
- };
- 
-+#ifndef CONFIG_CTLDOM_MAX_ORDER
-+#define CONFIG_CTLDOM_MAX_ORDER CONFIG_PAGEALLOC_MAX_ORDER
-+#endif
-+#ifndef CONFIG_PTDOM_MAX_ORDER
-+#define CONFIG_PTDOM_MAX_ORDER CONFIG_HWDOM_MAX_ORDER
-+#endif
-+
-+static unsigned int __read_mostly domu_max_order = CONFIG_DOMU_MAX_ORDER;
-+static unsigned int __read_mostly ctldom_max_order = CONFIG_CTLDOM_MAX_ORDER;
-+static unsigned int __read_mostly hwdom_max_order = CONFIG_HWDOM_MAX_ORDER;
-+#ifdef HAS_PASSTHROUGH
-+static unsigned int __read_mostly ptdom_max_order = CONFIG_PTDOM_MAX_ORDER;
-+#else
-+# define ptdom_max_order domu_max_order
-+#endif
-+static void __init parse_max_order(const char *s)
-+{
-+    if ( *s != ',' )
-+        domu_max_order = simple_strtoul(s, &s, 0);
-+    if ( *s == ',' && *++s != ',' )
-+        ctldom_max_order = simple_strtoul(s, &s, 0);
-+    if ( *s == ',' && *++s != ',' )
-+        hwdom_max_order = simple_strtoul(s, &s, 0);
-+#ifdef HAS_PASSTHROUGH
-+    if ( *s == ',' && *++s != ',' )
-+        ptdom_max_order = simple_strtoul(s, &s, 0);
-+#endif
-+}
-+custom_param("memop-max-order", parse_max_order);
-+
-+static unsigned int max_order(const struct domain *d)
-+{
-+    unsigned int order = cache_flush_permitted(d) ? domu_max_order
-+                                                  : ptdom_max_order;
-+
-+    if ( is_control_domain(d) && order < ctldom_max_order )
-+        order = ctldom_max_order;
-+
-+    if ( is_hardware_domain(d) && order < hwdom_max_order )
-+        order = hwdom_max_order;
-+
-+    return min(order, MAX_ORDER + 0U);
-+}
-+
- static void increase_reservation(struct memop_args *a)
- {
-     struct page_info *page;
-@@ -58,7 +102,7 @@ static void increase_reservation(struct memop_args *a)
-                                      a->nr_extents-1) )
-         return;
- 
--    if ( !multipage_allocation_permitted(current->domain, a->extent_order) )
-+    if ( a->extent_order > max_order(current->domain) )
-         return;
- 
-     for ( i = a->nr_done; i < a->nr_extents; i++ )
-@@ -103,8 +147,8 @@ static void populate_physmap(struct memop_args *a)
-                                      a->nr_extents-1) )
-         return;
- 
--    if ( a->memflags & MEMF_populate_on_demand ? a->extent_order > MAX_ORDER :
--         !multipage_allocation_permitted(current->domain, a->extent_order) )
-+    if ( a->extent_order > (a->memflags & MEMF_populate_on_demand ? MAX_ORDER :
-+                            max_order(current->domain)) )
-         return;
- 
-     for ( i = a->nr_done; i < a->nr_extents; i++ )
-@@ -263,7 +307,7 @@ static void decrease_reservation(struct memop_args *a)
- 
-     if ( !guest_handle_subrange_okay(a->extent_list, a->nr_done,
-                                      a->nr_extents-1) ||
--         a->extent_order > MAX_ORDER )
-+         a->extent_order > max_order(current->domain) )
-         return;
- 
-     for ( i = a->nr_done; i < a->nr_extents; i++ )
-@@ -328,13 +372,17 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
-     if ( copy_from_guest(&exch, arg, 1) )
-         return -EFAULT;
- 
-+    if ( max(exch.in.extent_order, exch.out.extent_order) >
-+         max_order(current->domain) )
-+    {
-+        rc = -EPERM;
-+        goto fail_early;
-+    }
-+
-     /* Various sanity checks. */
-     if ( (exch.nr_exchanged > exch.in.nr_extents) ||
-          /* Input and output domain identifiers match? */
-          (exch.in.domid != exch.out.domid) ||
--         /* Extent orders are sensible? */
--         (exch.in.extent_order > MAX_ORDER) ||
--         (exch.out.extent_order > MAX_ORDER) ||
-          /* Sizes of input and output lists do not overflow a long? */
-          ((~0UL >> exch.in.extent_order) < exch.in.nr_extents) ||
-          ((~0UL >> exch.out.extent_order) < exch.out.nr_extents) ||
-@@ -353,16 +401,6 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
-         goto fail_early;
-     }
- 
--    /* Only privileged guests can allocate multi-page contiguous extents. */
--    if ( !multipage_allocation_permitted(current->domain,
--                                         exch.in.extent_order) ||
--         !multipage_allocation_permitted(current->domain,
--                                         exch.out.extent_order) )
--    {
--        rc = -EPERM;
--        goto fail_early;
--    }
--
-     if ( exch.in.extent_order <= exch.out.extent_order )
-     {
-         in_chunk_order  = exch.out.extent_order - exch.in.extent_order;
-diff --git a/xen/include/asm-arm/config.h b/xen/include/asm-arm/config.h
-index 5b7b1a8..26805cb 100644
---- a/xen/include/asm-arm/config.h
-+++ b/xen/include/asm-arm/config.h
-@@ -37,6 +37,10 @@
- 
- #define CONFIG_VIDEO 1
- 
-+#define CONFIG_PAGEALLOC_MAX_ORDER 18
-+#define CONFIG_DOMU_MAX_ORDER      9
-+#define CONFIG_HWDOM_MAX_ORDER     10
-+
- #define OPT_CONSOLE_STR "dtuart"
- 
- #ifdef MAX_PHYS_CPUS
-diff --git a/xen/include/asm-arm/iocap.h b/xen/include/asm-arm/iocap.h
-index 22cfa41..276fefb 100644
---- a/xen/include/asm-arm/iocap.h
-+++ b/xen/include/asm-arm/iocap.h
-@@ -4,10 +4,6 @@
- #define cache_flush_permitted(d)                        \
-     (!rangeset_is_empty((d)->iomem_caps))
- 
--#define multipage_allocation_permitted(d, order)        \
--    (((order) <= 9) || /* allow 2MB superpages */       \
--     !rangeset_is_empty((d)->iomem_caps))
--
- #endif
- 
- /*
-diff --git a/xen/include/asm-x86/config.h b/xen/include/asm-x86/config.h
-index 3f7f852..1fdcb5b 100644
---- a/xen/include/asm-x86/config.h
-+++ b/xen/include/asm-x86/config.h
-@@ -29,9 +29,12 @@
- #define CONFIG_NUMA 1
- #define CONFIG_DISCONTIGMEM 1
- #define CONFIG_NUMA_EMU 1
--#define CONFIG_PAGEALLOC_MAX_ORDER (2 * PAGETABLE_ORDER)
- #define CONFIG_DOMAIN_PAGE 1
- 
-+#define CONFIG_PAGEALLOC_MAX_ORDER (2 * PAGETABLE_ORDER)
-+#define CONFIG_DOMU_MAX_ORDER      PAGETABLE_ORDER
-+#define CONFIG_HWDOM_MAX_ORDER     12
-+
- /* Intel P4 currently has largest cache line (L2 line size is 128 bytes). */
- #define CONFIG_X86_L1_CACHE_SHIFT 7
- 
-diff --git a/xen/include/asm-x86/iocap.h b/xen/include/asm-x86/iocap.h
-index 591ae17..eee4722 100644
---- a/xen/include/asm-x86/iocap.h
-+++ b/xen/include/asm-x86/iocap.h
-@@ -18,9 +18,4 @@
-     (!rangeset_is_empty((d)->iomem_caps) ||             \
-      !rangeset_is_empty((d)->arch.ioport_caps))
- 
--#define multipage_allocation_permitted(d, order)        \
--    (((order) <= 9) || /* allow 2MB superpages */       \
--     !rangeset_is_empty((d)->iomem_caps) ||             \
--     !rangeset_is_empty((d)->arch.ioport_caps))
--
- #endif /* __X86_IOCAP_H__ */
--- 
-2.1.4
-
-
-From 75463cbd9c2f5bd282725a04f128d725b42660d4 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Mon, 14 Dec 2015 12:21:02 +0000
-Subject: [PATCH] memory: fix XSA-158 fix
-
-For one the uses of domu_max_order and ptdom_max_order were swapped.
-
-And then gcc warns about an unused result of a __must_check function
-in the control part of a conditional expression when both other
-expressions can be determined by the compiler to produce the same value
-(see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68039), which happens
-when HAS_PASSTHROUGH is undefined (i.e. for ARM on 4.4 and older).
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- xen/common/memory.c | 10 ++++++----
- 1 file changed, 6 insertions(+), 4 deletions(-)
-
-diff --git a/xen/common/memory.c b/xen/common/memory.c
-index 86d7bf9..ed3f481 100644
---- a/xen/common/memory.c
-+++ b/xen/common/memory.c
-@@ -58,8 +58,6 @@ static unsigned int __read_mostly ctldom_max_order = CONFIG_CTLDOM_MAX_ORDER;
- static unsigned int __read_mostly hwdom_max_order = CONFIG_HWDOM_MAX_ORDER;
- #ifdef HAS_PASSTHROUGH
- static unsigned int __read_mostly ptdom_max_order = CONFIG_PTDOM_MAX_ORDER;
--#else
--# define ptdom_max_order domu_max_order
- #endif
- static void __init parse_max_order(const char *s)
- {
-@@ -78,8 +76,12 @@ custom_param("memop-max-order", parse_max_order);
- 
- static unsigned int max_order(const struct domain *d)
- {
--    unsigned int order = cache_flush_permitted(d) ? domu_max_order
--                                                  : ptdom_max_order;
-+    unsigned int order = domu_max_order;
-+
-+#ifdef HAS_PASSTHROUGH
-+    if ( cache_flush_permitted(d) && order < ptdom_max_order )
-+        order = ptdom_max_order;
-+#endif
- 
-     if ( is_control_domain(d) && order < ctldom_max_order )
-         order = ctldom_max_order;
--- 
-2.1.4
-
-
-From be42a669a71ebd0eca554457213c020b91637ed7 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Mon, 14 Dec 2015 12:27:06 +0000
-Subject: [PATCH] x86: don't leak ST(n)/XMMn values to domains first using them
-
-FNINIT doesn't alter these registers, and hence using it is
-insufficient to initialize a guest's initial state.
-
-This is XSA-165.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/arch/x86/domain.c | 11 +++++++++++
- xen/arch/x86/i387.c   | 31 +++++++++----------------------
- 2 files changed, 20 insertions(+), 22 deletions(-)
-
-diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
-index 062cff0..4efef9a 100644
---- a/xen/arch/x86/domain.c
-+++ b/xen/arch/x86/domain.c
-@@ -751,6 +751,17 @@ int arch_set_info_guest(
-         if ( v->arch.xsave_area )
-              v->arch.xsave_area->xsave_hdr.xstate_bv = XSTATE_FP_SSE;
-     }
-+    else if ( v->arch.xsave_area )
-+        memset(&v->arch.xsave_area->xsave_hdr, 0,
-+               sizeof(v->arch.xsave_area->xsave_hdr));
-+    else
-+    {
-+        typeof(v->arch.xsave_area->fpu_sse) *fpu_sse = v->arch.fpu_ctxt;
-+
-+        memset(fpu_sse, 0, sizeof(*fpu_sse));
-+        fpu_sse->fcw = FCW_DEFAULT;
-+        fpu_sse->mxcsr = MXCSR_DEFAULT;
-+    }
- 
-     if ( !compat )
-     {
-diff --git a/xen/arch/x86/i387.c b/xen/arch/x86/i387.c
-index a372e0b..58fb7b7 100644
---- a/xen/arch/x86/i387.c
-+++ b/xen/arch/x86/i387.c
-@@ -17,19 +17,6 @@
- #include <asm/xstate.h>
- #include <asm/asm_defns.h>
- 
--static void fpu_init(void)
--{
--    unsigned long val;
--    
--    asm volatile ( "fninit" );
--    if ( cpu_has_xmm )
--    {
--        /* load default value into MXCSR control/status register */
--        val = MXCSR_DEFAULT;
--        asm volatile ( "ldmxcsr %0" : : "m" (val) );
--    }
--}
--
- /*******************************/
- /*     FPU Restore Functions   */
- /*******************************/
-@@ -248,15 +235,8 @@ void vcpu_restore_fpu_lazy(struct vcpu *v)
- 
-     if ( cpu_has_xsave )
-         fpu_xrstor(v, XSTATE_LAZY);
--    else if ( v->fpu_initialised )
--    {
--        if ( cpu_has_fxsr )
--            fpu_fxrstor(v);
--        else
--            fpu_frstor(v);
--    }
-     else
--        fpu_init();
-+        fpu_fxrstor(v);
- 
-     v->fpu_initialised = 1;
-     v->fpu_dirtied = 1;
-@@ -317,7 +297,14 @@ int vcpu_init_fpu(struct vcpu *v)
-     else
-     {
-         v->arch.fpu_ctxt = _xzalloc(sizeof(v->arch.xsave_area->fpu_sse), 16);
--        if ( !v->arch.fpu_ctxt )
-+        if ( v->arch.fpu_ctxt )
-+        {
-+            typeof(v->arch.xsave_area->fpu_sse) *fpu_sse = v->arch.fpu_ctxt;
-+
-+            fpu_sse->fcw = FCW_DEFAULT;
-+            fpu_sse->mxcsr = MXCSR_DEFAULT;
-+        }
-+        else
-         {
-             rc = -ENOMEM;
-             goto done;
--- 
-2.1.4
-
-
-From 3da10464a6fecde6bf1e6f5d596c1a3b1d55f687 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Mon, 14 Dec 2015 12:28:23 +0000
-Subject: [PATCH] x86/HVM: avoid reading ioreq state more than once
-
-Otherwise, especially when the compiler chooses to translate the
-switch() to a jump table, unpredictable behavior (and in the jump table
-case arbitrary code execution) can result.
-
-This is XSA-166.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- xen/arch/x86/hvm/hvm.c | 11 ++++++-----
- 1 file changed, 6 insertions(+), 5 deletions(-)
-
-diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
-index 86ae18a..26a5927 100644
---- a/xen/arch/x86/hvm/hvm.c
-+++ b/xen/arch/x86/hvm/hvm.c
-@@ -348,6 +348,7 @@ void hvm_migrate_pirqs(struct vcpu *v)
- void hvm_do_resume(struct vcpu *v)
- {
-     ioreq_t *p;
-+    unsigned int state;
- 
-     check_wakeup_from_wait();
- 
-@@ -358,9 +359,10 @@ void hvm_do_resume(struct vcpu *v)
-     if ( !(p = get_ioreq(v)) )
-         goto check_inject_trap;
- 
--    while ( p->state != STATE_IOREQ_NONE )
-+    while ( (state = p->state) != STATE_IOREQ_NONE )
-     {
--        switch ( p->state )
-+        rmb();
-+        switch ( state )
-         {
-         case STATE_IORESP_READY: /* IORESP_READY -> NONE */
-             hvm_io_assist(p);
-@@ -368,11 +370,10 @@ void hvm_do_resume(struct vcpu *v)
-         case STATE_IOREQ_READY:  /* IOREQ_{READY,INPROCESS} -> IORESP_READY */
-         case STATE_IOREQ_INPROCESS:
-             wait_on_xen_event_channel(v->arch.hvm_vcpu.xen_port,
--                                      (p->state != STATE_IOREQ_READY) &&
--                                      (p->state != STATE_IOREQ_INPROCESS));
-+                                      p->state != state);
-             break;
-         default:
--            gdprintk(XENLOG_ERR, "Weird HVM iorequest state %d.\n", p->state);
-+            gdprintk(XENLOG_ERR, "Weird HVM iorequest state %u\n", state);
-             domain_crash(v->domain);
-             return; /* bail */
-         }
--- 
-2.1.4
-
-
-From e6a2a2439d7a1b31fc1ce4dcefbd5aa19c79bc6b Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 13 Jan 2016 15:35:58 +0000
-Subject: [PATCH] x86/mm: PV superpage handling lacks sanity checks
-
-MMUEXT_{,UN}MARK_SUPER fail to check the input MFN for validity before
-dereferencing pointers into the superpage frame table.
-
-get_superpage() has a similar issue.
-
-This is XSA-167.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- xen/arch/x86/mm.c | 29 +++++++----------------------
- 1 file changed, 7 insertions(+), 22 deletions(-)
-
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index b14ba81..37b3ec1 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -2566,6 +2566,9 @@ int get_superpage(unsigned long mfn, struct domain *d)
- 
-     ASSERT(opt_allow_superpage);
- 
-+    if ( !mfn_valid(mfn | (L1_PAGETABLE_ENTRIES - 1)) )
-+        return -EINVAL;
-+
-     spage = mfn_to_spage(mfn);
-     y = spage->type_info;
-     do {
-@@ -3320,14 +3323,6 @@ long do_mmuext_op(
-             unsigned long mfn;
-             struct spage_info *spage;
- 
--            mfn = op.arg1.mfn;
--            if ( mfn & (L1_PAGETABLE_ENTRIES-1) )
--            {
--                MEM_LOG("Unaligned superpage reference mfn %lx", mfn);
--                okay = 0;
--                break;
--            }
--
-             if ( !opt_allow_superpage )
-             {
-                 MEM_LOG("Superpages disallowed");
-@@ -3336,16 +3331,6 @@ long do_mmuext_op(
-                 break;
-             }
- 
--            spage = mfn_to_spage(mfn);
--            okay = (mark_superpage(spage, d) >= 0);
--            break;
--        }
--
--        case MMUEXT_UNMARK_SUPER:
--        {
--            unsigned long mfn;
--            struct spage_info *spage;
--
-             mfn = op.arg1.mfn;
-             if ( mfn & (L1_PAGETABLE_ENTRIES-1) )
-             {
-@@ -3354,16 +3339,16 @@ long do_mmuext_op(
-                 break;
-             }
- 
--            if ( !opt_allow_superpage )
-+            if ( !mfn_valid(mfn | (L1_PAGETABLE_ENTRIES - 1)) )
-             {
--                MEM_LOG("Superpages disallowed");
-                 okay = 0;
--                rc = -ENOSYS;
-                 break;
-             }
- 
-             spage = mfn_to_spage(mfn);
--            okay = (unmark_superpage(spage) >= 0);
-+            okay = ((op.cmd == MMUEXT_MARK_SUPER
-+                    ? mark_superpage(spage, d)
-+                    : unmark_superpage(spage)) >= 0);
-             break;
-         }
- 
--- 
-2.1.4
-
-
-From 53bddb47dad6fd7f96a0df8f62ff0b2b8908ce25 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 13 Jan 2016 15:36:49 +0000
-Subject: [PATCH] x86/VMX: prevent INVVPID failure due to non-canonical guest
- address
-
-While INVLPG (and on SVM INVLPGA) don't fault on non-canonical
-addresses, INVVPID fails (in the "individual address" case) when passed
-such an address.
-
-Since such intercepted INVLPG are effectively no-ops anyway, don't fix
-this in vmx_invlpg_intercept(), but instead have paging_invlpg() never
-return true in such a case.
-
-This is XSA-168.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- xen/include/asm-x86/paging.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/xen/include/asm-x86/paging.h b/xen/include/asm-x86/paging.h
-index 0a7c73c..ef14d52 100644
---- a/xen/include/asm-x86/paging.h
-+++ b/xen/include/asm-x86/paging.h
-@@ -239,7 +239,7 @@ paging_fault(unsigned long va, struct cpu_user_regs *regs)
-  * or 0 if it's safe not to do so. */
- static inline int paging_invlpg(struct vcpu *v, unsigned long va)
- {
--    return paging_get_hostmode(v)->invlpg(v, va);
-+    return is_canonical_address(va) && paging_get_hostmode(v)->invlpg(v, va);
- }
- 
- /* Translate a guest virtual address to the frame number that the
--- 
-2.1.4
-
-
-From 111c035693e9b6e5fcc1d805c422bbbb2d63cd73 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 13 Jan 2016 15:37:03 +0000
-Subject: [PATCH] x86: make debug output consistent in hvm_set_callback_via
-
-The unconditional printks in the switch statement of the
-hvm_set_callback_via function results in Xen log spam in non debug
-versions of Xen. The printks are for debug output only so conditionally
-compile the entire switch statement on debug versions of Xen only.
-
-This is XSA-169.
-
-Signed-off-by: Malcolm Crossley <malcolm.crossley@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- xen/arch/x86/hvm/irq.c | 4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
-
-diff --git a/xen/arch/x86/hvm/irq.c b/xen/arch/x86/hvm/irq.c
-index 5048c29..d39f246 100644
---- a/xen/arch/x86/hvm/irq.c
-+++ b/xen/arch/x86/hvm/irq.c
-@@ -370,7 +370,8 @@ void hvm_set_callback_via(struct domain *d, uint64_t via)
- 
-     spin_unlock(&d->arch.hvm_domain.irq_lock);
- 
--    dprintk(XENLOG_G_INFO, "Dom%u callback via changed to ", d->domain_id);
-+#ifndef NDEBUG
-+    printk(XENLOG_G_INFO "Dom%u callback via changed to ", d->domain_id);
-     switch ( via_type )
-     {
-     case HVMIRQ_callback_gsi:
-@@ -386,6 +387,7 @@ void hvm_set_callback_via(struct domain *d, uint64_t via)
-         printk("None\n");
-         break;
-     }
-+#endif
- }
- 
- struct hvm_intack hvm_vcpu_has_pending_irq(struct vcpu *v)
--- 
-2.1.4
-
-
-From a9809c107ac439bc67ddc417265cc35d07049c2d Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 25 Nov 2015 14:33:04 +0000
-Subject: [PATCH] memory: fix XENMEM_exchange error handling
-
-assign_pages() can fail due to the domain getting killed in parallel,
-which should not result in a hypervisor crash.
-
-Also delete a redundant put_gfn() - all relevant paths leading to the
-"fail" label already do this (and there are also paths where it was
-plain wrong). All of the put_gfn()-s got introduced by 51032ca058
-("Modify naming of queries into the p2m"), including the otherwise
-unneeded initializer for k (with even a kind of misleading comment -
-the compiler warning could actually have served as a hint that the use
-is wrong).
-
-This is XSA-159.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: Ian Campbell <ian.campbell@citrix.com>
----
- xen/common/memory.c | 11 ++++++-----
- 1 file changed, 6 insertions(+), 5 deletions(-)
-
-diff --git a/xen/common/memory.c b/xen/common/memory.c
-index ed3f481..63c0c99 100644
---- a/xen/common/memory.c
-+++ b/xen/common/memory.c
-@@ -365,7 +365,7 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
-     PAGE_LIST_HEAD(out_chunk_list);
-     unsigned long in_chunk_order, out_chunk_order;
-     xen_pfn_t     gpfn, gmfn, mfn;
--    unsigned long i, j, k = 0; /* gcc ... */
-+    unsigned long i, j, k;
-     unsigned int  memflags = 0;
-     long          rc = 0;
-     struct domain *d;
-@@ -596,11 +596,12 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
-  fail:
-     /* Reassign any input pages we managed to steal. */
-     while ( (page = page_list_remove_head(&in_chunk_list)) )
--    {
--        put_gfn(d, gmfn + k--);
-         if ( assign_pages(d, page, 0, MEMF_no_refcount) )
--            BUG();
--    }
-+        {
-+            BUG_ON(!d->is_dying);
-+            if ( test_and_clear_bit(_PGC_allocated, &page->count_info) )
-+                put_page(page);
-+        }
- 
-  dying:
-     rcu_unlock_domain(d);
--- 
-2.1.4
-
-
-From f762dd4d7258d8e02f1ea919dfaa19bb06d0ee17 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 18 Nov 2015 17:05:11 +0000
-Subject: [PATCH] libxl: Fix bootloader-related virtual memory leak on pv build
- failure
-
-The bootloader may call libxl__file_reference_map(), which mmap's the
-pv_kernel and pv_ramdisk into process memory.  This was only unmapped,
-however, on the success path of libxl__build_pv().  If there were a
-failure anywhere between libxl_bootloader.c:parse_bootloader_result()
-and the end of libxl__build_pv(), the calls to
-libxl__file_reference_unmap() would be skipped, leaking the mapped
-virtual memory.
-
-Ideally this would be fixed by adding the unmap calls to the
-destruction path for libxl__domain_build_state.  Unfortunately the
-lifetime of the libxl__domain_build_state is opaque, and it doesn't
-have a proper destruction path.  But, the only thing in it that isn't
-from the gc are these bootloader references, and they are only ever
-set for one libxl__domain_build_state, the one which is
-libxl__domain_create_state.build_state.
-
-So we can clean up in the exit path from libxl__domain_create_*, which
-always comes through domcreate_complete.
-
-Remove the now-redundant unmaps in libxl__build_pv's success path.
-
-Signed-off-by: George Dunlap <george.dunlap@citrix.com>
-Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
----
- tools/libxl/libxl_create.c | 8 +++-----
- tools/libxl/libxl_dom.c    | 3 ---
- 2 files changed, 3 insertions(+), 8 deletions(-)
-
-diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
-index e3350d5..6328adc 100644
---- a/tools/libxl/libxl_create.c
-+++ b/tools/libxl/libxl_create.c
-@@ -986,11 +986,6 @@ void libxl__xc_domain_restore_done(libxl__egc *egc, void *dcs_void,
-     }
- 
- out:
--    if (info->type == LIBXL_DOMAIN_TYPE_PV) {
--        libxl__file_reference_unmap(&state->pv_kernel);
--        libxl__file_reference_unmap(&state->pv_ramdisk);
--    }
--
-     esave = errno;
- 
-     flags = fcntl(fd, F_GETFL);
-@@ -1295,6 +1290,9 @@ static void domcreate_complete(libxl__egc *egc,
-     STATE_AO_GC(dcs->ao);
-     libxl_domain_config *const d_config = dcs->guest_config;
- 
-+    libxl__file_reference_unmap(&dcs->build_state.pv_kernel);
-+    libxl__file_reference_unmap(&dcs->build_state.pv_ramdisk);
-+    
-     if (!rc && d_config->b_info.exec_ssidref)
-         rc = xc_flask_relabel_domain(CTX->xch, dcs->guest_domid, d_config->b_info.exec_ssidref);
- 
-diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
-index bb5b5a7..62a394f3 100644
---- a/tools/libxl/libxl_dom.c
-+++ b/tools/libxl/libxl_dom.c
-@@ -451,9 +451,6 @@ int libxl__build_pv(libxl__gc *gc, uint32_t domid,
-         state->store_mfn = xc_dom_p2m_host(dom, dom->xenstore_pfn);
-     }
- 
--    libxl__file_reference_unmap(&state->pv_kernel);
--    libxl__file_reference_unmap(&state->pv_ramdisk);
--
-     ret = 0;
- out:
-     xc_dom_release(dom);
--- 
-2.1.4
-
-
-From a0e3a35e766599f8a5696d540fef162f1dec610e Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 25 Nov 2015 14:35:43 +0000
-Subject: [PATCH] x86/vPMU: document as unsupported
-
-This is XSA-163.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
----
- docs/misc/xen-command-line.markdown | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
-
-diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
-index 3d2ebc7..74999e3 100644
---- a/docs/misc/xen-command-line.markdown
-+++ b/docs/misc/xen-command-line.markdown
-@@ -1041,8 +1041,9 @@ feature is switched on on Intel processors supporting this feature.
- Note that if **watchdog** option is also specified vpmu will be turned off.
- 
- *Warning:*
--As the BTS virtualisation is not 100% safe and because of the nehalem quirk
--don't use the vpmu flag on production systems with Intel cpus!
-+As the virtualisation is not 100% safe, don't use the vpmu flag on
-+production systems (see Xen Security Advisory 163,
-+http://xenbits.xen.org/xsa/advisory-163.html)!
- 
- ### watchdog
- > `= force | <boolean>`
--- 
-2.1.4
-
-
-From 5b7d3c46e2ccbef5af491ffe9538496d839085ec Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:11:58 +0000
-Subject: [PATCH] x86/VMX: sanitize rIP before re-entering guest
-
-... to prevent guest user mode arranging for a guest crash (due to
-failed VM entry). (On the AMD system I checked, hardware is doing
-exactly the canonicalization being added here.)
-
-Note that fixing this in an architecturally correct way would be quite
-a bit more involved: Making the x86 instruction emulator check all
-branch targets for validity, plus dealing with invalid rIP resulting
-from update_guest_eip() or incoming directly during a VM exit. The only
-way to get the latter right would be by not having hardware do the
-injection.
-
-Note further that there are a two early returns from
-vmx_vmexit_handler(): One (through vmx_failed_vmentry()) leads to
-domain_crash() anyway, and the other covers real mode only and can
-neither occur with a non-canonical rIP nor result in an altered rIP,
-so we don't need to force those paths through the checking logic.
-
-This is XSA-170.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Tested-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/arch/x86/hvm/vmx/vmx.c | 37 ++++++++++++++++++++++++++++++++++++-
- 1 file changed, 36 insertions(+), 1 deletion(-)
-
-diff --git a/xen/arch/x86/hvm/vmx/vmx.c b/xen/arch/x86/hvm/vmx/vmx.c
-index ced3092..4cef768 100644
---- a/xen/arch/x86/hvm/vmx/vmx.c
-+++ b/xen/arch/x86/hvm/vmx/vmx.c
-@@ -2512,7 +2512,7 @@ void vmx_handle_EOI_induced_exit(struct vlapic *vlapic, int vector)
- void vmx_vmexit_handler(struct cpu_user_regs *regs)
- {
-     unsigned long exit_qualification, exit_reason, idtv_info, intr_info = 0;
--    unsigned int vector = 0;
-+    unsigned int vector = 0, mode;
-     struct vcpu *v = current;
- 
-     __vmread(GUEST_RIP,    &regs->rip);
-@@ -3048,6 +3048,41 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
- out:
-     if ( nestedhvm_vcpu_in_guestmode(v) )
-         nvmx_idtv_handling();
-+
-+    /*
-+     * VM entry will fail (causing the guest to get crashed) if rIP (and
-+     * rFLAGS, but we don't have an issue there) doesn't meet certain
-+     * criteria. As we must not allow less than fully privileged mode to have
-+     * such an effect on the domain, we correct rIP in that case (accepting
-+     * this not being architecturally correct behavior, as the injected #GP
-+     * fault will then not see the correct [invalid] return address).
-+     * And since we know the guest will crash, we crash it right away if it
-+     * already is in most privileged mode.
-+     */
-+    mode = vmx_guest_x86_mode(v);
-+    if ( mode == 8 ? !is_canonical_address(regs->rip)
-+                   : regs->rip != regs->_eip )
-+    {
-+        struct segment_register ss;
-+
-+        gdprintk(XENLOG_WARNING, "Bad rIP %lx for mode %u\n", regs->rip, mode);
-+
-+        vmx_get_segment_register(v, x86_seg_ss, &ss);
-+        if ( ss.attr.fields.dpl )
-+        {
-+            __vmread(VM_ENTRY_INTR_INFO, &intr_info);
-+            if ( !(intr_info & INTR_INFO_VALID_MASK) )
-+                hvm_inject_hw_exception(TRAP_gp_fault, 0);
-+            /* Need to fix rIP nevertheless. */
-+            if ( mode == 8 )
-+                regs->rip = (long)(regs->rip << (64 - VADDR_BITS)) >>
-+                            (64 - VADDR_BITS);
-+            else
-+                regs->rip = regs->_eip;
-+        }
-+        else
-+            domain_crash(v->domain);
-+    }
- }
- 
- void vmx_vmenter_helper(const struct cpu_user_regs *regs)
--- 
-2.1.4
-
-
-From 80c628833f0a69080f1ed43cd43b0df4de24fa58 Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 17 Feb 2016 12:38:38 +0000
-Subject: [PATCH] x86: enforce consistent cachability of MMIO mappings
-
-We've been told by Intel that inconsistent cachability between
-multiple mappings of the same page can affect system stability only
-when the affected page is an MMIO one. Since the stale data issue is
-of no relevance to the hypervisor (since all guest memory accesses go
-through proper accessors and validation), handling of RAM pages
-remains unchanged here. Any MMIO mapped by domains however needs to be
-done consistently (all cachable mappings or all uncachable ones), in
-order to avoid Machine Check exceptions. Since converting existing
-cachable mappings to uncachable (at the time an uncachable mapping
-gets established) would in the PV case require tracking all mappings,
-allow MMIO to only get mapped uncachable (UC, UC-, or WC).
-
-This also implies that in the PV case we mustn't use the L1 PTE update
-fast path when cachability flags get altered.
-
-Since in the HVM case at least for now we want to continue honoring
-pinned cachability attributes for pages not mapped by the hypervisor,
-special case handling of r/o MMIO pages (forcing UC) gets added there.
-Arguably the counterpart change to p2m-pt.c may not be necessary, since
-UC- (which already gets enforced there) is probably strict enough.
-
-Note that the shadow code changes include fixing the write protection
-of r/o MMIO ranges: shadow_l1e_remove_flags() and its siblings, other
-than l1e_remove_flags() and alike, return the new PTE (and hence
-ignoring their return values makes them no-ops).
-
-This is CVE-2016-2270 / XSA-154.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- docs/misc/xen-command-line.markdown |  9 +++++
- xen/arch/x86/hvm/mtrr.c             |  6 ++-
- xen/arch/x86/mm.c                   | 79 +++++++++++++++++++++++++++++--------
- xen/arch/x86/mm/p2m-pt.c            |  2 +
- xen/arch/x86/mm/shadow/multi.c      | 32 ++++++++++-----
- xen/arch/x86/mm/shadow/types.h      |  3 ++
- xen/include/asm-x86/page.h          |  3 ++
- 7 files changed, 108 insertions(+), 26 deletions(-)
-
-diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
-index 74999e3..fdcfd7c 100644
---- a/docs/misc/xen-command-line.markdown
-+++ b/docs/misc/xen-command-line.markdown
-@@ -697,6 +697,15 @@ limit is ignored by Xen.
- 
- Specify if the MMConfig space should be enabled.
- 
-+### mmio-relax
-+> `= <boolean> | all`
-+
-+> Default: `false`
-+
-+By default, domains may not create cached mappings to MMIO regions.
-+This option relaxes the check for Domain 0 (or when using `all`, all PV
-+domains), to permit the use of cacheable MMIO mappings.
-+
- ### msi
- > `= <boolean>`
- 
-diff --git a/xen/arch/x86/hvm/mtrr.c b/xen/arch/x86/hvm/mtrr.c
-index e13647c..ad11483 100644
---- a/xen/arch/x86/hvm/mtrr.c
-+++ b/xen/arch/x86/hvm/mtrr.c
-@@ -693,8 +693,12 @@ uint8_t epte_get_entry_emt(struct domain *d, unsigned long gfn, mfn_t mfn,
-     if ( v->domain != d )
-         v = d->vcpu ? d->vcpu[0] : NULL;
- 
--    if ( !mfn_valid(mfn_x(mfn)) )
-+    if ( !mfn_valid(mfn_x(mfn)) ||
-+         rangeset_contains_singleton(mmio_ro_ranges, mfn_x(mfn)) )
-+    {
-+        *ipat = 1;
-         return MTRR_TYPE_UNCACHABLE;
-+    }
- 
-     if ( hvm_get_mem_pinned_cacheattr(d, gfn, &type) )
-         return type;
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index 37b3ec1..c2b8d9d 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -188,6 +188,18 @@ static uint32_t base_disallow_mask;
-       is_pv_domain(d)) ?                                        \
-      L1_DISALLOW_MASK : (L1_DISALLOW_MASK & ~PAGE_CACHE_ATTRS))
- 
-+static s8 __read_mostly opt_mmio_relax;
-+static void __init parse_mmio_relax(const char *s)
-+{
-+    if ( !*s )
-+        opt_mmio_relax = 1;
-+    else
-+        opt_mmio_relax = parse_bool(s);
-+    if ( opt_mmio_relax < 0 && strcmp(s, "all") )
-+        opt_mmio_relax = 0;
-+}
-+custom_param("mmio-relax", parse_mmio_relax);
-+
- static void __init init_frametable_chunk(void *start, void *end)
- {
-     unsigned long s = (unsigned long)start;
-@@ -773,6 +785,8 @@ get_page_from_l1e(
-     if ( !mfn_valid(mfn) ||
-          (real_pg_owner = page_get_owner_and_reference(page)) == dom_io )
-     {
-+        int flip = 0;
-+
-         /* Only needed the reference to confirm dom_io ownership. */
-         if ( mfn_valid(mfn) )
-             put_page(page);
-@@ -805,13 +819,41 @@ get_page_from_l1e(
-             return -EINVAL;
-         }
- 
--        if ( !(l1f & _PAGE_RW) ||
--             !rangeset_contains_singleton(mmio_ro_ranges, mfn) )
--            return 0;
--        dprintk(XENLOG_G_WARNING,
--                "d%d: Forcing read-only access to MFN %lx\n",
--                l1e_owner->domain_id, mfn);
--        return 1;
-+        if ( !rangeset_contains_singleton(mmio_ro_ranges, mfn) )
-+        {
-+            /* MMIO pages must not be mapped cachable unless requested so. */
-+            switch ( opt_mmio_relax )
-+            {
-+            case 0:
-+                break;
-+            case 1:
-+                if ( is_hardware_domain(l1e_owner) )
-+            case -1:
-+                    return 0;
-+            default:
-+                ASSERT_UNREACHABLE();
-+            }
-+        }
-+        else if ( l1f & _PAGE_RW )
-+        {
-+            dprintk(XENLOG_G_WARNING,
-+                    "d%d: Forcing read-only access to MFN %lx\n",
-+                    l1e_owner->domain_id, mfn);
-+            flip = _PAGE_RW;
-+        }
-+
-+        switch ( l1f & PAGE_CACHE_ATTRS )
-+        {
-+        case 0: /* WB */
-+            flip |= _PAGE_PWT | _PAGE_PCD;
-+            break;
-+        case _PAGE_PWT: /* WT */
-+        case _PAGE_PWT | _PAGE_PAT: /* WP */
-+            flip |= _PAGE_PCD | (l1f & _PAGE_PAT);
-+            break;
-+        }
-+
-+        return flip;
-     }
- 
-     if ( unlikely( (real_pg_owner != pg_owner) &&
-@@ -1210,8 +1252,9 @@ static int alloc_l1_table(struct page_info *page)
-                 goto fail;
-             case 0:
-                 break;
--            case 1:
--                l1e_remove_flags(pl1e[i], _PAGE_RW);
-+            case _PAGE_RW ... _PAGE_RW | PAGE_CACHE_ATTRS:
-+                ASSERT(!(ret & ~(_PAGE_RW | PAGE_CACHE_ATTRS)));
-+                l1e_flip_flags(pl1e[i], ret);
-                 break;
-             }
- 
-@@ -1706,8 +1749,9 @@ static int mod_l1_entry(l1_pgentry_t *pl1e, l1_pgentry_t nl1e,
-             return -EINVAL;
-         }
- 
--        /* Fast path for identical mapping, r/w and presence. */
--        if ( !l1e_has_changed(ol1e, nl1e, _PAGE_RW | _PAGE_PRESENT) )
-+        /* Fast path for identical mapping, r/w, presence, and cachability. */
-+        if ( !l1e_has_changed(ol1e, nl1e,
-+                              PAGE_CACHE_ATTRS | _PAGE_RW | _PAGE_PRESENT) )
-         {
-             adjust_guest_l1e(nl1e, pt_dom);
-             if ( UPDATE_ENTRY(l1, pl1e, ol1e, nl1e, gl1mfn, pt_vcpu,
-@@ -1730,8 +1774,9 @@ static int mod_l1_entry(l1_pgentry_t *pl1e, l1_pgentry_t nl1e,
-             return rc;
-         case 0:
-             break;
--        case 1:
--            l1e_remove_flags(nl1e, _PAGE_RW);
-+        case _PAGE_RW ... _PAGE_RW | PAGE_CACHE_ATTRS:
-+            ASSERT(!(rc & ~(_PAGE_RW | PAGE_CACHE_ATTRS)));
-+            l1e_flip_flags(nl1e, rc);
-             rc = 0;
-             break;
-         }
-@@ -4926,6 +4971,7 @@ static int ptwr_emulated_update(
-     l1_pgentry_t pte, ol1e, nl1e, *pl1e;
-     struct vcpu *v = current;
-     struct domain *d = v->domain;
-+    int ret;
- 
-     /* Only allow naturally-aligned stores within the original %cr2 page. */
-     if ( unlikely(((addr^ptwr_ctxt->cr2) & PAGE_MASK) || (addr & (bytes-1))) )
-@@ -4973,7 +5019,7 @@ static int ptwr_emulated_update(
- 
-     /* Check the new PTE. */
-     nl1e = l1e_from_intpte(val);
--    switch ( get_page_from_l1e(nl1e, d, d) )
-+    switch ( ret = get_page_from_l1e(nl1e, d, d) )
-     {
-     default:
-         if ( is_pv_32bit_domain(d) && (bytes == 4) && (unaligned_addr & 4) &&
-@@ -4997,8 +5043,9 @@ static int ptwr_emulated_update(
-         break;
-     case 0:
-         break;
--    case 1:
--        l1e_remove_flags(nl1e, _PAGE_RW);
-+    case _PAGE_RW ... _PAGE_RW | PAGE_CACHE_ATTRS:
-+        ASSERT(!(ret & ~(_PAGE_RW | PAGE_CACHE_ATTRS)));
-+        l1e_flip_flags(nl1e, ret);
-         break;
-     }
- 
-diff --git a/xen/arch/x86/mm/p2m-pt.c b/xen/arch/x86/mm/p2m-pt.c
-index a1d5650..a463e93 100644
---- a/xen/arch/x86/mm/p2m-pt.c
-+++ b/xen/arch/x86/mm/p2m-pt.c
-@@ -93,6 +93,8 @@ static unsigned long p2m_type_to_flags(p2m_type_t t, mfn_t mfn)
-     case p2m_mmio_direct:
-         if ( !rangeset_contains_singleton(mmio_ro_ranges, mfn_x(mfn)) )
-             flags |= _PAGE_RW;
-+        else
-+            flags |= _PAGE_PWT;
-         return flags | P2M_BASE_FLAGS | _PAGE_PCD;
-     }
- }
-diff --git a/xen/arch/x86/mm/shadow/multi.c b/xen/arch/x86/mm/shadow/multi.c
-index 3d35537..0f499bf 100644
---- a/xen/arch/x86/mm/shadow/multi.c
-+++ b/xen/arch/x86/mm/shadow/multi.c
-@@ -521,6 +521,7 @@ _sh_propagate(struct vcpu *v,
-     gfn_t target_gfn = guest_l1e_get_gfn(guest_entry);
-     u32 pass_thru_flags;
-     u32 gflags, sflags;
-+    bool_t mmio_mfn;
- 
-     /* We don't shadow PAE l3s */
-     ASSERT(GUEST_PAGING_LEVELS > 3 || level != 3);
-@@ -561,7 +562,10 @@ _sh_propagate(struct vcpu *v,
-     // mfn means that we can not usefully shadow anything, and so we
-     // return early.
-     //
--    if ( !mfn_valid(target_mfn)
-+    mmio_mfn = !mfn_valid(target_mfn)
-+               || (level == 1
-+                   && page_get_owner(mfn_to_page(target_mfn)) == dom_io);
-+    if ( mmio_mfn
-          && !(level == 1 && (!shadow_mode_refcounts(d) 
-                              || p2mt == p2m_mmio_direct)) )
-     {
-@@ -579,7 +583,7 @@ _sh_propagate(struct vcpu *v,
-                        _PAGE_RW | _PAGE_PRESENT);
-     if ( guest_supports_nx(v) )
-         pass_thru_flags |= _PAGE_NX_BIT;
--    if ( !shadow_mode_refcounts(d) && !mfn_valid(target_mfn) )
-+    if ( level == 1 && !shadow_mode_refcounts(d) && mmio_mfn )
-         pass_thru_flags |= _PAGE_PAT | _PAGE_PCD | _PAGE_PWT;
-     sflags = gflags & pass_thru_flags;
- 
-@@ -676,10 +680,14 @@ _sh_propagate(struct vcpu *v,
-     }
- 
-     /* Read-only memory */
--    if ( p2m_is_readonly(p2mt) ||
--         (p2mt == p2m_mmio_direct &&
--          rangeset_contains_singleton(mmio_ro_ranges, mfn_x(target_mfn))) )
-+    if ( p2m_is_readonly(p2mt) )
-         sflags &= ~_PAGE_RW;
-+    else if ( p2mt == p2m_mmio_direct &&
-+              rangeset_contains_singleton(mmio_ro_ranges, mfn_x(target_mfn)) )
-+    {
-+        sflags &= ~(_PAGE_RW | _PAGE_PAT);
-+        sflags |= _PAGE_PCD | _PAGE_PWT;
-+    }
-     
-     // protect guest page tables
-     //
-@@ -1201,22 +1209,28 @@ static int shadow_set_l1e(struct vcpu *v,
-          && !sh_l1e_is_magic(new_sl1e) ) 
-     {
-         /* About to install a new reference */        
--        if ( shadow_mode_refcounts(d) ) {
-+        if ( shadow_mode_refcounts(d) )
-+        {
-+#define PAGE_FLIPPABLE (_PAGE_RW | _PAGE_PWT | _PAGE_PCD | _PAGE_PAT)
-+            int rc;
-+
-             TRACE_SHADOW_PATH_FLAG(TRCE_SFLAG_SHADOW_L1_GET_REF);
--            switch ( shadow_get_page_from_l1e(new_sl1e, d, new_type) )
-+            switch ( rc = shadow_get_page_from_l1e(new_sl1e, d, new_type) )
-             {
-             default:
-                 /* Doesn't look like a pagetable. */
-                 flags |= SHADOW_SET_ERROR;
-                 new_sl1e = shadow_l1e_empty();
-                 break;
--            case 1:
--                shadow_l1e_remove_flags(new_sl1e, _PAGE_RW);
-+            case PAGE_FLIPPABLE & -PAGE_FLIPPABLE ... PAGE_FLIPPABLE:
-+                ASSERT(!(rc & ~PAGE_FLIPPABLE));
-+                new_sl1e = shadow_l1e_flip_flags(new_sl1e, rc);
-                 /* fall through */
-             case 0:
-                 shadow_vram_get_l1e(new_sl1e, sl1e, sl1mfn, d);
-                 break;
-             }
-+#undef PAGE_FLIPPABLE
-         }
-     } 
- 
-diff --git a/xen/arch/x86/mm/shadow/types.h b/xen/arch/x86/mm/shadow/types.h
-index 953d168..83d08e0 100644
---- a/xen/arch/x86/mm/shadow/types.h
-+++ b/xen/arch/x86/mm/shadow/types.h
-@@ -100,6 +100,9 @@ static inline u32 shadow_l4e_get_flags(shadow_l4e_t sl4e)
- static inline shadow_l1e_t
- shadow_l1e_remove_flags(shadow_l1e_t sl1e, u32 flags)
- { l1e_remove_flags(sl1e, flags); return sl1e; }
-+static inline shadow_l1e_t
-+shadow_l1e_flip_flags(shadow_l1e_t sl1e, u32 flags)
-+{ l1e_flip_flags(sl1e, flags); return sl1e; }
- 
- static inline shadow_l1e_t shadow_l1e_empty(void) 
- { return l1e_empty(); }
-diff --git a/xen/include/asm-x86/page.h b/xen/include/asm-x86/page.h
-index 91e9e92..dca0504 100644
---- a/xen/include/asm-x86/page.h
-+++ b/xen/include/asm-x86/page.h
-@@ -157,6 +157,9 @@ static inline l4_pgentry_t l4e_from_paddr(paddr_t pa, unsigned int flags)
- #define l3e_remove_flags(x, flags) ((x).l3 &= ~put_pte_flags(flags))
- #define l4e_remove_flags(x, flags) ((x).l4 &= ~put_pte_flags(flags))
- 
-+/* Flip flags in an existing L1 PTE. */
-+#define l1e_flip_flags(x, flags)    ((x).l1 ^= put_pte_flags(flags))
-+
- /* Check if a pte's page mapping or significant access flags have changed. */
- #define l1e_has_changed(x,y,flags) \
-     ( !!(((x).l1 ^ (y).l1) & ((PADDR_MASK&PAGE_MASK)|put_pte_flags(flags))) )
--- 
-2.1.4
+1.8.3.1
 

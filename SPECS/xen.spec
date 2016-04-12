@@ -18,8 +18,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.4.3
-Release: 12%{?dist}
+Version: 4.4.4
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -63,13 +63,8 @@ Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
-Patch2001: xsa155-qemu44-qdisk-double-access.patch
-Patch2002: xsa155-qemu-xenfb.patch
 Patch2003: xsa162-qemuu.patch
 
-Patch3001: xsa155-qemut-qdisk-double-access.patch
-Patch3002: xsa155-qemut-xenfb.patch
-Patch3003: xsa162-qemut.patch
 Patch3004: xsa164.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
@@ -283,16 +278,11 @@ popd
 
 pushd tools/qemu-xen
 # Add qemu-xen (aka "qemu upstream") -related patches here
-%patch2001 -p1
-%patch2002 -p1
 %patch2003 -p1
 popd
 
 pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
-%patch3001 -p1
-%patch3002 -p1
-%patch3003 -p1
 %patch3004 -p1
 popd
 
@@ -810,23 +800,35 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Apr  7 2016 Johnny Hughes <johnny@centos.org> - 4.4.4-2.el6.centos
+- Removed qemu upstream and qemu traditional patches for XSA-155 since
+  they are in Xen-4.4.4 tarball 
+
+- corrected some 'bogus date warnings' on older changelog entries
+
+* Thu Apr  7 2016 Johnny Hughes <johnny@centos.org> - 4.4.4-1.el6.centos
+- Rebase to Xen-4.4.4
+
+* Tue Mar 29 2016 Johnny Hughes <johnny@centos.org> - 4.4.3-14.el6.centos
+- Add XSA-172
+
 * Wed Feb 17 2016 George Dunlap <george.dunlap@citrix.com> - 4.4.3-12.el6.centos
 - Add XSA-154
 
 * Wed Feb 17 2016 George Dunlap <george.dunlap@citrix.com> - 4.4.3-11.el6.centos
 - Add XSAs 170
 
-* Mon Jan 13 2016 George Dunlap <george.dunlap@citrix.com> - 4.4.3-10.el6.centos
+* Wed Jan 13 2016 George Dunlap <george.dunlap@citrix.com> - 4.4.3-10.el6.centos
 - Add XSAs 167-169
 
 * Mon Dec 14 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-9.el6.centos
 - Add XSAs 142, 155, 164-166
 - Add update for XSA-158
 
-* Mon Nov 25 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-8.el6.centos
+* Wed Nov 25 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-8.el6.centos
 - Remove XSA-161
 
-* Mon Nov 25 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-7.el6.centos
+* Wed Nov 25 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-7.el6.centos
 - Import XSAs 159-163
 
 * Mon Nov 09 2015 George Dunlap <george.dunlap@citrix.com> - 4.4.3-6.el6.centos
