@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 2%{?dist}
+Release: 3%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -800,6 +800,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Apr 18 2016 Johnny Hughes <johnny@centos.org> - 4.4.4-3.el6.centos
+- Import XSA-173
+
 * Thu Apr  7 2016 Johnny Hughes <johnny@centos.org> - 4.4.4-2.el6.centos
 - Removed qemu upstream and qemu traditional patches for XSA-155 since
   they are in Xen-4.4.4 tarball 
