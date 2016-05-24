@@ -1671,3 +1671,131 @@ index 06543d3..f64d8ae 100644
 -- 
 2.1.4
 
+
+From 42bdc4e1e85d9cecd09ebbf414bf112123da21bc Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Thu, 19 May 2016 18:08:38 +0100
+Subject: [PATCH] hotplug: Fix xendomains lock path for RHEL-based systems
+
+Commit c996572 changed the LOCKFILE path from a check between two
+hardcoded paths (/var/lock/subsys/ or /var/lock) to using the
+XEN_LOCK_DIR variable designated at configure time.  Since
+XEN_LOCK_DIR doesn't (and shouldn't) have the 'subsys' postfix, this
+effectively moves all the lock files by default to /var/lock instead.
+
+Unfortunately, this breaks xendomains on RedHat-based SYSV init
+systems.  RedHat-based SYSV init systems try to only call "${SERVICE}
+shutdown" on systems which actually have an actively running
+component; and they use the existence of /var/lock/subsys/${SERVICE}
+to determine which systems are running.
+
+Changing XEN_LOCK_DIR to /var/lock/subsys is not suitable, as only
+system services like xendomains should create lockfiles there; other
+locks (such as the console locks) should be created in /var/lock
+instead.
+
+Instead, re-instate the check for the subsys/ subdirectory of the lock
+directory in the xendomains script.
+
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+Acked-by: Olaf Hering <olaf@aepfle.de>
+Release-acked-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/hotplug/Linux/xendomains.in | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/tools/hotplug/Linux/xendomains.in b/tools/hotplug/Linux/xendomains.in
+index 0603842..e749b78 100644
+--- a/tools/hotplug/Linux/xendomains.in
++++ b/tools/hotplug/Linux/xendomains.in
+@@ -49,7 +49,13 @@ if ! [ -e /proc/xen/privcmd ]; then
+ 	exit 0
+ fi
+ 
+-LOCKFILE=${XEN_LOCK_DIR}/xendomains
++# RHEL-based systems only shutdown a service if they find a lockfile
++# in /var/lock/subsys
++if [[ -d ${XEN_LOCK_DIR}/subsys ]] ; then
++    LOCKFILE=${XEN_LOCK_DIR}/subsys/xendomains
++else
++    LOCKFILE=${XEN_LOCK_DIR}/xendomains
++fi
+ 
+ XENDOM_CONFIG=@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xendomains
+ 
+-- 
+2.1.4
+
+
+From d6be4c4140f8754e1f94095525ea3de3be221029 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Thu, 19 May 2016 18:08:54 +0100
+Subject: [PATCH] tools/xendomains: Create lockfile on start unconditionally
+
+At the moment, the xendomains init script will only create a lockfile
+if when started, it actually does something -- either tries to restore
+a previously saved domain as a result of XENDOMAINS_RESTORE, or tries
+to create a domain as a result of XENDOMAINS_AUTO.
+
+RedHat-based SYSV init systems try to only call "${SERVICE} shutdown"
+on systems which actually have an actively running component; and they
+use the existence of /var/lock/subsys/${SERVICE} to determine which
+systems are running.
+
+This means that at the moment, on RedHat-based SYSV systems (such as
+CentOS 6), if you enable xendomains, and have XENDOMAINS_RESTORE set
+to "true", but don't happen to start a VM, then your running VMs will
+not be suspended on shutdown.
+
+Since the lockfile doesn't really have any other effect than to
+prevent duplicate starting, just create it unconditionally every time
+we start the xendomains script.
+
+The other option would have been to touch the lockfile if
+XENDOMAINS_RESTORE was true regardless of whether there were any
+domains to be restored.  But this would mean that if you started with
+the xendomains script active but XENDOMAINS_RESTORE set to "false",
+and then changed it to "true", then xendomains would still not run the
+next time you shut down.  This seems to me to violate the principle of
+least surprise.
+
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+Acked-by: Olaf Hering <olaf@aepfle.de>
+Release-acked-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/hotplug/Linux/xendomains.in | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tools/hotplug/Linux/xendomains.in b/tools/hotplug/Linux/xendomains.in
+index e749b78..1dce21d 100644
+--- a/tools/hotplug/Linux/xendomains.in
++++ b/tools/hotplug/Linux/xendomains.in
+@@ -244,12 +244,13 @@ start()
+ 	return;
+     fi
+ 
++    mkdir -p $(dirname "$LOCKFILE")
++    touch $LOCKFILE
++
+     saved_domains=" "
+     if [ "$XENDOMAINS_RESTORE" = "true" ] &&
+        contains_something "$XENDOMAINS_SAVE"
+     then
+-	mkdir -p $(dirname "$LOCKFILE")
+-	touch $LOCKFILE
+ 	echo -n "Restoring Xen domains:"
+ 	saved_domains=`ls $XENDOMAINS_SAVE`
+         for dom in $XENDOMAINS_SAVE/*; do
+@@ -275,7 +276,6 @@ start()
+ 
+     if contains_something "$XENDOMAINS_AUTO"
+     then
+-	touch $LOCKFILE
+ 	echo -n "Starting auto Xen domains:"
+ 	# We expect config scripts for auto starting domains to be in
+ 	# XENDOMAINS_AUTO - they could just be symlinks to files elsewhere
+-- 
+2.1.4
+
