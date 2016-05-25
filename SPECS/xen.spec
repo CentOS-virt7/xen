@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 5%{?dist}
+Release: 6%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -59,6 +59,8 @@ Patch1: xen-queue.am
 # 1000+: blktap
 # 2000+: qemu-xen
 # 3000+: qemu-traditional
+# 4000+: xen bugfix not upstream
+
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
@@ -69,6 +71,7 @@ Patch2005: xsa179-qemuu-4.4-0002-vga-add-vbe_enabled-helper.patch
 Patch2006: xsa179-qemuu-4.4-0003-vga-factor-out-vga-register-setup.patch
 Patch2007: xsa179-qemuu-4.4-0004-vga-update-vga-register-setup-on-vbe-changes.patch
 Patch2008: xsa179-qemuu-4.4-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
+Patch2009: xsa180-qemuu.patch 
 
 
 Patch3004: xsa164.patch
@@ -78,6 +81,9 @@ Patch3007: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
 Patch3008: xsa179-qemut-unstable-0003-vga-factor-out-vga-register-setup.patch
 Patch3009: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-changes.patch
 Patch3010: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
+Patch3011: xsa180-qemut.patch
+
+Patch4000: xen-44-tools-xendomains-create-lockfile-uncond.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -286,6 +292,10 @@ popd
 %patch1005 -p1
 %patch1006 -p1
 
+pushd tools/hotplug/Linux/init.d/
+%patch4000 -p0
+popd
+
 %define _default_patch_fuzz 2
 
 pushd tools/qemu-xen
@@ -296,6 +306,7 @@ pushd tools/qemu-xen
 %patch2006 -p1
 %patch2007 -p1
 %patch2008 -p1
+%patch2009 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -307,6 +318,7 @@ pushd tools/qemu-xen-traditional
 %patch3008 -p1
 %patch3009 -p1
 %patch3010 -p1
+%patch3011 -p1
 popd
 
 # stubdom sources
@@ -823,6 +835,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed May 25 2016 Johnny Hughes <johnny@centos.org> 4.4.4-6.el6.centos
+- Import XSA-180
+- add xen-44-tools-xendomains-create-lockfile-uncond.patch 
+
 * Wed May 18 2016 Johnny Hughes <johnny@centos.org>  - 4.4.4-5.el6.centos
 - Import XSA-176
 

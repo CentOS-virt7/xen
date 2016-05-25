@@ -1,0 +1,88 @@
+From 7490dab5c1a01b1623e9d87bdc653cb4f963dd8a Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Thu, 19 May 2016 19:38:35 +0100
+Subject: [PATCH] main loop: Big hammer to fix logfile disk DoS in Xen setups
+
+Each time round the main loop, we now fstat stderr.  If it is too big,
+we dup2 /dev/null onto it.  This is not a very pretty patch but it is
+very simple, easy to see that it's correct, and has a low risk of
+collateral damage.
+
+The limit is 1Mby by default but can be adjusted by setting a new
+environment variable.
+
+This fixes CVE-2014-3672.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Tested-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+---
+ vl.c |   46 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 46 insertions(+)
+
+diff --git a/vl.c b/vl.c
+index c864e7d..d7ef742 100644
+--- a/vl.c
++++ b/vl.c
+@@ -3752,6 +3752,50 @@ static void host_main_loop_wait(int *timeout)
+ }
+ #endif
+ 
++static void check_cve_2014_3672_xen(void)
++{
++    static unsigned long limit = ~0UL;
++    const int fd = 2;
++    struct stat stab;
++
++    if (limit == ~0UL) {
++        const char *s = getenv("XEN_QEMU_CONSOLE_LIMIT");
++        /* XEN_QEMU_CONSOLE_LIMIT=0 means no limit */
++        limit = s ? strtoul(s,0,0) : 1*1024*1024;
++    }
++    if (limit == 0)
++        return;
++
++    int r = fstat(fd, &stab);
++    if (r) {
++        perror("fstat stderr (for CVE-2014-3672 check)");
++        exit(-1);
++    }
++    if (!S_ISREG(stab.st_mode))
++        return;
++    if (stab.st_size <= limit)
++        return;
++
++    /* oh dear */
++    fprintf(stderr,"\r\n"
++            "Closing stderr due to CVE-2014-3672 limit. "
++            " Set XEN_QEMU_CONSOLE_LIMIT to number of bytes to override,"
++            " or 0 for no limit.\n");
++    fflush(stderr);
++
++    int nfd = open("/dev/null", O_WRONLY);
++    if (nfd < 0) {
++        perror("open /dev/null (for CVE-2014-3672 check)");
++        exit(-1);
++    }
++    r = dup2(nfd, fd);
++    if (r != fd) {
++        perror("dup2 /dev/null (for CVE-2014-3672 check)");
++        exit(-1);
++    }
++    close(nfd);
++}
++
+ void main_loop_wait(int timeout)
+ {
+     IOHandlerRecord *ioh;
+@@ -3763,6 +3807,8 @@ void main_loop_wait(int timeout)
+ 
+     host_main_loop_wait(&timeout);
+ 
++    check_cve_2014_3672_xen();
++
+     /* poll any events */
+     /* XXX: separate device handlers from system ones */
+     nfds = -1;
+-- 
+1.7.10.4
+
