@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.1
-Release: 9%{?dist}
+Release: 10%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -98,12 +98,14 @@ Patch2006: xsa179-qemuu-4.6-0002-vga-add-vbe_enabled-helper.patch
 Patch2007: xsa179-qemuu-4.6-0003-vga-factor-out-vga-register-setup.patch
 Patch2008: xsa179-qemuu-4.6-0004-vga-update-vga-register-setup-on-vbe-changes.patch
 Patch2009: xsa179-qemuu-4.6-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
+Patch2010: xsa180-qemuu.patch
 
 Patch3001: xsa179-qemut-unstable-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
 Patch3002: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
 Patch3003: xsa179-qemut-unstable-0003-vga-factor-out-vga-register-setup.patch
 Patch3004: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-changes.patch
 Patch3005: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
+Patch3010: xsa180-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -320,6 +322,7 @@ pushd tools/qemu-xen
 %patch2007 -p1
 %patch2008 -p1
 %patch2009 -p1
+%patch2010 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -329,6 +332,7 @@ pushd tools/qemu-xen-traditional
 %patch3003 -p1
 %patch3004 -p1
 %patch3005 -p1
+%patch3010 -p1
 popd
 
 %if %{with_blktap}
