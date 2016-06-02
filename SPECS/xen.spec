@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 6%{?dist}
+Release: 7%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -835,6 +835,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jun 02 2016 Johnny Hughes <johnny@centos.org> 4.4.4-7.el6.centos
+- Import XSA-175
+
 * Wed May 25 2016 Johnny Hughes <johnny@centos.org> 4.4.4-6.el6.centos
 - Import XSA-180
 - add xen-44-tools-xendomains-create-lockfile-uncond.patch 
