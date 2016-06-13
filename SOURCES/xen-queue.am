@@ -2193,3 +2193,73 @@ index 008d6da..7ab4096 100644
 -- 
 1.8.3.1
 
+
+From 6955b7679c802a9aa16c8eaf9ff09127cb482219 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Wed, 11 May 2016 11:14:45 +0100
+Subject: [PATCH] Subject: tools/xendomains: Create lockfile on start
+ unconditionally
+
+tools/xendomains: Create lockfile on start unconditionally
+
+At the moment, the xendomains init script will only create a lockfile
+if when started, it actually does something -- either tries to restore
+a previously saved domain as a result of XENDOMAINS_RESTORE, or tries
+to create a domain as a result of XENDOMAINS_AUTO.
+
+RedHat-based SYSV init systems try to only call "${SERVICE} shutdown"
+on systems which actually have an actively running component; and they
+use the existence of /var/lock/subsys/${SERVICE} to determine which
+systems are running.
+
+This means that at the moment, on RedHat-based SYSV systems (such as
+CentOS 6), if you enable xendomains, and have XENDOMAINS_RESTORE set
+to "true", but don't happen to start a VM, then your running VMs will
+not be suspended on shutdown.
+
+Since the lockfile doesn't really have any other effect than to
+prevent duplicate starting, just create it unconditionally every time
+we start the xendomains script.
+
+The other option would have been to touch the lockfile if
+XENDOMAINS_RESTORE was true regardless of whether there were any
+domains to be restored.  But this would mean that if you started with
+the xendomains script active but XENDOMAINS_RESTORE set to "false",
+and then changed it to "true", then xendomains would still not run the
+next time you shut down.  This seems to me to violate the principle of
+least surprise.
+---
+ tools/hotplug/Linux/init.d/xendomains | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tools/hotplug/Linux/init.d/xendomains b/tools/hotplug/Linux/init.d/xendomains
+index 59f1e3d..eeddd96 100644
+--- a/tools/hotplug/Linux/init.d/xendomains
++++ b/tools/hotplug/Linux/init.d/xendomains
+@@ -248,12 +248,13 @@ start()
+ 	return; 
+     fi
+ 
++    mkdir -p $(dirname "$LOCKFILE")
++    touch $LOCKFILE
++
+     saved_domains=" "
+     if [ "$XENDOMAINS_RESTORE" = "true" ] &&
+        contains_something "$XENDOMAINS_SAVE"
+     then
+-	mkdir -p $(dirname "$LOCKFILE")
+-	touch $LOCKFILE
+ 	echo -n "Restoring Xen domains:"
+ 	saved_domains=`ls $XENDOMAINS_SAVE`
+         for dom in $XENDOMAINS_SAVE/*; do
+@@ -279,7 +280,6 @@ start()
+ 
+     if contains_something "$XENDOMAINS_AUTO"
+     then
+-	touch $LOCKFILE
+ 	echo -n "Starting auto Xen domains:"
+ 	# We expect config scripts for auto starting domains to be in
+ 	# XENDOMAINS_AUTO - they could just be symlinks to files elsewhere
+-- 
+1.8.3.1
+
