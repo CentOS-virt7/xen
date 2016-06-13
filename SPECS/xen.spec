@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 5%{?dist}
+Release: 8%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -59,6 +59,7 @@ Patch1: xen-queue.am
 # 1000+: blktap
 # 2000+: qemu-xen
 # 3000+: qemu-traditional
+
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
@@ -69,6 +70,7 @@ Patch2005: xsa179-qemuu-4.4-0002-vga-add-vbe_enabled-helper.patch
 Patch2006: xsa179-qemuu-4.4-0003-vga-factor-out-vga-register-setup.patch
 Patch2007: xsa179-qemuu-4.4-0004-vga-update-vga-register-setup-on-vbe-changes.patch
 Patch2008: xsa179-qemuu-4.4-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
+Patch2009: xsa180-qemuu.patch 
 
 
 Patch3004: xsa164.patch
@@ -78,6 +80,7 @@ Patch3007: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
 Patch3008: xsa179-qemut-unstable-0003-vga-factor-out-vga-register-setup.patch
 Patch3009: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-changes.patch
 Patch3010: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
+Patch3011: xsa180-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -266,6 +269,8 @@ git init
 git config user.email "..."
 git config user.name "..."
 git config gc.auto 0
+# Have to remove the .gitignore so that tools/hotplug/Linux/init.d actually get included in the git tree
+rm -f .gitignore
 git add .
 git commit -a -q -m "%{version} baseline."
 
@@ -273,7 +278,6 @@ git commit -a -q -m "%{version} baseline."
 git am %{PATCH1}
 
 # Now apply patches to things not in the core Xen repo
-
 pushd `pwd`
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
@@ -281,6 +285,7 @@ cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 ./autogen.sh
 XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=/usr/lib/xen/bin
 popd
+
 # Add blktap-related patches here
 %patch1001 -p1
 %patch1005 -p1
@@ -296,6 +301,7 @@ pushd tools/qemu-xen
 %patch2006 -p1
 %patch2007 -p1
 %patch2008 -p1
+%patch2009 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -307,6 +313,7 @@ pushd tools/qemu-xen-traditional
 %patch3008 -p1
 %patch3009 -p1
 %patch3010 -p1
+%patch3011 -p1
 popd
 
 # stubdom sources
@@ -823,6 +830,17 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Jun 03 2016 Johnny Hughes <johnny@centos.org> 4.4.4-8.el6.centos
+- backport http://bit.ly/1UvGd4y from xen-46 branch
+- Move in xen-44-tools-xendomains-create-lockfile-uncond.patch to xen-queue.am 
+
+* Thu Jun 02 2016 Johnny Hughes <johnny@centos.org> 4.4.4-7.el6.centos
+- Import XSA-175
+
+* Wed May 25 2016 Johnny Hughes <johnny@centos.org> 4.4.4-6.el6.centos
+- Import XSA-180
+- add xen-44-tools-xendomains-create-lockfile-uncond.patch 
+
 * Wed May 18 2016 Johnny Hughes <johnny@centos.org>  - 4.4.4-5.el6.centos
 - Import XSA-176
 
