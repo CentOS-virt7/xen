@@ -303,6 +303,8 @@ git init
 git config user.email "..."
 git config user.name "..."
 git config gc.auto 0
+# Have to remove the .gitignore so that tools/hotplug/Linux/init.d actually get included in the git tree
+rm -f .gitignore
 git add .
 git commit -a -q -m "%{version} baseline."
 
