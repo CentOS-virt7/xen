@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.1
-Release: 11%{?dist}
+Release: 12%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -86,6 +86,7 @@ Patch1: xen-queue.am
 # 1000+: blktap
 # 2000+: qemu-xen
 # 3000+: qemu-traditional
+# 4000+: mini-os
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
@@ -106,6 +107,8 @@ Patch3003: xsa179-qemut-unstable-0003-vga-factor-out-vga-register-setup.patch
 Patch3004: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-changes.patch
 Patch3005: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
 Patch3010: xsa180-qemut.patch
+
+Patch4001: mini-os-xen-RELEASE-4.6.2.am
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -335,6 +338,19 @@ pushd tools/qemu-xen-traditional
 %patch3004 -p1
 %patch3005 -p1
 %patch3010 -p1
+popd
+
+pushd extras/mini-os
+# Create a git repo within the expanded tarball.
+git init
+git config user.email "..."
+git config user.name "..."
+git config gc.auto 0
+git add .
+git commit -a -q -m "%{version} baseline."
+
+# Apply patches to mini-os
+git am %{PATCH4001}
 popd
 
 %if %{with_blktap}
@@ -920,6 +936,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Sat Jun 18 2016 Sarah Newman <srn@prgmr.com> 4.6.1-12.el6.centos
+- Update mini-os to xen-RELEASE-4.6.2 to fix bug introduced by 7c8f3483
+
 * Thu May 19 2016 George Dunlap <george.dunlap@citrix.com> 4.6.1-11.el6.centos
 - Gratuitous release bump due to CBS build failure
 
