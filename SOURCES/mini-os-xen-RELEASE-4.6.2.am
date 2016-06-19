@@ -1,0 +1,396 @@
+From ebf889d9d65aa9a59ec11402182c7663d44f8ac9 Mon Sep 17 00:00:00 2001
+From: Wei Liu <wei.liu2@citrix.com>
+Date: Tue, 27 Oct 2015 15:43:28 +0000
+Subject: [PATCH 1/6] xenbus: notify the other end when necessary
+
+The xenbus thread didn't send notification to other end when it expected
+more data or consumed responses, which led to stalling the ring from
+time to time.
+
+This is the culprit that guest was less responsive when using stubdom
+because the device model was stalled.
+
+Fix this by sending notification to the other end when it consumes a
+message. A bunch of memory barriers are also added to ensure
+correctness.
+
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+Acked-by: Samuel Thibault <samuel.thibault@ens-lyon.org>
+master commit: 22d01aab99180539b38b13ba30f0e1cd62b72147
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+---
+ xenbus/xenbus.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/xenbus/xenbus.c b/xenbus/xenbus.c
+index 4613ed6..0ab387a 100644
+--- a/xenbus/xenbus.c
++++ b/xenbus/xenbus.c
+@@ -237,6 +237,7 @@ static void xenbus_thread_func(void *ign)
+ 		event->path = data;
+ 		event->token = event->path + strlen(event->path) + 1;
+ 
++                mb();
+                 xenstore_buf->rsp_cons += msg.len + sizeof(msg);
+ 
+                 for (watch = watches; watch; watch = watch->next)
+@@ -262,9 +263,13 @@ static void xenbus_thread_func(void *ign)
+                     req_info[msg.req_id].reply,
+                     MASK_XENSTORE_IDX(xenstore_buf->rsp_cons),
+                     msg.len + sizeof(msg));
++                mb();
+                 xenstore_buf->rsp_cons += msg.len + sizeof(msg);
+                 wake_up(&req_info[msg.req_id].waitq);
+             }
++
++            wmb();
++            notify_remote_via_evtchn(start_info.store_evtchn);
+         }
+     }
+ }
+-- 
+1.9.1
+
+
+From 9aa18170e8f5460872fa16b5abf83e10932c6da5 Mon Sep 17 00:00:00 2001
+From: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date: Fri, 1 Apr 2016 20:17:01 +0200
+Subject: [PATCH 2/6] Mini-OS: netfront: fix off-by-one error introduced in
+ 7c8f3483
+
+7c8f3483 introduced a break within a loop in netfront.c such that
+cons and nr_consumed were no longer always being incremented. The
+offset at cons will be processed multiple times with the break in
+place.
+
+This commit reverts to using the "some" variable in the loop condition,
+but avoids ifdefs for the non-libc case. It also renames it to dobreak
+to make its usage clearer.
+
+Signed-off-by: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Tested-by: Sarah Newman <srn@prgmr.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+master commit: 5c70e2a1b3beae7222580c01e2cbac1685a03903
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+---
+ netfront.c | 20 ++++++--------------
+ 1 file changed, 6 insertions(+), 14 deletions(-)
+
+diff --git a/netfront.c b/netfront.c
+index 0eca5b5..b8fac62 100644
+--- a/netfront.c
++++ b/netfront.c
+@@ -97,19 +97,15 @@ void network_rx(struct netfront_dev *dev)
+ {
+     RING_IDX rp,cons,req_prod;
+     int nr_consumed, more, i, notify;
+-#ifdef HAVE_LIBC
+-    int some;
+-#endif
++    int dobreak;
+ 
+     nr_consumed = 0;
+ moretodo:
+     rp = dev->rx.sring->rsp_prod;
+     rmb(); /* Ensure we see queued responses up to 'rp'. */
+ 
+-#ifdef HAVE_LIBC
+-    some = 0;
+-#endif
+-    for (cons = dev->rx.rsp_cons; cons != rp; nr_consumed++, cons++)
++    dobreak = 0;
++    for (cons = dev->rx.rsp_cons; cons != rp && !dobreak; nr_consumed++, cons++)
+     {
+         struct net_buffer* buf;
+         unsigned char* page;
+@@ -134,8 +130,8 @@ moretodo:
+ 		    len = dev->len;
+ 		memcpy(dev->data, page+rx->offset, len);
+ 		dev->rlen = len;
+-		some = 1;
+-                break;
++		/* No need to receive the rest for now */
++		dobreak = 1;
+ 	    } else
+ #endif
+ 		dev->netif_rx(page+rx->offset,rx->status);
+@@ -144,11 +140,7 @@ moretodo:
+     dev->rx.rsp_cons=cons;
+ 
+     RING_FINAL_CHECK_FOR_RESPONSES(&dev->rx,more);
+-#ifdef HAVE_LIBC
+-    if(more && !some) goto moretodo;
+-#else
+-    if(more) goto moretodo;
+-#endif
++    if(more && !dobreak) goto moretodo;
+ 
+     req_prod = dev->rx.req_prod_pvt;
+ 
+-- 
+1.9.1
+
+
+From 2d5faa650baa6655c0ca89297ab51aa150a9a220 Mon Sep 17 00:00:00 2001
+From: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date: Sun, 10 Apr 2016 00:46:31 +0200
+Subject: [PATCH 3/6] Clean arch/x86/time.c
+
+block_domain() does not actually use the value returned by gettimeofday.
+Fix indent in monotonic_clock() along the way.
+
+Signed-off-by: Samuel Thibault <samuel.thibault@ens-lyon.org>
+master commit: a6763f9ef8f7224e1b55cd8a2ac9bdcd867da4ec
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+---
+ arch/x86/time.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/arch/x86/time.c b/arch/x86/time.c
+index 2c8d033..cf5fab0 100644
+--- a/arch/x86/time.c
++++ b/arch/x86/time.c
+@@ -160,7 +160,7 @@ uint64_t monotonic_clock(void)
+ 		local_time_version = shadow.version;
+ 		rmb();
+ 		time = shadow.system_timestamp + get_nsec_offset();
+-        if (!time_values_up_to_date())
++		if (!time_values_up_to_date())
+ 			get_time_values_from_xen();
+ 		rmb();
+ 	} while (local_time_version != shadow.version);
+@@ -199,8 +199,6 @@ int gettimeofday(struct timeval *tv, void *tz)
+ 
+ void block_domain(s_time_t until)
+ {
+-    struct timeval tv;
+-    gettimeofday(&tv, NULL);
+     ASSERT(irqs_disabled());
+     if(monotonic_clock() < until)
+     {
+-- 
+1.9.1
+
+
+From 6aadd46e0927763861b19eacce2f2aeac9f17835 Mon Sep 17 00:00:00 2001
+From: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date: Sun, 10 Apr 2016 00:46:32 +0200
+Subject: [PATCH 4/6] Fix time update
+
+The timer handler should actually not update the shadowed copy, since that
+makes reading them non-atomic. Users of the shadowed copy should just update
+it themselves, which is already the case in monotonic_clock(), we just need
+to make to make gettimeofday() update the wallclock.
+
+This also fixes an issue reported by David Vercauteren: when the timer
+interrupt was not called yet, gettimeofday was returning bogus values.
+
+Signed-off-by: Samuel Thibault <samuel.thibault@ens-lyon.org>
+master commit: e085b7e5613576601e2f100e6f1ee9e0778c3eb9
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+---
+ arch/x86/time.c | 15 +++++++++++----
+ 1 file changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/arch/x86/time.c b/arch/x86/time.c
+index cf5fab0..af45e56 100644
+--- a/arch/x86/time.c
++++ b/arch/x86/time.c
+@@ -79,6 +79,12 @@ static inline int time_values_up_to_date(void)
+ 	return (shadow.version == src->version);
+ }
+ 
++static inline int wc_values_up_to_date(void)
++{
++	shared_info_t *s= HYPERVISOR_shared_info;
++
++	return (shadow_ts_version == s->wc_version);
++}
+ 
+ /*
+  * Scale a 64-bit delta by scaling and multiplying by a 32-bit fraction,
+@@ -186,9 +192,12 @@ static void update_wallclock(void)
+ int gettimeofday(struct timeval *tv, void *tz)
+ {
+     uint64_t nsec = monotonic_clock();
++
++    if (!wc_values_up_to_date())
++	update_wallclock();
++
+     nsec += shadow_ts.tv_nsec;
+-    
+-    
++
+     tv->tv_sec = shadow_ts.tv_sec;
+     tv->tv_sec += NSEC_TO_SEC(nsec);
+     tv->tv_usec = NSEC_TO_USEC(nsec % 1000000000UL);
+@@ -214,8 +223,6 @@ void block_domain(s_time_t until)
+  */
+ static void timer_handler(evtchn_port_t ev, struct pt_regs *regs, void *ign)
+ {
+-    get_time_values_from_xen();
+-    update_wallclock();
+ }
+ 
+ 
+-- 
+1.9.1
+
+
+From 41d152a49045288d7f2b94335e932f255c9ce6ba Mon Sep 17 00:00:00 2001
+From: Wei Liu <wei.liu2@citrix.com>
+Date: Mon, 2 May 2016 13:55:00 +0100
+Subject: [PATCH 5/6] build: change MINI-OS_ROOT to MINIOS_ROOT
+
+In the GNU make manual "How to Use Variables" section there is such
+word:
+
+"However, variable names containing characters other than letters,
+numbers, and underscores should be considered carefully, as in some
+shells they cannot be passed through the environment to a sub-make (see
+Communicating Variables to a Sub-make)."
+
+I discover xen stubdom fails to build on Ubuntu 16.04 and Debian
+unstable due to MINI-OS_ROOT is not preserved in the invocation of
+sub-make, while stubdom builds fine on older versions of Ubuntu and
+Debian. It's hard to track down what exactly is changed in those
+systems, but changing MINI-OS_ROOT to MINIOS_ROOT fixes the problem.
+
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+Acked-by: Samuel Thibault <samuel.thibault@ens-lyon.org>
+master commit: 4464673ccbfd12dcd0ec08cc29ca62cc12f6e61e
+---
+ Config.mk        | 14 +++++++-------
+ Makefile         |  2 +-
+ config/MiniOS.mk |  4 ++--
+ minios.mk        |  8 ++++----
+ 4 files changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/Config.mk b/Config.mk
+index e5d8ade..9d19cd7 100644
+--- a/Config.mk
++++ b/Config.mk
+@@ -27,11 +27,11 @@ cc-option = $(shell if test -z "`echo 'void*p=1;' | \
+ # stubdom, some XEN_ variables are set, set MINIOS_ variables accordingly.
+ #
+ ifneq ($(XEN_ROOT),)
+-MINI-OS_ROOT=$(XEN_ROOT)/extras/mini-os
++MINIOS_ROOT=$(XEN_ROOT)/extras/mini-os
+ else
+-MINI-OS_ROOT=$(TOPLEVEL_DIR)
++MINIOS_ROOT=$(TOPLEVEL_DIR)
+ endif
+-export MINI-OS_ROOT
++export MINIOS_ROOT
+ 
+ ifneq ($(XEN_TARGET_ARCH),)
+ MINIOS_TARGET_ARCH = $(XEN_TARGET_ARCH)
+@@ -78,16 +78,16 @@ EXTRA_INC = $(ARCH_INC)
+ 
+ # Include the architecture family's special makerules.
+ # This must be before include minios.mk!
+-include $(MINI-OS_ROOT)/$(TARGET_ARCH_DIR)/arch.mk
++include $(MINIOS_ROOT)/$(TARGET_ARCH_DIR)/arch.mk
+ 
+-extra_incl := $(foreach dir,$(EXTRA_INC),-isystem $(MINI-OS_ROOT)/include/$(dir))
++extra_incl := $(foreach dir,$(EXTRA_INC),-isystem $(MINIOS_ROOT)/include/$(dir))
+ 
+-DEF_CPPFLAGS += -isystem $(MINI-OS_ROOT)/include
++DEF_CPPFLAGS += -isystem $(MINIOS_ROOT)/include
+ DEF_CPPFLAGS += -D__MINIOS__
+ 
+ ifeq ($(libc),y)
+ DEF_CPPFLAGS += -DHAVE_LIBC
+-DEF_CPPFLAGS += -isystem $(MINI-OS_ROOT)/include/posix
++DEF_CPPFLAGS += -isystem $(MINIOS_ROOT)/include/posix
+ DEF_CPPFLAGS += -isystem $(XEN_ROOT)/tools/xenstore/include
+ endif
+ 
+diff --git a/Makefile b/Makefile
+index 2cb5e51..534eb65 100644
+--- a/Makefile
++++ b/Makefile
+@@ -14,7 +14,7 @@ EXTRA_DEPS += $(MINIOS_CONFIG)
+ include $(MINIOS_CONFIG)
+ endif
+ 
+-include $(MINI-OS_ROOT)/config/MiniOS.mk
++include $(MINIOS_ROOT)/config/MiniOS.mk
+ 
+ # Configuration defaults
+ CONFIG_START_NETWORK ?= y
+diff --git a/config/MiniOS.mk b/config/MiniOS.mk
+index e4febe4..be542dc 100644
+--- a/config/MiniOS.mk
++++ b/config/MiniOS.mk
+@@ -1,5 +1,5 @@
+-include $(MINI-OS_ROOT)/config/StdGNU.mk
+-include $(MINI-OS_ROOT)/Config.mk
++include $(MINIOS_ROOT)/config/StdGNU.mk
++include $(MINIOS_ROOT)/Config.mk
+ CFLAGS += $(DEF_CFLAGS) $(ARCH_CFLAGS)
+ CPPFLAGS += $(DEF_CPPFLAGS) $(ARCH_CPPFLAGS) $(extra_incl)
+ ASFLAGS += $(DEF_ASFLAGS) $(ARCH_ASFLAGS)
+diff --git a/minios.mk b/minios.mk
+index e042027..89534f7 100644
+--- a/minios.mk
++++ b/minios.mk
+@@ -39,12 +39,12 @@ LDFLAGS := $(DEF_LDFLAGS) $(ARCH_LDFLAGS)
+ 
+ # Special build dependencies.
+ # Rebuild all after touching this/these file(s)
+-EXTRA_DEPS += $(MINI-OS_ROOT)/minios.mk
+-EXTRA_DEPS += $(MINI-OS_ROOT)/$(TARGET_ARCH_DIR)/arch.mk
++EXTRA_DEPS += $(MINIOS_ROOT)/minios.mk
++EXTRA_DEPS += $(MINIOS_ROOT)/$(TARGET_ARCH_DIR)/arch.mk
+ 
+ # Find all header files for checking dependencies.
+-HDRS := $(wildcard $(MINI-OS_ROOT)/include/*.h)
+-HDRS += $(wildcard $(MINI-OS_ROOT)/include/xen/*.h)
++HDRS := $(wildcard $(MINIOS_ROOT)/include/*.h)
++HDRS += $(wildcard $(MINIOS_ROOT)/include/xen/*.h)
+ HDRS += $(wildcard $(ARCH_INC)/*.h)
+ # For special wanted header directories.
+ extra_heads := $(foreach dir,$(EXTRA_INC),$(wildcard $(dir)/*.h))
+-- 
+1.9.1
+
+
+From e1cca557c64272d33da7bafc0ad25399267563d0 Mon Sep 17 00:00:00 2001
+From: Wei Liu <wei.liu2@citrix.com>
+Date: Fri, 13 May 2016 15:21:10 +0100
+Subject: [PATCH 6/6] lib/sys.c: enclose file_types in define guards
+
+Otherwise some build environments complain file_types array is defined
+but not used.
+
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+Acked-by: Samuel Thibault <samuel.thibault@ens-lyon.org>
+master commit: 1a3ee6eeca136525aa2e6917ae500e7cf731c09d
+---
+ lib/sys.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/lib/sys.c b/lib/sys.c
+index f8d7a7c..1420722 100644
+--- a/lib/sys.c
++++ b/lib/sys.c
+@@ -634,6 +634,7 @@ int closedir(DIR *dir)
+ 
+ /* We assume that only the main thread calls select(). */
+ 
++#if defined(LIBC_DEBUG) || defined(LIBC_VERBOSE)
+ static const char file_types[] = {
+     [FTYPE_NONE]	= 'N',
+     [FTYPE_CONSOLE]	= 'C',
+@@ -646,6 +647,7 @@ static const char file_types[] = {
+     [FTYPE_KBD]		= 'K',
+     [FTYPE_FB]		= 'G',
+ };
++#endif
+ #ifdef LIBC_DEBUG
+ static void dump_set(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
+ {
+-- 
+1.9.1
+
