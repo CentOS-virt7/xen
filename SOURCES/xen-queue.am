@@ -1780,6 +1780,2287 @@ index e749b78..1dce21d 100644
 
 
 From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Wed, 27 Apr 2016 15:50:01 +0100
+Subject: [PATCH] libxl: Record backend/frontend paths in /libxl/$DOMID
+
+This gives us a record of all the backends we have set up for a
+domain, which is separate from the frontends in
+  /local/domain/$DOMID/device.
+
+In particular:
+
+1. A guest has write permission for the frontend path:
+  /local/domain/$DOMID/device/$KIND/$DEVID
+which means that the guest can completely delete the frontend.
+(They can't recreate it because they don't have write permission
+on the containing directory.)
+
+2. A guest has write permission for the backend path recorded in the
+frontend, ie, it can write to
+  /local/domain/$DOMID/device/$KIND/$DEVID/backend
+which means that the guest can break the association between
+frontend and backend.
+
+So we can't rely on iterating over the frontends to find all the
+backends, or examining a frontend to discover how a device is
+configured.
+
+So, have libxl__device_generic_add record the frontend and backend
+paths in /libxl/$DOMID/device, and have libxl__device_destroy remove
+them again.
+
+Create the containing directory /libxl/GUEST/device in
+libxl__domain_make.  The already existing xs_rm in devices_destroy_cb
+will take care of removing it.
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ docs/misc/xenstore-paths.markdown | 15 +++++++++++++++
+ tools/libxl/libxl_create.c        |  2 ++
+ tools/libxl/libxl_device.c        | 36 ++++++++++++++++++++++++++++++++++--
+ tools/libxl/libxl_internal.h      |  1 +
+ 4 files changed, 52 insertions(+), 2 deletions(-)
+
+diff --git a/docs/misc/xenstore-paths.markdown b/docs/misc/xenstore-paths.markdown
+index d94ea9d..276273d 100644
+--- a/docs/misc/xenstore-paths.markdown
++++ b/docs/misc/xenstore-paths.markdown
+@@ -389,6 +389,21 @@ The guest's virtual time offset from UTC in seconds.
+ 
+ ### libxl Specific Paths
+ 
++#### /libxl/$DOMID/device/$KIND/$DEVID
++
++Created by libxl for every frontend/backend pair created for $DOMID.
++Used by libxl for enumeration and management of the device.
++
++#### /libxl/$DOMID/device/$KIND/$DEVID/frontend
++
++Path in xenstore to the frontend, normally
++/local/domain/$DOMID/device/$KIND/$DEVID
++
++#### /libxl/$DOMID/device/$KIND/$DEVID/backend
++
++Path in xenstore to the backend, normally
++/local/domain/$BACKEND_DOMID/backend/$KIND/$DOMID/$DEVID
++
+ #### /libxl/$DOMID/dm-version ("qemu\_xen"|"qemu\_xen\_traditional") = [n,INTERNAL]
+ 
+ The device model version for a domain.
+diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
+index 278b9ed..1c9426e 100644
+--- a/tools/libxl/libxl_create.c
++++ b/tools/libxl/libxl_create.c
+@@ -591,6 +591,8 @@ retry_transaction:
+ 
+     xs_rm(ctx->xsh, t, libxl_path);
+     libxl__xs_mkdir(gc, t, libxl_path, noperm, ARRAY_SIZE(noperm));
++    libxl__xs_mkdir(gc, t, GCSPRINTF("%s/device", libxl_path),
++                    noperm, ARRAY_SIZE(noperm));
+ 
+     xs_write(ctx->xsh, t, libxl__sprintf(gc, "%s/vm", dom_path), vm_path, strlen(vm_path));
+     rc = libxl__domain_rename(gc, *domid, 0, info->name, t);
+diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
+index 68823e3..9946565 100644
+--- a/tools/libxl/libxl_device.c
++++ b/tools/libxl/libxl_device.c
+@@ -40,6 +40,15 @@ char *libxl__device_backend_path(libxl__gc *gc, libxl__device *device)
+                      device->domid, device->devid);
+ }
+ 
++char *libxl__device_libxl_path(libxl__gc *gc, libxl__device *device)
++{
++    char *libxl_dom_path = libxl__xs_libxl_path(gc, device->domid);
++
++    return GCSPRINTF("%s/device/%s/%d", libxl_dom_path,
++                     libxl__device_kind_to_string(device->kind),
++                     device->devid);
++}
++
+ /* Returns 1 if device exists, 0 if not, ERROR_* (<0) on error. */
+ int libxl__device_exists(libxl__gc *gc, xs_transaction_t t,
+                          libxl__device *device)
+@@ -105,14 +114,16 @@ int libxl__device_generic_add(libxl__gc *gc, xs_transaction_t t,
+         libxl__device *device, char **bents, char **fents, char **ro_fents)
+ {
+     libxl_ctx *ctx = libxl__gc_owner(gc);
+-    char *frontend_path, *backend_path;
++    char *frontend_path, *backend_path, *libxl_path;
+     struct xs_permissions frontend_perms[2];
+     struct xs_permissions ro_frontend_perms[2];
+     struct xs_permissions backend_perms[2];
+     int create_transaction = t == XBT_NULL;
++    int rc;
+ 
+     frontend_path = libxl__device_frontend_path(gc, device);
+     backend_path = libxl__device_backend_path(gc, device);
++    libxl_path = libxl__device_libxl_path(gc, device);
+ 
+     frontend_perms[0].id = device->domid;
+     frontend_perms[0].perms = XS_PERM_NONE;
+@@ -127,8 +138,22 @@ int libxl__device_generic_add(libxl__gc *gc, xs_transaction_t t,
+ retry_transaction:
+     if (create_transaction)
+         t = xs_transaction_start(ctx->xsh);
++
+     /* FIXME: read frontend_path and check state before removing stuff */
+ 
++    rc = libxl__xs_rm_checked(gc, t, libxl_path);
++    if (rc) goto out;
++
++    rc = libxl__xs_write_checked(gc, t, GCSPRINTF("%s/frontend",libxl_path),
++                                 frontend_path);
++    if (rc) goto out;
++
++    rc = libxl__xs_write_checked(gc, t, GCSPRINTF("%s/backend",libxl_path),
++                                 backend_path);
++    if (rc) goto out;
++
++    /* xxx much of this function lacks error checks! */
++
+     if (fents || ro_fents) {
+         xs_rm(ctx->xsh, t, frontend_path);
+         xs_mkdir(ctx->xsh, t, frontend_path);
+@@ -174,6 +199,11 @@ retry_transaction:
+         }
+     }
+     return 0;
++
++ out:
++    if (create_transaction && t)
++        libxl__xs_transaction_abort(gc, &t);
++    return rc;
+ }
+ 
+ typedef struct {
+@@ -572,6 +602,7 @@ int libxl__device_destroy(libxl__gc *gc, libxl__device *dev)
+ {
+     const char *be_path = libxl__device_backend_path(gc, dev);
+     const char *fe_path = libxl__device_frontend_path(gc, dev);
++    const char *libxl_path = libxl__device_libxl_path(gc, dev);
+     const char *tapdisk_path = GCSPRINTF("%s/%s", be_path, "tapdisk-params");
+     const char *tapdisk_params;
+     xs_transaction_t t = 0;
+@@ -592,9 +623,10 @@ int libxl__device_destroy(libxl__gc *gc, libxl__device *dev)
+         if (domid == LIBXL_TOOLSTACK_DOMID) {
+             /*
+              * The toolstack domain is in charge of removing the
+-             * frontend path.
++             * frontend and libxl paths.
+              */
+             libxl__xs_path_cleanup(gc, t, fe_path);
++            libxl__xs_path_cleanup(gc, t, libxl_path);
+         }
+         if (dev->backend_domid == domid) {
+             /*
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index 1699f32..38af3ac 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -1152,6 +1152,7 @@ _hidden int libxl__device_generic_add(libxl__gc *gc, xs_transaction_t t,
+         libxl__device *device, char **bents, char **fents, char **ro_fents);
+ _hidden char *libxl__device_backend_path(libxl__gc *gc, libxl__device *device);
+ _hidden char *libxl__device_frontend_path(libxl__gc *gc, libxl__device *device);
++_hidden char *libxl__device_libxl_path(libxl__gc *gc, libxl__device *device);
+ _hidden int libxl__parse_backend_path(libxl__gc *gc, const char *path,
+                                       libxl__device *dev);
+ _hidden int libxl__device_destroy(libxl__gc *gc, libxl__device *dev);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Wed, 27 Apr 2016 16:34:19 +0100
+Subject: [PATCH] libxl: Provide libxl__backendpath_parse_domid
+
+Multiple places in libxl need to figure out the backend domid of a
+device.  This can be discovered easily by looking at the backend path,
+which always starts /local/domain/$backend_domid/.
+
+There are no call sites yet.
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl_device.c   | 15 +++++++++++++++
+ tools/libxl/libxl_internal.h |  2 ++
+ 2 files changed, 17 insertions(+)
+
+diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
+index 9946565..98538d2 100644
+--- a/tools/libxl/libxl_device.c
++++ b/tools/libxl/libxl_device.c
+@@ -288,6 +288,21 @@ static int disk_try_backend(disk_try_backend_args *a,
+     return 0;
+ }
+ 
++int libxl__backendpath_parse_domid(libxl__gc *gc, const char *be_path,
++                                   libxl_domid *domid_out) {
++    int r;
++    unsigned int domid_sc;
++    char delim_sc;
++
++    r = sscanf(be_path, "/local/domain/%u%c", &domid_sc, &delim_sc);
++    if (!(r==2 && delim_sc=='/')) {
++        LOG(ERROR, "internal error: backend path %s unparseable!", be_path);
++        return ERROR_FAIL;
++    }
++    *domid_out = domid_sc;
++    return 0;
++}
++
+ int libxl__device_disk_set_backend(libxl__gc *gc, libxl_device_disk *disk) {
+     libxl_disk_backend ok;
+     disk_try_backend_args a;
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index 38af3ac..f034f63 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -683,6 +683,8 @@ _hidden bool libxl__xs_mkdir(libxl__gc *gc, xs_transaction_t t,
+ 
+ _hidden char *libxl__xs_libxl_path(libxl__gc *gc, uint32_t domid);
+ 
++_hidden int libxl__backendpath_parse_domid(libxl__gc *gc, const char *be_path,
++                                           libxl_domid *domid_out);
+ 
+ /*----- "checked" xenstore access functions -----*/
+ /* Each of these functions will check that it succeeded; if it
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Tue, 3 May 2016 18:39:36 +0100
+Subject: [PATCH] libxl: Do not trust frontend in libxl__devices_destroy
+
+We need to enumerate the devices we have provided to a domain, without
+trusting the guest-writeable (or, at least, guest-deletable) frontend
+paths.
+
+Instead, enumerate via, and read the backend path from, /libxl.
+
+The console /libxl path is regular, so the special case for console 0
+is not relevant any more: /libxl/GUEST/device/console/0 will be found,
+and then libxl__device_destroy will DTRT to the right frontend path.
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl_device.c | 22 +++-------------------
+ 1 file changed, 3 insertions(+), 19 deletions(-)
+
+diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
+index 98538d2..8a280c2 100644
+--- a/tools/libxl/libxl_device.c
++++ b/tools/libxl/libxl_device.c
+@@ -685,7 +685,7 @@ void libxl__devices_destroy(libxl__egc *egc, libxl__devices_remove_state *drs)
+     libxl__multidev_begin(ao, multidev);
+     multidev->callback = devices_remove_callback;
+ 
+-    path = GCSPRINTF("/local/domain/%d/device", domid);
++    path = GCSPRINTF("/libxl/%d/device", domid);
+     kinds = libxl__xs_directory(gc, XBT_NULL, path, &num_kinds);
+     if (!kinds) {
+         if (errno != ENOENT) {
+@@ -698,12 +698,12 @@ void libxl__devices_destroy(libxl__egc *egc, libxl__devices_remove_state *drs)
+         if (libxl__device_kind_from_string(kinds[i], &kind))
+             continue;
+ 
+-        path = GCSPRINTF("/local/domain/%d/device/%s", domid, kinds[i]);
++        path = GCSPRINTF("/libxl/%d/device/%s", domid, kinds[i]);
+         devs = libxl__xs_directory(gc, XBT_NULL, path, &num_dev_xsentries);
+         if (!devs)
+             continue;
+         for (j = 0; j < num_dev_xsentries; j++) {
+-            path = GCSPRINTF("/local/domain/%d/device/%s/%s/backend",
++            path = GCSPRINTF("/libxl/%d/device/%s/%s/backend",
+                              domid, kinds[i], devs[j]);
+             path = libxl__xs_read(gc, XBT_NULL, path);
+             GCNEW(dev);
+@@ -728,22 +728,6 @@ void libxl__devices_destroy(libxl__egc *egc, libxl__devices_remove_state *drs)
+         }
+     }
+ 
+-    /* console 0 frontend directory is not under /local/domain/<domid>/device */
+-    path = GCSPRINTF("/local/domain/%d/console/backend", domid);
+-    path = libxl__xs_read(gc, XBT_NULL, path);
+-    GCNEW(dev);
+-    if (path && strcmp(path, "") &&
+-        libxl__parse_backend_path(gc, path, dev) == 0) {
+-        dev->domid = domid;
+-        dev->kind = LIBXL__DEVICE_KIND_CONSOLE;
+-        dev->devid = 0;
+-
+-        /* Currently console devices can be destroyed synchronously by just
+-         * removing xenstore entries, this is what libxl__device_destroy does.
+-         */
+-        libxl__device_destroy(gc, dev);
+-    }
+-
+ out:
+     libxl__multidev_prepared(egc, multidev, rc);
+ }
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Wed, 4 May 2016 15:30:32 +0100
+Subject: [PATCH] libxl: Do not trust frontend in libxl__device_nextid
+
+When selecting the devid for a new device, we should look in
+/libxl/device for existing devices, not in the frontend area.
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 1366177..96f68dc 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2008,15 +2008,16 @@ out:
+ /* common function to get next device id */
+ static int libxl__device_nextid(libxl__gc *gc, uint32_t domid, char *device)
+ {
+-    char *dompath, **l;
++    char *libxl_dom_path, **l;
+     unsigned int nb;
+     int nextid = -1;
+ 
+-    if (!(dompath = libxl__xs_get_dompath(gc, domid)))
++    if (!(libxl_dom_path = libxl__xs_libxl_path(gc, domid)))
+         return nextid;
+ 
+     l = libxl__xs_directory(gc, XBT_NULL,
+-                            GCSPRINTF("%s/device/%s", dompath, device), &nb);
++        GCSPRINTF("%s/device/%s", libxl_dom_path, device),
++                            &nb);
+     if (l == NULL || nb == 0)
+         nextid = 0;
+     else
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Wed, 27 Apr 2016 16:08:49 +0100
+Subject: [PATCH] libxl: Do not trust frontend for disk eject event
+
+Use the /libxl path for interpreting disk eject watch events: do not
+read the backend path out of the frontend.  Instead, use the version
+in /libxl.  That avoids us relying on the guest-modifiable
+$frontend/backend pointer.
+
+To implement this we store the path
+  /libxl/$guest/device/vbd/$devid/backend
+in the evgen structure.
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c          | 28 ++++++++++++++++++++++------
+ tools/libxl/libxl_internal.h |  2 +-
+ 2 files changed, 23 insertions(+), 7 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 96f68dc..831b80c 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -1336,9 +1336,10 @@ static void disk_eject_xswatch_callback(libxl__egc *egc, libxl__ev_xswatch *w,
+                                         const char *wpath, const char *epath) {
+     EGC_GC;
+     libxl_evgen_disk_eject *evg = (void*)w;
+-    char *backend;
++    const char *backend;
+     char *value;
+     char backend_type[BACKEND_STRING_SIZE+1];
++    int rc;
+ 
+     value = libxl__xs_read(gc, XBT_NULL, wpath);
+ 
+@@ -1354,9 +1355,16 @@ static void disk_eject_xswatch_callback(libxl__egc *egc, libxl__ev_xswatch *w,
+     libxl_event *ev = NEW_EVENT(egc, DISK_EJECT, evg->domid, evg->user);
+     libxl_device_disk *disk = &ev->u.disk_eject.disk;
+     
+-    backend = libxl__xs_read(gc, XBT_NULL,
+-                             libxl__sprintf(gc, "%.*s/backend",
+-                                            (int)strlen(wpath)-6, wpath));
++    rc = libxl__xs_read_checked(gc, XBT_NULL, evg->be_ptr_path, &backend);
++    if (rc) {
++        LIBXL__EVENT_DISASTER(egc, "xs_read failed reading be_ptr_path",
++                              errno, LIBXL_EVENT_TYPE_DISK_EJECT);
++        return;
++    }
++    if (!backend) {
++        /* device has been removed, not simply ejected */
++        return;
++    }
+ 
+     sscanf(backend,
+             "/local/domain/%d/backend/%" TOSTRING(BACKEND_STRING_SIZE)
+@@ -1405,11 +1413,18 @@ int libxl_evenable_disk_eject(libxl_ctx *ctx, uint32_t guest_domid,
+     if (!domid)
+         domid = guest_domid;
+ 
+-    path = libxl__sprintf(gc, "%s/device/vbd/%d/eject",
++    int devid = libxl__device_disk_dev_number(vdev, NULL, NULL);
++
++    path = GCSPRINTF("%s/device/vbd/%d/eject",
+                  libxl__xs_get_dompath(gc, domid),
+-                 libxl__device_disk_dev_number(vdev, NULL, NULL));
++                 devid);
+     if (!path) { rc = ERROR_NOMEM; goto out; }
+ 
++    const char *libxl_path = GCSPRINTF("%s/device/vbd/%d",
++                                 libxl__xs_libxl_path(gc, domid),
++                                 devid);
++    evg->be_ptr_path = libxl__sprintf(NOGC, "%s/backend", libxl_path);
++
+     rc = libxl__ev_xswatch_register(gc, &evg->watch,
+                                     disk_eject_xswatch_callback, path);
+     if (rc) goto out;
+@@ -1436,6 +1451,7 @@ void libxl__evdisable_disk_eject(libxl__gc *gc, libxl_evgen_disk_eject *evg) {
+         libxl__ev_xswatch_deregister(gc, &evg->watch);
+ 
+     free(evg->vdev);
++    free(evg->be_ptr_path);
+     free(evg);
+ 
+     CTX_UNLOCK;
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index f034f63..1f11b1a 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -337,7 +337,7 @@ struct libxl__evgen_disk_eject {
+     uint32_t domid;
+     LIBXL_LIST_ENTRY(libxl_evgen_disk_eject) entry;
+     libxl_ev_user user;
+-    char *vdev;
++    char *vdev, *be_ptr_path;
+ };
+ _hidden void
+ libxl__evdisable_disk_eject(libxl__gc*, libxl_evgen_disk_eject*);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Fri, 29 Apr 2016 19:21:51 +0100
+Subject: [PATCH] libxl: Do not trust frontend for disk in getinfo
+
+* Rename the frontend variable to `fe_path' to check we caught them all
+* Read the backend path from /libxl, rather than from the frontend
+* Parse the backend domid from the backend path, rather than reading it
+  from the frontend (and add the appropriate error path and initialisation)
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 27 +++++++++++++++++++--------
+ 1 file changed, 19 insertions(+), 8 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 831b80c..b418564 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2821,27 +2821,34 @@ int libxl_device_disk_getinfo(libxl_ctx *ctx, uint32_t domid,
+                               libxl_device_disk *disk, libxl_diskinfo *diskinfo)
+ {
+     GC_INIT(ctx);
+-    char *dompath, *diskpath;
++    char *dompath, *fe_path, *libxl_path;
+     char *val;
++    int rc;
++
++    diskinfo->backend = NULL;
+ 
+     dompath = libxl__xs_get_dompath(gc, domid);
+     diskinfo->devid = libxl__device_disk_dev_number(disk->vdev, NULL, NULL);
+ 
+     /* tap devices entries in xenstore are written as vbd devices. */
+-    diskpath = libxl__sprintf(gc, "%s/device/vbd/%d", dompath, diskinfo->devid);
++    fe_path = GCSPRINTF("%s/device/vbd/%d", dompath, diskinfo->devid);
++    libxl_path = GCSPRINTF("%s/device/vbd/%d",
++                           libxl__xs_libxl_path(gc, domid), diskinfo->devid);
+     diskinfo->backend = xs_read(ctx->xsh, XBT_NULL,
+-                                libxl__sprintf(gc, "%s/backend", diskpath), NULL);
++                                GCSPRINTF("%s/backend", libxl_path), NULL);
+     if (!diskinfo->backend) {
+         GC_FREE;
+         return ERROR_FAIL;
+     }
+-    val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/backend-id", diskpath));
+-    diskinfo->backend_id = val ? strtoul(val, NULL, 10) : -1;
+-    val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/state", diskpath));
++    rc = libxl__backendpath_parse_domid(gc, diskinfo->backend,
++                                        &diskinfo->backend_id);
++    if (rc) goto out;
++
++    val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/state", fe_path));
+     diskinfo->state = val ? strtoul(val, NULL, 10) : -1;
+-    val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/event-channel", diskpath));
++    val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/event-channel", fe_path));
+     diskinfo->evtch = val ? strtoul(val, NULL, 10) : -1;
+-    val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/ring-ref", diskpath));
++    val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/ring-ref", fe_path));
+     diskinfo->rref = val ? strtoul(val, NULL, 10) : -1;
+     diskinfo->frontend = xs_read(ctx->xsh, XBT_NULL,
+                                  libxl__sprintf(gc, "%s/frontend", diskinfo->backend), NULL);
+@@ -2850,6 +2857,10 @@ int libxl_device_disk_getinfo(libxl_ctx *ctx, uint32_t domid,
+ 
+     GC_FREE;
+     return 0;
++
++ out:
++    free(diskinfo->backend);
++    return rc;
+ }
+ 
+ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Tue, 3 May 2016 15:58:32 +0100
+Subject: [PATCH] libxl: Do not trust frontend for vtpm list
+
+libxl_device_vtpm_list needs to enumerate and identify devices without
+trusting frontend-controlled data.  So
+
+* Use the /libxl path to enumerate vtpms.
+* Use the /libxl path to find the corresponding backends.
+* Parse the backend path to find the backend domid.
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index b418564..6590157 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2196,14 +2196,15 @@ libxl_device_vtpm *libxl_device_vtpm_list(libxl_ctx *ctx, uint32_t domid, int *n
+     GC_INIT(ctx);
+ 
+     libxl_device_vtpm* vtpms = NULL;
+-    char* fe_path = NULL;
++    char *libxl_path;
+     char** dir = NULL;
+     unsigned int ndirs = 0;
++    int rc;
+ 
+     *num = 0;
+ 
+-    fe_path = libxl__sprintf(gc, "%s/device/vtpm", libxl__xs_get_dompath(gc, domid));
+-    dir = libxl__xs_directory(gc, XBT_NULL, fe_path, &ndirs);
++    libxl_path = GCSPRINTF("%s/device/vtpm", libxl__xs_libxl_path(gc, domid));
++    dir = libxl__xs_directory(gc, XBT_NULL, libxl_path, &ndirs);
+     if (dir && ndirs) {
+        vtpms = malloc(sizeof(*vtpms) * ndirs);
+        libxl_device_vtpm* vtpm;
+@@ -2212,16 +2213,15 @@ libxl_device_vtpm *libxl_device_vtpm_list(libxl_ctx *ctx, uint32_t domid, int *n
+           char* tmp;
+           const char* be_path = libxl__xs_read(gc, XBT_NULL,
+                 GCSPRINTF("%s/%s/backend",
+-                   fe_path, *dir));
++                   libxl_path, *dir));
+ 
+           libxl_device_vtpm_init(vtpm);
+ 
+           vtpm->devid = atoi(*dir);
+ 
+-          tmp = libxl__xs_read(gc, XBT_NULL,
+-                GCSPRINTF("%s/%s/backend-id",
+-                   fe_path, *dir));
+-          vtpm->backend_domid = atoi(tmp);
++          rc = libxl__backendpath_parse_domid(gc, be_path,
++                                              &vtpm->backend_domid);
++          if (rc) return NULL;
+ 
+           tmp = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/uuid", be_path));
+           if (tmp) {
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Tue, 3 May 2016 16:00:20 +0100
+Subject: [PATCH] libxl: Do not trust frontend for vtpm in getinfo
+
+libxl_device_vtpm_getinfo needs to examine devices without trusting
+frontend-controlled data.  So:
+
+* Use /libxl to find the backend path.
+* Parse the backend path to find the backend domid, rather than
+  reading it from the frontend.
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 6590157..a424832 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2245,7 +2245,7 @@ int libxl_device_vtpm_getinfo(libxl_ctx *ctx,
+                               libxl_vtpminfo *vtpminfo)
+ {
+     GC_INIT(ctx);
+-    char *dompath, *vtpmpath;
++    char *libxl_path, *dompath, *vtpmpath;
+     char *val;
+     int rc = 0;
+ 
+@@ -2254,8 +2254,10 @@ int libxl_device_vtpm_getinfo(libxl_ctx *ctx,
+     vtpminfo->devid = vtpm->devid;
+ 
+     vtpmpath = GCSPRINTF("%s/device/vtpm/%d", dompath, vtpminfo->devid);
++    libxl_path = GCSPRINTF("%s/device/vtpm/%d",
++                           libxl__xs_libxl_path(gc, domid), vtpminfo->devid);
+     vtpminfo->backend = xs_read(ctx->xsh, XBT_NULL,
+-          GCSPRINTF("%s/backend", vtpmpath), NULL);
++          GCSPRINTF("%s/backend", libxl_path), NULL);
+     if (!vtpminfo->backend) {
+         goto err;
+     }
+@@ -2263,9 +2265,9 @@ int libxl_device_vtpm_getinfo(libxl_ctx *ctx,
+        goto err;
+     }
+ 
+-    val = libxl__xs_read(gc, XBT_NULL,
+-          GCSPRINTF("%s/backend-id", vtpmpath));
+-    vtpminfo->backend_id = val ? strtoul(val, NULL, 10) : -1;
++    rc = libxl__backendpath_parse_domid(gc, vtpminfo->backend,
++                                        &vtpminfo->backend_id);
++    if (rc) goto exit;
+ 
+     val = libxl__xs_read(gc, XBT_NULL,
+           GCSPRINTF("%s/state", vtpmpath));
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Tue, 3 May 2016 15:52:53 +0100
+Subject: [PATCH] libxl: Do not trust frontend for nic in
+ libxl_devid_to_device_nic
+
+Find the backend by reading the pointer in /libxl rather than in the
+guest's frontend area.
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index a424832..225e659 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -3512,17 +3512,17 @@ int libxl_devid_to_device_nic(libxl_ctx *ctx, uint32_t domid,
+                               int devid, libxl_device_nic *nic)
+ {
+     GC_INIT(ctx);
+-    char *dompath, *path;
++    char *libxl_dom_path, *path;
+     int rc = ERROR_FAIL;
+ 
+     libxl_device_nic_init(nic);
+-    dompath = libxl__xs_get_dompath(gc, domid);
+-    if (!dompath)
++    libxl_dom_path = libxl__xs_libxl_path(gc, domid);
++    if (!libxl_dom_path)
+         goto out;
+ 
+     path = libxl__xs_read(gc, XBT_NULL,
+-                          libxl__sprintf(gc, "%s/device/vif/%d/backend",
+-                                         dompath, devid));
++                          GCSPRINTF("%s/device/vif/%d/backend", libxl_dom_path,
++                                    devid));
+     if (!path)
+         goto out;
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Tue, 3 May 2016 16:31:07 +0100
+Subject: [PATCH] libxl: Do not trust frontend for nic in getinfo
+
+libxl_device_nic_getinfo needs to examine devices without trusting
+frontend-controlled data.  So:
+
+* Use /libxl to find the backend path.
+* Parse the backend path to find the backend domid, rather than
+  reading it from the frontend.
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 21 ++++++++++++++-------
+ 1 file changed, 14 insertions(+), 7 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 225e659..105a9cc 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -3601,22 +3601,27 @@ int libxl_device_nic_getinfo(libxl_ctx *ctx, uint32_t domid,
+                               libxl_device_nic *nic, libxl_nicinfo *nicinfo)
+ {
+     GC_INIT(ctx);
+-    char *dompath, *nicpath;
++    char *dompath, *nicpath, *libxl_path;
+     char *val;
++    int rc;
+ 
+     dompath = libxl__xs_get_dompath(gc, domid);
+     nicinfo->devid = nic->devid;
+ 
+-    nicpath = libxl__sprintf(gc, "%s/device/vif/%d", dompath, nicinfo->devid);
++    nicpath = GCSPRINTF("%s/device/vif/%d", dompath, nicinfo->devid);
++    libxl_path = GCSPRINTF("%s/device/vif/%d",
++                           libxl__xs_libxl_path(gc, domid), nicinfo->devid);
+     nicinfo->backend = xs_read(ctx->xsh, XBT_NULL,
+-                                libxl__sprintf(gc, "%s/backend", nicpath), NULL);
++                                GCSPRINTF("%s/backend", libxl_path), NULL);
+     if (!nicinfo->backend) {
+         GC_FREE;
+         return ERROR_FAIL;
+     }
+-    val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/backend-id", nicpath));
+-    nicinfo->backend_id = val ? strtoul(val, NULL, 10) : -1;
+-    val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/state", nicpath));
++    rc = libxl__backendpath_parse_domid(gc, nicinfo->backend,
++                                        &nicinfo->backend_id);
++    if (rc) goto out;
++
++    val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/state", nicpath));
+     nicinfo->state = val ? strtoul(val, NULL, 10) : -1;
+     val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/event-channel", nicpath));
+     nicinfo->evtch = val ? strtoul(val, NULL, 10) : -1;
+@@ -3629,8 +3634,10 @@ int libxl_device_nic_getinfo(libxl_ctx *ctx, uint32_t domid,
+     val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/frontend-id", nicinfo->backend));
+     nicinfo->frontend_id = val ? strtoul(val, NULL, 10) : -1;
+ 
++    rc = 0;
++ out:
+     GC_FREE;
+-    return 0;
++    return rc;
+ }
+ 
+ const char *libxl__device_nic_devname(libxl__gc *gc,
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Tue, 3 May 2016 17:01:56 +0100
+Subject: [PATCH] libxl: Do not trust frontend for channel in list
+
+libxl_device_channel_list should not trust frontend-provided data.
+
+So it needs to iterate using the /libxl paths, and read the backend
+path out of /libxl.
+
+However, it also filters out pure "consoles", which are channels
+without a "name".  But the name was stored only in the frontend
+directory, which the frontend can delete.
+
+So store the name in the backend too.  (Ideally we would store it in
+/libxl, where the backend can't write to it either, but
+libxl__device_console_add not currently have access to the xenstore
+transaction used by libxl__device_generic_add.  Protection against the
+backend will come later, in XSA-178.)
+
+Because the libxl paths are defined to be in terms of the frontend
+device types, not the backend device types, it is no longer correct
+for libxl__append_channel_list to take a type argument.  Abolish this
+(with no functional effect).
+
+This is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 25 ++++++++++++++-----------
+ 1 file changed, 14 insertions(+), 11 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 105a9cc..48d491f 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -3698,6 +3698,8 @@ int libxl__device_console_add(libxl__gc *gc, uint32_t domid,
+     if (console->name) {
+         flexarray_append(ro_front, "name");
+         flexarray_append(ro_front, console->name);
++        flexarray_append(back, "name");
++        flexarray_append(back, console->name);
+     }
+     if (console->connection) {
+         flexarray_append(back, "connection");
+@@ -3836,34 +3838,35 @@ static int libxl__device_channel_from_xs_be(libxl__gc *gc,
+     return rc;
+ }
+ 
+-static int libxl__append_channel_list_of_type(libxl__gc *gc,
++static int libxl__append_channel_list(libxl__gc *gc,
+                                               uint32_t domid,
+-                                              const char *type,
+                                               libxl_device_channel **channels,
+                                               int *nchannels)
+ {
+-    char *fe_path = NULL, *be_path = NULL;
++    char *libxl_dir_path = NULL, *be_path = NULL;
+     char **dir = NULL;
+     unsigned int n = 0, devid = 0;
+     libxl_device_channel *next = NULL;
+     int rc = 0, i;
+ 
+-    fe_path = GCSPRINTF("%s/device/%s",
+-                        libxl__xs_get_dompath(gc, domid), type);
+-    dir = libxl__xs_directory(gc, XBT_NULL, fe_path, &n);
++    libxl_dir_path = GCSPRINTF("%s/device/console",
++                               libxl__xs_libxl_path(gc, domid));
++    dir = libxl__xs_directory(gc, XBT_NULL, libxl_dir_path, &n);
+     if (!dir || !n)
+       goto out;
+ 
+     for (i = 0; i < n; i++) {
+-        const char *p, *name;
++        const char *libxl_path, *name;
+         libxl_device_channel *tmp;
+ 
+-        p = libxl__sprintf(gc, "%s/%s", fe_path, dir[i]);
+-        name = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/name", p));
++        libxl_path = GCSPRINTF("%s/%s", libxl_dir_path, dir[i]);
++        be_path = libxl__xs_read(gc, XBT_NULL,
++                                 GCSPRINTF("%s/backend", libxl_path));
++        if (!be_path) continue;
++        name = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/name", be_path));
+         /* 'channels' are consoles with names, so ignore all consoles
+            without names */
+         if (!name) continue;
+-        be_path = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/backend", p));
+         tmp = realloc(*channels,
+                       sizeof(libxl_device_channel) * (*nchannels + devid + 1));
+         if (!tmp) {
+@@ -3894,7 +3897,7 @@ libxl_device_channel *libxl_device_channel_list(libxl_ctx *ctx,
+ 
+     *num = 0;
+ 
+-    rc = libxl__append_channel_list_of_type(gc, domid, "console", &channels, num);
++    rc = libxl__append_channel_list(gc, domid, &channels, num);
+     if (rc) goto out_err;
+ 
+     GC_FREE;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Tue, 3 May 2016 17:24:32 +0100
+Subject: [PATCH] libxl: Do not trust frontend for channel in getinfo
+
+libxl_device_channel_getinfo needs to examine devices without trusting
+frontend-controlled data.  So:
+
+* Use /libxl to find the backend path.
+* Parse the backend path to find the backend domid, rather than
+  reading it from the frontend.
+* Tolerate FRONTEND/tty vanishing.
+
+Note that there is a strange off-by-one error in the computation of
+both fe_path and libxl_path in libxl_device_channel_getinfo: the
+incoming channel->devid, which is copied to channelinfo->devid, has +1
+applied to calculate the frontend path (and, after this patch, the
+libxl path).  I.e., the devid passed to libxl_device_channel_getinfo
+must be one less than the actual devid for the device being asked
+about.
+
+This is actually a bug which mirrors a bug in
+libxl__append_channel_list, which fills in the devids of the channel
+devices it finds with sequentially increasing numbers starting at 0.
+
+In the usual case channels have real devids starting at 1 (because
+there is the console, which is devid 0, but not a channel).  So these
+bugs usually cancel out.
+
+We do not address this problem at this time.  This bug does not have
+any security implications.
+
+This patch is part of XSA-175.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 44 ++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 36 insertions(+), 8 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 48d491f..db92fae 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -3918,23 +3918,28 @@ int libxl_device_channel_getinfo(libxl_ctx *ctx, uint32_t domid,
+                                  libxl_channelinfo *channelinfo)
+ {
+     GC_INIT(ctx);
+-    char *dompath, *fe_path;
++    char *dompath, *fe_path, *libxl_path;
+     char *val;
++    int rc;
+ 
+     dompath = libxl__xs_get_dompath(gc, domid);
+     channelinfo->devid = channel->devid;
+ 
+-    fe_path = libxl__sprintf(gc, "%s/device/console/%d", dompath,
+-                             channelinfo->devid + 1);
++    fe_path = GCSPRINTF("%s/device/console/%d", dompath,
++                        channelinfo->devid + 1);
++    libxl_path = GCSPRINTF("%s/device/console/%d",
++                           libxl__xs_libxl_path(gc, domid),
++                           channelinfo->devid + 1);
+     channelinfo->backend = xs_read(ctx->xsh, XBT_NULL,
+-                                   libxl__sprintf(gc, "%s/backend",
+-                                   fe_path), NULL);
++                                   GCSPRINTF("%s/backend", libxl_path), NULL);
+     if (!channelinfo->backend) {
+         GC_FREE;
+         return ERROR_FAIL;
+     }
+-    val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/backend-id", fe_path));
+-    channelinfo->backend_id = val ? strtoul(val, NULL, 10) : -1;
++    rc = libxl__backendpath_parse_domid(gc, channelinfo->backend,
++                                        &channelinfo->backend_id);
++    if (rc) goto out;
++
+     val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/state", fe_path));
+     channelinfo->state = val ? strtoul(val, NULL, 10) : -1;
+     channelinfo->frontend = xs_read(ctx->xsh, XBT_NULL,
+@@ -3952,13 +3957,36 @@ int libxl_device_channel_getinfo(libxl_ctx *ctx, uint32_t domid,
+     switch (channel->connection) {
+          case LIBXL_CHANNEL_CONNECTION_PTY:
+              val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/tty", fe_path));
++             /*
++              * It is obviously very wrong for this value to be in the
++              * frontend.  But in XSA-175 we don't want to re-engineer
++              * this because other xenconsole code elsewhere (some
++              * even out of tree, perhaps) expects this node to be
++              * here.
++              *
++              * FE/pty is readonly for the guest.  It always exists if
++              * FE does because libxl__device_console_add
++              * unconditionally creates it and nothing deletes it.
++              *
++              * The guest can delete the whole FE (which it has write
++              * privilege on) but the containing directories
++              * /local/GUEST[/device[/console]] are also RO for the
++              * guest.  So if the guest deletes FE it cannot recreate
++              * it.
++              *
++              * Therefore the guest cannot cause FE/pty to contain bad
++              * data, although it can cause it to not exist.
++              */
++             if (!val) val = "/NO-SUCH-PATH";
+              channelinfo->u.pty.path = strdup(val);
+              break;
+          default:
+              break;
+     }
++    rc = 0;
++ out:
+     GC_FREE;
+-    return 0;
++    return rc;
+ }
+ 
+ /******************************************************************************/
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:54 +0100
+Subject: [PATCH] libxl: Make copy of every xs backend in /libxl in
+ _generic_add
+
+We want to stop libxl trustingly reading information from the backend
+directory (since this is, of course, writeable by the backend, which
+might be a semi-trusted driver domain).
+
+In principle it is wrong in current libxl for anything to try to
+divine virtual device configuration from xenstore: the JSON domain
+config ought to supply that, and xenstore should only tell us which
+devices actually exist.
+
+However:
+
+Firstly, there are several existing places where configuration
+information is retrieved from xenstore rather than JSON.  We do not
+want to reen gineer this in a security patch.
+
+Secondly, we want to make a security patch which can be backported to
+versions of libxl without the JSON configuration machinery.
+
+So we take the expedient approach of keeping a copy of the
+configuration somewhere we trust, namely /libxl.  This is obviously
+fairly low-risk, although it does write significantly more keys in
+xenstore.
+
+In this patch we make this change in libxl__device_generic_add.  This
+is responsible for actually writing the vast majority of device
+information to xenstore.  There are a few loose ends which will be
+dealt with in a moment.
+
+Likewise, changes to readers to use the new location will appear in
+further patches.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ docs/misc/xenstore-paths.markdown |  4 ++++
+ tools/libxl/libxl_device.c        | 23 +++++++++++++++++++++++
+ 2 files changed, 27 insertions(+)
+
+diff --git a/docs/misc/xenstore-paths.markdown b/docs/misc/xenstore-paths.markdown
+index 276273d..8c686ec 100644
+--- a/docs/misc/xenstore-paths.markdown
++++ b/docs/misc/xenstore-paths.markdown
+@@ -404,6 +404,10 @@ Path in xenstore to the frontend, normally
+ Path in xenstore to the backend, normally
+ /local/domain/$BACKEND_DOMID/backend/$KIND/$DOMID/$DEVID
+ 
++#### /libxl/$DOMID/device/$KIND/$DEVID/$NODE
++
++Trustworthy copy of /local/domain/$DOMID/backend/$KIND/$DEVID/$NODE.
++
+ #### /libxl/$DOMID/dm-version ("qemu\_xen"|"qemu\_xen\_traditional") = [n,INTERNAL]
+ 
+ The device model version for a domain.
+diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
+index 8a280c2..d1f074a 100644
+--- a/tools/libxl/libxl_device.c
++++ b/tools/libxl/libxl_device.c
+@@ -185,6 +185,29 @@ retry_transaction:
+         xs_write(ctx->xsh, t, GCSPRINTF("%s/frontend", backend_path),
+                  frontend_path, strlen(frontend_path));
+         libxl__xs_writev(gc, t, backend_path, bents);
++
++        /*
++         * We make a copy of everything for the backend in the libxl
++         * path as well.  This means we don't need to trust the
++         * backend.  Ideally this information would not be used and we
++         * would use the information from the json configuration
++         * instead.  But there are still places in libxl that try to
++         * reconstruct a config from xenstore.
++         *
++         * This duplication will typically produces duplicate keys
++         * which will go out of date, but that's OK because nothing
++         * reads those.  For example, there is usually
++         *   /libxl/$guest/device/$kind/$devid/state
++         * which starts out containing XenbusStateInitialising ("1")
++         * just like the copy in
++         *  /local/domain/$driverdom/backend/$guest/$kind/$devid/state
++         * but which won't ever be updated.
++         *
++         * This duplication is superfluous and messy but as discussed
++         * the proper fix is more intrusive than we want to do now.
++         */
++        rc = libxl__xs_writev(gc, t, libxl_path, bents);
++        if (rc) goto out;
+     }
+ 
+     if (!create_transaction)
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:55 +0100
+Subject: [PATCH] libxl: Do not trust backend in libxl__device_exists
+
+To determine whether a device is supposed to exist, look in /libxl,
+rather than the backend.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl_device.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
+index d1f074a..1288d3e 100644
+--- a/tools/libxl/libxl_device.c
++++ b/tools/libxl/libxl_device.c
+@@ -54,7 +54,7 @@ int libxl__device_exists(libxl__gc *gc, xs_transaction_t t,
+                          libxl__device *device)
+ {
+     int rc;
+-    char *be_path = libxl__device_backend_path(gc, device);
++    char *be_path = libxl__device_libxl_path(gc, device);
+     const char *dir;
+ 
+     rc = libxl__xs_read_checked(gc, t, be_path, &dir);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:55 +0100
+Subject: [PATCH] libxl: Do not trust backend for vtpm in getinfo (except uuid)
+
+* Do not check the backend for existence.  We have already read the
+  /libxl path so know that the vtpm exists (or is supposed to); if the
+  backend doesn't exist then that must be the backend's doing.
+* Get the frontend path from the /libxl directory.
+* The frontend domid is the guest domid, and does not need to be read
+  from xenstore (!)
+
+We still attempt to read the uuid from the backend.  This will be
+fixed in the next patch.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 10 ++--------
+ 1 file changed, 2 insertions(+), 8 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index db92fae..e23f9bb 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2261,9 +2261,6 @@ int libxl_device_vtpm_getinfo(libxl_ctx *ctx,
+     if (!vtpminfo->backend) {
+         goto err;
+     }
+-    if(!libxl__xs_read(gc, XBT_NULL, vtpminfo->backend)) {
+-       goto err;
+-    }
+ 
+     rc = libxl__backendpath_parse_domid(gc, vtpminfo->backend,
+                                         &vtpminfo->backend_id);
+@@ -2282,11 +2279,8 @@ int libxl_device_vtpm_getinfo(libxl_ctx *ctx,
+     vtpminfo->rref = val ? strtoul(val, NULL, 10) : -1;
+ 
+     vtpminfo->frontend = xs_read(ctx->xsh, XBT_NULL,
+-          GCSPRINTF("%s/frontend", vtpminfo->backend), NULL);
+-
+-    val = libxl__xs_read(gc, XBT_NULL,
+-          GCSPRINTF("%s/frontend-id", vtpminfo->backend));
+-    vtpminfo->frontend_id = val ? strtoul(val, NULL, 10) : -1;
++          GCSPRINTF("%s/frontend", libxl_path), NULL);
++    vtpminfo->frontend_id = domid;
+ 
+     val = libxl__xs_read(gc, XBT_NULL,
+           GCSPRINTF("%s/uuid", vtpminfo->backend));
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:55 +0100
+Subject: [PATCH] libxl: Do not trust backend for vtpm in getinfo (uuid)
+
+Use uuid from /libxl, rather than from backend.  I think the backend
+is not supposed to change the uuid, since it seems to be set by libxl
+during setup.
+
+If in fact the backend is supposed to be able to change the uuid, this
+patch needs to be dropped and replaced by a patch which makes the vtpm
+uuid lookup tolerate bad or missing data.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index e23f9bb..feb5d8f 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2223,7 +2223,7 @@ libxl_device_vtpm *libxl_device_vtpm_list(libxl_ctx *ctx, uint32_t domid, int *n
+                                               &vtpm->backend_domid);
+           if (rc) return NULL;
+ 
+-          tmp = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/uuid", be_path));
++          tmp = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/uuid", libxl_path));
+           if (tmp) {
+               if(libxl_uuid_from_string(&(vtpm->uuid), tmp)) {
+                   LOG(ERROR, "%s/uuid is a malformed uuid?? (%s) Probably a bug!!\n", be_path, tmp);
+@@ -2283,7 +2283,7 @@ int libxl_device_vtpm_getinfo(libxl_ctx *ctx,
+     vtpminfo->frontend_id = domid;
+ 
+     val = libxl__xs_read(gc, XBT_NULL,
+-          GCSPRINTF("%s/uuid", vtpminfo->backend));
++          GCSPRINTF("%s/uuid", libxl_path));
+     if(val == NULL) {
+        LOG(ERROR, "%s/uuid does not exist!", vtpminfo->backend);
+        goto err;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:55 +0100
+Subject: [PATCH] libxl: cdrom eject and insert: write to /libxl
+
+Copy the new type and params values to /libxl, so that the information
+in /libxl is kept up to date.
+
+This is needed so that we can return this trustworthy information,
+rather than trusting the backend-writeable parts of xenstore.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 19 ++++++++++++++-----
+ 1 file changed, 14 insertions(+), 5 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index feb5d8f..f1c81da 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2868,7 +2868,7 @@ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+     libxl_domain_config d_config;
+     int rc, dm_ver;
+     libxl__device device;
+-    const char * path;
++    const char *path, *libxl_path;
+     char * tmp;
+     libxl__domain_userdata_lock *lock = NULL;
+     xs_transaction_t t = XBT_NULL;
+@@ -2936,6 +2936,7 @@ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+     if (rc) goto out;
+ 
+     path = libxl__device_backend_path(gc, &device);
++    libxl_path = libxl__device_libxl_path(gc, &device);
+ 
+     insert = flexarray_make(gc, 4, 1);
+ 
+@@ -2984,8 +2985,12 @@ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+             goto out;
+         }
+ 
+-        rc = libxl__xs_writev(gc, t, path,
+-                              libxl__xs_kvs_of_flexarray(gc, empty, empty->count));
++        char **kvs = libxl__xs_kvs_of_flexarray(gc, empty, empty->count);
++
++        rc = libxl__xs_writev(gc, t, path, kvs);
++        if (rc) goto out;
++
++        rc = libxl__xs_writev(gc, t, libxl_path, kvs);
+         if (rc) goto out;
+ 
+         rc = libxl__xs_transaction_commit(gc, &t);
+@@ -3019,8 +3024,12 @@ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+         rc = libxl__set_domain_configuration(gc, domid, &d_config);
+         if (rc) goto out;
+ 
+-        rc = libxl__xs_writev(gc, t, path,
+-                              libxl__xs_kvs_of_flexarray(gc, insert, insert->count));
++        char **kvs = libxl__xs_kvs_of_flexarray(gc, insert, insert->count);
++
++        rc = libxl__xs_writev(gc, t, path, kvs);
++        if (rc) goto out;
++
++        rc = libxl__xs_writev(gc, t, libxl_path, kvs);
+         if (rc) goto out;
+ 
+         rc = libxl__xs_transaction_commit(gc, &t);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:56 +0100
+Subject: [PATCH] libxl: Do not trust backend for disk eject vdev
+
+For disk eject, use configured vdev from /libxl, not backend.
+
+The backend directory is writeable by driver domains.  This means that
+a malicious driver domain could cause libxl to see a wrong vdev,
+confusing the user or the toolstack.
+
+Use the vdev from the /libxl space, rather than the backend.
+
+For convenience, we read the vdev from the /libxl space into the evg
+during setup and copy it on each event, rather than reading it afresh
+each time (which would in any case involve generating or saving a copy
+of the relevant /libxl path).
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index f1c81da..9025334 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -1381,8 +1381,7 @@ static void disk_eject_xswatch_callback(libxl__egc *egc, libxl__ev_xswatch *w,
+     disk->pdev_path = strdup(""); /* xxx fixme malloc failure */
+     disk->format = LIBXL_DISK_FORMAT_EMPTY;
+     /* this value is returned to the user: do not free right away */
+-    disk->vdev = xs_read(CTX->xsh, XBT_NULL,
+-                         libxl__sprintf(gc, "%s/dev", backend), NULL);
++    disk->vdev = libxl__strdup(NOGC, evg->vdev);
+     disk->removable = 1;
+     disk->readwrite = 0;
+     disk->is_cdrom = 1;
+@@ -1405,9 +1404,6 @@ int libxl_evenable_disk_eject(libxl_ctx *ctx, uint32_t guest_domid,
+     evg->domid = guest_domid;
+     LIBXL_LIST_INSERT_HEAD(&CTX->disk_eject_evgens, evg, entry);
+ 
+-    evg->vdev = strdup(vdev);
+-    if (!evg->vdev) { rc = ERROR_NOMEM; goto out; }
+-
+     uint32_t domid = libxl_get_stubdom_id(ctx, guest_domid);
+ 
+     if (!domid)
+@@ -1425,6 +1421,13 @@ int libxl_evenable_disk_eject(libxl_ctx *ctx, uint32_t guest_domid,
+                                  devid);
+     evg->be_ptr_path = libxl__sprintf(NOGC, "%s/backend", libxl_path);
+ 
++    const char *configured_vdev;
++    rc = libxl__xs_read_checked(gc, XBT_NULL,
++            GCSPRINTF("%s/vdev", libxl_path), &configured_vdev);
++    if (rc) goto out;
++
++    evg->vdev = libxl__strdup(NOGC, configured_vdev);
++
+     rc = libxl__ev_xswatch_register(gc, &evg->watch,
+                                     disk_eject_xswatch_callback, path);
+     if (rc) goto out;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:56 +0100
+Subject: [PATCH] libxl: Do not trust backend for disk; fix driver domain disks
+ list
+
+Rework libxl__device_disk_from_xs_be (which takes a backend path) into
+to libxl__device_disk_from_xenstore (which takes a libxl path).
+
+libxl__device_disk_from_xenstore now finds the backend path itself,
+although it doesn't use it any more for most of its functions.  We
+rename the variable from be_path to backend_path to make sure we
+didn't miss any cases.
+
+All the data collection is now done by reading from the copy in
+/libxl.
+
+libxl_device_disk_list and its helper libxl__append_disk_list (which
+used to be libxl__append_disk_list_of_type) need extensive rework,
+because they now need to specify the /libxl path rather than the
+backend path.
+
+To do that they enumerate disks by looking in the appropriate area in
+/libxl.  Previously they scanned various of the backend directories in
+dom0 (which was broken for driver domains).  It is no longer necessary
+to enumerate the various disk backends, because they all use the same
+paths in /devices.  libxl__device_disk_from_xenstore will parse the
+type out of the backend path, for itself.  (Indeed, it did so before -
+the now-gone type parameter to libxl__append_disk_list_of_type wasn't
+used other than to construct the directory to list.)
+
+Finally, remove a redundant store to pdisk->backend_domid in
+libxl__append_disk_list[_of_type].  Even before this commit, that
+store was not needed because libxl_device_disk_init (called by
+libxl__device_disk_from_xenstore) would zero it.  Now it overwrites
+the correct backend domid with zero; so remove it.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+v2: Also fix up COLO reads, following rebase
+---
+ tools/libxl/libxl.c | 84 +++++++++++++++++++++++++++--------------------------
+ 1 file changed, 43 insertions(+), 41 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 9025334..17367e5 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2642,8 +2642,8 @@ void libxl__device_disk_add(libxl__egc *egc, uint32_t domid,
+     device_disk_add(egc, domid, disk, aodev, NULL, NULL);
+ }
+ 
+-static int libxl__device_disk_from_xs_be(libxl__gc *gc,
+-                                         const char *be_path,
++static int libxl__device_disk_from_xenstore(libxl__gc *gc,
++                                         const char *libxl_path,
+                                          libxl_device_disk *disk)
+ {
+     libxl_ctx *ctx = libxl__gc_owner(gc);
+@@ -2653,15 +2653,27 @@ static int libxl__device_disk_from_xs_be(libxl__gc *gc,
+ 
+     libxl_device_disk_init(disk);
+ 
+-    rc = sscanf(be_path, "/local/domain/%d/", &disk->backend_domid);
++    const char *backend_path;
++    rc = libxl__xs_read_checked(gc, XBT_NULL,
++                                GCSPRINTF("%s/backend", libxl_path),
++                                &backend_path);
++    if (rc) goto out;
++
++    if (!backend_path) {
++        LOG(ERROR, "disk %s does not exist (no backend path", libxl_path);
++        rc = ERROR_FAIL;
++        goto out;
++    }
++
++    rc = sscanf(backend_path, "/local/domain/%d/", &disk->backend_domid);
+     if (rc != 1) {
+-        LOG(ERROR, "Unable to fetch device backend domid from %s", be_path);
++        LOG(ERROR, "Unable to fetch device backend domid from %s", backend_path);
+         goto cleanup;
+     }
+ 
+     /* "params" may not be present; but everything else must be. */
+     tmp = xs_read(ctx->xsh, XBT_NULL,
+-                  libxl__sprintf(gc, "%s/params", be_path), &len);
++                  libxl__sprintf(gc, "%s/params", libxl_path), &len);
+     if (tmp && strchr(tmp, ':')) {
+         disk->pdev_path = strdup(strchr(tmp, ':') + 1);
+         free(tmp);
+@@ -2671,31 +2683,31 @@ static int libxl__device_disk_from_xs_be(libxl__gc *gc,
+ 
+ 
+     tmp = libxl__xs_read(gc, XBT_NULL,
+-                         libxl__sprintf(gc, "%s/type", be_path));
++                         libxl__sprintf(gc, "%s/type", libxl_path));
+     if (!tmp) {
+-        LOG(ERROR, "Missing xenstore node %s/type", be_path);
++        LOG(ERROR, "Missing xenstore node %s/type", libxl_path);
+         goto cleanup;
+     }
+     libxl_string_to_backend(ctx, tmp, &(disk->backend));
+ 
+     disk->vdev = xs_read(ctx->xsh, XBT_NULL,
+-                         libxl__sprintf(gc, "%s/dev", be_path), &len);
++                         libxl__sprintf(gc, "%s/dev", libxl_path), &len);
+     if (!disk->vdev) {
+-        LOG(ERROR, "Missing xenstore node %s/dev", be_path);
++        LOG(ERROR, "Missing xenstore node %s/dev", libxl_path);
+         goto cleanup;
+     }
+ 
+     tmp = libxl__xs_read(gc, XBT_NULL, libxl__sprintf
+-                         (gc, "%s/removable", be_path));
++                         (gc, "%s/removable", libxl_path));
+     if (!tmp) {
+-        LOG(ERROR, "Missing xenstore node %s/removable", be_path);
++        LOG(ERROR, "Missing xenstore node %s/removable", libxl_path);
+         goto cleanup;
+     }
+     disk->removable = atoi(tmp);
+ 
+-    tmp = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/mode", be_path));
++    tmp = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/mode", libxl_path));
+     if (!tmp) {
+-        LOG(ERROR, "Missing xenstore node %s/mode", be_path);
++        LOG(ERROR, "Missing xenstore node %s/mode", libxl_path);
+         goto cleanup;
+     }
+     if (!strcmp(tmp, "w"))
+@@ -2704,9 +2716,9 @@ static int libxl__device_disk_from_xs_be(libxl__gc *gc,
+         disk->readwrite = 0;
+ 
+     tmp = libxl__xs_read(gc, XBT_NULL,
+-                         libxl__sprintf(gc, "%s/device-type", be_path));
++                         libxl__sprintf(gc, "%s/device-type", libxl_path));
+     if (!tmp) {
+-        LOG(ERROR, "Missing xenstore node %s/device-type", be_path);
++        LOG(ERROR, "Missing xenstore node %s/device-type", libxl_path);
+         goto cleanup;
+     }
+     disk->is_cdrom = !strcmp(tmp, "cdrom");
+@@ -2715,15 +2727,17 @@ static int libxl__device_disk_from_xs_be(libxl__gc *gc,
+ 
+     return 0;
+ cleanup:
++    rc = ERROR_FAIL;
++ out:
+     libxl_device_disk_dispose(disk);
+-    return ERROR_FAIL;
++    return rc;
+ }
+ 
+ int libxl_vdev_to_device_disk(libxl_ctx *ctx, uint32_t domid,
+                               const char *vdev, libxl_device_disk *disk)
+ {
+     GC_INIT(ctx);
+-    char *dompath, *path;
++    char *dom_xl_path, *libxl_path;
+     int devid = libxl__device_disk_dev_number(vdev, NULL, NULL);
+     int rc = ERROR_FAIL;
+ 
+@@ -2732,39 +2746,34 @@ int libxl_vdev_to_device_disk(libxl_ctx *ctx, uint32_t domid,
+ 
+     libxl_device_disk_init(disk);
+ 
+-    dompath = libxl__xs_get_dompath(gc, domid);
+-    if (!dompath) {
++    dom_xl_path = libxl__xs_libxl_path(gc, domid);
++    if (!dom_xl_path) {
+         goto out;
+     }
+-    path = libxl__xs_read(gc, XBT_NULL,
+-                          libxl__sprintf(gc, "%s/device/vbd/%d/backend",
+-                                         dompath, devid));
+-    if (!path)
+-        goto out;
++    libxl_path = GCSPRINTF("%s/device/vbd/%d", dom_xl_path, devid);
+ 
+-    rc = libxl__device_disk_from_xs_be(gc, path, disk);
++    rc = libxl__device_disk_from_xenstore(gc, libxl_path, disk);
+ out:
+     GC_FREE;
+     return rc;
+ }
+ 
+ 
+-static int libxl__append_disk_list_of_type(libxl__gc *gc,
++static int libxl__append_disk_list(libxl__gc *gc,
+                                            uint32_t domid,
+-                                           const char *type,
+                                            libxl_device_disk **disks,
+                                            int *ndisks)
+ {
+-    char *be_path = NULL;
++    char *libxl_dir_path = NULL;
+     char **dir = NULL;
+     unsigned int n = 0;
+     libxl_device_disk *pdisk = NULL, *pdisk_end = NULL;
+     int rc=0;
+     int initial_disks = *ndisks;
+ 
+-    be_path = libxl__sprintf(gc, "%s/backend/%s/%d",
+-                             libxl__xs_get_dompath(gc, 0), type, domid);
+-    dir = libxl__xs_directory(gc, XBT_NULL, be_path, &n);
++    libxl_dir_path = GCSPRINTF("%s/device/vbd",
++                        libxl__xs_libxl_path(gc, domid));
++    dir = libxl__xs_directory(gc, XBT_NULL, libxl_dir_path, &n);
+     if (dir && n) {
+         libxl_device_disk *tmp;
+         tmp = realloc(*disks, sizeof (libxl_device_disk) * (*ndisks + n));
+@@ -2775,10 +2784,9 @@ static int libxl__append_disk_list_of_type(libxl__gc *gc,
+         pdisk_end = *disks + initial_disks + n;
+         for (; pdisk < pdisk_end; pdisk++, dir++) {
+             const char *p;
+-            p = libxl__sprintf(gc, "%s/%s", be_path, *dir);
+-            if ((rc=libxl__device_disk_from_xs_be(gc, p, pdisk)))
++            p = libxl__sprintf(gc, "%s/%s", libxl_dir_path, *dir);
++            if ((rc=libxl__device_disk_from_xenstore(gc, p, pdisk)))
+                 goto out;
+-            pdisk->backend_domid = 0;
+             *ndisks += 1;
+         }
+     }
+@@ -2794,13 +2802,7 @@ libxl_device_disk *libxl_device_disk_list(libxl_ctx *ctx, uint32_t domid, int *n
+ 
+     *num = 0;
+ 
+-    rc = libxl__append_disk_list_of_type(gc, domid, "vbd", &disks, num);
+-    if (rc) goto out_err;
+-
+-    rc = libxl__append_disk_list_of_type(gc, domid, "tap", &disks, num);
+-    if (rc) goto out_err;
+-
+-    rc = libxl__append_disk_list_of_type(gc, domid, "qdisk", &disks, num);
++    rc = libxl__append_disk_list(gc, domid, &disks, num);
+     if (rc) goto out_err;
+ 
+     GC_FREE;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:56 +0100
+Subject: [PATCH] libxl: Do not trust backend for disk in getinfo
+
+Do not read the frontend path out of the backend.  We have it in our
+hand.  Likewise the guest (frontend) domid was one of our parameters (!)
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 17367e5..996b122 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2852,9 +2852,8 @@ int libxl_device_disk_getinfo(libxl_ctx *ctx, uint32_t domid,
+     val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/ring-ref", fe_path));
+     diskinfo->rref = val ? strtoul(val, NULL, 10) : -1;
+     diskinfo->frontend = xs_read(ctx->xsh, XBT_NULL,
+-                                 libxl__sprintf(gc, "%s/frontend", diskinfo->backend), NULL);
+-    val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/frontend-id", diskinfo->backend));
+-    diskinfo->frontend_id = val ? strtoul(val, NULL, 10) : -1;
++                                 GCSPRINTF("%s/frontend", libxl_path), NULL);
++    diskinfo->frontend_id = domid;
+ 
+     GC_FREE;
+     return 0;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:57 +0100
+Subject: [PATCH] libxl: Do not trust backend for cdrom insert
+
+Use the /libxl path where appropriate.  Rename `path' variable to
+`be_path' to make sure we caught all the occurrences.
+
+Specifically, when checking that the device still exists, check the
+`frontend' value in /libxl, rather than anything in the backend
+directory.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 996b122..faddb14 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2872,7 +2872,7 @@ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+     libxl_domain_config d_config;
+     int rc, dm_ver;
+     libxl__device device;
+-    const char *path, *libxl_path;
++    const char *be_path, *libxl_path;
+     char * tmp;
+     libxl__domain_userdata_lock *lock = NULL;
+     xs_transaction_t t = XBT_NULL;
+@@ -2939,7 +2939,7 @@ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+     rc = libxl__device_from_disk(gc, domid, disk, &device);
+     if (rc) goto out;
+ 
+-    path = libxl__device_backend_path(gc, &device);
++    be_path = libxl__device_backend_path(gc, &device);
+     libxl_path = libxl__device_libxl_path(gc, &device);
+ 
+     insert = flexarray_make(gc, 4, 1);
+@@ -2979,19 +2979,19 @@ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+     for (;;) {
+         rc = libxl__xs_transaction_start(gc, &t);
+         if (rc) goto out;
+-        /* Sanity check: make sure the backend exists before writing here */
+-        tmp = libxl__xs_read(gc, t, libxl__sprintf(gc, "%s/frontend", path));
++        /* Sanity check: make sure the device exists before writing here */
++        tmp = libxl__xs_read(gc, t, GCSPRINTF("%s/frontend", libxl_path));
+         if (!tmp)
+         {
+             LIBXL__LOG(ctx, LIBXL__LOG_ERROR, "Internal error: %s does not exist",
+-                       libxl__sprintf(gc, "%s/frontend", path));
++                       libxl__sprintf(gc, "%s/frontend", libxl_path));
+             rc = ERROR_FAIL;
+             goto out;
+         }
+ 
+         char **kvs = libxl__xs_kvs_of_flexarray(gc, empty, empty->count);
+ 
+-        rc = libxl__xs_writev(gc, t, path, kvs);
++        rc = libxl__xs_writev(gc, t, be_path, kvs);
+         if (rc) goto out;
+ 
+         rc = libxl__xs_writev(gc, t, libxl_path, kvs);
+@@ -3015,12 +3015,12 @@ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+     for (;;) {
+         rc = libxl__xs_transaction_start(gc, &t);
+         if (rc) goto out;
+-        /* Sanity check: make sure the backend exists before writing here */
+-        tmp = libxl__xs_read(gc, t, libxl__sprintf(gc, "%s/frontend", path));
++        /* Sanity check: make sure the device exists before writing here */
++        tmp = libxl__xs_read(gc, t, GCSPRINTF("%s/frontend", libxl_path));
+         if (!tmp)
+         {
+             LIBXL__LOG(ctx, LIBXL__LOG_ERROR, "Internal error: %s does not exist",
+-                       libxl__sprintf(gc, "%s/frontend", path));
++                       libxl__sprintf(gc, "%s/frontend", libxl_path));
+             rc = ERROR_FAIL;
+             goto out;
+         }
+@@ -3030,7 +3030,7 @@ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+ 
+         char **kvs = libxl__xs_kvs_of_flexarray(gc, insert, insert->count);
+ 
+-        rc = libxl__xs_writev(gc, t, path, kvs);
++        rc = libxl__xs_writev(gc, t, be_path, kvs);
+         if (rc) goto out;
+ 
+         rc = libxl__xs_writev(gc, t, libxl_path, kvs);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:57 +0100
+Subject: [PATCH] libxl: Do not trust backend for channel in getinfo
+
+Do not read the frontend path out of the backend.  We have it in our
+hand.  Likewise the guest (frontend) domid was one of our parameters (!)
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index faddb14..1091b85 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -3949,12 +3949,8 @@ int libxl_device_channel_getinfo(libxl_ctx *ctx, uint32_t domid,
+ 
+     val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/state", fe_path));
+     channelinfo->state = val ? strtoul(val, NULL, 10) : -1;
+-    channelinfo->frontend = xs_read(ctx->xsh, XBT_NULL,
+-                                    GCSPRINTF("%s/frontend",
+-                                    channelinfo->backend), NULL);
+-    val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/frontend-id",
+-                         channelinfo->backend));
+-    channelinfo->frontend_id = val ? strtoul(val, NULL, 10) : -1;
++    channelinfo->frontend = libxl__strdup(NOGC, fe_path);
++    channelinfo->frontend_id = domid;
+     val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/ring-ref", fe_path));
+     channelinfo->rref = val ? strtoul(val, NULL, 10) : -1;
+     val = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/port", fe_path));
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:57 +0100
+Subject: [PATCH] libxl: Rename libxl__device_{nic,channel}_from_xs_be to
+ _from_xenstore
+
+We are going to change these functions to expect, and be passed, a
+/libxl path.  So it is wrong that they are called _from_xs_be.
+
+Neither function reads anything which isn't found in both places, so
+we can and will change the call sites later.
+
+The only remaining function in libxl called *_from_xs_be relates to
+PCI devices, for which the backend domain is hardcoded to 0 throughout
+the libxl_pci.c.
+
+No functional change.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 1091b85..d7c236c 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -3470,7 +3470,7 @@ out:
+     return;
+ }
+ 
+-static int libxl__device_nic_from_xs_be(libxl__gc *gc,
++static int libxl__device_nic_from_xenstore(libxl__gc *gc,
+                                         const char *be_path,
+                                         libxl_device_nic *nic)
+ {
+@@ -3533,7 +3533,7 @@ int libxl_devid_to_device_nic(libxl_ctx *ctx, uint32_t domid,
+     if (!path)
+         goto out;
+ 
+-    rc = libxl__device_nic_from_xs_be(gc, path, nic);
++    rc = libxl__device_nic_from_xenstore(gc, path, nic);
+     if (rc) goto out;
+ 
+     rc = 0;
+@@ -3568,7 +3568,7 @@ static int libxl__append_nic_list_of_type(libxl__gc *gc,
+         for (; pnic < pnic_end; pnic++, dir++) {
+             const char *p;
+             p = libxl__sprintf(gc, "%s/%s", be_path, *dir);
+-            rc = libxl__device_nic_from_xs_be(gc, p, pnic);
++            rc = libxl__device_nic_from_xenstore(gc, p, pnic);
+             if (rc) goto out;
+             pnic->backend_domid = 0;
+         }
+@@ -3818,7 +3818,7 @@ int libxl__init_console_from_channel(libxl__gc *gc,
+     return 0;
+ }
+ 
+-static int libxl__device_channel_from_xs_be(libxl__gc *gc,
++static int libxl__device_channel_from_xenstore(libxl__gc *gc,
+                                             const char *be_path,
+                                             libxl_device_channel *channel)
+ {
+@@ -3827,7 +3827,7 @@ static int libxl__device_channel_from_xs_be(libxl__gc *gc,
+ 
+     libxl_device_channel_init(channel);
+ 
+-    /* READ_BACKEND is from libxl__device_nic_from_xs_be above */
++    /* READ_BACKEND is from libxl__device_nic_from_xenstore above */
+     channel->name = READ_BACKEND(NOGC, "name");
+     tmp = READ_BACKEND(gc, "connection");
+     if (!strcmp(tmp, "pty")) {
+@@ -3882,7 +3882,7 @@ static int libxl__append_channel_list(libxl__gc *gc,
+         }
+         *channels = tmp;
+         next = *channels + *nchannels + devid;
+-        rc = libxl__device_channel_from_xs_be(gc, be_path, next);
++        rc = libxl__device_channel_from_xenstore(gc, be_path, next);
+         if (rc) goto out;
+         next->devid = devid;
+         devid++;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:58 +0100
+Subject: [PATCH] libxl: Rename READ_BACKEND to READ_LIBXLDEV
+
+We are going to want to change all the functions that use READ_BACKEND
+to get untrustworthy information from the backend, to use trustworthy
+information from /libxl.
+
+This will involve replacing READ_BACKEND, which reads from be_path,
+with a similar macro READ_LIBXLDEV, which reads from libxl_path.
+
+The macro name change generates a lot of clutter in the diff.  So we
+break it out into this separate patch.  Here, we rename the macro, but
+the implementation does not really match the new name.
+
+So, another way to look at this, is that we have transformed the bug:
+ * All of the backends use READ_BACKEND, which is unsafe
+into the new bug:
+ * READ_LIBXLDEV actually reads be_path, which is unsafe.
+
+There is no functional change as yet.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 22 +++++++++++-----------
+ 1 file changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index d7c236c..3c17ba5 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -21,8 +21,8 @@
+ #define PAGE_TO_MEMKB(pages) ((pages) * 4)
+ #define BACKEND_STRING_SIZE 5
+ 
+-/* Utility to read backend xenstore keys */
+-#define READ_BACKEND(tgc, subpath) ({                                   \
++/* Utility to read /libxl or backend xenstore keys, from be_path */
++#define READ_LIBXLDEV(tgc, subpath) ({                                  \
+         rc = libxl__xs_read_checked(tgc, XBT_NULL,                      \
+                                     GCSPRINTF("%s/" subpath, be_path),  \
+                                     &tmp);                              \
+@@ -3479,7 +3479,7 @@ static int libxl__device_nic_from_xenstore(libxl__gc *gc,
+ 
+     libxl_device_nic_init(nic);
+ 
+-    tmp = READ_BACKEND(gc, "handle");
++    tmp = READ_LIBXLDEV(gc, "handle");
+     if (tmp)
+         nic->devid = atoi(tmp);
+     else
+@@ -3487,7 +3487,7 @@ static int libxl__device_nic_from_xenstore(libxl__gc *gc,
+ 
+     /* nic->mtu = */
+ 
+-    tmp = READ_BACKEND(gc, "mac");
++    tmp = READ_LIBXLDEV(gc, "mac");
+     if (tmp) {
+         rc = libxl__parse_mac(tmp, nic->mac);
+         if (rc) goto out;
+@@ -3495,12 +3495,12 @@ static int libxl__device_nic_from_xenstore(libxl__gc *gc,
+         memset(nic->mac, 0, sizeof(nic->mac));
+     }
+ 
+-    nic->ip = READ_BACKEND(NOGC, "ip");
+-    nic->bridge = READ_BACKEND(NOGC, "bridge");
+-    nic->script = READ_BACKEND(NOGC, "script");
++    nic->ip = READ_LIBXLDEV(NOGC, "ip");
++    nic->bridge = READ_LIBXLDEV(NOGC, "bridge");
++    nic->script = READ_LIBXLDEV(NOGC, "script");
+ 
+     /* vif_ioemu nics use the same xenstore entries as vif interfaces */
+-    tmp = READ_BACKEND(gc, "type");
++    tmp = READ_LIBXLDEV(gc, "type");
+     if (tmp) {
+         rc = libxl_nic_type_from_string(tmp, &nic->nictype);
+         if (rc) goto out;
+@@ -3828,13 +3828,13 @@ static int libxl__device_channel_from_xenstore(libxl__gc *gc,
+     libxl_device_channel_init(channel);
+ 
+     /* READ_BACKEND is from libxl__device_nic_from_xenstore above */
+-    channel->name = READ_BACKEND(NOGC, "name");
+-    tmp = READ_BACKEND(gc, "connection");
++    channel->name = READ_LIBXLDEV(NOGC, "name");
++    tmp = READ_LIBXLDEV(gc, "connection");
+     if (!strcmp(tmp, "pty")) {
+         channel->connection = LIBXL_CHANNEL_CONNECTION_PTY;
+     } else if (!strcmp(tmp, "socket")) {
+         channel->connection = LIBXL_CHANNEL_CONNECTION_SOCKET;
+-        channel->u.socket.path = READ_BACKEND(NOGC, "path");
++        channel->u.socket.path = READ_LIBXLDEV(NOGC, "path");
+     } else {
+         rc = ERROR_INVAL;
+         goto out;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:58 +0100
+Subject: [PATCH] libxl: Have READ_LIBXLDEV use libxl_path rather than be_path
+
+Fix the just-introduced bug in this macro: now it reads the
+trustworthy libxl_path.  Change the variable name in the two functions
+(nic and channel) which use it.
+
+Shuffling the bump in the carpet along, we now introduce three new
+bugs: the three call sites pass a backend path where a frontend path
+is expected.
+
+No functional change.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 3c17ba5..397c7e8 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -21,10 +21,10 @@
+ #define PAGE_TO_MEMKB(pages) ((pages) * 4)
+ #define BACKEND_STRING_SIZE 5
+ 
+-/* Utility to read /libxl or backend xenstore keys, from be_path */
++/* Utility to read /libxl xenstore keys, from libxl_path */
+ #define READ_LIBXLDEV(tgc, subpath) ({                                  \
+         rc = libxl__xs_read_checked(tgc, XBT_NULL,                      \
+-                                    GCSPRINTF("%s/" subpath, be_path),  \
++                                    GCSPRINTF("%s/" subpath, libxl_path),  \
+                                     &tmp);                              \
+         if (rc) goto out;                                               \
+         (char*)tmp;                                                     \
+@@ -3471,7 +3471,7 @@ out:
+ }
+ 
+ static int libxl__device_nic_from_xenstore(libxl__gc *gc,
+-                                        const char *be_path,
++                                        const char *libxl_path,
+                                         libxl_device_nic *nic)
+ {
+     const char *tmp;
+@@ -3819,7 +3819,7 @@ int libxl__init_console_from_channel(libxl__gc *gc,
+ }
+ 
+ static int libxl__device_channel_from_xenstore(libxl__gc *gc,
+-                                            const char *be_path,
++                                            const char *libxl_path,
+                                             libxl_device_channel *channel)
+ {
+     const char *tmp;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:58 +0100
+Subject: [PATCH] libxl: Do not trust backend in nic getinfo
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 397c7e8..c255837 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -3636,10 +3636,8 @@ int libxl_device_nic_getinfo(libxl_ctx *ctx, uint32_t domid,
+     nicinfo->rref_tx = val ? strtoul(val, NULL, 10) : -1;
+     val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/rx-ring-ref", nicpath));
+     nicinfo->rref_rx = val ? strtoul(val, NULL, 10) : -1;
+-    nicinfo->frontend = xs_read(ctx->xsh, XBT_NULL,
+-                                 libxl__sprintf(gc, "%s/frontend", nicinfo->backend), NULL);
+-    val = libxl__xs_read(gc, XBT_NULL, libxl__sprintf(gc, "%s/frontend-id", nicinfo->backend));
+-    nicinfo->frontend_id = val ? strtoul(val, NULL, 10) : -1;
++    nicinfo->frontend = libxl__strdup(NOGC, nicpath);
++    nicinfo->frontend_id = domid;
+ 
+     rc = 0;
+  out:
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:59 +0100
+Subject: [PATCH] libxl: Do not trust backend for nic in devid_to_device
+
+libxl_devid_to_device_nic should read the information it needs from
+the /libxl/device path, not the backend.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 10 +++-------
+ 1 file changed, 3 insertions(+), 7 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index c255837..1cbe4e9 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -3519,7 +3519,7 @@ int libxl_devid_to_device_nic(libxl_ctx *ctx, uint32_t domid,
+                               int devid, libxl_device_nic *nic)
+ {
+     GC_INIT(ctx);
+-    char *libxl_dom_path, *path;
++    char *libxl_dom_path, *libxl_path;
+     int rc = ERROR_FAIL;
+ 
+     libxl_device_nic_init(nic);
+@@ -3527,13 +3527,9 @@ int libxl_devid_to_device_nic(libxl_ctx *ctx, uint32_t domid,
+     if (!libxl_dom_path)
+         goto out;
+ 
+-    path = libxl__xs_read(gc, XBT_NULL,
+-                          GCSPRINTF("%s/device/vif/%d/backend", libxl_dom_path,
+-                                    devid));
+-    if (!path)
+-        goto out;
++    libxl_path = GCSPRINTF("%s/device/vif/%d", libxl_dom_path, devid);
+ 
+-    rc = libxl__device_nic_from_xenstore(gc, path, nic);
++    rc = libxl__device_nic_from_xenstore(gc, libxl_path, nic);
+     if (rc) goto out;
+ 
+     rc = 0;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:59 +0100
+Subject: [PATCH] libxl: Do not trust backend for nic in list
+
+libxl_device_nic_list should use the /libxl path to search for
+devices, and for obtaining the device information.
+
+The "type" parameter was always "vif".  Abolish it.  (In any case,
+paths in /libxl/device are named after the frontend type which is
+constant, not the backend type which might in future vary.)
+
+Abolish a redundant store to pnic->backend_domid.  Before this commit,
+that store was not needed because libxl_device_nic_init (called by
+libxl__device_nic_from_xenstore) would zero it.  Now it overwrites the
+correct backend domid with zero; so remove it.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 16 +++++++---------
+ 1 file changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 1cbe4e9..8cb5582 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -3538,21 +3538,20 @@ out:
+     return rc;
+ }
+ 
+-static int libxl__append_nic_list_of_type(libxl__gc *gc,
++static int libxl__append_nic_list(libxl__gc *gc,
+                                            uint32_t domid,
+-                                           const char *type,
+                                            libxl_device_nic **nics,
+                                            int *nnics)
+ {
+-    char *be_path = NULL;
++    char *libxl_dir_path = NULL;
+     char **dir = NULL;
+     unsigned int n = 0;
+     libxl_device_nic *pnic = NULL, *pnic_end = NULL;
+     int rc;
+ 
+-    be_path = libxl__sprintf(gc, "%s/backend/%s/%d",
+-                             libxl__xs_get_dompath(gc, 0), type, domid);
+-    dir = libxl__xs_directory(gc, XBT_NULL, be_path, &n);
++    libxl_dir_path = GCSPRINTF("%s/device/vif",
++                               libxl__xs_libxl_path(gc, domid));
++    dir = libxl__xs_directory(gc, XBT_NULL, libxl_dir_path, &n);
+     if (dir && n) {
+         libxl_device_nic *tmp;
+         tmp = realloc(*nics, sizeof (libxl_device_nic) * (*nnics + n));
+@@ -3563,10 +3562,9 @@ static int libxl__append_nic_list_of_type(libxl__gc *gc,
+         pnic_end = *nics + *nnics + n;
+         for (; pnic < pnic_end; pnic++, dir++) {
+             const char *p;
+-            p = libxl__sprintf(gc, "%s/%s", be_path, *dir);
++            p = GCSPRINTF("%s/%s", libxl_dir_path, *dir);
+             rc = libxl__device_nic_from_xenstore(gc, p, pnic);
+             if (rc) goto out;
+-            pnic->backend_domid = 0;
+         }
+         *nnics += n;
+     }
+@@ -3584,7 +3582,7 @@ libxl_device_nic *libxl_device_nic_list(libxl_ctx *ctx, uint32_t domid, int *num
+ 
+     *num = 0;
+ 
+-    rc = libxl__append_nic_list_of_type(gc, domid, "vif", &nics, num);
++    rc = libxl__append_nic_list(gc, domid, &nics, num);
+     if (rc) goto out_err;
+ 
+     GC_FREE;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Mon, 18 Jul 2016 14:53:59 +0100
+Subject: [PATCH] libxl: Do not trust backend in channel list
+
+Read the name from /libxl/device.  Pass the /libxl path to
+libxl__device_channel_from_xenstore.
+
+This removes the final route by which READ_LIBXLDEV might receive a
+backend path.
+
+This is part of XSA-178.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+---
+v2: Remove be_path variable which is now no longer used.
+---
+ tools/libxl/libxl.c | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 8cb5582..41d125f 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -3842,7 +3842,7 @@ static int libxl__append_channel_list(libxl__gc *gc,
+                                               libxl_device_channel **channels,
+                                               int *nchannels)
+ {
+-    char *libxl_dir_path = NULL, *be_path = NULL;
++    char *libxl_dir_path = NULL;
+     char **dir = NULL;
+     unsigned int n = 0, devid = 0;
+     libxl_device_channel *next = NULL;
+@@ -3859,10 +3859,7 @@ static int libxl__append_channel_list(libxl__gc *gc,
+         libxl_device_channel *tmp;
+ 
+         libxl_path = GCSPRINTF("%s/%s", libxl_dir_path, dir[i]);
+-        be_path = libxl__xs_read(gc, XBT_NULL,
+-                                 GCSPRINTF("%s/backend", libxl_path));
+-        if (!be_path) continue;
+-        name = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/name", be_path));
++        name = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/name", libxl_path));
+         /* 'channels' are consoles with names, so ignore all consoles
+            without names */
+         if (!name) continue;
+@@ -3874,7 +3871,7 @@ static int libxl__append_channel_list(libxl__gc *gc,
+         }
+         *channels = tmp;
+         next = *channels + *nchannels + devid;
+-        rc = libxl__device_channel_from_xenstore(gc, be_path, next);
++        rc = libxl__device_channel_from_xenstore(gc, libxl_path, next);
+         if (rc) goto out;
+         next->devid = devid;
+         devid++;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Mon, 11 Jul 2016 14:32:03 +0100
 Subject: [PATCH] x86/pv: Remove unsafe bits from the mod_l?_entry() fastpath
