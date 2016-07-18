@@ -90,6 +90,12 @@ When you're done, export the patchqueue back to `xen-queue.am`:
 
     git format-patch --stdout -N RELEASE-4.6.0 > ${path_to_package_repo}/SOURCES/xen-queue.am
 
+And finally, run the script provided in this repo to remove extraneous
+information from the patchqueue (such as the version of git you're
+running) and reduce the diff size:
+
+    ./pqnorm.pl
+
 I also strongly recommend keeping this tree around, so you can simply
 manipulate it and then do the export again, rather than repeating the
 whole process each time.
@@ -123,6 +129,10 @@ rid of these like this:
 Now export the patchqueue:
 
     git format-patch --stdout -N RELEASE-4.6.1 > ${path_to_package_repo}/SOURCES/xen-queue.am
+
+Clean it up:
+
+    ./pqnorm.pl
 
 Update `get_sources.sh` with the new version:
 
