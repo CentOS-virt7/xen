@@ -84,7 +84,7 @@ And import the patchqueue:
 Now you can manipulate the patchqueue using normal stackgit commands.
 For example, if you wanted to import the patch from XSA-150:
 
-    stg import /path/to/xsas/xsa150.patch
+    stg import -m /path/to/xsas/xsa150.patch
 
 When you're done, export the patchqueue back to `xen-queue.am`:
 

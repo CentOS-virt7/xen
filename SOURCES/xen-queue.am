@@ -1782,9 +1782,7 @@ index e749b78..1dce21d 100644
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Mon, 11 Jul 2016 14:32:03 +0100
-Subject: [PATCH] From f48a75b0c10ac79b287ca2b580ecb9ea2f696607 Mon Sep 17
- 00:00:00 2001 Subject: [PATCH] x86/pv: Remove unsafe bits from the
- mod_l?_entry() fastpath
+Subject: [PATCH] x86/pv: Remove unsafe bits from the mod_l?_entry() fastpath
 
 All changes in writeability and cacheability must go through full
 re-validation.
@@ -1885,8 +1883,7 @@ index 66b611c..1a59ed8 100644
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Wed, 15 Jun 2016 18:32:14 +0100
-Subject: [PATCH] From 114e31ccf4ab4e787340032f3630638ea36b0b71 Mon Sep 17
- 00:00:00 2001 Subject: [PATCH] x86/entry: Avoid SMAP violation in 
+Subject: [PATCH] x86/entry: Avoid SMAP violation in 
  compat_create_bounce_frame()
 
 A 32bit guest kernel might be running on user mappings.
