@@ -1,5 +1,5 @@
 #!/bin/bash
-XEN_VERSION=4.6.1
+XEN_VERSION=4.6.3
 XEN_RELEASE_BASE=http://bits.xensource.com/oss-xen/release/
 XEN_RELEASE_FILE=xen-$XEN_VERSION.tar.gz
 echo "Checking Xen $XEN_VERSION release tarball"
