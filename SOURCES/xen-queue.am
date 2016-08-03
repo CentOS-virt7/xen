@@ -1,4 +1,4 @@
-From 45cd8c1cbce58217873ff7530f9b03ffa47319c1 Mon Sep 17 00:00:00 2001
+From 9c60b3dad2a0aa4e00820d9f9bea520d1bd26b79 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] Fix up xend init scripts
@@ -156,7 +156,7 @@ index 9ef0210..0876ee2 100644
 1.8.3.1
 
 
-From 048a0c1f88ed293e401f6c1beb05f1684a2dfaf5 Mon Sep 17 00:00:00 2001
+From beb9028af3dcc91c21e60453f3ef1ea805b33379 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] Change dumpdir to /var/lib/xen
@@ -205,7 +205,7 @@ index 8d4ff5c..895fc01 100644
 1.8.3.1
 
 
-From fa3ee1ba431aec5fb0a1036edf49f9abeb8af980 Mon Sep 17 00:00:00 2001
+From a948978c87d6655a96c05b906ad23c0ec1099aaf Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] Disable iptables on the bridge
@@ -252,7 +252,7 @@ index 3c63c55..f74de3d 100644
 1.8.3.1
 
 
-From dfe6f420066c6fbcea8a1bfb6c1d1876f9616919 Mon Sep 17 00:00:00 2001
+From 0cb79e77fb0797671528c737f167b6df19fc50ac Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] pygrubfix.patch
@@ -295,7 +295,7 @@ index c7b6aa7..8ff6964 100755
 1.8.3.1
 
 
-From 71f725566c54b39d7ae8eaf259d8c3f4d7055228 Mon Sep 17 00:00:00 2001
+From f9f1bb123fae6398449a38b81894116f57cd94a0 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] xend.catchbt.patch
@@ -343,7 +343,7 @@ index 832c168..161aeb5 100644
 1.8.3.1
 
 
-From 277db8f94c5f9b9c6f6a3dd0fd3fc6162314e4d5 Mon Sep 17 00:00:00 2001
+From c3c8401da97cbaec929b3b200400b7e2d0977cd2 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] xend-pci-loop.patch # Don't crash due to weird PCI cards (Bug
@@ -375,7 +375,7 @@ index adeca4b..94326b3 100644
 1.8.3.1
 
 
-From c748ecf14b21a1d9e3b0717075f486a8e31a7045 Mon Sep 17 00:00:00 2001
+From 990abbef40bea82327421ab3be79d74e2ce18461 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] xend.selinux.fixes.patch
@@ -413,7 +413,7 @@ index 0876ee2..05afc0e 100644
 1.8.3.1
 
 
-From cd5472ff4d341bd0a3ee99acfc1dd385867f2643 Mon Sep 17 00:00:00 2001
+From 2e2f8d17247ad538605bd85d134562c5c353fca9 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen.use.fedora.ipxe.patch
@@ -467,7 +467,7 @@ index 00ee952..b0c6f37 100644
 1.8.3.1
 
 
-From 805a5e54908f26f7abdf9d62cc96b60c11b77d2f Mon Sep 17 00:00:00 2001
+From 5964ba2fda90823a39a90e4392ded5e70e21b74d Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen.fedora.efi.build.patch
@@ -534,7 +534,7 @@ index 1daa7ac..f5398c4 100644
 1.8.3.1
 
 
-From 885d37a7e4a7cdb6364dbe455a5bfcd159371bfa Mon Sep 17 00:00:00 2001
+From 5dae3026d9385f94eb915479aa71f735c970ea40 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen.fedora19.buildfix.patch
@@ -569,7 +569,7 @@ index 0fc3f82..0d43727 100644
 1.8.3.1
 
 
-From f62e91d57043a0753827d64027b129500f9a264b Mon Sep 17 00:00:00 2001
+From 578ed369d7876f461665e0554ad1eb5fcff6f468 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen-configure-xend.patch
@@ -620,7 +620,7 @@ index 0896a27..cea12e1 100644
 1.8.3.1
 
 
-From 2049e55c8b93ec169bcbd58aaca9948170f8aa61 Mon Sep 17 00:00:00 2001
+From a2d37765d4832e07686562c44bce3a4aea239f73 Mon Sep 17 00:00:00 2001
 From: Wen Congyang <wency@cn.fujitsu.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] tools: libxl: pass correct file to qemu if we use blktap2
@@ -678,7 +678,7 @@ index d7e199f..d6ba1a2 100644
 1.8.3.1
 
 
-From dc3c48a99361ad9106a453eb4a30828a97978a6b Mon Sep 17 00:00:00 2001
+From dd4f1adcf394f7e02817570dae0e3dbdc73be5fc Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] it: George Dunlap <george.dunlap@eu.citrix.com>
@@ -727,7 +727,7 @@ index d6ba1a2..2b4bebd 100644
 1.8.3.1
 
 
-From 32ba9a7098b894c183c54faede2ff4032b664dc7 Mon Sep 17 00:00:00 2001
+From 80cc745549035fdf66b076d9cc894ed97acee589 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
@@ -764,7 +764,7 @@ index 29ed547..0f9fe2d 100644
 1.8.3.1
 
 
-From 3b5d531bf262b1f973448c0a23616b331ccacfa8 Mon Sep 17 00:00:00 2001
+From de63b1038da188df2b019233392670ad7f1ced8b Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -789,7 +789,7 @@ index 125acee..ce752b0 100644
 1.8.3.1
 
 
-From f4e383dc6eaa3e3f9d0f140aee6d6981347e231e Mon Sep 17 00:00:00 2001
+From 8a3d2d92d0b5b1c04e776ea2ddce0e29ebc52031 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
@@ -983,7 +983,7 @@ index f6d469b..1bee9e7 100644
 1.8.3.1
 
 
-From 7ac6742207efff87df9331f681d86175c0ed01c6 Mon Sep 17 00:00:00 2001
+From 11625e2c47665651c2b3db65ac69f4aecf4fbf79 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:41 -0500
 Subject: [PATCH] libxl: adjust PoD target by memory fudge, too
@@ -1038,7 +1038,7 @@ index 978a1eb..62a394f3 100644
 1.8.3.1
 
 
-From 77a99bbff41dccb50bdb99acc360f07154bf8a72 Mon Sep 17 00:00:00 2001
+From e47b30870d01394702e984400634a5b1fb56e1c7 Mon Sep 17 00:00:00 2001
 From: Tim Deegan <tim@xen.org>
 Date: Wed, 16 Mar 2016 17:05:25 +0000
 Subject: [PATCH] x86: limit GFNs to 32 bits for shadowed superpages.
@@ -1303,7 +1303,7 @@ index c193c88..a48c650 100644
 1.8.3.1
 
 
-From f69daa99d832bcd2cafadc0bed2b42094083c43b Mon Sep 17 00:00:00 2001
+From 91fcd7ac4b6d617ea36f0b02c8b73054dab80bef Mon Sep 17 00:00:00 2001
 From: Johnny Hughes <johnny@centos.org>
 Date: Wed, 18 May 2016 13:56:52 -0500
 Subject: [PATCH] x86/mm: fully honor PS bits in guest page table walks
@@ -1360,7 +1360,7 @@ index 09511f0..ae742b6 100644
 1.8.3.1
 
 
-From b023f852fdd41249b2260fe126c8a0797dadc140 Mon Sep 17 00:00:00 2001
+From d020a7a4e66f0ac1ae1671090c4b70605ac10ca8 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Mon, 16 May 2016 16:44:31 +0100
 Subject: [PATCH] From 9a5ccbd7b599c75b3a95c52bf128e362c0ae9e45 Mon Sep 17
@@ -1555,7 +1555,7 @@ index 1bee9e7..14f17e1 100644
 1.8.3.1
 
 
-From 01deff288fc8d9829b516ab1e8e610da87872fbe Mon Sep 17 00:00:00 2001
+From 36b04be538871fb98bebee33ebd243d0f5ede69e Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Wed, 27 Apr 2016 16:34:19 +0100
 Subject: [PATCH] From 35a740847bea0a2aede72de7b2b8b49eef36e4eb Mon Sep 17
@@ -1620,7 +1620,7 @@ index 14f17e1..015ae3a 100644
 1.8.3.1
 
 
-From 264896c09c0c91f5718f51f6a00b3378414629af Mon Sep 17 00:00:00 2001
+From 9d1b1d999f741e81a53cb235cfd7e83d550c2d80 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Tue, 3 May 2016 18:39:36 +0100
 Subject: [PATCH] From ef216637a72ce30661d28a47ccc7464869baa398 Mon Sep 17
@@ -1700,7 +1700,7 @@ index 75bc5d5..ebfcd17 100644
 1.8.3.1
 
 
-From 5ec5f1a6032309ac33d19b9df5239605e5a662ab Mon Sep 17 00:00:00 2001
+From e60125547796486e8ce7ebc1afbedebb50f4682f Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Wed, 4 May 2016 15:30:32 +0100
 Subject: [PATCH] From 90f14dc5c68f52baeef9722090695a166c7e083d Mon Sep 17
@@ -1746,7 +1746,7 @@ index 17afae5..c03db97 100644
 1.8.3.1
 
 
-From 4bd73a94a2fc7c9a9ea0ef5833bbd62a182f5f03 Mon Sep 17 00:00:00 2001
+From dd239242a1ae155e05dce5e68a27474647fef3ba Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Wed, 27 Apr 2016 16:08:49 +0100
 Subject: [PATCH] From d84e538d96525f75fc0aa7d0ebe3cd194186d0d4 Mon Sep 17
@@ -1853,7 +1853,7 @@ index 015ae3a..6a7ac2b 100644
 1.8.3.1
 
 
-From ed09676e127ea59f4d4a7b06dc3f69e6c90d4373 Mon Sep 17 00:00:00 2001
+From 79b54640b76aa9d3fd4620006a7f2613bb7a7ac4 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Fri, 29 Apr 2016 19:21:51 +0100
 Subject: [PATCH] From 3d1d7473c756d79e464600cee370c8759bd20f89 Mon Sep 17
@@ -1935,7 +1935,7 @@ index 553a873..c6c912d 100644
 1.8.3.1
 
 
-From 7e83ecc3fdc1a9fd363538db2a6d33f152a747f5 Mon Sep 17 00:00:00 2001
+From 66de9e908a3f59015d78f3bf02a5e77a361da9e7 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Tue, 3 May 2016 15:58:32 +0100
 Subject: [PATCH] From 44aadb912061fc75e41fceb00c67b8d222a2c7c4 Mon Sep 17
@@ -2005,7 +2005,7 @@ index c6c912d..a614ebc 100644
 1.8.3.1
 
 
-From 6403608f858d597757a86da4a4b3f1574dd4de37 Mon Sep 17 00:00:00 2001
+From 14b3f6fca61b7d9fe1db6a82beb57bd85075aec8 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Tue, 3 May 2016 16:00:20 +0100
 Subject: [PATCH] From 593d796c753fea1c4cdc365273de777aff798fe9 Mon Sep 17
@@ -2069,7 +2069,7 @@ index a614ebc..8be77db 100644
 1.8.3.1
 
 
-From 569699a6012ad7c95772855c3a70367c8b9143b2 Mon Sep 17 00:00:00 2001
+From 6b2e4fcba57c5f12a92b6e5633525e530d90187f Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Tue, 3 May 2016 15:52:53 +0100
 Subject: [PATCH] From a7fb7be6b7a14e8ca5ab0609c49b06545d6772bf Mon Sep 17
@@ -2118,7 +2118,7 @@ index 8be77db..008d6da 100644
 1.8.3.1
 
 
-From 3f09ee7460caf45490f0ec5b468559718af6303b Mon Sep 17 00:00:00 2001
+From 4f7f126f9fa4af3bfa9968c044f89ffc90a0dd52 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Tue, 3 May 2016 16:31:07 +0100
 Subject: [PATCH] From e4c0f9b55819194a501e3ecae6b12188a2db1d01 Mon Sep 17
@@ -2194,7 +2194,7 @@ index 008d6da..7ab4096 100644
 1.8.3.1
 
 
-From 6955b7679c802a9aa16c8eaf9ff09127cb482219 Mon Sep 17 00:00:00 2001
+From 1486ac8923e453c7c5f02f3a37262799131e1139 Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
 Date: Wed, 11 May 2016 11:14:45 +0100
 Subject: [PATCH] Subject: tools/xendomains: Create lockfile on start
@@ -2260,6 +2260,468 @@ index 59f1e3d..eeddd96 100644
  	echo -n "Starting auto Xen domains:"
  	# We expect config scripts for auto starting domains to be in
  	# XENDOMAINS_AUTO - they could just be symlinks to files elsewhere
+-- 
+1.8.3.1
+
+
+From 1d21b08f33907abcd75193ee734cfaa29557ad06 Mon Sep 17 00:00:00 2001
+From: Johnny Hughes <johnny@centos.org>
+Date: Wed, 13 Jul 2016 10:11:04 -0500
+Subject: [PATCH] x86: enforce consistent cachability of MMIO mappings
+
+We've been told by Intel that inconsistent cachability between
+multiple mappings of the same page can affect system stability only
+when the affected page is an MMIO one. Since the stale data issue is
+of no relevance to the hypervisor (since all guest memory accesses go
+through proper accessors and validation), handling of RAM pages
+remains unchanged here. Any MMIO mapped by domains however needs to be
+done consistently (all cachable mappings or all uncachable ones), in
+order to avoid Machine Check exceptions. Since converting existing
+cachable mappings to uncachable (at the time an uncachable mapping
+gets established) would in the PV case require tracking all mappings,
+allow MMIO to only get mapped uncachable (UC, UC-, or WC).
+
+This also implies that in the PV case we mustn't use the L1 PTE update
+fast path when cachability flags get altered.
+
+Since in the HVM case at least for now we want to continue honoring
+pinned cachability attributes for pages not mapped by the hypervisor,
+special case handling of r/o MMIO pages (forcing UC) gets added there.
+Arguably the counterpart change to p2m-pt.c may not be necessary, since
+UC- (which already gets enforced there) is probably strict enough.
+
+Note that the shadow code changes include fixing the write protection
+of r/o MMIO ranges: shadow_l1e_remove_flags() and its siblings, other
+than l1e_remove_flags() and alike, return the new PTE (and hence
+ignoring their return values makes them no-ops).
+
+This is CVE-2016-2270 / XSA-154.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Acked-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ docs/misc/xen-command-line.markdown |  9 +++++
+ xen/arch/x86/hvm/mtrr.c             |  6 ++-
+ xen/arch/x86/mm.c                   | 79 +++++++++++++++++++++++++++++--------
+ xen/arch/x86/mm/p2m-pt.c            |  2 +
+ xen/arch/x86/mm/shadow/multi.c      | 32 ++++++++++-----
+ xen/arch/x86/mm/shadow/types.h      |  3 ++
+ xen/include/asm-x86/page.h          |  3 ++
+ 7 files changed, 108 insertions(+), 26 deletions(-)
+
+diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
+index 74999e3..fdcfd7c 100644
+--- a/docs/misc/xen-command-line.markdown
++++ b/docs/misc/xen-command-line.markdown
+@@ -697,6 +697,15 @@ limit is ignored by Xen.
+ 
+ Specify if the MMConfig space should be enabled.
+ 
++### mmio-relax
++> `= <boolean> | all`
++
++> Default: `false`
++
++By default, domains may not create cached mappings to MMIO regions.
++This option relaxes the check for Domain 0 (or when using `all`, all PV
++domains), to permit the use of cacheable MMIO mappings.
++
+ ### msi
+ > `= <boolean>`
+ 
+diff --git a/xen/arch/x86/hvm/mtrr.c b/xen/arch/x86/hvm/mtrr.c
+index e13647c..ad11483 100644
+--- a/xen/arch/x86/hvm/mtrr.c
++++ b/xen/arch/x86/hvm/mtrr.c
+@@ -693,8 +693,12 @@ uint8_t epte_get_entry_emt(struct domain *d, unsigned long gfn, mfn_t mfn,
+     if ( v->domain != d )
+         v = d->vcpu ? d->vcpu[0] : NULL;
+ 
+-    if ( !mfn_valid(mfn_x(mfn)) )
++    if ( !mfn_valid(mfn_x(mfn)) ||
++         rangeset_contains_singleton(mmio_ro_ranges, mfn_x(mfn)) )
++    {
++        *ipat = 1;
+         return MTRR_TYPE_UNCACHABLE;
++    }
+ 
+     if ( hvm_get_mem_pinned_cacheattr(d, gfn, &type) )
+         return type;
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 9f96be8..e6ac37e 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -188,6 +188,18 @@ static uint32_t base_disallow_mask;
+       is_pv_domain(d)) ?                                        \
+      L1_DISALLOW_MASK : (L1_DISALLOW_MASK & ~PAGE_CACHE_ATTRS))
+ 
++static s8 __read_mostly opt_mmio_relax;
++static void __init parse_mmio_relax(const char *s)
++{
++    if ( !*s )
++        opt_mmio_relax = 1;
++    else
++        opt_mmio_relax = parse_bool(s);
++    if ( opt_mmio_relax < 0 && strcmp(s, "all") )
++        opt_mmio_relax = 0;
++}
++custom_param("mmio-relax", parse_mmio_relax);
++
+ static void __init init_frametable_chunk(void *start, void *end)
+ {
+     unsigned long s = (unsigned long)start;
+@@ -773,6 +785,8 @@ get_page_from_l1e(
+     if ( !mfn_valid(mfn) ||
+          (real_pg_owner = page_get_owner_and_reference(page)) == dom_io )
+     {
++        int flip = 0;
++
+         /* Only needed the reference to confirm dom_io ownership. */
+         if ( mfn_valid(mfn) )
+             put_page(page);
+@@ -805,13 +819,41 @@ get_page_from_l1e(
+             return -EINVAL;
+         }
+ 
+-        if ( !(l1f & _PAGE_RW) ||
+-             !rangeset_contains_singleton(mmio_ro_ranges, mfn) )
+-            return 0;
+-        dprintk(XENLOG_G_WARNING,
+-                "d%d: Forcing read-only access to MFN %lx\n",
+-                l1e_owner->domain_id, mfn);
+-        return 1;
++        if ( !rangeset_contains_singleton(mmio_ro_ranges, mfn) )
++        {
++            /* MMIO pages must not be mapped cachable unless requested so. */
++            switch ( opt_mmio_relax )
++            {
++            case 0:
++                break;
++            case 1:
++                if ( is_hardware_domain(l1e_owner) )
++            case -1:
++                    return 0;
++            default:
++                ASSERT_UNREACHABLE();
++            }
++        }
++        else if ( l1f & _PAGE_RW )
++        {
++            dprintk(XENLOG_G_WARNING,
++                    "d%d: Forcing read-only access to MFN %lx\n",
++                    l1e_owner->domain_id, mfn);
++            flip = _PAGE_RW;
++        }
++
++        switch ( l1f & PAGE_CACHE_ATTRS )
++        {
++        case 0: /* WB */
++            flip |= _PAGE_PWT | _PAGE_PCD;
++            break;
++        case _PAGE_PWT: /* WT */
++        case _PAGE_PWT | _PAGE_PAT: /* WP */
++            flip |= _PAGE_PCD | (l1f & _PAGE_PAT);
++            break;
++        }
++
++        return flip;
+     }
+ 
+     if ( unlikely( (real_pg_owner != pg_owner) &&
+@@ -1210,8 +1252,9 @@ static int alloc_l1_table(struct page_info *page)
+                 goto fail;
+             case 0:
+                 break;
+-            case 1:
+-                l1e_remove_flags(pl1e[i], _PAGE_RW);
++            case _PAGE_RW ... _PAGE_RW | PAGE_CACHE_ATTRS:
++                ASSERT(!(ret & ~(_PAGE_RW | PAGE_CACHE_ATTRS)));
++                l1e_flip_flags(pl1e[i], ret);
+                 break;
+             }
+ 
+@@ -1706,8 +1749,9 @@ static int mod_l1_entry(l1_pgentry_t *pl1e, l1_pgentry_t nl1e,
+             return -EINVAL;
+         }
+ 
+-        /* Fast path for identical mapping, r/w and presence. */
+-        if ( !l1e_has_changed(ol1e, nl1e, _PAGE_RW | _PAGE_PRESENT) )
++        /* Fast path for identical mapping, r/w, presence, and cachability. */
++        if ( !l1e_has_changed(ol1e, nl1e,
++                              PAGE_CACHE_ATTRS | _PAGE_RW | _PAGE_PRESENT) )
+         {
+             adjust_guest_l1e(nl1e, pt_dom);
+             if ( UPDATE_ENTRY(l1, pl1e, ol1e, nl1e, gl1mfn, pt_vcpu,
+@@ -1730,8 +1774,9 @@ static int mod_l1_entry(l1_pgentry_t *pl1e, l1_pgentry_t nl1e,
+             return rc;
+         case 0:
+             break;
+-        case 1:
+-            l1e_remove_flags(nl1e, _PAGE_RW);
++        case _PAGE_RW ... _PAGE_RW | PAGE_CACHE_ATTRS:
++            ASSERT(!(rc & ~(_PAGE_RW | PAGE_CACHE_ATTRS)));
++            l1e_flip_flags(nl1e, rc);
+             rc = 0;
+             break;
+         }
+@@ -4919,6 +4964,7 @@ static int ptwr_emulated_update(
+     l1_pgentry_t pte, ol1e, nl1e, *pl1e;
+     struct vcpu *v = current;
+     struct domain *d = v->domain;
++    int ret;
+ 
+     /* Only allow naturally-aligned stores within the original %cr2 page. */
+     if ( unlikely(((addr^ptwr_ctxt->cr2) & PAGE_MASK) || (addr & (bytes-1))) )
+@@ -4966,7 +5012,7 @@ static int ptwr_emulated_update(
+ 
+     /* Check the new PTE. */
+     nl1e = l1e_from_intpte(val);
+-    switch ( get_page_from_l1e(nl1e, d, d) )
++    switch ( ret = get_page_from_l1e(nl1e, d, d) )
+     {
+     default:
+         if ( is_pv_32bit_domain(d) && (bytes == 4) && (unaligned_addr & 4) &&
+@@ -4990,8 +5036,9 @@ static int ptwr_emulated_update(
+         break;
+     case 0:
+         break;
+-    case 1:
+-        l1e_remove_flags(nl1e, _PAGE_RW);
++    case _PAGE_RW ... _PAGE_RW | PAGE_CACHE_ATTRS:
++        ASSERT(!(ret & ~(_PAGE_RW | PAGE_CACHE_ATTRS)));
++        l1e_flip_flags(nl1e, ret);
+         break;
+     }
+ 
+diff --git a/xen/arch/x86/mm/p2m-pt.c b/xen/arch/x86/mm/p2m-pt.c
+index b71bc9d..7957f2e 100644
+--- a/xen/arch/x86/mm/p2m-pt.c
++++ b/xen/arch/x86/mm/p2m-pt.c
+@@ -93,6 +93,8 @@ static unsigned long p2m_type_to_flags(p2m_type_t t, mfn_t mfn)
+     case p2m_mmio_direct:
+         if ( !rangeset_contains_singleton(mmio_ro_ranges, mfn_x(mfn)) )
+             flags |= _PAGE_RW;
++        else
++            flags |= _PAGE_PWT;
+         return flags | P2M_BASE_FLAGS | _PAGE_PCD;
+     }
+ }
+diff --git a/xen/arch/x86/mm/shadow/multi.c b/xen/arch/x86/mm/shadow/multi.c
+index f9dc739..6c88d4e 100644
+--- a/xen/arch/x86/mm/shadow/multi.c
++++ b/xen/arch/x86/mm/shadow/multi.c
+@@ -521,6 +521,7 @@ _sh_propagate(struct vcpu *v,
+     gfn_t target_gfn = guest_l1e_get_gfn(guest_entry);
+     u32 pass_thru_flags;
+     u32 gflags, sflags;
++    bool_t mmio_mfn;
+ 
+     /* We don't shadow PAE l3s */
+     ASSERT(GUEST_PAGING_LEVELS > 3 || level != 3);
+@@ -562,7 +563,10 @@ _sh_propagate(struct vcpu *v,
+     // mfn means that we can not usefully shadow anything, and so we
+     // return early.
+     //
+-    if ( !mfn_valid(target_mfn)
++    mmio_mfn = !mfn_valid(target_mfn)
++               || (level == 1
++                   && page_get_owner(mfn_to_page(target_mfn)) == dom_io);
++    if ( mmio_mfn
+          && !(level == 1 && (!shadow_mode_refcounts(d) 
+                              || p2mt == p2m_mmio_direct)) )
+     {
+@@ -580,7 +584,7 @@ _sh_propagate(struct vcpu *v,
+                        _PAGE_RW | _PAGE_PRESENT);
+     if ( guest_supports_nx(v) )
+         pass_thru_flags |= _PAGE_NX_BIT;
+-    if ( !shadow_mode_refcounts(d) && !mfn_valid(target_mfn) )
++    if ( level == 1 && !shadow_mode_refcounts(d) && mmio_mfn )
+         pass_thru_flags |= _PAGE_PAT | _PAGE_PCD | _PAGE_PWT;
+     sflags = gflags & pass_thru_flags;
+ 
+@@ -677,10 +681,14 @@ _sh_propagate(struct vcpu *v,
+     }
+ 
+     /* Read-only memory */
+-    if ( p2m_is_readonly(p2mt) ||
+-         (p2mt == p2m_mmio_direct &&
+-          rangeset_contains_singleton(mmio_ro_ranges, mfn_x(target_mfn))) )
++    if ( p2m_is_readonly(p2mt) )
+         sflags &= ~_PAGE_RW;
++    else if ( p2mt == p2m_mmio_direct &&
++              rangeset_contains_singleton(mmio_ro_ranges, mfn_x(target_mfn)) )
++    {
++        sflags &= ~(_PAGE_RW | _PAGE_PAT);
++        sflags |= _PAGE_PCD | _PAGE_PWT;
++    }
+     
+     // protect guest page tables
+     //
+@@ -1202,22 +1210,28 @@ static int shadow_set_l1e(struct vcpu *v,
+          && !sh_l1e_is_magic(new_sl1e) ) 
+     {
+         /* About to install a new reference */        
+-        if ( shadow_mode_refcounts(d) ) {
++        if ( shadow_mode_refcounts(d) )
++        {
++#define PAGE_FLIPPABLE (_PAGE_RW | _PAGE_PWT | _PAGE_PCD | _PAGE_PAT)
++            int rc;
++
+             TRACE_SHADOW_PATH_FLAG(TRCE_SFLAG_SHADOW_L1_GET_REF);
+-            switch ( shadow_get_page_from_l1e(new_sl1e, d, new_type) )
++            switch ( rc = shadow_get_page_from_l1e(new_sl1e, d, new_type) )
+             {
+             default:
+                 /* Doesn't look like a pagetable. */
+                 flags |= SHADOW_SET_ERROR;
+                 new_sl1e = shadow_l1e_empty();
+                 break;
+-            case 1:
+-                shadow_l1e_remove_flags(new_sl1e, _PAGE_RW);
++            case PAGE_FLIPPABLE & -PAGE_FLIPPABLE ... PAGE_FLIPPABLE:
++                ASSERT(!(rc & ~PAGE_FLIPPABLE));
++                new_sl1e = shadow_l1e_flip_flags(new_sl1e, rc);
+                 /* fall through */
+             case 0:
+                 shadow_vram_get_l1e(new_sl1e, sl1e, sl1mfn, d);
+                 break;
+             }
++#undef PAGE_FLIPPABLE
+         }
+     } 
+ 
+diff --git a/xen/arch/x86/mm/shadow/types.h b/xen/arch/x86/mm/shadow/types.h
+index 953d168..83d08e0 100644
+--- a/xen/arch/x86/mm/shadow/types.h
++++ b/xen/arch/x86/mm/shadow/types.h
+@@ -100,6 +100,9 @@ static inline u32 shadow_l4e_get_flags(shadow_l4e_t sl4e)
+ static inline shadow_l1e_t
+ shadow_l1e_remove_flags(shadow_l1e_t sl1e, u32 flags)
+ { l1e_remove_flags(sl1e, flags); return sl1e; }
++static inline shadow_l1e_t
++shadow_l1e_flip_flags(shadow_l1e_t sl1e, u32 flags)
++{ l1e_flip_flags(sl1e, flags); return sl1e; }
+ 
+ static inline shadow_l1e_t shadow_l1e_empty(void) 
+ { return l1e_empty(); }
+diff --git a/xen/include/asm-x86/page.h b/xen/include/asm-x86/page.h
+index 91e9e92..dca0504 100644
+--- a/xen/include/asm-x86/page.h
++++ b/xen/include/asm-x86/page.h
+@@ -157,6 +157,9 @@ static inline l4_pgentry_t l4e_from_paddr(paddr_t pa, unsigned int flags)
+ #define l3e_remove_flags(x, flags) ((x).l3 &= ~put_pte_flags(flags))
+ #define l4e_remove_flags(x, flags) ((x).l4 &= ~put_pte_flags(flags))
+ 
++/* Flip flags in an existing L1 PTE. */
++#define l1e_flip_flags(x, flags)    ((x).l1 ^= put_pte_flags(flags))
++
+ /* Check if a pte's page mapping or significant access flags have changed. */
+ #define l1e_has_changed(x,y,flags) \
+     ( !!(((x).l1 ^ (y).l1) & ((PADDR_MASK&PAGE_MASK)|put_pte_flags(flags))) )
+-- 
+1.8.3.1
+
+
+From 33fc89a599c0e3fb4e8aed908fd23c17ffc40e7a Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Mon, 11 Jul 2016 14:32:03 +0100
+Subject: [PATCH] From 798c1498f764bfaa7b0b955bab40b01b0610d372 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH] x86/pv: Remove unsafe bits from the
+ mod_l?_entry() fastpath
+
+All changes in writeability and cacheability must go through full
+re-validation.
+
+Rework the logic as a whitelist, to make it clearer to follow.
+
+This is XSA-182
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm.c          | 28 ++++++++++++++++------------
+ xen/include/asm-x86/page.h |  1 +
+ 2 files changed, 17 insertions(+), 12 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index e6ac37e..83d0d6f 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -1709,6 +1709,14 @@ static inline int update_intpte(intpte_t *p,
+                   _t ## e_get_intpte(_o), _t ## e_get_intpte(_n),   \
+                   (_m), (_v), (_ad))
+ 
++/*
++ * PTE flags that a guest may change without re-validating the PTE.
++ * All other bits affect translation, caching, or Xen's safety.
++ */
++#define FASTPATH_FLAG_WHITELIST                                     \
++    (_PAGE_NX_BIT | _PAGE_AVAIL_HIGH | _PAGE_AVAIL | _PAGE_GLOBAL | \
++     _PAGE_DIRTY | _PAGE_ACCESSED | _PAGE_USER)
++
+ /* Update the L1 entry at pl1e to new value nl1e. */
+ static int mod_l1_entry(l1_pgentry_t *pl1e, l1_pgentry_t nl1e,
+                         unsigned long gl1mfn, int preserve_ad,
+@@ -1749,9 +1757,8 @@ static int mod_l1_entry(l1_pgentry_t *pl1e, l1_pgentry_t nl1e,
+             return -EINVAL;
+         }
+ 
+-        /* Fast path for identical mapping, r/w, presence, and cachability. */
+-        if ( !l1e_has_changed(ol1e, nl1e,
+-                              PAGE_CACHE_ATTRS | _PAGE_RW | _PAGE_PRESENT) )
++        /* Fast path for sufficiently-similar mappings. */
++        if ( !l1e_has_changed(ol1e, nl1e, ~FASTPATH_FLAG_WHITELIST) )
+         {
+             adjust_guest_l1e(nl1e, pt_dom);
+             if ( UPDATE_ENTRY(l1, pl1e, ol1e, nl1e, gl1mfn, pt_vcpu,
+@@ -1833,11 +1840,8 @@ static int mod_l2_entry(l2_pgentry_t *pl2e,
+             return -EINVAL;
+         }
+ 
+-        /* Fast path for identical mapping and presence. */
+-        if ( !l2e_has_changed(ol2e, nl2e,
+-                              unlikely(opt_allow_superpage)
+-                              ? _PAGE_PSE | _PAGE_RW | _PAGE_PRESENT
+-                              : _PAGE_PRESENT) )
++        /* Fast path for sufficiently-similar mappings. */
++        if ( !l2e_has_changed(ol2e, nl2e, ~FASTPATH_FLAG_WHITELIST) )
+         {
+             adjust_guest_l2e(nl2e, d);
+             if ( UPDATE_ENTRY(l2, pl2e, ol2e, nl2e, pfn, vcpu, preserve_ad) )
+@@ -1902,8 +1906,8 @@ static int mod_l3_entry(l3_pgentry_t *pl3e,
+             return -EINVAL;
+         }
+ 
+-        /* Fast path for identical mapping and presence. */
+-        if ( !l3e_has_changed(ol3e, nl3e, _PAGE_PRESENT) )
++        /* Fast path for sufficiently-similar mappings. */
++        if ( !l3e_has_changed(ol3e, nl3e, ~FASTPATH_FLAG_WHITELIST) )
+         {
+             adjust_guest_l3e(nl3e, d);
+             rc = UPDATE_ENTRY(l3, pl3e, ol3e, nl3e, pfn, vcpu, preserve_ad);
+@@ -1966,8 +1970,8 @@ static int mod_l4_entry(l4_pgentry_t *pl4e,
+             return -EINVAL;
+         }
+ 
+-        /* Fast path for identical mapping and presence. */
+-        if ( !l4e_has_changed(ol4e, nl4e, _PAGE_PRESENT) )
++        /* Fast path for sufficiently-similar mappings. */
++        if ( !l4e_has_changed(ol4e, nl4e, ~FASTPATH_FLAG_WHITELIST) )
+         {
+             adjust_guest_l4e(nl4e, d);
+             rc = UPDATE_ENTRY(l4, pl4e, ol4e, nl4e, pfn, vcpu, preserve_ad);
+diff --git a/xen/include/asm-x86/page.h b/xen/include/asm-x86/page.h
+index dca0504..e855104 100644
+--- a/xen/include/asm-x86/page.h
++++ b/xen/include/asm-x86/page.h
+@@ -308,6 +308,7 @@ void efi_update_l4_pgtable(unsigned int l4idx, l4_pgentry_t);
+ #define _PAGE_AVAIL2   _AC(0x800,U)
+ #define _PAGE_AVAIL    _AC(0xE00,U)
+ #define _PAGE_PSE_PAT _AC(0x1000,U)
++#define _PAGE_AVAIL_HIGH (_AC(0x7ff, U) << 12)
+ /* non-architectural flags */
+ #define _PAGE_PAGED   0x2000U
+ #define _PAGE_SHARED  0x4000U
 -- 
 1.8.3.1
 
