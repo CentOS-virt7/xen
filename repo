@@ -1,0 +1,13 @@
+#!/bin/bash
+#set -x
+
+TESTLIB_PATH="$PWD/lib"
+
+# Then as many as the sub-libraries as you need
+. ${TESTLIB_PATH}/core.sh
+. ${TESTLIB_PATH}/git.sh
+. ${TESTLIB_PATH}/centosrepo.sh
+
+# And do your own thing rather than running commands
+# I suggest defining a "main" function of your own and running it like this.
+cmdline "$@"
