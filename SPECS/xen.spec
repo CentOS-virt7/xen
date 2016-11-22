@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 13%{?dist}
+Release: 14%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -72,6 +72,7 @@ Patch2007: xsa179-qemuu-4.4-0004-vga-update-vga-register-setup-on-vbe-changes.pa
 Patch2008: xsa179-qemuu-4.4-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
 Patch2009: xsa180-qemuu.patch 
 Patch2010: xsa184-qemuu-master.patch
+Patch2011: xsa197-4.4-qemuu.patch
 
 Patch3004: xsa164.patch
 Patch3005: xen46-cve-2014-3615-backport-qemut-vbe-rework-sanity-checks.patch 
@@ -82,6 +83,7 @@ Patch3009: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-chang
 Patch3010: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
 Patch3011: xsa180-qemut.patch
 Patch3012: xsa184-qemut-master.patch
+Patch3013: xsa197-4.5-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -304,6 +306,7 @@ pushd tools/qemu-xen
 %patch2008 -p1
 %patch2009 -p1
 %patch2010 -p1
+%patch2011 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -317,6 +320,7 @@ pushd tools/qemu-xen-traditional
 %patch3010 -p1
 %patch3011 -p1
 %patch3012 -p1
+%patch3013 -p1
 popd
 
 # stubdom sources
@@ -833,7 +837,12 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
-* Tue Oct  4 2016 Johnny Hughes <johnny@centos.org> 4.4.4-12.el6.centos
+* Tue Nov 22 2016 Johnny Hughes <johnny@centos.org> 4.4.4-14.el6.centos
+- Import XSA-191, XSA-192, XSA-193, XSA-195, XSA-198 into xen-queue.am
+- Add xsa197-4.4-qemuu.patch and xsa197-4.5-qemut.patch for XSA-197
+- Note:  XSA-194 and XSA-196 do not effect xen-4.4
+
+* Tue Oct  4 2016 Johnny Hughes <johnny@centos.org> 4.4.4-13.el6.centos
 - Import XSA-190
 
 * Wed Sep  7 2016 Johnny Hughes <johnny@centos.org> 4.4.4-12.el6.centos

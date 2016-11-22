@@ -3206,3 +3206,434 @@ index 85bc4bc..7307423 100644
 -- 
 1.8.3.1
 
+
+From 5bcf6a6f132643df3e77f709656cd229ffc9dffc Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Tue, 22 Nov 2016 05:49:25 -0600
+Subject: [PATCH] Subject: x86/hvm: Fix the handling of non-present segments
+
+In 32bit, the data segments may be NULL to indicate that the segment is
+ineligible for use.  In both 32bit and 64bit, the LDT selector may be NULL to
+indicate that the entire LDT is ineligible for use.  However, nothing in Xen
+actually checks for this condition when performing other segmentation
+checks.  (Note however that limit and writeability checks are correctly
+performed).
+
+Neither Intel nor AMD specify the exact behaviour of loading a NULL segment.
+Experimentally, AMD zeroes all attributes but leaves the base and limit
+unmodified.  Intel zeroes the base, sets the limit to 0xfffffff and resets the
+attributes to just .G and .D/B.
+
+The use of the segment information in the VMCB/VMCS is equivalent to a native
+pipeline interacting with the segment cache.  The present bit can therefore
+have a subtly different meaning, and it is now cooked to uniformly indicate
+whether the segment is usable or not.
+
+GDTR and IDTR don't have access rights like the other segments, but for
+consistency, they are treated as being present so no special casing is needed
+elsewhere in the segmentation logic.
+
+AMD hardware does not consider the present bit for %cs and %tr, and will
+function as if they were present.  They are therefore unconditionally set to
+present when reading information from the VMCB, to maintain the new meaning of
+usability.
+
+Intel hardware has a separate unusable bit in the VMCS segment attributes.
+This bit is inverted and stored in the present field, so the hvm code can work
+with architecturally-common state.
+
+This is XSA-191.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/hvm.c                 |  8 ++++++++
+ xen/arch/x86/hvm/svm/svm.c             |  4 ++++
+ xen/arch/x86/hvm/vmx/vmx.c             | 20 +++++++++++---------
+ xen/arch/x86/x86_emulate/x86_emulate.c |  4 ++++
+ 4 files changed, 27 insertions(+), 9 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index a4bfb90..a3c3933 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -2069,6 +2069,10 @@ int hvm_virtual_to_linear_addr(
+          * COMPATIBILITY MODE: Apply segment checks and add base.
+          */
+ 
++        /* Segment not valid for use (cooked meaning of .p)? */
++        if ( !reg->attr.fields.p )
++            return 0;
++
+         switch ( access_type )
+         {
+         case hvm_access_read:
+@@ -2266,6 +2270,10 @@ static int hvm_load_segment_selector(
+     hvm_get_segment_register(
+         v, (sel & 4) ? x86_seg_ldtr : x86_seg_gdtr, &desctab);
+ 
++    /* Segment not valid for use (cooked meaning of .p)? */
++    if ( !desctab.attr.fields.p )
++        goto fail;
++
+     /* Check against descriptor table limit. */
+     if ( ((sel & 0xfff8) + 7) > desctab.limit )
+         goto fail;
+diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
+index e21084d..8fda457 100644
+--- a/xen/arch/x86/hvm/svm/svm.c
++++ b/xen/arch/x86/hvm/svm/svm.c
+@@ -522,6 +522,7 @@ static void svm_get_segment_register(struct vcpu *v, enum x86_segment seg,
+     {
+     case x86_seg_cs:
+         memcpy(reg, &vmcb->cs, sizeof(*reg));
++        reg->attr.fields.p = 1;
+         reg->attr.fields.g = reg->limit > 0xFFFFF;
+         break;
+     case x86_seg_ds:
+@@ -555,13 +556,16 @@ static void svm_get_segment_register(struct vcpu *v, enum x86_segment seg,
+     case x86_seg_tr:
+         svm_sync_vmcb(v);
+         memcpy(reg, &vmcb->tr, sizeof(*reg));
++        reg->attr.fields.p = 1;
+         reg->attr.fields.type |= 0x2;
+         break;
+     case x86_seg_gdtr:
+         memcpy(reg, &vmcb->gdtr, sizeof(*reg));
++        reg->attr.bytes = 0x80;
+         break;
+     case x86_seg_idtr:
+         memcpy(reg, &vmcb->idtr, sizeof(*reg));
++        reg->attr.bytes = 0x80;
+         break;
+     case x86_seg_ldtr:
+         svm_sync_vmcb(v);
+diff --git a/xen/arch/x86/hvm/vmx/vmx.c b/xen/arch/x86/hvm/vmx/vmx.c
+index f35119b..226cfd6 100644
+--- a/xen/arch/x86/hvm/vmx/vmx.c
++++ b/xen/arch/x86/hvm/vmx/vmx.c
+@@ -770,10 +770,12 @@ void vmx_get_segment_register(struct vcpu *v, enum x86_segment seg,
+     reg->sel = sel;
+     reg->limit = limit;
+ 
+-    reg->attr.bytes = (attr & 0xff) | ((attr >> 4) & 0xf00);
+-    /* Unusable flag is folded into Present flag. */
+-    if ( attr & (1u<<16) )
+-        reg->attr.fields.p = 0;
++    /*
++     * Fold VT-x representation into Xen's representation.  The Present bit is
++     * unconditionally set to the inverse of unusable.
++     */
++    reg->attr.bytes =
++        (!(attr & (1u << 16)) << 7) | (attr & 0x7f) | ((attr >> 4) & 0xf00);
+ 
+     /* Adjust for virtual 8086 mode */
+     if ( v->arch.hvm_vmx.vmx_realmode && seg <= x86_seg_tr 
+@@ -853,11 +855,11 @@ static void vmx_set_segment_register(struct vcpu *v, enum x86_segment seg,
+         }
+     }
+ 
+-    attr = ((attr & 0xf00) << 4) | (attr & 0xff);
+-
+-    /* Not-present must mean unusable. */
+-    if ( !reg->attr.fields.p )
+-        attr |= (1u << 16);
++    /*
++     * Unfold Xen representation into VT-x representation.  The unusable bit
++     * is unconditionally set to the inverse of present.
++     */
++    attr = (!(attr & (1u << 7)) << 16) | ((attr & 0xf00) << 4) | (attr & 0xff);
+ 
+     /* VMX has strict consistency requirement for flag G. */
+     attr |= !!(limit >> 20) << 15;
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 81e268a..2aec5c6 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1185,6 +1185,10 @@ protmode_load_seg(
+                                  &desctab, ctxt)) )
+         return rc;
+ 
++    /* Segment not valid for use (cooked meaning of .p)? */
++    if ( !desctab.attr.fields.p )
++        goto raise_exn;
++
+     /* Check against descriptor table limit. */
+     if ( ((sel & 0xfff8) + 7) > desctab.limit )
+         goto raise_exn;
+-- 
+1.8.3.1
+
+
+From 532c04cc369a5a3b3af612d85638a4ed20df2411 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 22 Nov 2016 05:49:48 -0600
+Subject: [PATCH] Subject: x86/HVM: don't load LDTR with VM86 mode attrs during
+ task switch
+
+Just like TR, LDTR is purely a protected mode facility and hence needs
+to be loaded accordingly. Also move its loading to where it
+architecurally belongs.
+
+This is XSA-192.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Tested-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/hvm/hvm.c | 20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index a3c3933..a22f7bc 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -2233,16 +2233,15 @@ static void hvm_unmap_entry(void *p)
+ }
+ 
+ static int hvm_load_segment_selector(
+-    enum x86_segment seg, uint16_t sel)
++    enum x86_segment seg, uint16_t sel, unsigned int eflags)
+ {
+     struct segment_register desctab, cs, segr;
+     struct desc_struct *pdesc, desc;
+     u8 dpl, rpl, cpl;
+     int fault_type = TRAP_invalid_tss;
+-    struct cpu_user_regs *regs = guest_cpu_user_regs();
+     struct vcpu *v = current;
+ 
+-    if ( regs->eflags & X86_EFLAGS_VM )
++    if ( eflags & X86_EFLAGS_VM )
+     {
+         segr.sel = sel;
+         segr.base = (uint32_t)sel << 4;
+@@ -2489,6 +2488,8 @@ void hvm_task_switch(
+     if ( rc != HVMCOPY_okay )
+         goto out;
+ 
++    if ( hvm_load_segment_selector(x86_seg_ldtr, tss.ldt, 0) )
++        goto out;
+ 
+     if ( hvm_set_cr3(tss.cr3) )
+         goto out;
+@@ -2511,13 +2512,12 @@ void hvm_task_switch(
+     }
+ 
+     exn_raised = 0;
+-    if ( hvm_load_segment_selector(x86_seg_ldtr, tss.ldt) ||
+-         hvm_load_segment_selector(x86_seg_es, tss.es) ||
+-         hvm_load_segment_selector(x86_seg_cs, tss.cs) ||
+-         hvm_load_segment_selector(x86_seg_ss, tss.ss) ||
+-         hvm_load_segment_selector(x86_seg_ds, tss.ds) ||
+-         hvm_load_segment_selector(x86_seg_fs, tss.fs) ||
+-         hvm_load_segment_selector(x86_seg_gs, tss.gs) )
++    if ( hvm_load_segment_selector(x86_seg_es, tss.es, tss.eflags) ||
++         hvm_load_segment_selector(x86_seg_cs, tss.cs, tss.eflags) ||
++         hvm_load_segment_selector(x86_seg_ss, tss.ss, tss.eflags) ||
++         hvm_load_segment_selector(x86_seg_ds, tss.ds, tss.eflags) ||
++         hvm_load_segment_selector(x86_seg_fs, tss.fs, tss.eflags) ||
++         hvm_load_segment_selector(x86_seg_gs, tss.gs, tss.eflags) )
+         exn_raised = 1;
+ 
+     rc = hvm_copy_to_guest_virt(
+-- 
+1.8.3.1
+
+
+From b2057a1c4844849dfdeb2a205596583f2ee6f355 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 22 Nov 2016 05:50:03 -0600
+Subject: [PATCH] Subject: x86/PV: writes of %fs and %gs base MSRs require
+ canonical addresses
+
+Commit c42494acb2 ("x86: fix FS/GS base handling when using the
+fsgsbase feature") replaced the use of wrmsr_safe() on these paths
+without recognizing that wr{f,g}sbase() use just wrmsrl() and that the
+WR{F,G}SBASE instructions also raise #GP for non-canonical input.
+
+Similarly arch_set_info_guest() needs to prevent non-canonical
+addresses from getting stored into state later to be loaded by context
+switch code. For consistency also check stack pointers and LDT base.
+DR0..3, otoh, already get properly checked in set_debugreg() (albeit
+we discard the error there).
+
+The SHADOW_GS_BASE check isn't strictly necessary, but I think we
+better avoid trying the WRMSR if we know it's going to fail.
+
+This is XSA-193.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/domain.c | 8 +++++++-
+ xen/arch/x86/traps.c  | 6 +++---
+ 2 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
+index 4efef9a..d8cc29a 100644
+--- a/xen/arch/x86/domain.c
++++ b/xen/arch/x86/domain.c
+@@ -685,7 +685,13 @@ int arch_set_info_guest(
+     {
+         if ( !compat )
+         {
+-            if ( !is_canonical_address(c.nat->user_regs.eip) ||
++            if ( !is_canonical_address(c.nat->user_regs.rip) ||
++                 !is_canonical_address(c.nat->user_regs.rsp) ||
++                 !is_canonical_address(c.nat->kernel_sp) ||
++                 (c.nat->ldt_ents && !is_canonical_address(c.nat->ldt_base)) ||
++                 !is_canonical_address(c.nat->fs_base) ||
++                 !is_canonical_address(c.nat->gs_base_kernel) ||
++                 !is_canonical_address(c.nat->gs_base_user) ||
+                  !is_canonical_address(c.nat->event_callback_eip) ||
+                  !is_canonical_address(c.nat->syscall_callback_eip) ||
+                  !is_canonical_address(c.nat->failsafe_callback_eip) )
+diff --git a/xen/arch/x86/traps.c b/xen/arch/x86/traps.c
+index 318153a..91ffbcf 100644
+--- a/xen/arch/x86/traps.c
++++ b/xen/arch/x86/traps.c
+@@ -2391,19 +2391,19 @@ static int emulate_privileged_op(struct cpu_user_regs *regs)
+         switch ( (u32)regs->ecx )
+         {
+         case MSR_FS_BASE:
+-            if ( is_pv_32on64_vcpu(v) )
++            if ( is_pv_32on64_vcpu(v) || !is_canonical_address(msr_content) )
+                 goto fail;
+             wrfsbase(msr_content);
+             v->arch.pv_vcpu.fs_base = msr_content;
+             break;
+         case MSR_GS_BASE:
+-            if ( is_pv_32on64_vcpu(v) )
++            if ( is_pv_32on64_vcpu(v) || !is_canonical_address(msr_content) )
+                 goto fail;
+             wrgsbase(msr_content);
+             v->arch.pv_vcpu.gs_base_kernel = msr_content;
+             break;
+         case MSR_SHADOW_GS_BASE:
+-            if ( is_pv_32on64_vcpu(v) )
++            if ( is_pv_32on64_vcpu(v) || !is_canonical_address(msr_content) )
+                 goto fail;
+             if ( wrmsr_safe(MSR_SHADOW_GS_BASE, msr_content) )
+                 goto fail;
+-- 
+1.8.3.1
+
+
+From efe80674ae94f3027725fa9894c2ee73bc099bf4 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 22 Nov 2016 05:50:17 -0600
+Subject: [PATCH] Subject: x86emul: fix huge bit offset handling
+
+We must never chop off the high 32 bits.
+
+This is XSA-195.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 13 ++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 2aec5c6..c7a6823 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1836,6 +1836,12 @@ x86_emulate(
+         else
+         {
+             /*
++             * Instructions such as bt can reference an arbitrary offset from
++             * their memory operand, but the instruction doing the actual
++             * emulation needs the appropriate op_bytes read from memory.
++             * Adjust both the source register and memory operand to make an
++             * equivalent instruction.
++             *
+              * EA       += BitOffset DIV op_bytes*8
+              * BitOffset = BitOffset MOD op_bytes*8
+              * DIV truncates towards negative infinity.
+@@ -1847,14 +1853,15 @@ x86_emulate(
+                 src.val = (int32_t)src.val;
+             if ( (long)src.val < 0 )
+             {
+-                unsigned long byte_offset;
+-                byte_offset = op_bytes + (((-src.val-1) >> 3) & ~(op_bytes-1));
++                unsigned long byte_offset =
++                    op_bytes + (((-src.val - 1) >> 3) & ~(op_bytes - 1L));
++
+                 ea.mem.off -= byte_offset;
+                 src.val = (byte_offset << 3) + src.val;
+             }
+             else
+             {
+-                ea.mem.off += (src.val >> 3) & ~(op_bytes - 1);
++                ea.mem.off += (src.val >> 3) & ~(op_bytes - 1L);
+                 src.val &= (op_bytes << 3) - 1;
+             }
+         }
+-- 
+1.8.3.1
+
+
+From fe4922816f621a725825fe77169bcb4355ffa8f2 Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Thu, 3 Nov 2016 16:37:40 +0000
+Subject: [PATCH] From 71a389ae940bc52bf897a6e5becd73fd8ede94c5 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH] pygrub: Properly quote results, when returning
+ them to the  caller:
+
+* When the caller wants sexpr output, use `repr()'
+  This is what Xend expects.
+
+  The returned S-expressions are now escaped and quoted by Python,
+  generally using '...'.  Previously kernel and ramdisk were unquoted
+  and args was quoted with "..." but without proper escaping.  This
+  change may break toolstacks which do not properly dequote the
+  returned S-expressions.
+
+* When the caller wants "simple" output, crash if the delimiter is
+  contained in the returned value.
+
+  With --output-format=simple it does not seem like this could ever
+  happen, because the bootloader config parsers all take line-based
+  input from the various bootloader config files.
+
+  With --output-format=simple0, this can happen if the bootloader
+  config file contains nul bytes.
+
+This is XSA-198.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Tested-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ tools/pygrub/src/pygrub | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/tools/pygrub/src/pygrub b/tools/pygrub/src/pygrub
+index 8ff6964..0d06eee 100755
+--- a/tools/pygrub/src/pygrub
++++ b/tools/pygrub/src/pygrub
+@@ -726,14 +726,17 @@ def sniff_netware(fs, cfg):
+     return cfg
+ 
+ def format_sxp(kernel, ramdisk, args):
+-    s = "linux (kernel %s)" % kernel
++    s = "linux (kernel %s)" % repr(kernel)
+     if ramdisk:
+-        s += "(ramdisk %s)" % ramdisk
++        s += "(ramdisk %s)" % repr(ramdisk)
+     if args:
+-        s += "(args \"%s\")" % args
++        s += "(args %s)" % repr(args)
+     return s
+                 
+ def format_simple(kernel, ramdisk, args, sep):
++    for check in (kernel, ramdisk, args):
++        if check is not None and sep in check:
++            raise RuntimeError, "simple format cannot represent delimiter-containing value"
+     s = ("kernel %s" % kernel) + sep
+     if ramdisk:
+         s += ("ramdisk %s" % ramdisk) + sep
+-- 
+1.8.3.1
+
