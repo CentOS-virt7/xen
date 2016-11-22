@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.3
-Release: 3%{?dist}
+Release: 4%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -93,6 +93,7 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 # aarch64-only
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
 Patch2011: xsa184-qemuu-4.6.patch
+Patch2012: xsa197-4.6-qemuu.patch
 
 Patch3001: xsa179-qemut-unstable-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
 Patch3002: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
@@ -101,6 +102,7 @@ Patch3004: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-chang
 Patch3005: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
 Patch3010: xsa180-qemut.patch
 Patch3011: xsa184-qemut-master.patch
+Patch3012: xsa197-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -314,11 +316,13 @@ pushd tools/qemu-xen
 %patch2001 -p1
 %endif
 %patch2011 -p1
+%patch2012 -p1
 popd
 
 pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
 %patch3011 -p1
+%patch3012 -p1
 popd
 
 %if %{with_blktap}
@@ -904,6 +908,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Nov 22 2016 George Dunlap <george.dunlap@citrix.com> 4.6.3-4.el6.centos
+- Import XSAs 191-193, 195-198.  (Not affected by XSA 194.)
+
 * Mon Oct 03 2016 George Dunlap <george.dunlap@citrix.com> 4.6.3-3.el6.centos
 - Import XSA 190
 
