@@ -1,4 +1,4 @@
-From 073e80dd796fa12cf13e7520f297977969553bb6 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 28 Jul 2016 12:10:38 +0100
 Subject: [PATCH] tools/hotplug: Before running xenstored, run restorecon if
@@ -44,10 +44,9 @@ index a5f836b..9d61024 100644
  ExecStartPre=/bin/mkdir -p @XEN_RUN_DIR@
  ExecStart=/bin/sh -c "exec $XENSTORED --no-fork $XENSTORED_ARGS"
 -- 
-2.1.4
 
 
-From a2403360150aa16ba70afc14bd697fc91c0e4448 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 28 Jul 2016 12:10:38 +0100
 Subject: [PATCH] tools/hotplug: Call xenstored directly rather than via sh
@@ -112,10 +111,9 @@ index 9d61024..15defbe 100644
  [Install]
  WantedBy=multi-user.target
 -- 
-2.1.4
 
 
-From ad2727d8076ed2183402ed8ea83170c79b271f73 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 28 Jul 2016 12:10:38 +0100
 Subject: [PATCH] tools/Linux: Fix blktap module name in default module list
@@ -155,10 +153,9 @@ index 6c70040..6d1e9dd 100644
  ;;
  *)
 -- 
-2.1.4
 
 
-From 38b74cd54497186fb9f1f85eac759d43998da8f2 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Feb 2016 11:29:17 +0000
 Subject: [PATCH] xen: Allow user to specify an alternate linker for EFI
@@ -225,10 +222,9 @@ index 1daa7ac..f5398c4 100644
  
  extra-$(efi) += boot.init.o relocs-dummy.o runtime.o compat.o
 -- 
-2.1.4
 
 
-From 8aa288a5daa9f4112fe880eec155112427a1ec3a Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Feb 2016 11:29:17 +0000
 Subject: [PATCH] Disable iptables on the bridge
@@ -270,10 +266,9 @@ index 92ffa60..0b1fde9 100644
  }
  
 -- 
-2.1.4
 
 
-From 30f96beb6783c133dc6a30d7e1249602d447ef54 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Feb 2016 11:29:17 +0000
 Subject: [PATCH] xen.use.fedora.ipxe.patch
@@ -324,10 +319,9 @@ index 0560a7b..6610722 100644
  
  ROMS := 
 -- 
-2.1.4
 
 
-From 01acaec385113bcf1e7ad8a28a709e126d4d2f86 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Feb 2016 11:29:17 +0000
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
@@ -361,10 +355,9 @@ index a81baee..1288d3e 100644
              LOG(DEBUG, "Disk vdev=%s, using backend %s",
                         disk->vdev,
 -- 
-2.1.4
 
 
-From 46b3c8da803518f378e3ed61f27d3e665e941d3f Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Feb 2016 11:29:18 +0000
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -386,10 +379,9 @@ index 2618559..4157edf 100644
  		$(QEMU_XEN_ENABLE_DEBUG) \
  		--prefix=$(LIBEXEC) \
 -- 
-2.1.4
 
 
-From 0ea52541fff510c2e4c730c5b7dc93a71d2753ac Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Feb 2016 11:29:18 +0000
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
@@ -499,10 +491,9 @@ index 2053403..9a0641b 100644
      }
  
 -- 
-2.1.4
 
 
-From fe2a19b5be8b7598580d938c2b9f3f692bcd2d12 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Julien Grall <julien.grall@linaro.org>
 Date: Thu, 11 Feb 2016 11:29:18 +0000
 Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
@@ -532,10 +523,9 @@ index 3c365f3..ef033c2 100644
  #define PSR_MODE_EL3h 0x0d
  #define PSR_MODE_EL3t 0x0c
 -- 
-2.1.4
 
 
-From 29670c7b9893f08d5a302501db6d085216282794 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
 Date: Thu, 11 Feb 2016 11:29:18 +0000
 Subject: [PATCH] xen/arm: support compressed kernels
@@ -734,10 +724,9 @@ index f641b12..35692e1 100644
          rc = kernel_uimage_probe(info, start, size);
      if (rc < 0)
 -- 
-2.1.4
 
 
-From 275d4c9de7d3efa002946688aadd327d5dbc2cf6 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: David Vrabel <david.vrabel@citrix.com>
 Date: Fri, 20 Nov 2015 11:59:05 -0500
 Subject: [PATCH] xen: Add RING_COPY_REQUEST()
@@ -789,10 +778,9 @@ index ba9401b..801c0da 100644
      (&((_r)->sring->ring[((_idx) & (RING_SIZE(_r) - 1))].rsp))
  
 -- 
-2.1.4
 
 
-From d701ce19edce18067a4471a9df29a1c128b74f8d Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
 Date: Thu, 19 May 2016 18:08:38 +0100
 Subject: [PATCH] hotplug: Fix xendomains lock path for RHEL-based systems
@@ -845,10 +833,9 @@ index 0603842..e749b78 100644
  XENDOM_CONFIG=@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xendomains
  
 -- 
-2.1.4
 
 
-From 90088b2d9694facecef8b9c336bdbfc221f96fa8 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
 Date: Thu, 19 May 2016 18:08:54 +0100
 Subject: [PATCH] tools/xendomains: Create lockfile on start unconditionally
@@ -917,10 +904,9 @@ index e749b78..1dce21d 100644
  	# We expect config scripts for auto starting domains to be in
  	# XENDOMAINS_AUTO - they could just be symlinks to files elsewhere
 -- 
-2.1.4
 
 
-From fc6e0f05d9bce3121dab3662c9ed233ce3da771d Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Mon, 11 Jul 2016 14:32:03 +0100
 Subject: [PATCH] x86/pv: Remove unsafe bits from the mod_l?_entry() fastpath
@@ -1019,10 +1005,9 @@ index 66b611c..1a59ed8 100644
  /* non-architectural flags */
  #define _PAGE_PAGED   0x2000U
 -- 
-2.1.4
 
 
-From 447509676a8187a5851b38d840ea58216f061694 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Wed, 15 Jun 2016 18:32:14 +0100
 Subject: [PATCH] x86/entry: Avoid SMAP violation in 
@@ -1085,10 +1070,9 @@ index 6e27508..bdd1284 100644
          call  show_page_walk
  ENTRY(dom_crash_sync_extable)
 -- 
-2.1.4
 
 
-From 322da54fd568f05189a586021e5093f12b8d1c7e Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Mon, 8 Aug 2016 10:58:12 +0100
 Subject: [PATCH] From 30aba4992b18245c436f16df7326a16c01a51570 Mon Sep 17
@@ -1123,10 +1107,9 @@ index 8dd22b8..64e2de3 100644
  
      return rc;
 -- 
-2.1.4
 
 
-From f6ea02b295ac7b9f6ed8758111f44c9c5a89c24d Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Fri, 22 Jul 2016 16:02:54 +0000
 Subject: [PATCH] From e938be013ba73ff08fa4f1d8670501aacefde7fb Mon Sep 17
@@ -1197,10 +1180,9 @@ index 8f3ffc2..af90884 100644
  
   done:
 -- 
-2.1.4
 
 
-From 0aed7cf406cd119ac60af1ecf54cda44f65665f7 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Wed, 7 Sep 2016 18:36:37 +0100
 Subject: [PATCH] Subject: x86/shadow: Avoid overflowing sh_ctxt->seg_reg[]
@@ -1249,10 +1231,9 @@ index 0eeffb4..83f6938 100644
          seg, reg, offset, bytes, access_type, sh_ctxt->ctxt.addr_size, paddr);
  
 -- 
-2.1.4
 
 
-From 9e4d600d7b41d5b55e80141557d14d7c8181b500 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Wed, 7 Sep 2016 18:37:15 +0100
 Subject: [PATCH] Subject: x86/segment: Bounds check accesses to emulation
@@ -1423,10 +1404,9 @@ index 142d1b6..3aabcbe 100644
  #include <asm/x86_emulate.h>
  
 -- 
-2.1.4
 
 
-From c07ce5af20e98afee3f1f4aa50a9038a6d305347 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
 Date: Mon, 3 Oct 2016 18:23:33 +0100
 Subject: [PATCH] x86emul: honor guest CR0.TS and CR0.EM
@@ -1563,10 +1543,9 @@ index af90884..3caf114 100644
  } while (0)
  #define _put_fpu()                                              \
 -- 
-2.1.4
 
 
-From 3f5773caf3a81eb02f176f452ff199cb73c2c870 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Tue, 22 Nov 2016 11:29:12 +0000
 Subject: [PATCH] x86/hvm: Fix the handling of non-present segments
@@ -1721,10 +1700,9 @@ index 3caf114..55ed401 100644
      if ( ((sel & 0xfff8) + 7) > desctab.limit )
          goto raise_exn;
 -- 
-2.1.4
 
 
-From 3b28cd3a8bfecbd3c3db3d12e2b0cc0dafae8168 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Tue, 22 Nov 2016 11:30:03 +0000
 Subject: [PATCH] x86/HVM: don't load LDTR with VM86 mode attrs during task
@@ -1797,10 +1775,9 @@ index 5339d91..54f9848 100644
  
      rc = hvm_copy_to_guest_virt(
 -- 
-2.1.4
 
 
-From 3e1c50050c76b24b53df894a2cda261d0d9d9e93 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Tue, 22 Nov 2016 11:30:22 +0000
 Subject: [PATCH] x86/PV: writes of %fs and %gs base MSRs require canonical
@@ -1879,10 +1856,9 @@ index c6231b5..b634236 100644
              if ( wrmsr_safe(MSR_SHADOW_GS_BASE, msr_content) )
                  goto fail;
 -- 
-2.1.4
 
 
-From 481f8c3bcf84612ab65aabd06f1f1ef05204bcf8 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Tue, 22 Nov 2016 11:30:49 +0000
 Subject: [PATCH] x86emul: fix huge bit offset handling
@@ -1934,10 +1910,9 @@ index 55ed401..e581fa6 100644
              }
          }
 -- 
-2.1.4
 
 
-From d4f22a501eedf6a7c2993f4a42bde4b46c8f15a0 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Tue, 22 Nov 2016 11:31:32 +0000
 Subject: [PATCH] x86/emul: Correct the IDT entry calculation in inject_swint()
@@ -2001,10 +1976,9 @@ index e581fa6..0167a55 100644
              /* Is this entry present? */
              if ( !(idte_ctl & (1u << 15)) )
 -- 
-2.1.4
 
 
-From b17d0f9daae7377d522091022c245f4bab4e5c23 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Tue, 22 Nov 2016 11:31:32 +0000
 Subject: [PATCH] x86/svm: Fix injection of software interrupts
@@ -2083,10 +2057,9 @@ index ded5d19..f93dfed 100644
             (unsigned long long)vmcb->exitcode,
             (unsigned long long)vmcb->exitintinfo.bytes);
 -- 
-2.1.4
 
 
-From 1717f7024c3caed33da6a355b0554b9d5db0211f Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Thu, 3 Nov 2016 16:37:40 +0000
 Subject: [PATCH] pygrub: Properly quote results, when returning them to the
@@ -2146,5 +2119,775 @@ index 40f9584..dd0c8f7 100755
      if ramdisk:
          s += ("ramdisk %s" % ramdisk) + sep
 -- 
-2.1.4
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Fri, 23 Dec 2016 10:08:13 -0600
+Subject: [PATCH] x86emul: CMPXCHG8B ignores operand size prefix
+
+Otherwise besides mis-handling the instruction, the comparison failure
+case would result in uninitialized stack data being handed back to the
+guest in rDX:rAX (32 bits leaked for 32-bit guests, 96 bits for 64-bit
+ones).
+
+This is XSA-200.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ tools/tests/x86_emulator/test_x86_emulator.c | 18 ++++++++++++++++++
+ xen/arch/x86/x86_emulate/x86_emulate.c       |  6 +++++-
+ 2 files changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/tools/tests/x86_emulator/test_x86_emulator.c b/tools/tests/x86_emulator/test_x86_emulator.c
+index 65c4c97..c63ac42 100644
+--- a/tools/tests/x86_emulator/test_x86_emulator.c
++++ b/tools/tests/x86_emulator/test_x86_emulator.c
+@@ -429,6 +429,24 @@ int main(int argc, char **argv)
+         goto fail;
+     printf("okay\n");
+ 
++    printf("%-40s", "Testing cmpxchg8b (%edi) [opsize]...");
++    instr[0] = 0x66; instr[1] = 0x0f; instr[2] = 0xc7; instr[3] = 0x0f;
++    res[0]      = 0x12345678;
++    res[1]      = 0x87654321;
++    regs.eflags = 0x200;
++    regs.eip    = (unsigned long)&instr[0];
++    regs.edi    = (unsigned long)res;
++    rc = x86_emulate(&ctxt, &emulops);
++    if ( (rc != X86EMUL_OKAY) ||
++         (res[0] != 0x12345678) ||
++         (res[1] != 0x87654321) ||
++         (regs.eax != 0x12345678) ||
++         (regs.edx != 0x87654321) ||
++         ((regs.eflags&0x240) != 0x200) ||
++         (regs.eip != (unsigned long)&instr[4]) )
++        goto fail;
++    printf("okay\n");
++
+     printf("%-40s", "Testing movsxbd (%%eax),%%ecx...");
+     instr[0] = 0x0f; instr[1] = 0xbe; instr[2] = 0x08;
+     regs.eflags = 0x200;
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 0167a55..65798db 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -4711,8 +4711,12 @@ x86_emulate(
+         generate_exception_if((modrm_reg & 7) != 1, EXC_UD, -1);
+         generate_exception_if(ea.type != OP_MEM, EXC_UD, -1);
+         if ( op_bytes == 8 )
++        {
+             vcpu_must_have_cx16();
+-        op_bytes *= 2;
++            op_bytes = 16;
++        }
++        else
++            op_bytes = 8;
+ 
+         /* Get actual old value. */
+         if ( (rc = ops->read(ea.mem.seg, ea.mem.off, old, op_bytes,
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Wei Chen <Wei.Chen@arm.com>
+Date: Fri, 23 Dec 2016 10:09:51 -0600
+Subject: [PATCH] arm64: handle guest-generated EL1 asynchronous abort
+
+In current code, when the hypervisor receives an asynchronous abort
+from a guest, the hypervisor will do panic, the host will be down.
+We have to prevent such security issue, so, in this patch we crash
+the guest, when the hypervisor receives an asynchronous abort from
+the guest.
+
+This is CVE-2016-9815, part of XSA-201.
+
+Signed-off-by: Wei Chen <Wei.Chen@arm.com>
+Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
+Reviewed-by: Steve Capper <steve.capper@arm.com>
+Reviewed-by: Julien Grall <Julien.Grall@arm.com>
+---
+ xen/arch/arm/arm64/entry.S | 18 ++++++++++++------
+ xen/arch/arm/traps.c       | 15 +++++++++++++++
+ 2 files changed, 27 insertions(+), 6 deletions(-)
+
+diff --git a/xen/arch/arm/arm64/entry.S b/xen/arch/arm/arm64/entry.S
+index 9cda8f1..0ed0073 100644
+--- a/xen/arch/arm/arm64/entry.S
++++ b/xen/arch/arm/arm64/entry.S
+@@ -204,9 +204,12 @@ guest_fiq_invalid:
+         entry   hyp=0, compat=0
+         invalid BAD_FIQ
+ 
+-guest_error_invalid:
++guest_error:
+         entry   hyp=0, compat=0
+-        invalid BAD_ERROR
++        msr     daifclr, #2
++        mov     x0, sp
++        bl      do_trap_guest_error
++        exit    hyp=0, compat=0
+ 
+ guest_sync_compat:
+         entry   hyp=0, compat=1
+@@ -225,9 +228,12 @@ guest_fiq_invalid_compat:
+         entry   hyp=0, compat=1
+         invalid BAD_FIQ
+ 
+-guest_error_invalid_compat:
++guest_error_compat:
+         entry   hyp=0, compat=1
+-        invalid BAD_ERROR
++        msr     daifclr, #2
++        mov     x0, sp
++        bl      do_trap_guest_error
++        exit    hyp=0, compat=1
+ 
+ ENTRY(return_to_new_vcpu32)
+         exit    hyp=0, compat=1
+@@ -286,12 +292,12 @@ ENTRY(hyp_traps_vector)
+         ventry  guest_sync                      // Synchronous 64-bit EL0/EL1
+         ventry  guest_irq                       // IRQ 64-bit EL0/EL1
+         ventry  guest_fiq_invalid               // FIQ 64-bit EL0/EL1
+-        ventry  guest_error_invalid             // Error 64-bit EL0/EL1
++        ventry  guest_error                     // Error 64-bit EL0/EL1
+ 
+         ventry  guest_sync_compat               // Synchronous 32-bit EL0/EL1
+         ventry  guest_irq_compat                // IRQ 32-bit EL0/EL1
+         ventry  guest_fiq_invalid_compat        // FIQ 32-bit EL0/EL1
+-        ventry  guest_error_invalid_compat      // Error 32-bit EL0/EL1
++        ventry  guest_error_compat              // Error 32-bit EL0/EL1
+ 
+ /*
+  * struct vcpu *__context_switch(struct vcpu *prev, struct vcpu *next)
+diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
+index c8b27ba..083193f 100644
+--- a/xen/arch/arm/traps.c
++++ b/xen/arch/arm/traps.c
+@@ -2595,6 +2595,21 @@ asmlinkage void do_trap_hypervisor(struct cpu_user_regs *regs)
+     }
+ }
+ 
++asmlinkage void do_trap_guest_error(struct cpu_user_regs *regs)
++{
++    enter_hypervisor_head(regs);
++
++    /*
++     * Currently, to ensure hypervisor safety, when we received a
++     * guest-generated vSerror/vAbort, we just crash the guest to protect
++     * the hypervisor. In future we can better handle this by injecting
++     * a vSerror/vAbort to the guest.
++     */
++    gdprintk(XENLOG_WARNING, "Guest(Dom-%u) will be crashed by vSError\n",
++             current->domain->domain_id);
++    domain_crash_synchronous();
++}
++
+ asmlinkage void do_trap_irq(struct cpu_user_regs *regs)
+ {
+     enter_hypervisor_head(regs);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Wei Chen <Wei.Chen@arm.com>
+Date: Fri, 23 Dec 2016 10:09:59 -0600
+Subject: [PATCH] arm64: handle async aborts delivered while at EL2
+
+If EL1 generates an asynchronous abort and then traps into EL2
+(by HVC or IRQ) before the abort has been delivered, the hypervisor
+could not catch it, because the PSTATE.A bit is masked all the time
+in hypervisor. So this asynchronous abort may be slipped to next
+running guest with PSTATE.A bit unmasked.
+
+In order to avoid this, it is necessary to take the abort at EL2, by
+clearing the PSTATE.A bit. In this patch, we unmask the PSTATE.A bit
+to open a window to catch guest-generated asynchronous abort in all
+EL1 -> EL2 swich paths. If we catched such asynchronous abort in
+checking window, the hyp_error exception will be triggered and the
+abort source guest will be crashed.
+
+This is CVE-2016-9816, part of XSA-201.
+
+Signed-off-by: Wei Chen <Wei.Chen@arm.com>
+Reviewed-by: Julien Grall <julien.grall@arm.com>
+---
+ xen/arch/arm/arm64/entry.S | 123 ++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 122 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/arm/arm64/entry.S b/xen/arch/arm/arm64/entry.S
+index 0ed0073..1840659 100644
+--- a/xen/arch/arm/arm64/entry.S
++++ b/xen/arch/arm/arm64/entry.S
+@@ -173,6 +173,43 @@ hyp_error_invalid:
+         entry   hyp=1
+         invalid BAD_ERROR
+ 
++hyp_error:
++        /*
++         * Only two possibilities:
++         * 1) Either we come from the exit path, having just unmasked
++         *    PSTATE.A: change the return code to an EL2 fault, and
++         *    carry on, as we're already in a sane state to handle it.
++         * 2) Or we come from anywhere else, and that's a bug: we panic.
++         */
++        entry   hyp=1
++        msr     daifclr, #2
++
++        /*
++         * The ELR_EL2 may be modified by an interrupt, so we have to use the
++         * saved value in cpu_user_regs to check whether we come from 1) or
++         * not.
++         */
++        ldr     x0, [sp, #UREGS_PC]
++        adr     x1, abort_guest_exit_start
++        cmp     x0, x1
++        adr     x1, abort_guest_exit_end
++        ccmp    x0, x1, #4, ne
++        mov     x0, sp
++        mov     x1, #BAD_ERROR
++
++        /*
++         * Not equal, the exception come from 2). It's a bug, we have to
++         * panic the hypervisor.
++         */
++        b.ne    do_bad_mode
++
++        /*
++         * Otherwise, the exception come from 1). It happened because of
++         * the guest. Crash this guest.
++         */
++        bl      do_trap_guest_error
++        exit    hyp=1
++
+ /* Traps taken in Current EL with SP_ELx */
+ hyp_sync:
+         entry   hyp=1
+@@ -189,15 +226,29 @@ hyp_irq:
+ 
+ guest_sync:
+         entry   hyp=0, compat=0
++        bl      check_pending_vserror
++        /*
++         * If x0 is Non-zero, a vSError took place, the initial exception
++         * doesn't have any significance to be handled. Exit ASAP
++         */
++        cbnz    x0, 1f
+         msr     daifclr, #2
+         mov     x0, sp
+         bl      do_trap_hypervisor
++1:
+         exit    hyp=0, compat=0
+ 
+ guest_irq:
+         entry   hyp=0, compat=0
++        bl      check_pending_vserror
++        /*
++         * If x0 is Non-zero, a vSError took place, the initial exception
++         * doesn't have any significance to be handled. Exit ASAP
++         */
++        cbnz    x0, 1f
+         mov     x0, sp
+         bl      do_trap_irq
++1:
+         exit    hyp=0, compat=0
+ 
+ guest_fiq_invalid:
+@@ -213,15 +264,29 @@ guest_error:
+ 
+ guest_sync_compat:
+         entry   hyp=0, compat=1
++        bl      check_pending_vserror
++        /*
++         * If x0 is Non-zero, a vSError took place, the initial exception
++         * doesn't have any significance to be handled. Exit ASAP
++         */
++        cbnz    x0, 1f
+         msr     daifclr, #2
+         mov     x0, sp
+         bl      do_trap_hypervisor
++1:
+         exit    hyp=0, compat=1
+ 
+ guest_irq_compat:
+         entry   hyp=0, compat=1
++        bl      check_pending_vserror
++        /*
++         * If x0 is Non-zero, a vSError took place, the initial exception
++         * doesn't have any significance to be handled. Exit ASAP
++         */
++        cbnz    x0, 1f
+         mov     x0, sp
+         bl      do_trap_irq
++1:
+         exit    hyp=0, compat=1
+ 
+ guest_fiq_invalid_compat:
+@@ -270,6 +335,62 @@ return_from_trap:
+         eret
+ 
+ /*
++ * This function is used to check pending virtual SError in the gap of
++ * EL1 -> EL2 world switch.
++ * The x0 register will be used to indicate the results of detection.
++ * x0 -- Non-zero indicates a pending virtual SError took place.
++ * x0 -- Zero indicates no pending virtual SError took place.
++ */
++check_pending_vserror:
++        /*
++         * Save elr_el2 to check whether the pending SError exception takes
++         * place while we are doing this sync exception.
++         */
++        mrs     x0, elr_el2
++
++        /* Synchronize against in-flight ld/st */
++        dsb     sy
++
++        /*
++         * Unmask PSTATE asynchronous abort bit. If there is a pending
++         * SError, the EL2 error exception will happen after PSTATE.A
++         * is cleared.
++         */
++        msr     daifclr, #4
++
++        /*
++         * This is our single instruction exception window. A pending
++         * SError is guaranteed to occur at the earliest when we unmask
++         * it, and at the latest just after the ISB.
++         *
++         * If a pending SError occurs, the program will jump to EL2 error
++         * exception handler, and the elr_el2 will be set to
++         * abort_guest_exit_start or abort_guest_exit_end.
++         */
++abort_guest_exit_start:
++
++        isb
++
++abort_guest_exit_end:
++        /* Mask PSTATE asynchronous abort bit, close the checking window. */
++        msr     daifset, #4
++
++        /*
++         * Compare elr_el2 and the saved value to check whether we are
++         * returning from a valid exception caused by pending SError.
++         */
++        mrs     x1, elr_el2
++        cmp     x0, x1
++
++        /*
++         * Not equal, the pending SError exception took place, set
++         * x0 to non-zero.
++         */
++        cset    x0, ne
++
++        ret
++
++/*
+  * Exception vectors.
+  */
+         .macro  ventry  label
+@@ -287,7 +408,7 @@ ENTRY(hyp_traps_vector)
+         ventry  hyp_sync                        // Synchronous EL2h
+         ventry  hyp_irq                         // IRQ EL2h
+         ventry  hyp_fiq_invalid                 // FIQ EL2h
+-        ventry  hyp_error_invalid               // Error EL2h
++        ventry  hyp_error                       // Error EL2h
+ 
+         ventry  guest_sync                      // Synchronous 64-bit EL0/EL1
+         ventry  guest_irq                       // IRQ 64-bit EL0/EL1
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Wei Chen <Wei.Chen@arm.com>
+Date: Fri, 23 Dec 2016 10:10:07 -0600
+Subject: [PATCH] arm: crash the guest when it traps on external abort
+
+If we spot a data or prefetch abort bearing the ESR_EL2.EA bit set, we
+know that this is an external abort, and that should crash the guest.
+
+This is CVE-2016-9817, part of XSA-201.
+
+Signed-off-by: Wei Chen <Wei.Chen@arm.com>
+Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
+Reviewed-by: Steve Capper <steve.capper@arm.com>
+Reviewed-by: Julien Grall <Julien.Grall@arm.com>
+---
+ xen/arch/arm/traps.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
+index 083193f..f7198d4 100644
+--- a/xen/arch/arm/traps.c
++++ b/xen/arch/arm/traps.c
+@@ -2333,6 +2333,15 @@ static void do_trap_instr_abort_guest(struct cpu_user_regs *regs,
+     int rc;
+     register_t gva = READ_SYSREG(FAR_EL2);
+ 
++    /*
++     * If this bit has been set, it means that this instruction abort is caused
++     * by a guest external abort. Currently we crash the guest to protect the
++     * hypervisor. In future one can better handle this by injecting a virtual
++     * abort to the guest.
++     */
++    if ( hsr.iabt.eat )
++        domain_crash_synchronous();
++
+     switch ( hsr.iabt.ifsc & 0x3f )
+     {
+     case FSC_FLT_PERM ... FSC_FLT_PERM + 3:
+@@ -2387,6 +2396,15 @@ static void do_trap_data_abort_guest(struct cpu_user_regs *regs,
+         return;
+     }
+ 
++    /*
++     * If this bit has been set, it means that this data abort is caused
++     * by a guest external abort. Currently we crash the guest to protect the
++     * hypervisor. In future one can better handle this by injecting a virtual
++     * abort to the guest.
++     */
++    if ( dabt.eat )
++        domain_crash_synchronous();
++
+     info.dabt = dabt;
+ #ifdef CONFIG_ARM_32
+     info.gva = READ_CP32(HDFAR);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Wei Chen <Wei.Chen@arm.com>
+Date: Fri, 23 Dec 2016 10:10:14 -0600
+Subject: [PATCH] arm32: handle async aborts delivered while at HYP
+
+If guest generates an asynchronous abort and then traps into HYP
+(by HVC or IRQ) before the abort has been delivered, the hypervisor
+could not catch it, because the PSTATE.A bit is masked all the time
+in hypervisor. So this asynchronous abort may be slipped to next
+running guest with PSTATE.A bit unmasked.
+
+In order to avoid this, it is necessary to take the abort at HYP, by
+clearing the PSTATE.A bit. In this patch, we unmask the PSTATE.A bit
+to open a window to catch guest-generated asynchronous abort in all
+Guest -> HYP switch paths. If we caught such asynchronous abort in
+checking window, the HYP data abort exception will be triggered and
+the abort source guest will be crashed.
+
+This is CVE-2016-9818, part of XSA-201.
+
+Signed-off-by: Wei Chen <Wei.Chen@arm.com>
+Reviewed-by: Julien Grall <julien.grall@arm.com>
+---
+ xen/arch/arm/arm32/entry.S            | 55 +++++++++++++++++++++++++++++++++++
+ xen/arch/arm/arm32/traps.c            |  5 +++-
+ xen/include/asm-arm/arm32/processor.h | 11 +++++++
+ xen/include/asm-arm/processor.h       |  2 ++
+ 4 files changed, 72 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/arm/arm32/entry.S b/xen/arch/arm/arm32/entry.S
+index 774e7c6..4b47f9b 100644
+--- a/xen/arch/arm/arm32/entry.S
++++ b/xen/arch/arm/arm32/entry.S
+@@ -42,6 +42,61 @@ save_guest_regs:
+         SAVE_BANKED(fiq)
+         SAVE_ONE_BANKED(R8_fiq); SAVE_ONE_BANKED(R9_fiq); SAVE_ONE_BANKED(R10_fiq)
+         SAVE_ONE_BANKED(R11_fiq); SAVE_ONE_BANKED(R12_fiq);
++        /*
++         * Start to check pending virtual abort in the gap of Guest -> HYP
++         * world switch.
++         *
++         * Save ELR_hyp to check whether the pending virtual abort exception
++         * takes place while we are doing this trap exception.
++         */
++        mrs r1, ELR_hyp
++
++        /*
++         * Force loads and stores to complete before unmasking asynchronous
++         * aborts and forcing the delivery of the exception.
++         */
++        dsb sy
++
++        /*
++         * Unmask asynchronous abort bit. If there is a pending asynchronous
++         * abort, the data_abort exception will happen after A bit is cleared.
++         */
++        cpsie a
++
++        /*
++         * This is our single instruction exception window. A pending
++         * asynchronous abort is guaranteed to occur at the earliest when we
++         * unmask it, and at the latest just after the ISB.
++         *
++         * If a pending abort occurs, the program will jump to data_abort
++         * exception handler, and the ELR_hyp will be set to
++         * abort_guest_exit_start or abort_guest_exit_end.
++         */
++        .global abort_guest_exit_start
++abort_guest_exit_start:
++
++        isb
++
++        .global abort_guest_exit_end
++abort_guest_exit_end:
++        /* Mask CPSR asynchronous abort bit, close the checking window. */
++        cpsid a
++
++        /*
++         * Compare ELR_hyp and the saved value to check whether we are
++         * returning from a valid exception caused by pending virtual
++         * abort.
++         */
++        mrs r2, ELR_hyp
++        cmp r1, r2
++
++        /*
++         * Not equal, the pending virtual abort exception took place, the
++         * initial exception does not have any significance to be handled.
++         * Exit ASAP.
++         */
++        bne return_from_trap
++
+         mov pc, lr
+ 
+ #define DEFINE_TRAP_ENTRY(trap)                                         \
+diff --git a/xen/arch/arm/arm32/traps.c b/xen/arch/arm/arm32/traps.c
+index f8cf864..7bfc5ff 100644
+--- a/xen/arch/arm/arm32/traps.c
++++ b/xen/arch/arm/arm32/traps.c
+@@ -63,7 +63,10 @@ asmlinkage void do_trap_prefetch_abort(struct cpu_user_regs *regs)
+ 
+ asmlinkage void do_trap_data_abort(struct cpu_user_regs *regs)
+ {
+-    do_unexpected_trap("Data Abort", regs);
++    if ( VABORT_GEN_BY_GUEST(regs) )
++        do_trap_guest_error(regs);
++    else
++        do_unexpected_trap("Data Abort", regs);
+ }
+ 
+ /*
+diff --git a/xen/include/asm-arm/arm32/processor.h b/xen/include/asm-arm/arm32/processor.h
+index f41644d..e3bd004 100644
+--- a/xen/include/asm-arm/arm32/processor.h
++++ b/xen/include/asm-arm/arm32/processor.h
+@@ -55,6 +55,17 @@ struct cpu_user_regs
+ 
+     uint32_t pad1; /* Doubleword-align the user half of the frame */
+ };
++
++/* Functions for pending virtual abort checking window. */
++void abort_guest_exit_start(void);
++void abort_guest_exit_end(void);
++
++#define VABORT_GEN_BY_GUEST(r)  \
++( \
++    ( (unsigned long)abort_guest_exit_start == (r)->pc ) || \
++    ( (unsigned long)abort_guest_exit_end == (r)->pc ) \
++)
++
+ #endif
+ 
+ /* Layout as used in assembly, with src/dest registers mixed in */
+diff --git a/xen/include/asm-arm/processor.h b/xen/include/asm-arm/processor.h
+index 6789cd0..04a3e37 100644
+--- a/xen/include/asm-arm/processor.h
++++ b/xen/include/asm-arm/processor.h
+@@ -642,6 +642,8 @@ void vcpu_regs_user_to_hyp(struct vcpu *vcpu,
+ int call_smc(register_t function_id, register_t arg0, register_t arg1,
+              register_t arg2);
+ 
++void do_trap_guest_error(struct cpu_user_regs *regs);
++
+ #endif /* __ASSEMBLY__ */
+ #endif /* __ASM_ARM_PROCESSOR_H */
+ /*
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Fri, 23 Dec 2016 10:10:34 -0600
+Subject: [PATCH] x86: force EFLAGS.IF on when exiting to PV guests
+
+Guest kernels modifying instructions in the process of being emulated
+for another of their vCPU-s may effect EFLAGS.IF to be cleared upon
+next exiting to guest context, by converting the being emulated
+instruction to CLI (at the right point in time). Prevent any such bad
+effects by always forcing EFLAGS.IF on. And to cover hypothetical other
+similar issues, also force EFLAGS.{IOPL,NT,VM} to zero.
+
+This is XSA-202.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/x86_64/compat/entry.S |  4 ++++
+ xen/arch/x86/x86_64/entry.S        | 15 ++++++++-------
+ 2 files changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/xen/arch/x86/x86_64/compat/entry.S b/xen/arch/x86/x86_64/compat/entry.S
+index 89c1e19..41e9537 100644
+--- a/xen/arch/x86/x86_64/compat/entry.S
++++ b/xen/arch/x86/x86_64/compat/entry.S
+@@ -174,6 +174,8 @@ compat_bad_hypercall:
+ /* %rbx: struct vcpu, interrupts disabled */
+ ENTRY(compat_restore_all_guest)
+         ASSERT_INTERRUPTS_DISABLED
++        mov   $~(X86_EFLAGS_IOPL|X86_EFLAGS_NT|X86_EFLAGS_VM),%r11d
++        and   UREGS_eflags(%rsp),%r11d
+ .Lcr4_orig:
+         .skip .Lcr4_alt_end - .Lcr4_alt, 0x90
+ .Lcr4_orig_end:
+@@ -209,6 +211,8 @@ ENTRY(compat_restore_all_guest)
+                              (.Lcr4_orig_end - .Lcr4_orig), \
+                              (.Lcr4_alt_end - .Lcr4_alt)
+         .popsection
++        or    $X86_EFLAGS_IF,%r11
++        mov   %r11d,UREGS_eflags(%rsp)
+         RESTORE_ALL adj=8 compat=1
+ .Lft0:  iretq
+ 
+diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
+index bdd1284..32a3361 100644
+--- a/xen/arch/x86/x86_64/entry.S
++++ b/xen/arch/x86/x86_64/entry.S
+@@ -40,28 +40,29 @@ restore_all_guest:
+         testw $TRAP_syscall,4(%rsp)
+         jz    iret_exit_to_guest
+ 
++        movq  24(%rsp),%r11           # RFLAGS
++        andq  $~(X86_EFLAGS_IOPL|X86_EFLAGS_NT|X86_EFLAGS_VM),%r11
++        orq   $X86_EFLAGS_IF,%r11
++
+         /* Don't use SYSRET path if the return address is not canonical. */
+         movq  8(%rsp),%rcx
+         sarq  $47,%rcx
+         incl  %ecx
+         cmpl  $1,%ecx
+-        ja    .Lforce_iret
++        movq  8(%rsp),%rcx            # RIP
++        ja    iret_exit_to_guest
+ 
+         cmpw  $FLAT_USER_CS32,16(%rsp)# CS
+-        movq  8(%rsp),%rcx            # RIP
+-        movq  24(%rsp),%r11           # RFLAGS
+         movq  32(%rsp),%rsp           # RSP
+         je    1f
+         sysretq
+ 1:      sysretl
+ 
+-.Lforce_iret:
+-        /* Mimic SYSRET behavior. */
+-        movq  8(%rsp),%rcx            # RIP
+-        movq  24(%rsp),%r11           # RFLAGS
+         ALIGN
+ /* No special register assumptions. */
+ iret_exit_to_guest:
++        andl  $~(X86_EFLAGS_IOPL|X86_EFLAGS_NT|X86_EFLAGS_VM),24(%rsp)
++        orl   $X86_EFLAGS_IF,24(%rsp)
+         addq  $8,%rsp
+ .Lft0:  iretq
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Fri, 23 Dec 2016 10:10:49 -0600
+Subject: [PATCH] x86/HVM: add missing NULL check before using VMFUNC hook
+
+This is XSA-203.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/hvm/emulate.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/xen/arch/x86/hvm/emulate.c b/xen/arch/x86/hvm/emulate.c
+index 806fa0f..071f56e 100644
+--- a/xen/arch/x86/hvm/emulate.c
++++ b/xen/arch/x86/hvm/emulate.c
+@@ -1619,6 +1619,8 @@ static int hvmemul_vmfunc(
+ {
+     int rc;
+ 
++    if ( !hvm_funcs.altp2m_vcpu_emulate_vmfunc )
++        return X86EMUL_UNHANDLEABLE;
+     rc = hvm_funcs.altp2m_vcpu_emulate_vmfunc(ctxt->regs);
+     if ( rc != X86EMUL_OKAY )
+         hvmemul_inject_hw_exception(TRAP_invalid_op, 0, ctxt);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Sun, 18 Dec 2016 15:42:59 +0000
+Subject: [PATCH] x86/emul: Correct the handling of eflags with SYSCALL
+
+A singlestep #DB is determined by the resulting eflags value from the
+execution of SYSCALL, not the original eflags value.
+
+By using the original eflags value, we negate the guest kernels attempt to
+protect itself from a privilege escalation by masking TF.
+
+Introduce a tf boolean and have the SYSCALL emulation recalculate it
+after the instruction is complete.
+
+This is XSA-204
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 23 ++++++++++++++++++++---
+ 1 file changed, 20 insertions(+), 3 deletions(-)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 65798db..df2f68f 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1534,6 +1534,7 @@ x86_emulate(
+     union vex vex = {};
+     unsigned int op_bytes, def_op_bytes, ad_bytes, def_ad_bytes;
+     bool_t lock_prefix = 0;
++    bool_t tf = !!(ctxt->regs->eflags & EFLG_TF);
+     int override_seg = -1, rc = X86EMUL_OKAY;
+     struct operand src = { .reg = REG_POISON };
+     struct operand dst = { .reg = REG_POISON };
+@@ -3884,9 +3885,8 @@ x86_emulate(
+     }
+ 
+  no_writeback:
+-    /* Inject #DB if single-step tracing was enabled at instruction start. */
+-    if ( (ctxt->regs->eflags & EFLG_TF) && (rc == X86EMUL_OKAY) &&
+-         (ops->inject_hw_exception != NULL) )
++    /* Should a singlestep #DB be raised? */
++    if ( tf && (rc == X86EMUL_OKAY) && (ops->inject_hw_exception != NULL) )
+         rc = ops->inject_hw_exception(EXC_DB, -1, ctxt) ? : X86EMUL_EXCEPTION;
+ 
+     /* Commit shadow register state. */
+@@ -4079,6 +4079,23 @@ x86_emulate(
+              (rc = ops->write_segment(x86_seg_ss, &ss, ctxt)) )
+             goto done;
+ 
++        /*
++         * SYSCALL (unlike most instructions) evaluates its singlestep action
++         * based on the resulting EFLG_TF, not the starting EFLG_TF.
++         *
++         * As the #DB is raised after the CPL change and before the OS can
++         * switch stack, it is a large risk for privilege escalation.
++         *
++         * 64bit kernels should mask EFLG_TF in MSR_FMASK to avoid any
++         * vulnerability.  Running the #DB handler on an IST stack is also a
++         * mitigation.
++         *
++         * 32bit kernels have no ability to mask EFLG_TF at all.  Their only
++         * mitigation is to use a task gate for handling #DB (or to not use
++         * enable EFER.SCE to start with).
++         */
++        tf = !!(_regs.eflags & EFLG_TF);
++
+         break;
+     }
+ 
+-- 
 
