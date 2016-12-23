@@ -3637,3 +3637,227 @@ index 8ff6964..0d06eee 100755
 -- 
 1.8.3.1
 
+
+From 2252cf9194db13e87aef68777cba5945f7a31ae6 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Fri, 23 Dec 2016 12:12:28 -0600
+Subject: [PATCH] Subject: x86emul: CMPXCHG8B ignores operand size prefix
+
+Otherwise besides mis-handling the instruction, the comparison failure
+case would result in uninitialized stack data being handed back to the
+guest in rDX:rAX (32 bits leaked for 32-bit guests, 96 bits for 64-bit
+ones).
+
+This is XSA-200.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ tools/tests/x86_emulator/test_x86_emulator.c | 18 ++++++++++++++++++
+ xen/arch/x86/x86_emulate/x86_emulate.c       |  6 +++++-
+ 2 files changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/tools/tests/x86_emulator/test_x86_emulator.c b/tools/tests/x86_emulator/test_x86_emulator.c
+index 5864a41..0d9b0eb 100644
+--- a/tools/tests/x86_emulator/test_x86_emulator.c
++++ b/tools/tests/x86_emulator/test_x86_emulator.c
+@@ -427,6 +427,24 @@ int main(int argc, char **argv)
+         goto fail;
+     printf("okay\n");
+ 
++    printf("%-40s", "Testing cmpxchg8b (%edi) [opsize]...");
++    instr[0] = 0x66; instr[1] = 0x0f; instr[2] = 0xc7; instr[3] = 0x0f;
++    res[0]      = 0x12345678;
++    res[1]      = 0x87654321;
++    regs.eflags = 0x200;
++    regs.eip    = (unsigned long)&instr[0];
++    regs.edi    = (unsigned long)res;
++    rc = x86_emulate(&ctxt, &emulops);
++    if ( (rc != X86EMUL_OKAY) ||
++         (res[0] != 0x12345678) ||
++         (res[1] != 0x87654321) ||
++         (regs.eax != 0x12345678) ||
++         (regs.edx != 0x87654321) ||
++         ((regs.eflags&0x240) != 0x200) ||
++         (regs.eip != (unsigned long)&instr[4]) )
++        goto fail;
++    printf("okay\n");
++
+     printf("%-40s", "Testing movsxbd (%%eax),%%ecx...");
+     instr[0] = 0x0f; instr[1] = 0xbe; instr[2] = 0x08;
+     regs.eflags = 0x200;
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index c7a6823..1f7c2cf 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -4540,8 +4540,12 @@ x86_emulate(
+         generate_exception_if((modrm_reg & 7) != 1, EXC_UD, -1);
+         generate_exception_if(ea.type != OP_MEM, EXC_UD, -1);
+         if ( op_bytes == 8 )
++        {
+             vcpu_must_have_cx16();
+-        op_bytes *= 2;
++            op_bytes = 16;
++        }
++        else
++            op_bytes = 8;
+ 
+         /* Get actual old value. */
+         if ( (rc = ops->read(ea.mem.seg, ea.mem.off, old, op_bytes,
+-- 
+1.8.3.1
+
+
+From 0ab4da3b225c4c85f567e436fc5bf85892d40b70 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Fri, 23 Dec 2016 12:12:40 -0600
+Subject: [PATCH] Subject: x86: force EFLAGS.IF on when exiting to PV guests
+
+Guest kernels modifying instructions in the process of being emulated
+for another of their vCPU-s may effect EFLAGS.IF to be cleared upon
+next exiting to guest context, by converting the being emulated
+instruction to CLI (at the right point in time). Prevent any such bad
+effects by always forcing EFLAGS.IF on. And to cover hypothetical other
+similar issues, also force EFLAGS.{IOPL,NT,VM} to zero.
+
+This is XSA-202.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/x86_64/compat/entry.S |  4 ++++
+ xen/arch/x86/x86_64/entry.S        | 15 ++++++++-------
+ 2 files changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/xen/arch/x86/x86_64/compat/entry.S b/xen/arch/x86/x86_64/compat/entry.S
+index 94f5b8d..f337251 100644
+--- a/xen/arch/x86/x86_64/compat/entry.S
++++ b/xen/arch/x86/x86_64/compat/entry.S
+@@ -173,6 +173,10 @@ compat_bad_hypercall:
+ /* %rbx: struct vcpu, interrupts disabled */
+ ENTRY(compat_restore_all_guest)
+         ASSERT_INTERRUPTS_DISABLED
++        mov   $~(X86_EFLAGS_IOPL|X86_EFLAGS_NT|X86_EFLAGS_VM),%r11d
++        and   UREGS_eflags(%rsp),%r11d
++        or    $X86_EFLAGS_IF,%r11
++        mov   %r11d,UREGS_eflags(%rsp)
+         RESTORE_ALL adj=8 compat=1
+ .Lft0:  iretq
+ 
+diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
+index 4bb48e7..76530f3 100644
+--- a/xen/arch/x86/x86_64/entry.S
++++ b/xen/arch/x86/x86_64/entry.S
+@@ -41,28 +41,29 @@ restore_all_guest:
+         testw $TRAP_syscall,4(%rsp)
+         jz    iret_exit_to_guest
+ 
++        movq  24(%rsp),%r11           # RFLAGS
++        andq  $~(X86_EFLAGS_IOPL|X86_EFLAGS_NT|X86_EFLAGS_VM),%r11
++        orq   $X86_EFLAGS_IF,%r11
++
+         /* Don't use SYSRET path if the return address is not canonical. */
+         movq  8(%rsp),%rcx
+         sarq  $47,%rcx
+         incl  %ecx
+         cmpl  $1,%ecx
+-        ja    .Lforce_iret
++        movq  8(%rsp),%rcx            # RIP
++        ja    iret_exit_to_guest
+ 
+         cmpw  $FLAT_USER_CS32,16(%rsp)# CS
+-        movq  8(%rsp),%rcx            # RIP
+-        movq  24(%rsp),%r11           # RFLAGS
+         movq  32(%rsp),%rsp           # RSP
+         je    1f
+         sysretq
+ 1:      sysretl
+ 
+-.Lforce_iret:
+-        /* Mimic SYSRET behavior. */
+-        movq  8(%rsp),%rcx            # RIP
+-        movq  24(%rsp),%r11           # RFLAGS
+         ALIGN
+ /* No special register assumptions. */
+ iret_exit_to_guest:
++        andl  $~(X86_EFLAGS_IOPL|X86_EFLAGS_NT|X86_EFLAGS_VM),24(%rsp)
++        orl   $X86_EFLAGS_IF,24(%rsp)
+         addq  $8,%rsp
+ .Lft0:  iretq
+ 
+-- 
+1.8.3.1
+
+
+From 93cb94cd1b75cb6806ff197f3a4bdea54af25907 Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Sun, 18 Dec 2016 15:42:59 +0000
+Subject: [PATCH] Subject: [PATCH] x86/emul: Correct the handling of eflags
+ with SYSCALL
+
+A singlestep #DB is determined by the resulting eflags value from the
+execution of SYSCALL, not the original eflags value.
+
+By using the original eflags value, we negate the guest kernels attempt to
+protect itself from a privilege escalation by masking TF.
+
+Introduce a tf boolean and have the SYSCALL emulation recalculate it
+after the instruction is complete.
+
+This is XSA-204
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 23 ++++++++++++++++++++---
+ 1 file changed, 20 insertions(+), 3 deletions(-)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 1f7c2cf..353b1cb 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1392,6 +1392,7 @@ x86_emulate(
+     union vex vex = {};
+     unsigned int op_bytes, def_op_bytes, ad_bytes, def_ad_bytes;
+     bool_t lock_prefix = 0;
++    bool_t tf = !!(ctxt->regs->eflags & EFLG_TF);
+     int override_seg = -1, rc = X86EMUL_OKAY;
+     struct operand src = { .reg = REG_POISON };
+     struct operand dst = { .reg = REG_POISON };
+@@ -3718,9 +3719,8 @@ x86_emulate(
+         break;
+     }
+ 
+-    /* Inject #DB if single-step tracing was enabled at instruction start. */
+-    if ( (ctxt->regs->eflags & EFLG_TF) && (rc == X86EMUL_OKAY) &&
+-         (ops->inject_hw_exception != NULL) )
++    /* Should a singlestep #DB be raised? */
++    if ( tf && (rc == X86EMUL_OKAY) && (ops->inject_hw_exception != NULL) )
+         rc = ops->inject_hw_exception(EXC_DB, -1, ctxt) ? : X86EMUL_EXCEPTION;
+ 
+     /* Commit shadow register state. */
+@@ -3905,6 +3905,23 @@ x86_emulate(
+              (rc = ops->write_segment(x86_seg_ss, &ss, ctxt)) )
+             goto done;
+ 
++        /*
++         * SYSCALL (unlike most instructions) evaluates its singlestep action
++         * based on the resulting EFLG_TF, not the starting EFLG_TF.
++         *
++         * As the #DB is raised after the CPL change and before the OS can
++         * switch stack, it is a large risk for privilege escalation.
++         *
++         * 64bit kernels should mask EFLG_TF in MSR_FMASK to avoid any
++         * vulnerability.  Running the #DB handler on an IST stack is also a
++         * mitigation.
++         *
++         * 32bit kernels have no ability to mask EFLG_TF at all.  Their only
++         * mitigation is to use a task gate for handling #DB (or to not use
++         * enable EFER.SCE to start with).
++         */
++        tf = !!(_regs.eflags & EFLG_TF);
++
+         break;
+     }
+ 
+-- 
+1.8.3.1
+
