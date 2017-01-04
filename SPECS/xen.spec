@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.3
-Release: 4%{?dist}
+Release: 5%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -103,6 +103,7 @@ Patch3005: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-s
 Patch3010: xsa180-qemut.patch
 Patch3011: xsa184-qemut-master.patch
 Patch3012: xsa197-qemut.patch
+Patch3013: xsa199-trad.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -323,6 +324,7 @@ pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
 %patch3011 -p1
 %patch3012 -p1
+%patch3013 -p1
 popd
 
 %if %{with_blktap}
@@ -908,6 +910,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Dec 23 2016 Johnny Hughes <johnny@centos.org> 4.6.3-5.el6.centos
+- Import XSAs 199, 200, 201, 202, 204, 204
+
 * Tue Nov 22 2016 George Dunlap <george.dunlap@citrix.com> 4.6.3-4.el6.centos
 - Import XSAs 191-193, 195-198.  (Not affected by XSA 194.)
 
