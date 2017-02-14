@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 15%{?dist}
+Release: 17%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -64,27 +64,51 @@ Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
-Patch2003: xsa162-qemuu.patch
-Patch2004: xsa179-qemuu-4.4-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
-Patch2005: xsa179-qemuu-4.4-0002-vga-add-vbe_enabled-helper.patch
-Patch2006: xsa179-qemuu-4.4-0003-vga-factor-out-vga-register-setup.patch
-Patch2007: xsa179-qemuu-4.4-0004-vga-update-vga-register-setup-on-vbe-changes.patch
-Patch2008: xsa179-qemuu-4.4-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
-Patch2009: xsa180-qemuu.patch 
-Patch2010: xsa184-qemuu-master.patch
-Patch2011: xsa197-4.4-qemuu.patch
+Patch2003: xen-fix-usage-xc_domain_create.qemuu.patch
+Patch2004: e1000-eliminate-infinite-loops-out-of-bounds-transfer-start.qemuu.patch
+Patch2005: ui-vnc-avoid-floating-point-exception.qemuu.patch
+Patch2006: net-vmxnet3-avoid-memory-leakage-activate_device.qemuu.patch
+Patch2007: scsi-initialise-info-object-with-appropriate-size.qemuu.patch
+Patch2008: net-ne2000-fix-bounds-check-in-ioport-operations.qemuu.patch
+Patch2009: ide-ahci-reset-ncq-object-to-unused-on-error.qemuu.patch
+Patch2010: net-cadence_gem-check-packet-size-in-gem_recieve.qemuu.patch
+Patch2011: usb-check-page-select-value-while-processing-iTD.qemuu.patch
+Patch2012: ehci-make-idt-processing-more-robust.qemuu.patch
+Patch2013: pcnet-fix-rx-buffer-overflow-CVE-2015-7512.qemuu.patch
+Patch2014: fix-MSI-injection-on-Xen.qemuu.patch
+Patch2015: xsa162-qemuu.patch
+Patch2016: xsa179-qemuu-4.4-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
+Patch2017: xsa179-qemuu-4.4-0002-vga-add-vbe_enabled-helper.patch
+Patch2018: xsa179-qemuu-4.4-0003-vga-factor-out-vga-register-setup.patch
+Patch2019: xsa179-qemuu-4.4-0004-vga-update-vga-register-setup-on-vbe-changes.patch
+Patch2020: xsa179-qemuu-4.4-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
+Patch2021: xsa180-qemuu.patch 
+Patch2022: xsa184-qemuu-master.patch
+Patch2023: xsa197-4.4-qemuu.patch
+Patch2024: xsa208-qemuu-4.7.patch
 
 Patch3004: xsa164.patch
-Patch3005: xen46-cve-2014-3615-backport-qemut-vbe-rework-sanity-checks.patch 
-Patch3006: xsa179-qemut-unstable-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
-Patch3007: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
-Patch3008: xsa179-qemut-unstable-0003-vga-factor-out-vga-register-setup.patch
-Patch3009: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-changes.patch
-Patch3010: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
-Patch3011: xsa180-qemut.patch
-Patch3012: xsa184-qemut-master.patch
-Patch3013: xsa197-4.5-qemut.patch
-Patch3014: xsa199-trad.patch
+Patch3005: usb-linux.c-fix-buffer-overflow.qemut.patch
+Patch3006: CVE-2014-8106-cirrus-fix-blit-region-check.qemut.patch
+Patch3007: CVE-2014-7815-vnc-sanitize-bits_per_pixel-from-the-client.qemut.patch
+Patch3008: CVE-2014-3615-vbe-rework-sanity-check.qemut.patch
+Patch3009: rtl8139-avoid-nested-ifs-in-IP-header-parsing.qemut.patch
+Patch3010: rtl8139-drop-tautologous-if-ip-statement.qemut.patch
+Patch3011: rtl8139-skip-offload-on-short-Ethernet-IP-header.qemut.patch
+Patch3012: rtl8139-check-IP-Header-Length-field.qemut.patch
+Patch3013: rtl8139-check-IP-Total-Length-field.qemut.patch
+Patch3014: rtl8139-skip-offload-on-short-TCP-header.qemut.patch
+Patch3015: rtl8139-check-TCP-Data-Offset-field.qemut.patch
+Patch3016: xsa179-qemut-unstable-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
+Patch3017: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
+Patch3018: xsa179-qemut-unstable-0003-vga-factor-out-vga-register-setup.patch
+Patch3019: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-changes.patch
+Patch3020: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
+Patch3021: xsa180-qemut.patch
+Patch3022: xsa184-qemut-master.patch
+Patch3023: xsa197-4.5-qemut.patch
+Patch3024: xsa199-trad.patch
+Patch3025: xsa208-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -281,19 +305,7 @@ git commit -a -q -m "%{version} baseline."
 # Apply patches to code in the core Xen repo
 git am %{PATCH1}
 
-# Now apply patches to things not in the core Xen repo
-pushd `pwd`
-rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
-%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
-cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
-./autogen.sh
-XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=/usr/lib/xen/bin
-popd
-
 # Add blktap-related patches here
-%patch1001 -p1
-%patch1005 -p1
-%patch1006 -p1
 
 %define _default_patch_fuzz 2
 
@@ -308,6 +320,19 @@ pushd tools/qemu-xen
 %patch2009 -p1
 %patch2010 -p1
 %patch2011 -p1
+%patch2012 -p1
+%patch2013 -p1
+%patch2014 -p1
+%patch2015 -p1
+%patch2016 -p1
+%patch2017 -p1
+%patch2018 -p1
+%patch2019 -p1
+%patch2020 -p1
+%patch2021 -p1
+%patch2022 -p1
+%patch2023 -p1
+%patch2024 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -323,7 +348,32 @@ pushd tools/qemu-xen-traditional
 %patch3012 -p1
 %patch3013 -p1
 %patch3014 -p1
+%patch3015 -p1
+%patch3016 -p1
+%patch3017 -p1
+%patch3018 -p1
+%patch3019 -p1
+%patch3020 -p1
+%patch3021 -p1
+%patch3022 -p1
+%patch3023 -p1
+%patch3024 -p1
+%patch3025 -p1
 popd
+
+# Now apply patches to things not in the core Xen repo
+pushd `pwd`
+rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
+cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
+./autogen.sh
+XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=/usr/lib/xen/bin
+popd
+
+# Add blktap-related patches here
+%patch1001 -p1
+%patch1005 -p1
+%patch1006 -p1
 
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} stubdom
@@ -839,6 +889,13 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Feb 14 2017 Johnny Hughes <johnny@centos.org> 4.4.4-17.el6.centos
+- add patches for xen-qemu to stable-4.4 (2016-11-22) and xen-qemu-traditional to 
+  stable-4.4 (2016-12-07)
+ 
+* Mon Feb 13 2017 Johnny Hughes <johnny@centos.org>  4.4.4-16.el6.centos
+- Import XSA-208
+
 * Fri Dec 23 2016 Johnny Hughes <johnny@centos.org> 4.4.4-15.el6.centos
 - Import XSA-199, 200, 202, 204.  XSA-201 and 203 N/A for Xen-44 
 

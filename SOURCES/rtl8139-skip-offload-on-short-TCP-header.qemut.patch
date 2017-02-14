@@ -1,0 +1,40 @@
+From 5cb90b247edc3e77f17c6a52c3830de48e0d5975 Mon Sep 17 00:00:00 2001
+From: Stefan Hajnoczi <stefanha@redhat.com>
+Date: Wed, 15 Jul 2015 18:17:03 +0100
+Subject: [PATCH] rtl8139: skip offload on short TCP header
+
+TCP Large Segment Offload accesses the TCP header in the packet.  If the
+packet is too short we must not attempt to access header fields:
+
+  tcp_header *p_tcp_hdr = (tcp_header*)(eth_payload_data + hlen);
+  int tcp_hlen = TCP_HEADER_DATA_OFFSET(p_tcp_hdr);
+
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+[Backport to qemu-xen-tradition]
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ hw/rtl8139.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/hw/rtl8139.c b/hw/rtl8139.c
+index d49d6fa..0bb4583 100644
+--- a/hw/rtl8139.c
++++ b/hw/rtl8139.c
+@@ -2163,9 +2163,15 @@ static int rtl8139_cplus_transmit_one(RTL8139State *s)
+ 
+             if ((txdw0 & CP_TX_LGSEN) && ip_protocol == IP_PROTO_TCP)
+             {
++
+ #if defined (DEBUG_RTL8139)
+                 int large_send_mss = (txdw0 >> 16) & CP_TC_LGSEN_MSS_MASK;
+ #endif
++                /* Large enough for the TCP header? */
++                if (ip_data_len < sizeof(tcp_header)) {
++                    goto skip_offload;
++                }
++
+                 DEBUG_PRINT(("RTL8139: +++ C+ mode offloaded task TSO MTU=%d IP data %d frame data %d specified MSS=%d\n",
+                              ETH_MTU, ip_data_len, saved_size - ETH_HLEN, large_send_mss));
+ 
+-- 
+2.1.4

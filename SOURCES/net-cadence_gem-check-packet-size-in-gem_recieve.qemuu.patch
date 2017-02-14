@@ -1,0 +1,34 @@
+From a37e0e9de748f58b793a83e5d680f474c640f87e Mon Sep 17 00:00:00 2001
+From: Prasad J Pandit <pjp@fedoraproject.org>
+Date: Fri, 15 Jan 2016 12:30:40 +0530
+Subject: [PATCH] net: cadence_gem: check packet size in gem_recieve
+
+While receiving packets in 'gem_receive' routine, if Frame Check
+Sequence(FCS) is enabled, it copies the packet into a local
+buffer without checking its size. Add check to validate packet
+length against the buffer size to avoid buffer overflow.
+
+Reported-by: Ling Liu <liuling-it@360.cn>
+Signed-off-by: Prasad J Pandit <pjp@fedoraproject.org>
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+---
+ hw/net/cadence_gem.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/hw/net/cadence_gem.c b/hw/net/cadence_gem.c
+index 4a355bb..770965c 100644
+--- a/hw/net/cadence_gem.c
++++ b/hw/net/cadence_gem.c
+@@ -640,6 +640,10 @@ static ssize_t gem_receive(NetClientState *nc, const uint8_t *buf, size_t size)
+         unsigned crc_val;
+         int      crc_offset;
+ 
++        if (size > sizeof(rxbuf) - sizeof(crc_val)) {
++            size = sizeof(rxbuf) - sizeof(crc_val);
++        }
++        bytes_to_copy = size;
+         /* The application wants the FCS field, which QEMU does not provide.
+          * We must try and caclculate one.
+          */
+-- 
+2.1.4

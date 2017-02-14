@@ -1,0 +1,95 @@
+From 7891bba284582bbf963f1bdcdaba334dcaa086c5 Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Fri, 13 Nov 2015 17:38:06 +0000
+Subject: [PATCH] xen: fix usage of xc_domain_create in domain builder
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf8
+Content-Transfer-Encoding: 8bit
+
+Due to the addition of HVMlite and the requirement to always provide a
+valid xc_domain_configuration_t, xc_domain_create now always takes an arch
+domain config, which can be NULL in order to mimic previous behaviour.
+
+Add a small stub called xen_domain_create that encapsulates the correct
+call to xc_domain_create depending on the libxc version detected.
+
+Signed-off-by: Roger Pau MonnÃ© <roger.pau@citrix.com>
+Acked-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
+Signed-off-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
+---
+ configure                   | 19 ++++++++++++++++++-
+ hw/i386/xen_domainbuild.c   |  2 +-
+ include/hw/xen/xen_common.h | 16 ++++++++++++++++
+ 3 files changed, 35 insertions(+), 2 deletions(-)
+
+diff --git a/configure b/configure
+index 3aaf0b6..c96902a 100755
+--- a/configure
++++ b/configure
+@@ -1563,7 +1563,24 @@ EOF
+     fi
+     xen=no
+ 
+-  # Xen unstable
++  # Xen 4.7
++  elif
++      cat > $TMPC <<EOF &&
++#include <xenctrl.h>
++#include <stdint.h>
++int main(void) {
++  xc_interface *xc = NULL;
++  xen_domain_handle_t handle;
++  xc_domain_create(xc, 0, handle, 0, NULL, NULL);
++  return 0;
++}
++EOF
++      compile_prog "" "$xen_libs"
++    then
++    xen_ctrl_version=470
++    xen=yes
++
++  # Xen 4.2
+   elif
+       cat > $TMPC <<EOF &&
+ #include <xenctrl.h>
+diff --git a/hw/i386/xen_domainbuild.c b/hw/i386/xen_domainbuild.c
+index 4e2cf95..957c949 100644
+--- a/hw/i386/xen_domainbuild.c
++++ b/hw/i386/xen_domainbuild.c
+@@ -234,7 +234,7 @@ int xen_domain_build_pv(const char *kernel, const char *ramdisk,
+     int rc;
+ 
+     memcpy(uuid, qemu_uuid, sizeof(uuid));
+-    rc = xc_domain_create(xen_xc, ssidref, uuid, flags, &xen_domid);
++    rc = xen_domain_create(xen_xc, ssidref, uuid, flags, &xen_domid);
+     if (rc < 0) {
+         fprintf(stderr, "xen: xc_domain_create() failed\n");
+         goto err;
+diff --git a/include/hw/xen/xen_common.h b/include/hw/xen/xen_common.h
+index 2d5a25b..90c2c48 100644
+--- a/include/hw/xen/xen_common.h
++++ b/include/hw/xen/xen_common.h
+@@ -157,4 +157,20 @@ void destroy_hvm_domain(bool reboot);
+ /* shutdown/destroy current domain because of an error */
+ void xen_shutdown_fatal_error(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
+ 
++#if CONFIG_XEN_CTRL_INTERFACE_VERSION < 470
++static inline int xen_domain_create(XenXC xc, uint32_t ssidref,
++                                    xen_domain_handle_t handle, uint32_t flags,
++                                    uint32_t *pdomid)
++{
++    return xc_domain_create(xc, ssidref, handle, flags, pdomid);
++}
++#else
++static inline int xen_domain_create(XenXC xc, uint32_t ssidref,
++                                    xen_domain_handle_t handle, uint32_t flags,
++                                    uint32_t *pdomid)
++{
++    return xc_domain_create(xc, ssidref, handle, flags, pdomid, NULL);
++}
++#endif
++
+ #endif /* QEMU_HW_XEN_COMMON_H */
+-- 
+2.1.4
+
