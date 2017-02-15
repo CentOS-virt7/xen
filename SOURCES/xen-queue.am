@@ -3861,3 +3861,44 @@ index 1f7c2cf..353b1cb 100644
 -- 
 1.8.3.1
 
+
+From 43620215f2ff795d932051df986af4339ea1e4aa Mon Sep 17 00:00:00 2001
+From: hughesjr <johnny@centos.org>
+Date: Wed, 15 Feb 2017 01:59:30 -0600
+Subject: [PATCH] IOMMU: always call teardown callback
+
+There is a possible scenario when (d)->need_iommu remains unset
+during guest domain execution. For example, when no devices
+were assigned to it. Taking into account that teardown callback
+is not called when (d)->need_iommu is unset we might have unreleased
+resourses after destroying domain.
+
+So, always call teardown callback to roll back actions
+that were performed in init callback.
+
+This is XSA-207.
+
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Tested-by: Jan Beulich <jbeulich@suse.com>
+Tested-by: Julien Grall <julien.grall@arm.com>
+---
+ xen/drivers/passthrough/iommu.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/xen/drivers/passthrough/iommu.c b/xen/drivers/passthrough/iommu.c
+index a4fccc5..5b96a46 100644
+--- a/xen/drivers/passthrough/iommu.c
++++ b/xen/drivers/passthrough/iommu.c
+@@ -418,8 +418,7 @@ void iommu_domain_destroy(struct domain *d)
+     if ( !iommu_enabled || !hd->platform_ops )
+         return;
+ 
+-    if ( need_iommu(d) )
+-        iommu_teardown(d);
++    iommu_teardown(d);
+ 
+     list_for_each_safe ( ioport_list, tmp, &hd->g2m_ioport_list )
+     {
+-- 
+1.8.3.1
+
