@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 18%{?dist}
+Release: 19%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -86,6 +86,8 @@ Patch2021: xsa180-qemuu.patch
 Patch2022: xsa184-qemuu-master.patch
 Patch2023: xsa197-4.4-qemuu.patch
 Patch2024: xsa208-qemuu-4.7.patch
+Patch2025: xsa209-qemuu-0001-display-cirrus-ignore-source-pitch-value-as-needed-i.patch
+Patch2026: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cput.patch 
 
 Patch3004: xsa164.patch
 Patch3005: usb-linux.c-fix-buffer-overflow.qemut.patch
@@ -109,6 +111,7 @@ Patch3022: xsa184-qemut-master.patch
 Patch3023: xsa197-4.5-qemut.patch
 Patch3024: xsa199-trad.patch
 Patch3025: xsa208-qemut.patch
+Patch3026: xsa209-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -305,8 +308,6 @@ git commit -a -q -m "%{version} baseline."
 # Apply patches to code in the core Xen repo
 git am %{PATCH1}
 
-# Add blktap-related patches here
-
 %define _default_patch_fuzz 2
 
 pushd tools/qemu-xen
@@ -333,6 +334,8 @@ pushd tools/qemu-xen
 %patch2022 -p1
 %patch2023 -p1
 %patch2024 -p1
+%patch2025 -p1
+%patch2026 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -359,6 +362,7 @@ pushd tools/qemu-xen-traditional
 %patch3023 -p1
 %patch3024 -p1
 %patch3025 -p1
+%patch3026 -p1
 popd
 
 # Now apply patches to things not in the core Xen repo
@@ -889,6 +893,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Feb 28 2017 Johnny Hughes <johnny@centos.org> 4.4.4-19.el6.centos
+- Import XSA-209
+
 * Wed Feb 15 2017 Johnny Hughes <johnny@centos.org> 4.4.4-18.el6.centos
 - Import XSA-207
 
