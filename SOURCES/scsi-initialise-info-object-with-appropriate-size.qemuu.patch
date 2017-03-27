@@ -1,0 +1,34 @@
+From 3a28ed2d1ca6e3204393350fa39833be896033d0 Mon Sep 17 00:00:00 2001
+From: P J P <ppandit@redhat.com>
+Date: Mon, 21 Dec 2015 15:13:13 +0530
+Subject: [PATCH] scsi: initialise info object with appropriate size
+
+While processing controller 'CTRL_GET_INFO' command, the routine
+'megasas_ctrl_get_info' overflows the '&info' object size. Use its
+appropriate size to null initialise it.
+
+Reported-by: Qinghao Tang <luodalongde@gmail.com>
+Signed-off-by: Prasad J Pandit <pjp@fedoraproject.org>
+Message-Id: <alpine.LFD.2.20.1512211501420.22471@wniryva>
+Cc: qemu-stable@nongnu.org
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: P J P <ppandit@redhat.com>
+---
+ hw/scsi/megasas.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/hw/scsi/megasas.c b/hw/scsi/megasas.c
+index a6d5285..bece2d2 100644
+--- a/hw/scsi/megasas.c
++++ b/hw/scsi/megasas.c
+@@ -671,7 +671,7 @@ static int megasas_ctrl_get_info(MegasasState *s, MegasasCmd *cmd)
+     int num_ld_disks = 0;
+     uint16_t sdev_id;
+ 
+-    memset(&info, 0x0, cmd->iov_size);
++    memset(&info, 0x0, dcmd_size);
+     if (cmd->iov_size < dcmd_size) {
+         trace_megasas_dcmd_invalid_xfer_len(cmd->index, cmd->iov_size,
+                                             dcmd_size);
+-- 
+2.1.4

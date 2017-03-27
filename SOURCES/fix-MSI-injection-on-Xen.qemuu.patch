@@ -1,0 +1,173 @@
+From e2888602131248aae6bb49243a03ec811d6508a3 Mon Sep 17 00:00:00 2001
+From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
+Date: Wed, 13 Jan 2016 14:59:09 +0000
+Subject: [PATCH] fix MSI injection on Xen
+
+On Xen MSIs can be remapped into pirqs, which are a type of event
+channels. It's mostly for the benefit of PCI passthrough devices, to
+avoid the overhead of interacting with the emulated lapic.
+
+However remapping interrupts and MSIs is also supported for emulated
+devices, such as the e1000 and virtio-net.
+
+When an interrupt or an MSI is remapped into a pirq, masking and
+unmasking is done by masking and unmasking the event channel. The
+masking bit on the PCI config space or MSI-X table should be ignored,
+but it isn't at the moment.
+
+As a consequence emulated devices which use MSI or MSI-X, such as
+virtio-net, don't work properly (the guest doesn't receive any
+notifications). The mechanism was working properly when xen_apic was
+introduced, but I haven't narrowed down which commit in particular is
+causing the regression.
+
+Fix the issue by ignoring the masking bit for MSI and MSI-X which have
+been remapped into pirqs.
+
+Signed-off-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
+Reviewed-by: Michael S. Tsirkin <mst@redhat.com>
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+---
+ hw/pci/msi.c         |  9 ++++++++-
+ hw/pci/msix.c        | 12 ++++++++++--
+ hw/xen/xen_pt_msi.c  |  4 +---
+ include/hw/xen/xen.h |  1 +
+ xen-all.c            |  9 +++++++++
+ xen-stub.c           |  5 +++++
+ 6 files changed, 34 insertions(+), 6 deletions(-)
+
+diff --git a/hw/pci/msi.c b/hw/pci/msi.c
+index 74fc31a..9f46e65 100644
+--- a/hw/pci/msi.c
++++ b/hw/pci/msi.c
+@@ -19,6 +19,7 @@
+  */
+ 
+ #include "hw/pci/msi.h"
++#include "hw/xen/xen.h"
+ #include "qemu/range.h"
+ 
+ /* PCI_MSI_ADDRESS_LO */
+@@ -253,13 +254,19 @@ void msi_reset(PCIDevice *dev)
+ static bool msi_is_masked(const PCIDevice *dev, unsigned int vector)
+ {
+     uint16_t flags = pci_get_word(dev->config + msi_flags_off(dev));
+-    uint32_t mask;
++    uint32_t mask, data;
++    bool msi64bit = flags & PCI_MSI_FLAGS_64BIT;
+     assert(vector < PCI_MSI_VECTORS_MAX);
+ 
+     if (!(flags & PCI_MSI_FLAGS_MASKBIT)) {
+         return false;
+     }
+ 
++    data = pci_get_word(dev->config + msi_data_off(dev, msi64bit));
++    if (xen_is_pirq_msi(data)) {
++        return false;
++    }
++
+     mask = pci_get_long(dev->config +
+                         msi_mask_off(dev, flags & PCI_MSI_FLAGS_64BIT));
+     return mask & (1U << vector);
+diff --git a/hw/pci/msix.c b/hw/pci/msix.c
+index 3430770..828509b 100644
+--- a/hw/pci/msix.c
++++ b/hw/pci/msix.c
+@@ -18,6 +18,7 @@
+ #include "hw/pci/msi.h"
+ #include "hw/pci/msix.h"
+ #include "hw/pci/pci.h"
++#include "hw/xen/xen.h"
+ #include "qemu/range.h"
+ 
+ #define MSIX_CAP_LENGTH 12
+@@ -77,8 +78,15 @@ static void msix_clr_pending(PCIDevice *dev, int vector)
+ 
+ static bool msix_vector_masked(PCIDevice *dev, unsigned int vector, bool fmask)
+ {
+-    unsigned offset = vector * PCI_MSIX_ENTRY_SIZE + PCI_MSIX_ENTRY_VECTOR_CTRL;
+-    return fmask || dev->msix_table[offset] & PCI_MSIX_ENTRY_CTRL_MASKBIT;
++    unsigned offset = vector * PCI_MSIX_ENTRY_SIZE;
++    uint32_t *data = (uint32_t *)&dev->msix_table[offset + PCI_MSIX_ENTRY_DATA];
++    /* MSIs on Xen can be remapped into pirqs. In those cases, masking
++     * and unmasking go through the PV evtchn path. */
++    if (xen_is_pirq_msi(*data)) {
++        return false;
++    }
++    return fmask || dev->msix_table[offset + PCI_MSIX_ENTRY_VECTOR_CTRL] &
++        PCI_MSIX_ENTRY_CTRL_MASKBIT;
+ }
+ 
+ bool msix_is_masked(PCIDevice *dev, unsigned int vector)
+diff --git a/hw/xen/xen_pt_msi.c b/hw/xen/xen_pt_msi.c
+index 76660e5..587cfc7 100644
+--- a/hw/xen/xen_pt_msi.c
++++ b/hw/xen/xen_pt_msi.c
+@@ -103,9 +103,7 @@ static int msi_msix_setup(XenPCIPassthroughState *s,
+ 
+     assert((!is_msix && msix_entry == 0) || is_msix);
+ 
+-    if (gvec == 0) {
+-        /* if gvec is 0, the guest is asking for a particular pirq that
+-         * is passed as dest_id */
++    if (xen_is_pirq_msi(data)) {
+         *ppirq = msi_ext_dest_id(addr >> 32) | msi_dest_id(addr);
+         if (!*ppirq) {
+             /* this probably identifies an misconfiguration of the guest,
+diff --git a/include/hw/xen/xen.h b/include/hw/xen/xen.h
+index e1f88bf..87fe0dc 100644
+--- a/include/hw/xen/xen.h
++++ b/include/hw/xen/xen.h
+@@ -33,6 +33,7 @@ void xen_piix3_set_irq(void *opaque, int irq_num, int level);
+ void xen_piix_pci_write_config_client(uint32_t address, uint32_t val, int len);
+ void xen_hvm_inject_msi(uint64_t addr, uint32_t data);
+ void xen_cmos_set_s3_resume(void *opaque, int irq, int level);
++int xen_is_pirq_msi(uint32_t msi_data);
+ 
+ qemu_irq *xen_interrupt_controller_init(void);
+ 
+diff --git a/xen-all.c b/xen-all.c
+index 0b4d934..984c346 100644
+--- a/xen-all.c
++++ b/xen-all.c
+@@ -12,6 +12,7 @@
+ 
+ #include "hw/pci/pci.h"
+ #include "hw/i386/pc.h"
++#include "hw/i386/apic-msidef.h"
+ #include "hw/xen/xen_common.h"
+ #include "hw/xen/xen_backend.h"
+ #include "qmp-commands.h"
+@@ -131,6 +132,14 @@ void xen_piix_pci_write_config_client(uint32_t address, uint32_t val, int len)
+     }
+ }
+ 
++int xen_is_pirq_msi(uint32_t msi_data)
++{
++    /* If vector is 0, the msi is remapped into a pirq, passed as
++     * dest_id.
++     */
++    return ((msi_data & MSI_DATA_VECTOR_MASK) >> MSI_DATA_VECTOR_SHIFT) == 0;
++}
++
+ void xen_hvm_inject_msi(uint64_t addr, uint32_t data)
+ {
+     xen_xc_hvm_inject_msi(xen_xc, xen_domid, addr, data);
+diff --git a/xen-stub.c b/xen-stub.c
+index ad189a6..e78e151 100644
+--- a/xen-stub.c
++++ b/xen-stub.c
+@@ -38,6 +38,11 @@ void xen_cmos_set_s3_resume(void *opaque, int irq, int level)
+ {
+ }
+ 
++int xen_is_pirq_msi(uint32_t msi_data)
++{
++    return 0;
++}
++
+ void xen_ram_alloc(ram_addr_t ram_addr, ram_addr_t size, MemoryRegion *mr)
+ {
+ }
+-- 
+2.1.4

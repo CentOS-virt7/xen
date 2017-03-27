@@ -2725,3 +2725,1180 @@ index dca0504..e855104 100644
 -- 
 1.8.3.1
 
+
+From 914d17df818ab6bc6cf7a9160cc17a24f35713e7 Mon Sep 17 00:00:00 2001
+From: Johnny Hughes <johnny@centos.org>
+Date: Wed, 7 Sep 2016 07:10:37 -0500
+Subject: [PATCH] evtchn-fifo: prevent use after free
+
+evtchn_fifo_init_control() calls evtchn_fifo_destroy() on an error
+path, leading to cleanup_event_array() which frees d->evtchn_fifo
+without also clearing the pointer. Otoh the bulk of
+evtchn_fifo_init_control() is dependent on d->evtchn_fifo being NULL.
+
+This is XSA-188.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/common/event_fifo.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/xen/common/event_fifo.c b/xen/common/event_fifo.c
+index a443c98..93752d4 100644
+--- a/xen/common/event_fifo.c
++++ b/xen/common/event_fifo.c
+@@ -482,6 +482,7 @@ static void cleanup_event_array(struct domain *d)
+     for ( i = 0; i < EVTCHN_FIFO_MAX_EVENT_ARRAY_PAGES; i++ )
+         unmap_guest_page(d->evtchn_fifo->event_array[i]);
+     xfree(d->evtchn_fifo);
++    d->evtchn_fifo = NULL;
+ }
+ 
+ static void setup_ports(struct domain *d)
+-- 
+1.8.3.1
+
+
+From ea7ec85ff68be7328878a5d501c71f0e97a51753 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Mon, 8 Aug 2016 10:58:12 +0100
+Subject: [PATCH] From 30aba4992b18245c436f16df7326a16c01a51570 Mon Sep 17
+ 00:00:00 2001 Subject: x86/32on64: don't allow recursive page tables from L3
+
+L3 entries are special in PAE mode, and hence can't reasonably be used
+for setting up recursive (and hence linear) page table mappings. Since
+abuse is possible when the guest in fact gets run on 4-level page
+tables, this needs to be excluded explicitly.
+
+This is XSA-185.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/mm.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 83d0d6f..76e0b70 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -1009,7 +1009,9 @@ get_page_from_l3e(
+ 
+     rc = get_page_and_type_from_pagenr(
+         l3e_get_pfn(l3e), PGT_l2_page_table, d, partial, 1);
+-    if ( unlikely(rc == -EINVAL) && get_l3_linear_pagetable(l3e, pfn, d) )
++    if ( unlikely(rc == -EINVAL) &&
++         !is_pv_32bit_domain(d) &&
++         get_l3_linear_pagetable(l3e, pfn, d) )
+         rc = 0;
+ 
+     return rc;
+-- 
+1.8.3.1
+
+
+From f89cb8a1bb09c5aea4d1ca85eaa3acd374efab12 Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Wed, 7 Sep 2016 07:11:40 -0500
+Subject: [PATCH] Subject: x86/shadow: Avoid overflowing sh_ctxt->seg_reg[]
+
+hvm_get_seg_reg() does not perform a range check on its input segment, calls
+hvm_get_segment_register() and writes straight into sh_ctxt->seg_reg[].
+
+x86_seg_none is outside the bounds of sh_ctxt->seg_reg[], and will hit a BUG()
+in {vmx,svm}_get_segment_register().
+
+HVM guests running with shadow paging can end up performing a virtual to
+linear translation with x86_seg_none.  This is used for addresses which are
+already linear.  However, none of this is a legitimate pagetable update, so
+fail the emulation in such a case.
+
+This is XSA-187
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm/shadow/common.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
+index 06a04ad..30ff11e 100644
+--- a/xen/arch/x86/mm/shadow/common.c
++++ b/xen/arch/x86/mm/shadow/common.c
+@@ -137,9 +137,18 @@ static int hvm_translate_linear_addr(
+     struct sh_emulate_ctxt *sh_ctxt,
+     unsigned long *paddr)
+ {
+-    struct segment_register *reg = hvm_get_seg_reg(seg, sh_ctxt);
++    struct segment_register *reg;
+     int okay;
+ 
++    /*
++     * Can arrive here with non-user segments.  However, no such cirucmstance
++     * is part of a legitimate pagetable update, so fail the emulation.
++     */
++    if ( !is_x86_user_segment(seg) )
++        return X86EMUL_UNHANDLEABLE;
++
++    reg = hvm_get_seg_reg(seg, sh_ctxt);
++
+     okay = hvm_virtual_to_linear_addr(
+         seg, reg, offset, bytes, access_type, sh_ctxt->ctxt.addr_size, paddr);
+ 
+-- 
+1.8.3.1
+
+
+From c6c8486613aee3f59b83d789c0018b72cbf3ca9f Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Wed, 7 Sep 2016 07:11:45 -0500
+Subject: [PATCH] Subject: x86/segment: Bounds check accesses to emulation
+ ctxt->seg_reg[]
+
+HVM HAP codepaths have space for all segment registers in the seg_reg[]
+cache (with x86_seg_none still risking an array overrun), while the shadow
+codepaths only have space for the user segments.
+
+Range check the input segment of *_get_seg_reg() against the size of the array
+used to cache the results, to avoid overruns in the case that the callers
+don't filter their input suitably.
+
+Subsume the is_x86_user_segment(seg) checks from the shadow code, which were
+an incomplete attempt at range checking, and are now superceeded.  Make
+hvm_get_seg_reg() static, as it is not used outside of shadow/common.c
+
+No functional change, but far easier to reason that no overflow is possible.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Acked-by: Tim Deegan <tim@xen.org>
+Acked-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/emulate.c        | 16 ++++++++++++++++
+ xen/arch/x86/mm/shadow/common.c   | 28 +++++++++++++---------------
+ xen/arch/x86/mm/shadow/private.h  |  2 --
+ xen/include/asm-x86/hvm/emulate.h |  1 +
+ 4 files changed, 30 insertions(+), 17 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/emulate.c b/xen/arch/x86/hvm/emulate.c
+index 868aa1d..87ba524 100644
+--- a/xen/arch/x86/hvm/emulate.c
++++ b/xen/arch/x86/hvm/emulate.c
+@@ -424,6 +424,8 @@ static int hvmemul_virtual_to_linear(
+     *reps = min_t(unsigned long, *reps, 4096);
+ 
+     reg = hvmemul_get_seg_reg(seg, hvmemul_ctxt);
++    if ( IS_ERR(reg) )
++        return -PTR_ERR(reg);
+ 
+     if ( (hvmemul_ctxt->ctxt.regs->eflags & X86_EFLAGS_DF) && (*reps > 1) )
+     {
+@@ -908,6 +910,10 @@ static int hvmemul_read_segment(
+     struct hvm_emulate_ctxt *hvmemul_ctxt =
+         container_of(ctxt, struct hvm_emulate_ctxt, ctxt);
+     struct segment_register *sreg = hvmemul_get_seg_reg(seg, hvmemul_ctxt);
++
++    if ( IS_ERR(sreg) )
++         return -PTR_ERR(sreg);
++
+     memcpy(reg, sreg, sizeof(struct segment_register));
+     return X86EMUL_OKAY;
+ }
+@@ -921,6 +927,9 @@ static int hvmemul_write_segment(
+         container_of(ctxt, struct hvm_emulate_ctxt, ctxt);
+     struct segment_register *sreg = hvmemul_get_seg_reg(seg, hvmemul_ctxt);
+ 
++    if ( IS_ERR(sreg) )
++         return -PTR_ERR(sreg);
++
+     memcpy(sreg, reg, sizeof(struct segment_register));
+     __set_bit(seg, &hvmemul_ctxt->seg_reg_dirty);
+ 
+@@ -1284,10 +1293,17 @@ void hvm_emulate_writeback(
+     }
+ }
+ 
++/*
++ * Callers which pass a known in-range x86_segment can rely on the return
++ * pointer being valid.  Other callers must explicitly check for errors.
++ */
+ struct segment_register *hvmemul_get_seg_reg(
+     enum x86_segment seg,
+     struct hvm_emulate_ctxt *hvmemul_ctxt)
+ {
++    if ( seg < 0 || seg >= ARRAY_SIZE(hvmemul_ctxt->seg_reg) )
++        return ERR_PTR(-X86EMUL_UNHANDLEABLE);
++
+     if ( !__test_and_set_bit(seg, &hvmemul_ctxt->seg_reg_accessed) )
+         hvm_get_segment_register(current, seg, &hvmemul_ctxt->seg_reg[seg]);
+     return &hvmemul_ctxt->seg_reg[seg];
+diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
+index 30ff11e..f092ea8 100644
+--- a/xen/arch/x86/mm/shadow/common.c
++++ b/xen/arch/x86/mm/shadow/common.c
+@@ -120,10 +120,19 @@ __initcall(shadow_audit_key_init);
+ /* x86 emulator support for the shadow code
+  */
+ 
+-struct segment_register *hvm_get_seg_reg(
++/*
++ * Callers which pass a known in-range x86_segment can rely on the return
++ * pointer being valid.  Other callers must explicitly check for errors.
++ */
++static struct segment_register *hvm_get_seg_reg(
+     enum x86_segment seg, struct sh_emulate_ctxt *sh_ctxt)
+ {
+-    struct segment_register *seg_reg = &sh_ctxt->seg_reg[seg];
++    struct segment_register *seg_reg;
++
++    if ( seg < 0 || seg >= ARRAY_SIZE(sh_ctxt->seg_reg) )
++        return ERR_PTR(-X86EMUL_UNHANDLEABLE);
++
++    seg_reg = &sh_ctxt->seg_reg[seg];
+     if ( !__test_and_set_bit(seg, &sh_ctxt->valid_seg_regs) )
+         hvm_get_segment_register(current, seg, seg_reg);
+     return seg_reg;
+@@ -140,14 +149,9 @@ static int hvm_translate_linear_addr(
+     struct segment_register *reg;
+     int okay;
+ 
+-    /*
+-     * Can arrive here with non-user segments.  However, no such cirucmstance
+-     * is part of a legitimate pagetable update, so fail the emulation.
+-     */
+-    if ( !is_x86_user_segment(seg) )
+-        return X86EMUL_UNHANDLEABLE;
+-
+     reg = hvm_get_seg_reg(seg, sh_ctxt);
++    if ( IS_ERR(reg) )
++        return -PTR_ERR(reg);
+ 
+     okay = hvm_virtual_to_linear_addr(
+         seg, reg, offset, bytes, access_type, sh_ctxt->ctxt.addr_size, paddr);
+@@ -249,9 +253,6 @@ hvm_emulate_write(enum x86_segment seg,
+     unsigned long addr;
+     int rc;
+ 
+-    if ( !is_x86_user_segment(seg) )
+-        return X86EMUL_UNHANDLEABLE;
+-
+     /* How many emulations could we save if we unshadowed on stack writes? */
+     if ( seg == x86_seg_ss )
+         perfc_incr(shadow_fault_emulate_stack);
+@@ -279,9 +280,6 @@ hvm_emulate_cmpxchg(enum x86_segment seg,
+     unsigned long addr, old[2], new[2];
+     int rc;
+ 
+-    if ( !is_x86_user_segment(seg) )
+-        return X86EMUL_UNHANDLEABLE;
+-
+     rc = hvm_translate_linear_addr(
+         seg, offset, bytes, hvm_access_write, sh_ctxt, &addr);
+     if ( rc )
+diff --git a/xen/arch/x86/mm/shadow/private.h b/xen/arch/x86/mm/shadow/private.h
+index 58844f1..3e2b626 100644
+--- a/xen/arch/x86/mm/shadow/private.h
++++ b/xen/arch/x86/mm/shadow/private.h
+@@ -741,8 +741,6 @@ const struct x86_emulate_ops *shadow_init_emulation(
+     struct sh_emulate_ctxt *sh_ctxt, struct cpu_user_regs *regs);
+ void shadow_continue_emulation(
+     struct sh_emulate_ctxt *sh_ctxt, struct cpu_user_regs *regs);
+-struct segment_register *hvm_get_seg_reg(
+-    enum x86_segment seg, struct sh_emulate_ctxt *sh_ctxt);
+ 
+ #if (SHADOW_OPTIMIZATIONS & SHOPT_VIRTUAL_TLB)
+ /**************************************************************************/
+diff --git a/xen/include/asm-x86/hvm/emulate.h b/xen/include/asm-x86/hvm/emulate.h
+index 00a06cc..4dc326e 100644
+--- a/xen/include/asm-x86/hvm/emulate.h
++++ b/xen/include/asm-x86/hvm/emulate.h
+@@ -13,6 +13,7 @@
+ #define __ASM_X86_HVM_EMULATE_H__
+ 
+ #include <xen/config.h>
++#include <xen/err.h>
+ #include <asm/x86_emulate.h>
+ 
+ struct hvm_emulate_ctxt {
+-- 
+1.8.3.1
+
+
+From d241842f3d275d3d35ce2e20d651c50cf7ae2518 Mon Sep 17 00:00:00 2001
+From: Johnny Hughes <johnny@centos.org>
+Date: Tue, 4 Oct 2016 08:26:13 -0500
+Subject: [PATCH] x86emul: honor guest CR0.TS and CR0.EM
+
+We must not emulate any instructions accessing respective registers
+when either of these flags is set in the guest view of the register, or
+else we may do so on data not belonging to the guest's current task.
+
+Being architecturally required behavior, the logic gets placed in the
+instruction emulator instead of hvmemul_get_fpu(). It should be noted,
+though, that hvmemul_get_fpu() being the only current handler for the
+get_fpu() callback, we don't have an active problem with CR4: Both
+CR4.OSFXSR and CR4.OSXSAVE get handled as necessary by that function.
+
+This is XSA-190.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ tools/tests/x86_emulator/test_x86_emulator.c | 17 +++++++++
+ xen/arch/x86/hvm/emulate.c                   |  2 +-
+ xen/arch/x86/x86_emulate/x86_emulate.c       | 53 +++++++++++++++++++++++++---
+ xen/arch/x86/x86_emulate/x86_emulate.h       |  1 +
+ 4 files changed, 68 insertions(+), 5 deletions(-)
+
+diff --git a/tools/tests/x86_emulator/test_x86_emulator.c b/tools/tests/x86_emulator/test_x86_emulator.c
+index 906fc6f..5864a41 100644
+--- a/tools/tests/x86_emulator/test_x86_emulator.c
++++ b/tools/tests/x86_emulator/test_x86_emulator.c
+@@ -127,6 +127,22 @@ static inline uint64_t xgetbv(uint32_t xcr)
+     (ebx & (1U << 5)) != 0; \
+ })
+ 
++static int read_cr(
++    unsigned int reg,
++    unsigned long *val,
++    struct x86_emulate_ctxt *ctxt)
++{
++    /* Fake just enough state for the emulator's _get_fpu() to be happy. */
++    switch ( reg )
++    {
++    case 0:
++        *val = 0x00000001; /* PE */
++        return X86EMUL_OKAY;
++    }
++
++    return X86EMUL_UNHANDLEABLE;
++}
++
+ int get_fpu(
+     void (*exception_callback)(void *, struct cpu_user_regs *),
+     void *exception_callback_arg,
+@@ -158,6 +174,7 @@ static struct x86_emulate_ops emulops = {
+     .write      = write,
+     .cmpxchg    = cmpxchg,
+     .cpuid      = cpuid,
++    .read_cr    = read_cr,
+     .get_fpu    = get_fpu,
+ };
+ 
+diff --git a/xen/arch/x86/hvm/emulate.c b/xen/arch/x86/hvm/emulate.c
+index 87ba524..1c3de24 100644
+--- a/xen/arch/x86/hvm/emulate.c
++++ b/xen/arch/x86/hvm/emulate.c
+@@ -1079,6 +1079,7 @@ static int hvmemul_get_fpu(
+     switch ( type )
+     {
+     case X86EMUL_FPU_fpu:
++    case X86EMUL_FPU_wait:
+         break;
+     case X86EMUL_FPU_mmx:
+         if ( !cpu_has_mmx )
+@@ -1086,7 +1087,6 @@ static int hvmemul_get_fpu(
+         break;
+     case X86EMUL_FPU_xmm:
+         if ( !cpu_has_xmm ||
+-             (curr->arch.hvm_vcpu.guest_cr[0] & X86_CR0_EM) ||
+              !(curr->arch.hvm_vcpu.guest_cr[4] & X86_CR4_OSFXSR) )
+             return X86EMUL_UNHANDLEABLE;
+         break;
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 4c90101..81e268a 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -373,6 +373,9 @@ typedef union {
+ 
+ /* Control register flags. */
+ #define CR0_PE    (1<<0)
++#define CR0_MP    (1<<1)
++#define CR0_EM    (1<<2)
++#define CR0_TS    (1<<3)
+ #define CR4_TSD   (1<<2)
+ 
+ /* EFLAGS bit definitions. */
+@@ -400,6 +403,7 @@ typedef union {
+ #define EXC_OF  4
+ #define EXC_BR  5
+ #define EXC_UD  6
++#define EXC_NM  7
+ #define EXC_TS 10
+ #define EXC_NP 11
+ #define EXC_SS 12
+@@ -668,10 +672,45 @@ static void fpu_handle_exception(void *_fic, struct cpu_user_regs *regs)
+     regs->eip += fic->insn_bytes;
+ }
+ 
++static int _get_fpu(
++    enum x86_emulate_fpu_type type,
++    struct fpu_insn_ctxt *fic,
++    struct x86_emulate_ctxt *ctxt,
++    const struct x86_emulate_ops *ops)
++{
++    int rc;
++
++    fic->exn_raised = 0;
++
++    fail_if(!ops->get_fpu);
++    rc = ops->get_fpu(fpu_handle_exception, fic, type, ctxt);
++
++    if ( rc == X86EMUL_OKAY )
++    {
++        unsigned long cr0;
++
++        fail_if(!ops->read_cr);
++        rc = ops->read_cr(0, &cr0, ctxt);
++        if ( rc != X86EMUL_OKAY )
++            return rc;
++        if ( cr0 & CR0_EM )
++        {
++            generate_exception_if(type == X86EMUL_FPU_fpu, EXC_NM, -1);
++            generate_exception_if(type == X86EMUL_FPU_mmx, EXC_UD, -1);
++            generate_exception_if(type == X86EMUL_FPU_xmm, EXC_UD, -1);
++        }
++        generate_exception_if((cr0 & CR0_TS) &&
++                              (type != X86EMUL_FPU_wait || (cr0 & CR0_MP)),
++                              EXC_NM, -1);
++    }
++
++ done:
++    return rc;
++}
++
+ #define get_fpu(_type, _fic)                                    \
+-do{ (_fic)->exn_raised = 0;                                     \
+-    fail_if(ops->get_fpu == NULL);                              \
+-    rc = ops->get_fpu(fpu_handle_exception, _fic, _type, ctxt); \
++do {                                                            \
++    rc = _get_fpu(_type, _fic, ctxt, ops);                      \
+     if ( rc ) goto done;                                        \
+ } while (0)
+ #define put_fpu(_fic)                                           \
+@@ -2349,8 +2388,14 @@ x86_emulate(
+     }
+ 
+     case 0x9b:  /* wait/fwait */
+-        emulate_fpu_insn("fwait");
++    {
++        struct fpu_insn_ctxt fic = { .insn_bytes = 1 };
++
++        get_fpu(X86EMUL_FPU_wait, &fic);
++        asm volatile ( "fwait" ::: "memory" );
++        put_fpu(&fic);
+         break;
++    }
+ 
+     case 0x9c: /* pushf */
+         src.val = _regs.eflags;
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.h b/xen/arch/x86/x86_emulate/x86_emulate.h
+index 85bc4bc..7307423 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.h
++++ b/xen/arch/x86/x86_emulate/x86_emulate.h
+@@ -99,6 +99,7 @@ struct segment_register {
+ /* FPU sub-types which may be requested via ->get_fpu(). */
+ enum x86_emulate_fpu_type {
+     X86EMUL_FPU_fpu, /* Standard FPU coprocessor instruction set */
++    X86EMUL_FPU_wait, /* WAIT/FWAIT instruction */
+     X86EMUL_FPU_mmx, /* MMX instruction set (%mm0-%mm7) */
+     X86EMUL_FPU_xmm, /* SSE instruction set (%xmm0-%xmm7/15) */
+     X86EMUL_FPU_ymm  /* AVX/XOP instruction set (%ymm0-%ymm7/15) */
+-- 
+1.8.3.1
+
+
+From 5bcf6a6f132643df3e77f709656cd229ffc9dffc Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Tue, 22 Nov 2016 05:49:25 -0600
+Subject: [PATCH] Subject: x86/hvm: Fix the handling of non-present segments
+
+In 32bit, the data segments may be NULL to indicate that the segment is
+ineligible for use.  In both 32bit and 64bit, the LDT selector may be NULL to
+indicate that the entire LDT is ineligible for use.  However, nothing in Xen
+actually checks for this condition when performing other segmentation
+checks.  (Note however that limit and writeability checks are correctly
+performed).
+
+Neither Intel nor AMD specify the exact behaviour of loading a NULL segment.
+Experimentally, AMD zeroes all attributes but leaves the base and limit
+unmodified.  Intel zeroes the base, sets the limit to 0xfffffff and resets the
+attributes to just .G and .D/B.
+
+The use of the segment information in the VMCB/VMCS is equivalent to a native
+pipeline interacting with the segment cache.  The present bit can therefore
+have a subtly different meaning, and it is now cooked to uniformly indicate
+whether the segment is usable or not.
+
+GDTR and IDTR don't have access rights like the other segments, but for
+consistency, they are treated as being present so no special casing is needed
+elsewhere in the segmentation logic.
+
+AMD hardware does not consider the present bit for %cs and %tr, and will
+function as if they were present.  They are therefore unconditionally set to
+present when reading information from the VMCB, to maintain the new meaning of
+usability.
+
+Intel hardware has a separate unusable bit in the VMCS segment attributes.
+This bit is inverted and stored in the present field, so the hvm code can work
+with architecturally-common state.
+
+This is XSA-191.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/hvm.c                 |  8 ++++++++
+ xen/arch/x86/hvm/svm/svm.c             |  4 ++++
+ xen/arch/x86/hvm/vmx/vmx.c             | 20 +++++++++++---------
+ xen/arch/x86/x86_emulate/x86_emulate.c |  4 ++++
+ 4 files changed, 27 insertions(+), 9 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index a4bfb90..a3c3933 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -2069,6 +2069,10 @@ int hvm_virtual_to_linear_addr(
+          * COMPATIBILITY MODE: Apply segment checks and add base.
+          */
+ 
++        /* Segment not valid for use (cooked meaning of .p)? */
++        if ( !reg->attr.fields.p )
++            return 0;
++
+         switch ( access_type )
+         {
+         case hvm_access_read:
+@@ -2266,6 +2270,10 @@ static int hvm_load_segment_selector(
+     hvm_get_segment_register(
+         v, (sel & 4) ? x86_seg_ldtr : x86_seg_gdtr, &desctab);
+ 
++    /* Segment not valid for use (cooked meaning of .p)? */
++    if ( !desctab.attr.fields.p )
++        goto fail;
++
+     /* Check against descriptor table limit. */
+     if ( ((sel & 0xfff8) + 7) > desctab.limit )
+         goto fail;
+diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
+index e21084d..8fda457 100644
+--- a/xen/arch/x86/hvm/svm/svm.c
++++ b/xen/arch/x86/hvm/svm/svm.c
+@@ -522,6 +522,7 @@ static void svm_get_segment_register(struct vcpu *v, enum x86_segment seg,
+     {
+     case x86_seg_cs:
+         memcpy(reg, &vmcb->cs, sizeof(*reg));
++        reg->attr.fields.p = 1;
+         reg->attr.fields.g = reg->limit > 0xFFFFF;
+         break;
+     case x86_seg_ds:
+@@ -555,13 +556,16 @@ static void svm_get_segment_register(struct vcpu *v, enum x86_segment seg,
+     case x86_seg_tr:
+         svm_sync_vmcb(v);
+         memcpy(reg, &vmcb->tr, sizeof(*reg));
++        reg->attr.fields.p = 1;
+         reg->attr.fields.type |= 0x2;
+         break;
+     case x86_seg_gdtr:
+         memcpy(reg, &vmcb->gdtr, sizeof(*reg));
++        reg->attr.bytes = 0x80;
+         break;
+     case x86_seg_idtr:
+         memcpy(reg, &vmcb->idtr, sizeof(*reg));
++        reg->attr.bytes = 0x80;
+         break;
+     case x86_seg_ldtr:
+         svm_sync_vmcb(v);
+diff --git a/xen/arch/x86/hvm/vmx/vmx.c b/xen/arch/x86/hvm/vmx/vmx.c
+index f35119b..226cfd6 100644
+--- a/xen/arch/x86/hvm/vmx/vmx.c
++++ b/xen/arch/x86/hvm/vmx/vmx.c
+@@ -770,10 +770,12 @@ void vmx_get_segment_register(struct vcpu *v, enum x86_segment seg,
+     reg->sel = sel;
+     reg->limit = limit;
+ 
+-    reg->attr.bytes = (attr & 0xff) | ((attr >> 4) & 0xf00);
+-    /* Unusable flag is folded into Present flag. */
+-    if ( attr & (1u<<16) )
+-        reg->attr.fields.p = 0;
++    /*
++     * Fold VT-x representation into Xen's representation.  The Present bit is
++     * unconditionally set to the inverse of unusable.
++     */
++    reg->attr.bytes =
++        (!(attr & (1u << 16)) << 7) | (attr & 0x7f) | ((attr >> 4) & 0xf00);
+ 
+     /* Adjust for virtual 8086 mode */
+     if ( v->arch.hvm_vmx.vmx_realmode && seg <= x86_seg_tr 
+@@ -853,11 +855,11 @@ static void vmx_set_segment_register(struct vcpu *v, enum x86_segment seg,
+         }
+     }
+ 
+-    attr = ((attr & 0xf00) << 4) | (attr & 0xff);
+-
+-    /* Not-present must mean unusable. */
+-    if ( !reg->attr.fields.p )
+-        attr |= (1u << 16);
++    /*
++     * Unfold Xen representation into VT-x representation.  The unusable bit
++     * is unconditionally set to the inverse of present.
++     */
++    attr = (!(attr & (1u << 7)) << 16) | ((attr & 0xf00) << 4) | (attr & 0xff);
+ 
+     /* VMX has strict consistency requirement for flag G. */
+     attr |= !!(limit >> 20) << 15;
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 81e268a..2aec5c6 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1185,6 +1185,10 @@ protmode_load_seg(
+                                  &desctab, ctxt)) )
+         return rc;
+ 
++    /* Segment not valid for use (cooked meaning of .p)? */
++    if ( !desctab.attr.fields.p )
++        goto raise_exn;
++
+     /* Check against descriptor table limit. */
+     if ( ((sel & 0xfff8) + 7) > desctab.limit )
+         goto raise_exn;
+-- 
+1.8.3.1
+
+
+From 532c04cc369a5a3b3af612d85638a4ed20df2411 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 22 Nov 2016 05:49:48 -0600
+Subject: [PATCH] Subject: x86/HVM: don't load LDTR with VM86 mode attrs during
+ task switch
+
+Just like TR, LDTR is purely a protected mode facility and hence needs
+to be loaded accordingly. Also move its loading to where it
+architecurally belongs.
+
+This is XSA-192.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Tested-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/hvm/hvm.c | 20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index a3c3933..a22f7bc 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -2233,16 +2233,15 @@ static void hvm_unmap_entry(void *p)
+ }
+ 
+ static int hvm_load_segment_selector(
+-    enum x86_segment seg, uint16_t sel)
++    enum x86_segment seg, uint16_t sel, unsigned int eflags)
+ {
+     struct segment_register desctab, cs, segr;
+     struct desc_struct *pdesc, desc;
+     u8 dpl, rpl, cpl;
+     int fault_type = TRAP_invalid_tss;
+-    struct cpu_user_regs *regs = guest_cpu_user_regs();
+     struct vcpu *v = current;
+ 
+-    if ( regs->eflags & X86_EFLAGS_VM )
++    if ( eflags & X86_EFLAGS_VM )
+     {
+         segr.sel = sel;
+         segr.base = (uint32_t)sel << 4;
+@@ -2489,6 +2488,8 @@ void hvm_task_switch(
+     if ( rc != HVMCOPY_okay )
+         goto out;
+ 
++    if ( hvm_load_segment_selector(x86_seg_ldtr, tss.ldt, 0) )
++        goto out;
+ 
+     if ( hvm_set_cr3(tss.cr3) )
+         goto out;
+@@ -2511,13 +2512,12 @@ void hvm_task_switch(
+     }
+ 
+     exn_raised = 0;
+-    if ( hvm_load_segment_selector(x86_seg_ldtr, tss.ldt) ||
+-         hvm_load_segment_selector(x86_seg_es, tss.es) ||
+-         hvm_load_segment_selector(x86_seg_cs, tss.cs) ||
+-         hvm_load_segment_selector(x86_seg_ss, tss.ss) ||
+-         hvm_load_segment_selector(x86_seg_ds, tss.ds) ||
+-         hvm_load_segment_selector(x86_seg_fs, tss.fs) ||
+-         hvm_load_segment_selector(x86_seg_gs, tss.gs) )
++    if ( hvm_load_segment_selector(x86_seg_es, tss.es, tss.eflags) ||
++         hvm_load_segment_selector(x86_seg_cs, tss.cs, tss.eflags) ||
++         hvm_load_segment_selector(x86_seg_ss, tss.ss, tss.eflags) ||
++         hvm_load_segment_selector(x86_seg_ds, tss.ds, tss.eflags) ||
++         hvm_load_segment_selector(x86_seg_fs, tss.fs, tss.eflags) ||
++         hvm_load_segment_selector(x86_seg_gs, tss.gs, tss.eflags) )
+         exn_raised = 1;
+ 
+     rc = hvm_copy_to_guest_virt(
+-- 
+1.8.3.1
+
+
+From b2057a1c4844849dfdeb2a205596583f2ee6f355 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 22 Nov 2016 05:50:03 -0600
+Subject: [PATCH] Subject: x86/PV: writes of %fs and %gs base MSRs require
+ canonical addresses
+
+Commit c42494acb2 ("x86: fix FS/GS base handling when using the
+fsgsbase feature") replaced the use of wrmsr_safe() on these paths
+without recognizing that wr{f,g}sbase() use just wrmsrl() and that the
+WR{F,G}SBASE instructions also raise #GP for non-canonical input.
+
+Similarly arch_set_info_guest() needs to prevent non-canonical
+addresses from getting stored into state later to be loaded by context
+switch code. For consistency also check stack pointers and LDT base.
+DR0..3, otoh, already get properly checked in set_debugreg() (albeit
+we discard the error there).
+
+The SHADOW_GS_BASE check isn't strictly necessary, but I think we
+better avoid trying the WRMSR if we know it's going to fail.
+
+This is XSA-193.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/domain.c | 8 +++++++-
+ xen/arch/x86/traps.c  | 6 +++---
+ 2 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
+index 4efef9a..d8cc29a 100644
+--- a/xen/arch/x86/domain.c
++++ b/xen/arch/x86/domain.c
+@@ -685,7 +685,13 @@ int arch_set_info_guest(
+     {
+         if ( !compat )
+         {
+-            if ( !is_canonical_address(c.nat->user_regs.eip) ||
++            if ( !is_canonical_address(c.nat->user_regs.rip) ||
++                 !is_canonical_address(c.nat->user_regs.rsp) ||
++                 !is_canonical_address(c.nat->kernel_sp) ||
++                 (c.nat->ldt_ents && !is_canonical_address(c.nat->ldt_base)) ||
++                 !is_canonical_address(c.nat->fs_base) ||
++                 !is_canonical_address(c.nat->gs_base_kernel) ||
++                 !is_canonical_address(c.nat->gs_base_user) ||
+                  !is_canonical_address(c.nat->event_callback_eip) ||
+                  !is_canonical_address(c.nat->syscall_callback_eip) ||
+                  !is_canonical_address(c.nat->failsafe_callback_eip) )
+diff --git a/xen/arch/x86/traps.c b/xen/arch/x86/traps.c
+index 318153a..91ffbcf 100644
+--- a/xen/arch/x86/traps.c
++++ b/xen/arch/x86/traps.c
+@@ -2391,19 +2391,19 @@ static int emulate_privileged_op(struct cpu_user_regs *regs)
+         switch ( (u32)regs->ecx )
+         {
+         case MSR_FS_BASE:
+-            if ( is_pv_32on64_vcpu(v) )
++            if ( is_pv_32on64_vcpu(v) || !is_canonical_address(msr_content) )
+                 goto fail;
+             wrfsbase(msr_content);
+             v->arch.pv_vcpu.fs_base = msr_content;
+             break;
+         case MSR_GS_BASE:
+-            if ( is_pv_32on64_vcpu(v) )
++            if ( is_pv_32on64_vcpu(v) || !is_canonical_address(msr_content) )
+                 goto fail;
+             wrgsbase(msr_content);
+             v->arch.pv_vcpu.gs_base_kernel = msr_content;
+             break;
+         case MSR_SHADOW_GS_BASE:
+-            if ( is_pv_32on64_vcpu(v) )
++            if ( is_pv_32on64_vcpu(v) || !is_canonical_address(msr_content) )
+                 goto fail;
+             if ( wrmsr_safe(MSR_SHADOW_GS_BASE, msr_content) )
+                 goto fail;
+-- 
+1.8.3.1
+
+
+From efe80674ae94f3027725fa9894c2ee73bc099bf4 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 22 Nov 2016 05:50:17 -0600
+Subject: [PATCH] Subject: x86emul: fix huge bit offset handling
+
+We must never chop off the high 32 bits.
+
+This is XSA-195.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 13 ++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 2aec5c6..c7a6823 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1836,6 +1836,12 @@ x86_emulate(
+         else
+         {
+             /*
++             * Instructions such as bt can reference an arbitrary offset from
++             * their memory operand, but the instruction doing the actual
++             * emulation needs the appropriate op_bytes read from memory.
++             * Adjust both the source register and memory operand to make an
++             * equivalent instruction.
++             *
+              * EA       += BitOffset DIV op_bytes*8
+              * BitOffset = BitOffset MOD op_bytes*8
+              * DIV truncates towards negative infinity.
+@@ -1847,14 +1853,15 @@ x86_emulate(
+                 src.val = (int32_t)src.val;
+             if ( (long)src.val < 0 )
+             {
+-                unsigned long byte_offset;
+-                byte_offset = op_bytes + (((-src.val-1) >> 3) & ~(op_bytes-1));
++                unsigned long byte_offset =
++                    op_bytes + (((-src.val - 1) >> 3) & ~(op_bytes - 1L));
++
+                 ea.mem.off -= byte_offset;
+                 src.val = (byte_offset << 3) + src.val;
+             }
+             else
+             {
+-                ea.mem.off += (src.val >> 3) & ~(op_bytes - 1);
++                ea.mem.off += (src.val >> 3) & ~(op_bytes - 1L);
+                 src.val &= (op_bytes << 3) - 1;
+             }
+         }
+-- 
+1.8.3.1
+
+
+From fe4922816f621a725825fe77169bcb4355ffa8f2 Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Thu, 3 Nov 2016 16:37:40 +0000
+Subject: [PATCH] From 71a389ae940bc52bf897a6e5becd73fd8ede94c5 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH] pygrub: Properly quote results, when returning
+ them to the  caller:
+
+* When the caller wants sexpr output, use `repr()'
+  This is what Xend expects.
+
+  The returned S-expressions are now escaped and quoted by Python,
+  generally using '...'.  Previously kernel and ramdisk were unquoted
+  and args was quoted with "..." but without proper escaping.  This
+  change may break toolstacks which do not properly dequote the
+  returned S-expressions.
+
+* When the caller wants "simple" output, crash if the delimiter is
+  contained in the returned value.
+
+  With --output-format=simple it does not seem like this could ever
+  happen, because the bootloader config parsers all take line-based
+  input from the various bootloader config files.
+
+  With --output-format=simple0, this can happen if the bootloader
+  config file contains nul bytes.
+
+This is XSA-198.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Tested-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ tools/pygrub/src/pygrub | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/tools/pygrub/src/pygrub b/tools/pygrub/src/pygrub
+index 8ff6964..0d06eee 100755
+--- a/tools/pygrub/src/pygrub
++++ b/tools/pygrub/src/pygrub
+@@ -726,14 +726,17 @@ def sniff_netware(fs, cfg):
+     return cfg
+ 
+ def format_sxp(kernel, ramdisk, args):
+-    s = "linux (kernel %s)" % kernel
++    s = "linux (kernel %s)" % repr(kernel)
+     if ramdisk:
+-        s += "(ramdisk %s)" % ramdisk
++        s += "(ramdisk %s)" % repr(ramdisk)
+     if args:
+-        s += "(args \"%s\")" % args
++        s += "(args %s)" % repr(args)
+     return s
+                 
+ def format_simple(kernel, ramdisk, args, sep):
++    for check in (kernel, ramdisk, args):
++        if check is not None and sep in check:
++            raise RuntimeError, "simple format cannot represent delimiter-containing value"
+     s = ("kernel %s" % kernel) + sep
+     if ramdisk:
+         s += ("ramdisk %s" % ramdisk) + sep
+-- 
+1.8.3.1
+
+
+From 2252cf9194db13e87aef68777cba5945f7a31ae6 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Fri, 23 Dec 2016 12:12:28 -0600
+Subject: [PATCH] Subject: x86emul: CMPXCHG8B ignores operand size prefix
+
+Otherwise besides mis-handling the instruction, the comparison failure
+case would result in uninitialized stack data being handed back to the
+guest in rDX:rAX (32 bits leaked for 32-bit guests, 96 bits for 64-bit
+ones).
+
+This is XSA-200.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ tools/tests/x86_emulator/test_x86_emulator.c | 18 ++++++++++++++++++
+ xen/arch/x86/x86_emulate/x86_emulate.c       |  6 +++++-
+ 2 files changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/tools/tests/x86_emulator/test_x86_emulator.c b/tools/tests/x86_emulator/test_x86_emulator.c
+index 5864a41..0d9b0eb 100644
+--- a/tools/tests/x86_emulator/test_x86_emulator.c
++++ b/tools/tests/x86_emulator/test_x86_emulator.c
+@@ -427,6 +427,24 @@ int main(int argc, char **argv)
+         goto fail;
+     printf("okay\n");
+ 
++    printf("%-40s", "Testing cmpxchg8b (%edi) [opsize]...");
++    instr[0] = 0x66; instr[1] = 0x0f; instr[2] = 0xc7; instr[3] = 0x0f;
++    res[0]      = 0x12345678;
++    res[1]      = 0x87654321;
++    regs.eflags = 0x200;
++    regs.eip    = (unsigned long)&instr[0];
++    regs.edi    = (unsigned long)res;
++    rc = x86_emulate(&ctxt, &emulops);
++    if ( (rc != X86EMUL_OKAY) ||
++         (res[0] != 0x12345678) ||
++         (res[1] != 0x87654321) ||
++         (regs.eax != 0x12345678) ||
++         (regs.edx != 0x87654321) ||
++         ((regs.eflags&0x240) != 0x200) ||
++         (regs.eip != (unsigned long)&instr[4]) )
++        goto fail;
++    printf("okay\n");
++
+     printf("%-40s", "Testing movsxbd (%%eax),%%ecx...");
+     instr[0] = 0x0f; instr[1] = 0xbe; instr[2] = 0x08;
+     regs.eflags = 0x200;
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index c7a6823..1f7c2cf 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -4540,8 +4540,12 @@ x86_emulate(
+         generate_exception_if((modrm_reg & 7) != 1, EXC_UD, -1);
+         generate_exception_if(ea.type != OP_MEM, EXC_UD, -1);
+         if ( op_bytes == 8 )
++        {
+             vcpu_must_have_cx16();
+-        op_bytes *= 2;
++            op_bytes = 16;
++        }
++        else
++            op_bytes = 8;
+ 
+         /* Get actual old value. */
+         if ( (rc = ops->read(ea.mem.seg, ea.mem.off, old, op_bytes,
+-- 
+1.8.3.1
+
+
+From 0ab4da3b225c4c85f567e436fc5bf85892d40b70 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Fri, 23 Dec 2016 12:12:40 -0600
+Subject: [PATCH] Subject: x86: force EFLAGS.IF on when exiting to PV guests
+
+Guest kernels modifying instructions in the process of being emulated
+for another of their vCPU-s may effect EFLAGS.IF to be cleared upon
+next exiting to guest context, by converting the being emulated
+instruction to CLI (at the right point in time). Prevent any such bad
+effects by always forcing EFLAGS.IF on. And to cover hypothetical other
+similar issues, also force EFLAGS.{IOPL,NT,VM} to zero.
+
+This is XSA-202.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/x86_64/compat/entry.S |  4 ++++
+ xen/arch/x86/x86_64/entry.S        | 15 ++++++++-------
+ 2 files changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/xen/arch/x86/x86_64/compat/entry.S b/xen/arch/x86/x86_64/compat/entry.S
+index 94f5b8d..f337251 100644
+--- a/xen/arch/x86/x86_64/compat/entry.S
++++ b/xen/arch/x86/x86_64/compat/entry.S
+@@ -173,6 +173,10 @@ compat_bad_hypercall:
+ /* %rbx: struct vcpu, interrupts disabled */
+ ENTRY(compat_restore_all_guest)
+         ASSERT_INTERRUPTS_DISABLED
++        mov   $~(X86_EFLAGS_IOPL|X86_EFLAGS_NT|X86_EFLAGS_VM),%r11d
++        and   UREGS_eflags(%rsp),%r11d
++        or    $X86_EFLAGS_IF,%r11
++        mov   %r11d,UREGS_eflags(%rsp)
+         RESTORE_ALL adj=8 compat=1
+ .Lft0:  iretq
+ 
+diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
+index 4bb48e7..76530f3 100644
+--- a/xen/arch/x86/x86_64/entry.S
++++ b/xen/arch/x86/x86_64/entry.S
+@@ -41,28 +41,29 @@ restore_all_guest:
+         testw $TRAP_syscall,4(%rsp)
+         jz    iret_exit_to_guest
+ 
++        movq  24(%rsp),%r11           # RFLAGS
++        andq  $~(X86_EFLAGS_IOPL|X86_EFLAGS_NT|X86_EFLAGS_VM),%r11
++        orq   $X86_EFLAGS_IF,%r11
++
+         /* Don't use SYSRET path if the return address is not canonical. */
+         movq  8(%rsp),%rcx
+         sarq  $47,%rcx
+         incl  %ecx
+         cmpl  $1,%ecx
+-        ja    .Lforce_iret
++        movq  8(%rsp),%rcx            # RIP
++        ja    iret_exit_to_guest
+ 
+         cmpw  $FLAT_USER_CS32,16(%rsp)# CS
+-        movq  8(%rsp),%rcx            # RIP
+-        movq  24(%rsp),%r11           # RFLAGS
+         movq  32(%rsp),%rsp           # RSP
+         je    1f
+         sysretq
+ 1:      sysretl
+ 
+-.Lforce_iret:
+-        /* Mimic SYSRET behavior. */
+-        movq  8(%rsp),%rcx            # RIP
+-        movq  24(%rsp),%r11           # RFLAGS
+         ALIGN
+ /* No special register assumptions. */
+ iret_exit_to_guest:
++        andl  $~(X86_EFLAGS_IOPL|X86_EFLAGS_NT|X86_EFLAGS_VM),24(%rsp)
++        orl   $X86_EFLAGS_IF,24(%rsp)
+         addq  $8,%rsp
+ .Lft0:  iretq
+ 
+-- 
+1.8.3.1
+
+
+From 93cb94cd1b75cb6806ff197f3a4bdea54af25907 Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Sun, 18 Dec 2016 15:42:59 +0000
+Subject: [PATCH] Subject: [PATCH] x86/emul: Correct the handling of eflags
+ with SYSCALL
+
+A singlestep #DB is determined by the resulting eflags value from the
+execution of SYSCALL, not the original eflags value.
+
+By using the original eflags value, we negate the guest kernels attempt to
+protect itself from a privilege escalation by masking TF.
+
+Introduce a tf boolean and have the SYSCALL emulation recalculate it
+after the instruction is complete.
+
+This is XSA-204
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/x86_emulate/x86_emulate.c | 23 ++++++++++++++++++++---
+ 1 file changed, 20 insertions(+), 3 deletions(-)
+
+diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
+index 1f7c2cf..353b1cb 100644
+--- a/xen/arch/x86/x86_emulate/x86_emulate.c
++++ b/xen/arch/x86/x86_emulate/x86_emulate.c
+@@ -1392,6 +1392,7 @@ x86_emulate(
+     union vex vex = {};
+     unsigned int op_bytes, def_op_bytes, ad_bytes, def_ad_bytes;
+     bool_t lock_prefix = 0;
++    bool_t tf = !!(ctxt->regs->eflags & EFLG_TF);
+     int override_seg = -1, rc = X86EMUL_OKAY;
+     struct operand src = { .reg = REG_POISON };
+     struct operand dst = { .reg = REG_POISON };
+@@ -3718,9 +3719,8 @@ x86_emulate(
+         break;
+     }
+ 
+-    /* Inject #DB if single-step tracing was enabled at instruction start. */
+-    if ( (ctxt->regs->eflags & EFLG_TF) && (rc == X86EMUL_OKAY) &&
+-         (ops->inject_hw_exception != NULL) )
++    /* Should a singlestep #DB be raised? */
++    if ( tf && (rc == X86EMUL_OKAY) && (ops->inject_hw_exception != NULL) )
+         rc = ops->inject_hw_exception(EXC_DB, -1, ctxt) ? : X86EMUL_EXCEPTION;
+ 
+     /* Commit shadow register state. */
+@@ -3905,6 +3905,23 @@ x86_emulate(
+              (rc = ops->write_segment(x86_seg_ss, &ss, ctxt)) )
+             goto done;
+ 
++        /*
++         * SYSCALL (unlike most instructions) evaluates its singlestep action
++         * based on the resulting EFLG_TF, not the starting EFLG_TF.
++         *
++         * As the #DB is raised after the CPL change and before the OS can
++         * switch stack, it is a large risk for privilege escalation.
++         *
++         * 64bit kernels should mask EFLG_TF in MSR_FMASK to avoid any
++         * vulnerability.  Running the #DB handler on an IST stack is also a
++         * mitigation.
++         *
++         * 32bit kernels have no ability to mask EFLG_TF at all.  Their only
++         * mitigation is to use a task gate for handling #DB (or to not use
++         * enable EFER.SCE to start with).
++         */
++        tf = !!(_regs.eflags & EFLG_TF);
++
+         break;
+     }
+ 
+-- 
+1.8.3.1
+
+
+From 43620215f2ff795d932051df986af4339ea1e4aa Mon Sep 17 00:00:00 2001
+From: hughesjr <johnny@centos.org>
+Date: Wed, 15 Feb 2017 01:59:30 -0600
+Subject: [PATCH] IOMMU: always call teardown callback
+
+There is a possible scenario when (d)->need_iommu remains unset
+during guest domain execution. For example, when no devices
+were assigned to it. Taking into account that teardown callback
+is not called when (d)->need_iommu is unset we might have unreleased
+resourses after destroying domain.
+
+So, always call teardown callback to roll back actions
+that were performed in init callback.
+
+This is XSA-207.
+
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Tested-by: Jan Beulich <jbeulich@suse.com>
+Tested-by: Julien Grall <julien.grall@arm.com>
+---
+ xen/drivers/passthrough/iommu.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/xen/drivers/passthrough/iommu.c b/xen/drivers/passthrough/iommu.c
+index a4fccc5..5b96a46 100644
+--- a/xen/drivers/passthrough/iommu.c
++++ b/xen/drivers/passthrough/iommu.c
+@@ -418,8 +418,7 @@ void iommu_domain_destroy(struct domain *d)
+     if ( !iommu_enabled || !hd->platform_ops )
+         return;
+ 
+-    if ( need_iommu(d) )
+-        iommu_teardown(d);
++    iommu_teardown(d);
+ 
+     list_for_each_safe ( ioport_list, tmp, &hd->g2m_ioport_list )
+     {
+-- 
+1.8.3.1
+
