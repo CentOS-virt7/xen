@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.3
-Release: 5%{?dist}
+Release: 9%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -94,6 +94,10 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
 Patch2011: xsa184-qemuu-4.6.patch
 Patch2012: xsa197-4.6-qemuu.patch
+Patch2013: xsa208-qemuu-4.7.patch
+Patch2014: xsa209-qemuu-0001-display-cirrus-ignore-source-pitch-value-as-needed-i.patch
+Patch2015: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cput.patch 
+Patch2016: xsa211-qemuu-4.6.patch
 
 Patch3001: xsa179-qemut-unstable-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
 Patch3002: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
@@ -104,6 +108,9 @@ Patch3010: xsa180-qemut.patch
 Patch3011: xsa184-qemut-master.patch
 Patch3012: xsa197-qemut.patch
 Patch3013: xsa199-trad.patch
+Patch3014: xsa208-qemut.patch
+Patch3015: xsa209-qemut.patch
+Patch3016: xsa211-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -318,6 +325,10 @@ pushd tools/qemu-xen
 %endif
 %patch2011 -p1
 %patch2012 -p1
+%patch2013 -p1
+%patch2014 -p1
+%patch2015 -p1
+%patch2016 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -325,6 +336,9 @@ pushd tools/qemu-xen-traditional
 %patch3011 -p1
 %patch3012 -p1
 %patch3013 -p1
+%patch3014 -p1
+%patch3015 -p1
+%patch3016 -p1
 popd
 
 %if %{with_blktap}
@@ -910,6 +924,18 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Mar 15 2017 Johnny Hughes <johnny@centos.org> 4.6.3-9.el6.centos
+- Import XSA 211
+
+* Tue Feb 28 2017 Johnny Hughes <johnny@centos.org> 4.6.3-8.el6.centos
+- Import XSA 209
+
+* Wed Feb 15 2017 Johnny Hughes <johnny@centos.org> 4.6.3-7.el6.centos
+- Import XSA 207
+
+* Mon Feb 13 2017 Johnny Hughes <johnny@centos.org> 4.6.3-6.el6.centos
+- Import XSA 208
+
 * Fri Dec 23 2016 Johnny Hughes <johnny@centos.org> 4.6.3-5.el6.centos
 - Import XSAs 199, 200, 201, 202, 204, 204
 
