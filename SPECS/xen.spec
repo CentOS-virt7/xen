@@ -92,12 +92,10 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 # aarch64-only
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
-Patch2011: xsa184-qemuu-4.6.patch
-Patch2012: xsa197-4.6-qemuu.patch
-Patch2013: xsa208-qemuu-4.7.patch
+Patch2013: xsa208-qemuu.patch
 Patch2014: xsa209-qemuu-0001-display-cirrus-ignore-source-pitch-value-as-needed-i.patch
 Patch2015: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cput.patch 
-Patch2016: xsa211-qemuu-4.6.patch
+Patch2016: xsa211-qemuu-4.8.patch
 
 Patch3001: xsa179-qemut-unstable-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
 Patch3002: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
@@ -323,8 +321,6 @@ pushd tools/qemu-xen
 %ifarch aarch64
 %patch2001 -p1
 %endif
-%patch2011 -p1
-%patch2012 -p1
 %patch2013 -p1
 %patch2014 -p1
 %patch2015 -p1

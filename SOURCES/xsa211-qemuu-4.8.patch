@@ -1,4 +1,4 @@
-From c85f4df08b17f5808eda2b8afea1e4db7016cdc8 Mon Sep 17 00:00:00 2001
+From 7563ddb0bd67e7e54568e017cb7d4f7f556587fc Mon Sep 17 00:00:00 2001
 From: Gerd Hoffmann <kraxel@redhat.com>
 Date: Tue, 14 Feb 2017 19:09:59 +0100
 Subject: [PATCH] cirrus/vnc: zap bitblit support from console code.
@@ -32,16 +32,16 @@ Lets kill it once for all.
 Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
 ---
  hw/display/cirrus_vga.c | 12 ++-----
- include/ui/console.h    |  8 -----
+ include/ui/console.h    |  7 ----
  ui/console.c            | 28 ---------------
- ui/vnc.c                | 91 -------------------------------------------------
- 4 files changed, 3 insertions(+), 136 deletions(-)
+ ui/vnc.c                | 96 -------------------------------------------------
+ 4 files changed, 3 insertions(+), 140 deletions(-)
 
 diff --git a/hw/display/cirrus_vga.c b/hw/display/cirrus_vga.c
-index d643a0d..2e38c86 100644
+index 9a4e90a..2966125 100644
 --- a/hw/display/cirrus_vga.c
 +++ b/hw/display/cirrus_vga.c
-@@ -756,11 +756,6 @@ static void cirrus_do_copy(CirrusVGAState *s, int dst, int src, int w, int h)
+@@ -760,11 +760,6 @@ static void cirrus_do_copy(CirrusVGAState *s, int dst, int src, int w, int h)
          }
      }
  
@@ -53,7 +53,7 @@ index d643a0d..2e38c86 100644
      (*s->cirrus_rop) (s, s->vga.vram_ptr +
  		      (s->cirrus_blt_dstaddr & s->cirrus_addr_mask),
  		      s->vga.vram_ptr +
-@@ -769,10 +764,9 @@ static void cirrus_do_copy(CirrusVGAState *s, int dst, int src, int w, int h)
+@@ -773,10 +768,9 @@ static void cirrus_do_copy(CirrusVGAState *s, int dst, int src, int w, int h)
  		      s->cirrus_blt_width, s->cirrus_blt_height);
  
      if (notify) {
@@ -68,21 +68,20 @@ index d643a0d..2e38c86 100644
  
      /* we don't have to notify the display that this portion has
 diff --git a/include/ui/console.h b/include/ui/console.h
-index 22ef8ca..331c07a 100644
+index 2703a3a..67927ed 100644
 --- a/include/ui/console.h
 +++ b/include/ui/console.h
-@@ -158,10 +158,6 @@ typedef struct DisplayChangeListenerOps {
+@@ -189,9 +189,6 @@ typedef struct DisplayChangeListenerOps {
                             int x, int y, int w, int h);
      void (*dpy_gfx_switch)(DisplayChangeListener *dcl,
                             struct DisplaySurface *new_surface);
 -    void (*dpy_gfx_copy)(DisplayChangeListener *dcl,
 -                         int src_x, int src_y,
 -                         int dst_x, int dst_y, int w, int h);
--
-     void (*dpy_text_cursor)(DisplayChangeListener *dcl,
-                             int x, int y);
-     void (*dpy_text_resize)(DisplayChangeListener *dcl,
-@@ -223,8 +219,6 @@ int dpy_set_ui_info(QemuConsole *con, QemuUIInfo *info);
+     bool (*dpy_gfx_check_format)(DisplayChangeListener *dcl,
+                                  pixman_format_code_t format);
+ 
+@@ -273,8 +270,6 @@ int dpy_set_ui_info(QemuConsole *con, QemuUIInfo *info);
  void dpy_gfx_update(QemuConsole *con, int x, int y, int w, int h);
  void dpy_gfx_replace_surface(QemuConsole *con,
                               DisplaySurface *surface);
@@ -91,20 +90,20 @@ index 22ef8ca..331c07a 100644
  void dpy_text_cursor(QemuConsole *con, int x, int y);
  void dpy_text_update(QemuConsole *con, int x, int y, int w, int h);
  void dpy_text_resize(QemuConsole *con, int w, int h);
-@@ -315,8 +309,6 @@ void text_consoles_set_display(DisplayState *ds);
+@@ -398,8 +393,6 @@ void text_consoles_set_display(DisplayState *ds);
  void console_select(unsigned int index);
  void console_color_init(DisplayState *ds);
  void qemu_console_resize(QemuConsole *con, int width, int height);
 -void qemu_console_copy(QemuConsole *con, int src_x, int src_y,
 -                       int dst_x, int dst_y, int w, int h);
  DisplaySurface *qemu_console_surface(QemuConsole *con);
- DisplayState *qemu_console_displaystate(QemuConsole *console);
  
+ /* console-gl.c */
 diff --git a/ui/console.c b/ui/console.c
-index 258af5d..cc1aa20 100644
+index c24bfe4..ece0c04 100644
 --- a/ui/console.c
 +++ b/ui/console.c
-@@ -1450,27 +1450,6 @@ static void dpy_refresh(DisplayState *s)
+@@ -1558,27 +1558,6 @@ static void dpy_refresh(DisplayState *s)
      }
  }
  
@@ -132,7 +131,7 @@ index 258af5d..cc1aa20 100644
  void dpy_text_cursor(QemuConsole *con, int x, int y)
  {
      DisplayState *s = con->ds;
-@@ -1968,13 +1947,6 @@ void qemu_console_resize(QemuConsole *s, int width, int height)
+@@ -2104,13 +2083,6 @@ void qemu_console_resize(QemuConsole *s, int width, int height)
      dpy_gfx_replace_surface(s, surface);
  }
  
@@ -147,10 +146,10 @@ index 258af5d..cc1aa20 100644
  {
      return console->surface;
 diff --git a/ui/vnc.c b/ui/vnc.c
-index 76caa897..c3c2625 100644
+index d1087c9..b45bb2c 100644
 --- a/ui/vnc.c
 +++ b/ui/vnc.c
-@@ -733,96 +733,6 @@ int vnc_send_framebuffer_update(VncState *vs, int x, int y, int w, int h)
+@@ -872,101 +872,6 @@ int vnc_send_framebuffer_update(VncState *vs, int x, int y, int w, int h)
      return n;
  }
  
@@ -178,6 +177,11 @@ index 76caa897..c3c2625 100644
 -    uint8_t *dst_row;
 -    int i, x, y, pitch, inc, w_lim, s;
 -    int cmp_bytes;
+-
+-    if (!vd->server) {
+-        /* no client connected */
+-        return;
+-    }
 -
 -    vnc_refresh_server_surface(vd);
 -    QTAILQ_FOREACH_SAFE(vs, &vd->clients, next, vn) {
@@ -247,14 +251,14 @@ index 76caa897..c3c2625 100644
  static void vnc_mouse_set(DisplayChangeListener *dcl,
                            int x, int y, int visible)
  {
-@@ -2949,7 +2859,6 @@ static void vnc_listen_websocket_read(void *opaque)
+@@ -3119,7 +3024,6 @@ static gboolean vnc_listen_io(QIOChannel *ioc,
  static const DisplayChangeListenerOps dcl_ops = {
-     .dpy_name          = "vnc",
-     .dpy_refresh       = vnc_refresh,
--    .dpy_gfx_copy      = vnc_dpy_copy,
-     .dpy_gfx_update    = vnc_dpy_update,
-     .dpy_gfx_switch    = vnc_dpy_switch,
-     .dpy_mouse_set     = vnc_mouse_set,
+     .dpy_name             = "vnc",
+     .dpy_refresh          = vnc_refresh,
+-    .dpy_gfx_copy         = vnc_dpy_copy,
+     .dpy_gfx_update       = vnc_dpy_update,
+     .dpy_gfx_switch       = vnc_dpy_switch,
+     .dpy_gfx_check_format = qemu_pixman_check_format,
 -- 
 2.1.4
 
