@@ -365,7 +365,13 @@ mkdir -p dist/install/boot/efi/efi/%{xen_efi_vendor}
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
 export debug="n"
-export CFLAGS="$RPM_OPT_FLAGS"
+# From xen.git/INSTALL
+unset CFLAGS CXXFLAGS FFLAGS LDFLAGS
+export EXTRA_CFLAGS_XEN_TOOLS="$RPM_OPT_FLAGS"
+export EXTRA_CFLAGS_QEMU_TRADITIONAL="$RPM_OPT_FLAGS"
+export EXTRA_CFLAGS_QEMU_XEN="$RPM_OPT_FLAGS"
+export WGET=$(type -P false)
+export GIT=$(type -P false)
 
 %if %{with_blktap}
 %else
@@ -395,9 +401,8 @@ make %{?_smp_mflags} %{?efi_flags}   dist-xen
 make %{?_smp_mflags} %{?ocaml_flags} dist-tools
 make                                 dist-docs
 
-unset CFLAGS
-
 %if %{with_stubdom}
+unset EXTRA_CFLAGS_XEN_TOOLS
 make %{?ocaml_flags} dist-stubdom
 %endif
 
