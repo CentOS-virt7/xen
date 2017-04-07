@@ -32,17 +32,17 @@ Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/tools/hotplug/Linux/systemd/xenstored.service.in b/tools/hotplug/Linux/systemd/xenstored.service.in
-index a5f836b..9d61024 100644
+index 80c1d408a5..95d6a52fe6 100644
 --- a/tools/hotplug/Linux/systemd/xenstored.service.in
 +++ b/tools/hotplug/Linux/systemd/xenstored.service.in
-@@ -13,6 +13,7 @@ Environment=XENSTORED_ARGS=
- Environment=XENSTORED=@XENSTORED@
- EnvironmentFile=-@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xencommons
+@@ -11,6 +11,7 @@ Type=notify
+ NotifyAccess=all
+ RemainAfterExit=true
  ExecStartPre=/bin/grep -q control_d /proc/xen/capabilities
 +ExecStartPre=-/usr/sbin/restorecon -R @XEN_LIB_STORED@
- ExecStartPre=-/bin/rm -f @XEN_LIB_STORED@/tdb*
- ExecStartPre=/bin/mkdir -p @XEN_RUN_DIR@
- ExecStart=/bin/sh -c "exec $XENSTORED --no-fork $XENSTORED_ARGS"
+ ExecStart=@XEN_SCRIPT_DIR@/launch-xenstore
+ 
+ [Install]
 -- 
 
 
@@ -83,29 +83,34 @@ ExecStart=/usr/bin/env $XENSTORED --no-fork $XENSTORED_ARGS
 Unfortunately, results in discarding the selinux restrictions on
 xenstored entirely:
 
-# ps axZ | grep xenstored
 system_u:system_r:unconfined_service_t:s0 612 ? Ss    0:00 /usr/sbin/xenstored --no-fork
 
 Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+[Updated to Xen 4.8.0, which use lauch-xenstore now, so have reverted
+ upstream changes]
+Signed-off-by: Anthony PERARD <anthony.perard@citrix.com>
 ---
- tools/hotplug/Linux/systemd/xenstored.service.in | 3 +--
- 1 file changed, 1 insertion(+), 2 deletions(-)
+ tools/hotplug/Linux/systemd/xenstored.service.in | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
 
 diff --git a/tools/hotplug/Linux/systemd/xenstored.service.in b/tools/hotplug/Linux/systemd/xenstored.service.in
-index 9d61024..15defbe 100644
+index 95d6a52fe6..2b80eeeb83 100644
 --- a/tools/hotplug/Linux/systemd/xenstored.service.in
 +++ b/tools/hotplug/Linux/systemd/xenstored.service.in
-@@ -10,13 +10,12 @@ ConditionPathExists=/proc/xen/capabilities
+@@ -8,11 +8,14 @@ ConditionPathExists=/proc/xen/capabilities
+ 
+ [Service]
  Type=notify
- KillMode=none
- Environment=XENSTORED_ARGS=
--Environment=XENSTORED=@XENSTORED@
- EnvironmentFile=-@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xencommons
+-NotifyAccess=all
+-RemainAfterExit=true
++KillMode=none
++Environment=XENSTORED_ARGS=
++EnvironmentFile=-@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xencommons
  ExecStartPre=/bin/grep -q control_d /proc/xen/capabilities
  ExecStartPre=-/usr/sbin/restorecon -R @XEN_LIB_STORED@
- ExecStartPre=-/bin/rm -f @XEN_LIB_STORED@/tdb*
- ExecStartPre=/bin/mkdir -p @XEN_RUN_DIR@
--ExecStart=/bin/sh -c "exec $XENSTORED --no-fork $XENSTORED_ARGS"
+-ExecStart=@XEN_SCRIPT_DIR@/launch-xenstore
++ExecStartPre=/bin/mkdir -p @XEN_RUN_DIR@
++ExecStartPre=-/bin/rm -f @XEN_LIB_STORED@/tdb*
 +ExecStart=@XENSTORED@ --no-fork $XENSTORED_ARGS
  
  [Install]
@@ -127,10 +132,10 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/configure b/tools/configure
-index aa66876..40efc29 100755
+index e1a30e8189..a4b61f4f61 100755
 --- a/tools/configure
 +++ b/tools/configure
-@@ -4133,7 +4133,7 @@ xen-scsibk
+@@ -4159,7 +4159,7 @@ xen-scsibk
  usbbk
  pciback
  xen-acpi-processor
@@ -140,10 +145,10 @@ index aa66876..40efc29 100755
  ;;
  *)
 diff --git a/tools/configure.ac b/tools/configure.ac
-index 6c70040..6d1e9dd 100644
+index 873e18dafb..b339df51b9 100644
 --- a/tools/configure.ac
 +++ b/tools/configure.ac
-@@ -105,7 +105,7 @@ xen-scsibk
+@@ -108,7 +108,7 @@ xen-scsibk
  usbbk
  pciback
  xen-acpi-processor
@@ -171,56 +176,58 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  3 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/xen/Makefile b/xen/Makefile
-index 2511c9a..232c8d4 100644
+index 269eee2c35..4dd6e1da7e 100644
 --- a/xen/Makefile
 +++ b/xen/Makefile
-@@ -16,6 +16,7 @@ export BASEDIR := $(CURDIR)
- export XEN_ROOT := $(BASEDIR)/..
+@@ -20,6 +20,7 @@ export XEN_ROOT := $(BASEDIR)/..
+ MAKEFLAGS += -rR
  
  EFI_MOUNTPOINT ?= $(BOOT_DIR)/efi
 +LD_EFI ?= $(LD)
  
- .PHONY: default
- default: build
+ ARCH=$(XEN_TARGET_ARCH)
+ SRCARCH=$(shell echo $(ARCH) | sed -e 's/x86.*/x86/' -e s'/arm\(32\|64\)/arm/g')
 diff --git a/xen/arch/x86/Makefile b/xen/arch/x86/Makefile
-index 5f24951..d87c2c1 100644
+index 931917d1d3..d30377d8b4 100644
 --- a/xen/arch/x86/Makefile
 +++ b/xen/arch/x86/Makefile
-@@ -130,18 +130,18 @@ $(TARGET).efi: ALT_BASE = 0x$(shell $(NM) efi/relocs-dummy.o | sed -n 's, A ALT_
- $(TARGET).efi: guard = $(if $(shell echo efi/dis* | grep disabled),:)
- $(TARGET).efi: prelink-efi.o efi.lds efi/relocs-dummy.o $(BASEDIR)/common/symbols-dummy.o efi/mkreloc
+@@ -173,20 +173,20 @@ endif
+ 
+ $(TARGET).efi: prelink-efi.o $(note_file) efi.lds efi/relocs-dummy.o $(BASEDIR)/common/symbols-dummy.o efi/mkreloc
  	$(foreach base, $(VIRT_BASE) $(ALT_BASE), \
 -	          $(guard) $(LD) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< efi/relocs-dummy.o \
 +	          $(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< efi/relocs-dummy.o \
- 	                $(BASEDIR)/common/symbols-dummy.o -o $(@D)/.$(@F).$(base).0 &&) :
+ 	                $(BASEDIR)/common/symbols-dummy.o $(note_file) -o $(@D)/.$(@F).$(base).0 &&) :
  	$(guard) efi/mkreloc $(foreach base,$(VIRT_BASE) $(ALT_BASE),$(@D)/.$(@F).$(base).0) >$(@D)/.$(@F).0r.S
- 	$(guard) $(NM) -n $(@D)/.$(@F).$(VIRT_BASE).0 | $(guard) $(BASEDIR)/tools/symbols >$(@D)/.$(@F).0s.S
+ 	$(guard) $(NM) -pa --format=sysv $(@D)/.$(@F).$(VIRT_BASE).0 \
+ 		| $(guard) $(BASEDIR)/tools/symbols $(all_symbols) --sysv --sort >$(@D)/.$(@F).0s.S
  	$(guard) $(MAKE) -f $(BASEDIR)/Rules.mk $(@D)/.$(@F).0r.o $(@D)/.$(@F).0s.o
  	$(foreach base, $(VIRT_BASE) $(ALT_BASE), \
 -	          $(guard) $(LD) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< \
 +	          $(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< \
- 	                $(@D)/.$(@F).0r.o $(@D)/.$(@F).0s.o -o $(@D)/.$(@F).$(base).1 &&) :
+ 	                $(@D)/.$(@F).0r.o $(@D)/.$(@F).0s.o $(note_file) -o $(@D)/.$(@F).$(base).1 &&) :
  	$(guard) efi/mkreloc $(foreach base,$(VIRT_BASE) $(ALT_BASE),$(@D)/.$(@F).$(base).1) >$(@D)/.$(@F).1r.S
- 	$(guard) $(NM) -n $(@D)/.$(@F).$(VIRT_BASE).1 | $(guard) $(BASEDIR)/tools/symbols >$(@D)/.$(@F).1s.S
+ 	$(guard) $(NM) -pa --format=sysv $(@D)/.$(@F).$(VIRT_BASE).1 \
+ 		| $(guard) $(BASEDIR)/tools/symbols $(all_symbols) --sysv --sort >$(@D)/.$(@F).1s.S
  	$(guard) $(MAKE) -f $(BASEDIR)/Rules.mk $(@D)/.$(@F).1r.o $(@D)/.$(@F).1s.o
 -	$(guard) $(LD) $(call EFI_LDFLAGS,$(VIRT_BASE)) -T efi.lds -N $< \
 +	$(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(VIRT_BASE)) -T efi.lds -N $< \
- 	                $(@D)/.$(@F).1r.o $(@D)/.$(@F).1s.o -o $@
- 	if $(guard) false; then rm -f $@; echo 'EFI support disabled'; fi
- 	rm -f $(@D)/.$(@F).[0-9]*
+ 	                $(@D)/.$(@F).1r.o $(@D)/.$(@F).1s.o $(note_file) -o $@
+ 	if $(guard) false; then rm -f $@; echo 'EFI support disabled'; \
+ 	else $(NM) -pa --format=sysv $(@D)/$(@F) \
 diff --git a/xen/arch/x86/efi/Makefile b/xen/arch/x86/efi/Makefile
-index 1daa7ac..f5398c4 100644
+index ad3fdf7ff7..05153f4211 100644
 --- a/xen/arch/x86/efi/Makefile
 +++ b/xen/arch/x86/efi/Makefile
 @@ -6,7 +6,7 @@ create = test -e $(1) || touch -t 199901010000 $(1)
  
- efi := $(filter y,$(x86_64)$(shell rm -f disabled))
+ efi := y$(shell rm -f disabled)
  efi := $(if $(efi),$(shell $(CC) $(filter-out $(CFLAGS-y) .%.d,$(CFLAGS)) -c check.c 2>disabled && echo y))
 -efi := $(if $(efi),$(shell $(LD) -mi386pep --subsystem=10 -o check.efi check.o 2>disabled && echo y))
 +efi := $(if $(efi),$(shell $(LD_EFI) -mi386pep --subsystem=10 -o check.efi check.o 2>disabled && echo y))
  efi := $(if $(efi),$(shell rm disabled)y,$(shell $(call create,boot.init.o); $(call create,runtime.o)))
  
- extra-$(efi) += boot.init.o relocs-dummy.o runtime.o compat.o
+ extra-$(efi) += boot.init.o relocs-dummy.o runtime.o compat.o buildid.o
 -- 
 
 
@@ -235,7 +242,7 @@ Subject: [PATCH] Disable iptables on the bridge
  2 files changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/tools/hotplug/Linux/vif-bridge b/tools/hotplug/Linux/vif-bridge
-index 3d72ca4..79220d3 100644
+index 6956dea66a..69bc25279d 100644
 --- a/tools/hotplug/Linux/vif-bridge
 +++ b/tools/hotplug/Linux/vif-bridge
 @@ -93,8 +93,6 @@ case "$command" in
@@ -248,7 +255,7 @@ index 3d72ca4..79220d3 100644
  
  log debug "Successful vif-bridge $command for $dev, bridge $bridge."
 diff --git a/tools/hotplug/Linux/xen-network-common.sh b/tools/hotplug/Linux/xen-network-common.sh
-index 92ffa60..0b1fde9 100644
+index 92ffa603f7..0b1fde9dac 100644
 --- a/tools/hotplug/Linux/xen-network-common.sh
 +++ b/tools/hotplug/Linux/xen-network-common.sh
 @@ -114,6 +114,13 @@ create_bridge () {
@@ -280,24 +287,24 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index c04a6c2..91382fa 100644
+index 73e2ba9555..31fd832550 100644
 --- a/Config.mk
 +++ b/Config.mk
-@@ -265,7 +265,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.8.2
- # Tue Mar 17 10:52:16 2015 -0400
- # vgabios: On bda_save_restore() the saved vbe_mode also has flags in it
+@@ -286,7 +286,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.10.0
+ # Wed Jun 22 14:53:24 2016 +0800
+ # fw/msr_feature_control: add support to set MSR_IA32_FEATURE_CONTROL
  
 -ETHERBOOT_NICS ?= rtl8139 8086100e
 +ETHERBOOT_NICS ?= 10ec8139 8086100e
  
  
- QEMU_TRADITIONAL_REVISION ?= xen-4.6.3
+ QEMU_TRADITIONAL_REVISION ?= xen-4.8.0
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
-index 6cc86ce..1b54335 100644
+index b840c6ab87..d3e552b373 100644
 --- a/tools/firmware/Makefile
 +++ b/tools/firmware/Makefile
-@@ -14,7 +14,7 @@ SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
- endif
+@@ -10,7 +10,7 @@ SUBDIRS-$(CONFIG_OVMF) += ovmf-dir
+ SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
  SUBDIRS-$(CONFIG_ROMBIOS) += rombios
  SUBDIRS-$(CONFIG_ROMBIOS) += vgabios
 -SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
@@ -306,10 +313,10 @@ index 6cc86ce..1b54335 100644
  
  LD32BIT-$(CONFIG_FreeBSD) := LD32BIT_FLAG=-melf_i386_fbsd
 diff --git a/tools/firmware/hvmloader/Makefile b/tools/firmware/hvmloader/Makefile
-index 0560a7b..6610722 100644
+index 80d7b448a5..1a498fcaca 100644
 --- a/tools/firmware/hvmloader/Makefile
 +++ b/tools/firmware/hvmloader/Makefile
-@@ -54,7 +54,7 @@ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.debug.bin
+@@ -51,7 +51,7 @@ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.debug.bin
  else
  CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.bin
  endif
@@ -340,10 +347,10 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
-index a81baee..1288d3e 100644
+index 3e7a1026c4..5c84508328 100644
 --- a/tools/libxl/libxl_device.c
 +++ b/tools/libxl/libxl_device.c
-@@ -358,8 +358,8 @@ int libxl__device_disk_set_backend(libxl__gc *gc, libxl_device_disk *disk) {
+@@ -388,8 +388,8 @@ int libxl__device_disk_set_backend(libxl__gc *gc, libxl_device_disk *disk) {
      } else {
          ok=
              disk_try_backend(&a, LIBXL_DISK_BACKEND_PHY) ?:
@@ -367,17 +374,17 @@ Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
  1 file changed, 1 insertion(+)
 
 diff --git a/tools/Makefile b/tools/Makefile
-index 2618559..4157edf 100644
+index 71515b48e0..212ce5c2c9 100644
 --- a/tools/Makefile
 +++ b/tools/Makefile
-@@ -241,6 +241,7 @@ subdir-all-qemu-xen-dir: qemu-xen-dir-find
+@@ -244,6 +244,7 @@ subdir-all-qemu-xen-dir: qemu-xen-dir-find
  		source=.; \
  	fi; \
  	cd qemu-xen-dir; \
 +	env -u CFLAGS \
- 	$$source/configure --enable-xen --target-list=i386-softmmu \
- 		$(QEMU_XEN_ENABLE_DEBUG) \
- 		--prefix=$(LIBEXEC) \
+ 	if $$source/scripts/tracetool.py --check-backend --backend log ; then \
+ 		enable_trace_backend='--enable-trace-backend=log'; \
+ 	elif $$source/scripts/tracetool.py --check-backend --backend stderr ; then \
 -- 
 
 
@@ -388,30 +395,30 @@ Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
 ---
- tools/Rules.mk              |  7 ++++---
- tools/libxl/libxl_blktap2.c | 41 +++++++++++++++++++++++++++--------------
- 2 files changed, 31 insertions(+), 17 deletions(-)
+ tools/Rules.mk              |  6 +++---
+ tools/libxl/libxl_blktap2.c | 43 ++++++++++++++++++++++++++++---------------
+ 2 files changed, 31 insertions(+), 18 deletions(-)
 
 diff --git a/tools/Rules.mk b/tools/Rules.mk
-index 2c422bd..6d05c3c 100644
+index 0e73690b00..6391d77212 100644
 --- a/tools/Rules.mk
 +++ b/tools/Rules.mk
-@@ -64,9 +64,10 @@ endif
+@@ -148,10 +148,10 @@ endif
  LIBXL_BLKTAP ?= $(CONFIG_BLKTAP2)
  
  ifeq ($(LIBXL_BLKTAP),y)
 -CFLAGS_libblktapctl = -I$(XEN_BLKTAP2)/control -I$(XEN_BLKTAP2)/include $(CFLAGS_xeninclude)
--LDLIBS_libblktapctl = $(XEN_BLKTAP2)/control/libblktapctl$(libextension)
--SHLIB_libblktapctl  = -Wl,-rpath-link=$(XEN_BLKTAP2)/control
 +CFLAGS_libblktapctl = -I$(XEN_BLKTAP2)/include $(CFLAGS_xeninclude)
-+#LDLIBS_libblktapctl = -L$(XEN_BLKTAP2)/control/.libs -lblktapctl
-+LDLIBS_libblktapctl = $(XEN_BLKTAP2)/control/.libs/libblktapctl$(libextension)
-+SHLIB_libblktapctl  = -Wl,-rpath-link=$(XEN_BLKTAP2)/control/.libs
+ SHDEPS_libblktapctl =
+-LDLIBS_libblktapctl = $(SHDEPS_libblktapctl) $(XEN_BLKTAP2)/control/libblktapctl$(libextension)
+-SHLIB_libblktapctl  = $(SHDEPS_libblktapctl) -Wl,-rpath-link=$(XEN_BLKTAP2)/control
++LDLIBS_libblktapctl = $(SHDEPS_libblktapctl) $(XEN_BLKTAP2)/control/.libs/libblktapctl$(libextension)
++SHLIB_libblktapctl  = $(SHDEPS_libblktapctl) -Wl,-rpath-link=$(XEN_BLKTAP2)/control/.libs
  else
  CFLAGS_libblktapctl =
- LDLIBS_libblktapctl =
+ SHDEPS_libblktapctl =
 diff --git a/tools/libxl/libxl_blktap2.c b/tools/libxl/libxl_blktap2.c
-index 2053403..9a0641b 100644
+index 5c9a0a2da8..a54a31e32b 100644
 --- a/tools/libxl/libxl_blktap2.c
 +++ b/tools/libxl/libxl_blktap2.c
 @@ -29,20 +29,15 @@ char *libxl__blktap_devpath(libxl__gc *gc,
@@ -424,13 +431,14 @@ index 2053403..9a0641b 100644
      type = libxl__device_disk_string_of_format(format);
 -    err = tap_ctl_find(type, disk, &tap);
 -    if (err == 0) {
--        devname = libxl__sprintf(gc, "/dev/xen/blktap-2/tapdev%d", tap.minor);
+-        devname = GCSPRINTF("/dev/xen/blktap-2/tapdev%d", tap.minor);
 -        if (devname)
 -            return devname;
 -    }
  
-     params = libxl__sprintf(gc, "%s:%s", type, disk);
+-    params = GCSPRINTF("%s:%s", type, disk);
 -    err = tap_ctl_create(params, &devname);
++    params = libxl__sprintf(gc, "%s:%s", type, disk);
 +    fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,params);
 +    err = tap_ctl_create(params, &devname, 0, -1, 0, 0);
      if (!err) {
@@ -438,7 +446,7 @@ index 2053403..9a0641b 100644
          libxl__ptr_add(gc, devname);
          return devname;
      }
-@@ -55,7 +50,10 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
+@@ -56,7 +51,10 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
  {
      char *type, *disk;
      int err;
@@ -450,7 +458,7 @@ index 2053403..9a0641b 100644
  
      type = libxl__strdup(gc, params);
  
-@@ -65,19 +63,34 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
+@@ -66,19 +64,34 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
          return ERROR_INVAL;
      }
  
@@ -503,10 +511,10 @@ Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
  1 file changed, 9 insertions(+)
 
 diff --git a/xen/include/public/arch-arm.h b/xen/include/public/arch-arm.h
-index 3c365f3..ef033c2 100644
+index bd974fb13d..da54f10df3 100644
 --- a/xen/include/public/arch-arm.h
 +++ b/xen/include/public/arch-arm.h
-@@ -364,6 +364,15 @@ typedef uint64_t xen_callback_t;
+@@ -361,6 +361,15 @@ typedef uint64_t xen_callback_t;
  #define PSR_MODE_SYS 0x1f
  
  /* 64 bit modes */
@@ -522,2185 +530,6 @@ index 3c365f3..ef033c2 100644
  #define PSR_MODE_BIT  0x10 /* Set iff AArch32 */
  #define PSR_MODE_EL3h 0x0d
  #define PSR_MODE_EL3t 0x0c
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:18 +0000
-Subject: [PATCH] xen/arm: support compressed kernels
-
-Signed-off-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
----
- xen/arch/arm/kernel.c | 156 ++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 156 insertions(+)
-
-diff --git a/xen/arch/arm/kernel.c b/xen/arch/arm/kernel.c
-index f641b12..35692e1 100644
---- a/xen/arch/arm/kernel.c
-+++ b/xen/arch/arm/kernel.c
-@@ -13,6 +13,7 @@
- #include <asm/byteorder.h>
- #include <asm/setup.h>
- #include <xen/libfdt/libfdt.h>
-+#include <xen/vmap.h>
- 
- #include "kernel.h"
- 
-@@ -258,6 +259,122 @@ static int kernel_uimage_probe(struct kernel_info *info,
- }
- 
- #ifdef CONFIG_ARM_64
-+
-+#define HEAPORDER 3
-+
-+static unsigned char *__initdata window;
-+#define memptr long
-+static memptr __initdata free_mem_ptr;
-+static memptr __initdata free_mem_end_ptr;
-+
-+#define WSIZE           0x80000000
-+
-+static unsigned char *__initdata inbuf;
-+static unsigned __initdata insize;
-+
-+/* Index of next byte to be processed in inbuf: */
-+static unsigned __initdata inptr;
-+
-+/* Bytes in output buffer: */
-+static unsigned __initdata outcnt;
-+
-+#define OF(args)        args
-+#define STATIC          static
-+
-+#define memzero(s, n)   memset((s), 0, (n))
-+
-+typedef unsigned char   uch;
-+typedef unsigned short  ush;
-+typedef unsigned long   ulg;
-+
-+#define INIT            __init
-+#define INITDATA        __initdata
-+
-+#define get_byte()      (inptr < insize ? inbuf[inptr++] : fill_inbuf())
-+
-+#ifdef DEBUG
-+#  define Assert(cond, msg) do { if (!(cond)) error(msg); } while (0)
-+#  define Trace(x)      do { fprintf x; } while (0)
-+#  define Tracev(x)     do { if (verbose) fprintf x ; } while (0)
-+#  define Tracevv(x)    do { if (verbose > 1) fprintf x ; } while (0)
-+#  define Tracec(c, x)  do { if (verbose && (c)) fprintf x ; } while (0)
-+#  define Tracecv(c, x) do { if (verbose > 1 && (c)) fprintf x ; } while (0)
-+#else
-+#  define Assert(cond, msg)
-+#  define Trace(x)
-+#  define Tracev(x)
-+#  define Tracevv(x)
-+#  define Tracec(c, x)
-+#  define Tracecv(c, x)
-+#endif
-+
-+static long __initdata bytes_out;
-+static void flush_window(void);
-+
-+static __init void error(char *x)
-+{
-+    panic("%s", x);
-+}
-+
-+static __init int fill_inbuf(void)
-+{
-+        error("ran out of input data");
-+        return 0;
-+}
-+
-+#include "../../common/inflate.c"
-+
-+static __init void flush_window(void)
-+{
-+    /*
-+     * The window is equal to the output buffer therefore only need to
-+     * compute the crc.
-+     */
-+    unsigned long c = crc;
-+    unsigned n;
-+    unsigned char *in, ch;
-+
-+    in = window;
-+    for ( n = 0; n < outcnt; n++ )
-+    {
-+        ch = *in++;
-+        c = crc_32_tab[((int)c ^ ch) & 0xff] ^ (c >> 8);
-+    }
-+    crc = c;
-+
-+    bytes_out += (unsigned long)outcnt;
-+    outcnt = 0;
-+}
-+
-+static __init int perform_gunzip(char *output, char *image, unsigned long image_len)
-+{
-+    int rc;
-+
-+    window = (unsigned char *)output;
-+
-+    free_mem_ptr = (unsigned long)alloc_xenheap_pages(HEAPORDER, 0);
-+    free_mem_end_ptr = free_mem_ptr + (PAGE_SIZE << HEAPORDER);
-+
-+    inbuf = (unsigned char *)image;
-+    insize = image_len;
-+    inptr = 0;
-+
-+    makecrc();
-+
-+    if ( gunzip() < 0 )
-+    {
-+        rc = -EINVAL;
-+    }
-+    else
-+    {
-+        rc = 0;
-+    }
-+
-+    free_xenheap_pages((void *)free_mem_ptr, HEAPORDER);
-+
-+    return rc;
-+}
-+
- /*
-  * Check if the image is a 64-bit Image.
-  */
-@@ -310,6 +427,43 @@ static int kernel_zimage64_probe(struct kernel_info *info,
- 
-     return 0;
- }
-+
-+static unsigned long output_length(char *image, unsigned long image_len)
-+{
-+    return *(uint32_t *)&image[image_len - 4];
-+}
-+
-+static int kernel_zimage64_compressed_probe(struct kernel_info *info,
-+                                 paddr_t addr, paddr_t size)
-+{
-+    char *output, *input;
-+    unsigned char magic[2];
-+    int rc;
-+    unsigned kernel_order_in;
-+    unsigned kernel_order_out;
-+    paddr_t output_size;
-+    
-+    copy_from_paddr(magic, addr, sizeof(magic));
-+
-+    if (!((magic[0] == 0x1f) && ((magic[1] == 0x8b) || (magic[1] == 0x9e))))
-+        return -EINVAL;
-+
-+    kernel_order_in = get_order_from_bytes(size);
-+    input = (char *)ioremap_cache(addr, size);
-+
-+    output_size = output_length(input, size);
-+    kernel_order_out = get_order_from_bytes(output_size);
-+    output = (char *)alloc_xenheap_pages(kernel_order_out, 0);
-+
-+    rc = perform_gunzip(output, input, size);
-+    clean_dcache_va_range(output, output_size);
-+    iounmap(input);
-+
-+    if (rc != 0)
-+        return rc;
-+
-+    return kernel_zimage64_probe(info, virt_to_maddr(output), output_size);
-+}
- #endif
- 
- /*
-@@ -466,6 +620,8 @@ int kernel_probe(struct kernel_info *info)
- #ifdef CONFIG_ARM_64
-     rc = kernel_zimage64_probe(info, start, size);
-     if (rc < 0)
-+        rc = kernel_zimage64_compressed_probe(info, start, size);
-+    if (rc < 0)
- #endif
-         rc = kernel_uimage_probe(info, start, size);
-     if (rc < 0)
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: David Vrabel <david.vrabel@citrix.com>
-Date: Fri, 20 Nov 2015 11:59:05 -0500
-Subject: [PATCH] xen: Add RING_COPY_REQUEST()
-
-Using RING_GET_REQUEST() on a shared ring is easy to use incorrectly
-(i.e., by not considering that the other end may alter the data in the
-shared ring while it is being inspected).  Safe usage of a request
-generally requires taking a local copy.
-
-Provide a RING_COPY_REQUEST() macro to use instead of
-RING_GET_REQUEST() and an open-coded memcpy().  This takes care of
-ensuring that the copy is done correctly regardless of any possible
-compiler optimizations.
-
-Use a volatile source to prevent the compiler from reordering or
-omitting the copy.
-
-This is part of XSA155.
-
-Signed-off-by: David Vrabel <david.vrabel@citrix.com>
-Signed-off-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
----
- xen/include/public/io/ring.h | 14 ++++++++++++++
- 1 file changed, 14 insertions(+)
-
-diff --git a/xen/include/public/io/ring.h b/xen/include/public/io/ring.h
-index ba9401b..801c0da 100644
---- a/xen/include/public/io/ring.h
-+++ b/xen/include/public/io/ring.h
-@@ -212,6 +212,20 @@ typedef struct __name##_back_ring __name##_back_ring_t
- #define RING_GET_REQUEST(_r, _idx)                                      \
-     (&((_r)->sring->ring[((_idx) & (RING_SIZE(_r) - 1))].req))
- 
-+/*
-+ * Get a local copy of a request.
-+ *
-+ * Use this in preference to RING_GET_REQUEST() so all processing is
-+ * done on a local copy that cannot be modified by the other end.
-+ *
-+ * Note that https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58145 may cause this
-+ * to be ineffective where _req is a struct which consists of only bitfields.
-+ */
-+#define RING_COPY_REQUEST(_r, _idx, _req) do {				\
-+	/* Use volatile to force the copy into _req. */			\
-+	*(_req) = *(volatile typeof(_req))RING_GET_REQUEST(_r, _idx);	\
-+} while (0)
-+
- #define RING_GET_RESPONSE(_r, _idx)                                     \
-     (&((_r)->sring->ring[((_idx) & (RING_SIZE(_r) - 1))].rsp))
- 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@citrix.com>
-Date: Thu, 19 May 2016 18:08:38 +0100
-Subject: [PATCH] hotplug: Fix xendomains lock path for RHEL-based systems
-
-Commit c996572 changed the LOCKFILE path from a check between two
-hardcoded paths (/var/lock/subsys/ or /var/lock) to using the
-XEN_LOCK_DIR variable designated at configure time.  Since
-XEN_LOCK_DIR doesn't (and shouldn't) have the 'subsys' postfix, this
-effectively moves all the lock files by default to /var/lock instead.
-
-Unfortunately, this breaks xendomains on RedHat-based SYSV init
-systems.  RedHat-based SYSV init systems try to only call "${SERVICE}
-shutdown" on systems which actually have an actively running
-component; and they use the existence of /var/lock/subsys/${SERVICE}
-to determine which systems are running.
-
-Changing XEN_LOCK_DIR to /var/lock/subsys is not suitable, as only
-system services like xendomains should create lockfiles there; other
-locks (such as the console locks) should be created in /var/lock
-instead.
-
-Instead, re-instate the check for the subsys/ subdirectory of the lock
-directory in the xendomains script.
-
-Signed-off-by: George Dunlap <george.dunlap@citrix.com>
-Acked-by: Wei Liu <wei.liu2@citrix.com>
-Acked-by: Olaf Hering <olaf@aepfle.de>
-Release-acked-by: Wei Liu <wei.liu2@citrix.com>
----
- tools/hotplug/Linux/xendomains.in | 8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
-
-diff --git a/tools/hotplug/Linux/xendomains.in b/tools/hotplug/Linux/xendomains.in
-index 0603842..e749b78 100644
---- a/tools/hotplug/Linux/xendomains.in
-+++ b/tools/hotplug/Linux/xendomains.in
-@@ -49,7 +49,13 @@ if ! [ -e /proc/xen/privcmd ]; then
- 	exit 0
- fi
- 
--LOCKFILE=${XEN_LOCK_DIR}/xendomains
-+# RHEL-based systems only shutdown a service if they find a lockfile
-+# in /var/lock/subsys
-+if [[ -d ${XEN_LOCK_DIR}/subsys ]] ; then
-+    LOCKFILE=${XEN_LOCK_DIR}/subsys/xendomains
-+else
-+    LOCKFILE=${XEN_LOCK_DIR}/xendomains
-+fi
- 
- XENDOM_CONFIG=@CONFIG_DIR@/@CONFIG_LEAF_DIR@/xendomains
- 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@citrix.com>
-Date: Thu, 19 May 2016 18:08:54 +0100
-Subject: [PATCH] tools/xendomains: Create lockfile on start unconditionally
-
-At the moment, the xendomains init script will only create a lockfile
-if when started, it actually does something -- either tries to restore
-a previously saved domain as a result of XENDOMAINS_RESTORE, or tries
-to create a domain as a result of XENDOMAINS_AUTO.
-
-RedHat-based SYSV init systems try to only call "${SERVICE} shutdown"
-on systems which actually have an actively running component; and they
-use the existence of /var/lock/subsys/${SERVICE} to determine which
-systems are running.
-
-This means that at the moment, on RedHat-based SYSV systems (such as
-CentOS 6), if you enable xendomains, and have XENDOMAINS_RESTORE set
-to "true", but don't happen to start a VM, then your running VMs will
-not be suspended on shutdown.
-
-Since the lockfile doesn't really have any other effect than to
-prevent duplicate starting, just create it unconditionally every time
-we start the xendomains script.
-
-The other option would have been to touch the lockfile if
-XENDOMAINS_RESTORE was true regardless of whether there were any
-domains to be restored.  But this would mean that if you started with
-the xendomains script active but XENDOMAINS_RESTORE set to "false",
-and then changed it to "true", then xendomains would still not run the
-next time you shut down.  This seems to me to violate the principle of
-least surprise.
-
-Signed-off-by: George Dunlap <george.dunlap@citrix.com>
-Acked-by: Wei Liu <wei.liu2@citrix.com>
-Acked-by: Olaf Hering <olaf@aepfle.de>
-Release-acked-by: Wei Liu <wei.liu2@citrix.com>
----
- tools/hotplug/Linux/xendomains.in | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
-
-diff --git a/tools/hotplug/Linux/xendomains.in b/tools/hotplug/Linux/xendomains.in
-index e749b78..1dce21d 100644
---- a/tools/hotplug/Linux/xendomains.in
-+++ b/tools/hotplug/Linux/xendomains.in
-@@ -244,12 +244,13 @@ start()
- 	return;
-     fi
- 
-+    mkdir -p $(dirname "$LOCKFILE")
-+    touch $LOCKFILE
-+
-     saved_domains=" "
-     if [ "$XENDOMAINS_RESTORE" = "true" ] &&
-        contains_something "$XENDOMAINS_SAVE"
-     then
--	mkdir -p $(dirname "$LOCKFILE")
--	touch $LOCKFILE
- 	echo -n "Restoring Xen domains:"
- 	saved_domains=`ls $XENDOMAINS_SAVE`
-         for dom in $XENDOMAINS_SAVE/*; do
-@@ -275,7 +276,6 @@ start()
- 
-     if contains_something "$XENDOMAINS_AUTO"
-     then
--	touch $LOCKFILE
- 	echo -n "Starting auto Xen domains:"
- 	# We expect config scripts for auto starting domains to be in
- 	# XENDOMAINS_AUTO - they could just be symlinks to files elsewhere
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Mon, 11 Jul 2016 14:32:03 +0100
-Subject: [PATCH] x86/pv: Remove unsafe bits from the mod_l?_entry() fastpath
-
-All changes in writeability and cacheability must go through full
-re-validation.
-
-Rework the logic as a whitelist, to make it clearer to follow.
-
-This is XSA-182
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Tim Deegan <tim@xen.org>
----
- xen/arch/x86/mm.c          | 28 ++++++++++++++++------------
- xen/include/asm-x86/page.h |  1 +
- 2 files changed, 17 insertions(+), 12 deletions(-)
-
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index daf02ab..8dd22b8 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -1780,6 +1780,14 @@ static inline int update_intpte(intpte_t *p,
-                   _t ## e_get_intpte(_o), _t ## e_get_intpte(_n),   \
-                   (_m), (_v), (_ad))
- 
-+/*
-+ * PTE flags that a guest may change without re-validating the PTE.
-+ * All other bits affect translation, caching, or Xen's safety.
-+ */
-+#define FASTPATH_FLAG_WHITELIST                                     \
-+    (_PAGE_NX_BIT | _PAGE_AVAIL_HIGH | _PAGE_AVAIL | _PAGE_GLOBAL | \
-+     _PAGE_DIRTY | _PAGE_ACCESSED | _PAGE_USER)
-+
- /* Update the L1 entry at pl1e to new value nl1e. */
- static int mod_l1_entry(l1_pgentry_t *pl1e, l1_pgentry_t nl1e,
-                         unsigned long gl1mfn, int preserve_ad,
-@@ -1820,9 +1828,8 @@ static int mod_l1_entry(l1_pgentry_t *pl1e, l1_pgentry_t nl1e,
-             return -EINVAL;
-         }
- 
--        /* Fast path for identical mapping, r/w, presence, and cachability. */
--        if ( !l1e_has_changed(ol1e, nl1e,
--                              PAGE_CACHE_ATTRS | _PAGE_RW | _PAGE_PRESENT) )
-+        /* Fast path for sufficiently-similar mappings. */
-+        if ( !l1e_has_changed(ol1e, nl1e, ~FASTPATH_FLAG_WHITELIST) )
-         {
-             adjust_guest_l1e(nl1e, pt_dom);
-             if ( UPDATE_ENTRY(l1, pl1e, ol1e, nl1e, gl1mfn, pt_vcpu,
-@@ -1904,11 +1911,8 @@ static int mod_l2_entry(l2_pgentry_t *pl2e,
-             return -EINVAL;
-         }
- 
--        /* Fast path for identical mapping and presence. */
--        if ( !l2e_has_changed(ol2e, nl2e,
--                              unlikely(opt_allow_superpage)
--                              ? _PAGE_PSE | _PAGE_RW | _PAGE_PRESENT
--                              : _PAGE_PRESENT) )
-+        /* Fast path for sufficiently-similar mappings. */
-+        if ( !l2e_has_changed(ol2e, nl2e, ~FASTPATH_FLAG_WHITELIST) )
-         {
-             adjust_guest_l2e(nl2e, d);
-             if ( UPDATE_ENTRY(l2, pl2e, ol2e, nl2e, pfn, vcpu, preserve_ad) )
-@@ -1973,8 +1977,8 @@ static int mod_l3_entry(l3_pgentry_t *pl3e,
-             return -EINVAL;
-         }
- 
--        /* Fast path for identical mapping and presence. */
--        if ( !l3e_has_changed(ol3e, nl3e, _PAGE_PRESENT) )
-+        /* Fast path for sufficiently-similar mappings. */
-+        if ( !l3e_has_changed(ol3e, nl3e, ~FASTPATH_FLAG_WHITELIST) )
-         {
-             adjust_guest_l3e(nl3e, d);
-             rc = UPDATE_ENTRY(l3, pl3e, ol3e, nl3e, pfn, vcpu, preserve_ad);
-@@ -2037,8 +2041,8 @@ static int mod_l4_entry(l4_pgentry_t *pl4e,
-             return -EINVAL;
-         }
- 
--        /* Fast path for identical mapping and presence. */
--        if ( !l4e_has_changed(ol4e, nl4e, _PAGE_PRESENT) )
-+        /* Fast path for sufficiently-similar mappings. */
-+        if ( !l4e_has_changed(ol4e, nl4e, ~FASTPATH_FLAG_WHITELIST) )
-         {
-             adjust_guest_l4e(nl4e, d);
-             rc = UPDATE_ENTRY(l4, pl4e, ol4e, nl4e, pfn, vcpu, preserve_ad);
-diff --git a/xen/include/asm-x86/page.h b/xen/include/asm-x86/page.h
-index 66b611c..1a59ed8 100644
---- a/xen/include/asm-x86/page.h
-+++ b/xen/include/asm-x86/page.h
-@@ -311,6 +311,7 @@ void efi_update_l4_pgtable(unsigned int l4idx, l4_pgentry_t);
- #define _PAGE_AVAIL2   _AC(0x800,U)
- #define _PAGE_AVAIL    _AC(0xE00,U)
- #define _PAGE_PSE_PAT  _AC(0x1000,U)
-+#define _PAGE_AVAIL_HIGH (_AC(0x7ff, U) << 12)
- #define _PAGE_NX       (cpu_has_nx ? _PAGE_NX_BIT : 0)
- /* non-architectural flags */
- #define _PAGE_PAGED   0x2000U
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Wed, 15 Jun 2016 18:32:14 +0100
-Subject: [PATCH] x86/entry: Avoid SMAP violation in 
- compat_create_bounce_frame()
-
-A 32bit guest kernel might be running on user mappings.
-compat_create_bounce_frame() must whitelist its guest accesses to avoid
-risking a SMAP violation.
-
-For both variants of create_bounce_frame(), re-blacklist user accesses if
-execution exits via an exception table redirection.
-
-This is XSA-183
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: George Dunlap <george.dunlap@citrix.com>
----
- xen/arch/x86/x86_64/compat/entry.S | 3 +++
- xen/arch/x86/x86_64/entry.S        | 1 +
- 2 files changed, 4 insertions(+)
-
-diff --git a/xen/arch/x86/x86_64/compat/entry.S b/xen/arch/x86/x86_64/compat/entry.S
-index 0e3db7c..89c1e19 100644
---- a/xen/arch/x86/x86_64/compat/entry.S
-+++ b/xen/arch/x86/x86_64/compat/entry.S
-@@ -351,6 +351,7 @@ compat_create_bounce_frame:
-         ASSERT_INTERRUPTS_ENABLED
-         mov   %fs,%edi
-         testb $2,UREGS_cs+8(%rsp)
-+        ASM_STAC
-         jz    1f
-         /* Push new frame at registered guest-OS stack base. */
-         movl  VCPU_kernel_sp(%rbx),%esi
-@@ -403,6 +404,7 @@ UNLIKELY_START(nz, compat_bounce_failsafe)
-         movl  %ds,%eax
- .Lft12: movl  %eax,%fs:0*4(%rsi)        # DS
- UNLIKELY_END(compat_bounce_failsafe)
-+        ASM_CLAC
-         /* Rewrite our stack frame and return to guest-OS mode. */
-         /* IA32 Ref. Vol. 3: TF, VM, RF and NT flags are cleared on trap. */
-         andl  $~(X86_EFLAGS_VM|X86_EFLAGS_RF|\
-@@ -448,6 +450,7 @@ compat_crash_page_fault_4:
-         addl  $4,%esi
- compat_crash_page_fault:
- .Lft14: mov   %edi,%fs
-+        ASM_CLAC
-         movl  %esi,%edi
-         call  show_page_walk
-         jmp   dom_crash_sync_extable
-diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
-index 6e27508..bdd1284 100644
---- a/xen/arch/x86/x86_64/entry.S
-+++ b/xen/arch/x86/x86_64/entry.S
-@@ -462,6 +462,7 @@ domain_crash_page_fault_16:
- domain_crash_page_fault_8:
-         addq  $8,%rsi
- domain_crash_page_fault:
-+        ASM_CLAC
-         movq  %rsi,%rdi
-         call  show_page_walk
- ENTRY(dom_crash_sync_extable)
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Mon, 8 Aug 2016 10:58:12 +0100
-Subject: [PATCH] From 30aba4992b18245c436f16df7326a16c01a51570 Mon Sep 17
- 00:00:00 2001 Subject: x86/32on64: don't allow recursive page tables from L3
-
-L3 entries are special in PAE mode, and hence can't reasonably be used
-for setting up recursive (and hence linear) page table mappings. Since
-abuse is possible when the guest in fact gets run on 4-level page
-tables, this needs to be excluded explicitly.
-
-This is XSA-185.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/arch/x86/mm.c | 4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
-
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index 8dd22b8..64e2de3 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -1051,7 +1051,9 @@ get_page_from_l3e(
- 
-     rc = get_page_and_type_from_pagenr(
-         l3e_get_pfn(l3e), PGT_l2_page_table, d, partial, 1);
--    if ( unlikely(rc == -EINVAL) && get_l3_linear_pagetable(l3e, pfn, d) )
-+    if ( unlikely(rc == -EINVAL) &&
-+         !is_pv_32bit_domain(d) &&
-+         get_l3_linear_pagetable(l3e, pfn, d) )
-         rc = 0;
- 
-     return rc;
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Fri, 22 Jul 2016 16:02:54 +0000
-Subject: [PATCH] From e938be013ba73ff08fa4f1d8670501aacefde7fb Mon Sep 17
- 00:00:00 2001 Subject: [PATCH 1/2] x86/emulate: Correct boundary interactions
- of emulated  instructions
-
-This reverts most of c/s 0640ffb6 "x86emul: fix rIP handling".
-
-Experimentally, in long mode processors will execute an instruction stream
-which crosses the 64bit -1 -> 0 virtual boundary, whether the instruction
-boundary is aligned on the virtual boundary, or is misaligned.
-
-In compatibility mode, Intel processors will execute an instruction stream
-which crosses the 32bit -1 -> 0 virtual boundary, while AMD processors raise a
-segmentation fault.  Xen's segmentation behaviour matches AMD.
-
-For 16bit code, hardware does not ever truncated %ip.  %eip is always used and
-behaves normally as a 32bit register, including in 16bit protected mode
-segments, as well as in Real and Unreal mode.
-
-This is XSA-186
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/x86_emulate/x86_emulate.c | 22 ++++------------------
- 1 file changed, 4 insertions(+), 18 deletions(-)
-
-diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index 8f3ffc2..af90884 100644
---- a/xen/arch/x86/x86_emulate/x86_emulate.c
-+++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -1515,10 +1515,6 @@ x86_emulate(
- #endif
-     }
- 
--    /* Truncate rIP to def_ad_bytes (2 or 4) if necessary. */
--    if ( def_ad_bytes < sizeof(_regs.eip) )
--        _regs.eip &= (1UL << (def_ad_bytes * 8)) - 1;
--
-     /* Prefix bytes. */
-     for ( ; ; )
-     {
-@@ -3845,21 +3841,11 @@ x86_emulate(
- 
-     /* Commit shadow register state. */
-     _regs.eflags &= ~EFLG_RF;
--    switch ( __builtin_expect(def_ad_bytes, sizeof(_regs.eip)) )
--    {
--        uint16_t ip;
- 
--    case 2:
--        ip = _regs.eip;
--        _regs.eip = ctxt->regs->eip;
--        *(uint16_t *)&_regs.eip = ip;
--        break;
--#ifdef __x86_64__
--    case 4:
--        _regs.rip = _regs._eip;
--        break;
--#endif
--    }
-+    /* Zero the upper 32 bits of %rip if not in long mode. */
-+    if ( def_ad_bytes < sizeof(_regs.eip) )
-+        _regs.eip = (uint32_t)_regs.eip;
-+
-     *ctxt->regs = _regs;
- 
-  done:
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Wed, 7 Sep 2016 18:36:37 +0100
-Subject: [PATCH] Subject: x86/shadow: Avoid overflowing sh_ctxt->seg_reg[]
-
-hvm_get_seg_reg() does not perform a range check on its input segment, calls
-hvm_get_segment_register() and writes straight into sh_ctxt->seg_reg[].
-
-x86_seg_none is outside the bounds of sh_ctxt->seg_reg[], and will hit a BUG()
-in {vmx,svm}_get_segment_register().
-
-HVM guests running with shadow paging can end up performing a virtual to
-linear translation with x86_seg_none.  This is used for addresses which are
-already linear.  However, none of this is a legitimate pagetable update, so
-fail the emulation in such a case.
-
-This is XSA-187
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Tim Deegan <tim@xen.org>
----
- xen/arch/x86/mm/shadow/common.c | 11 ++++++++++-
- 1 file changed, 10 insertions(+), 1 deletion(-)
-
-diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
-index 0eeffb4..83f6938 100644
---- a/xen/arch/x86/mm/shadow/common.c
-+++ b/xen/arch/x86/mm/shadow/common.c
-@@ -142,9 +142,18 @@ static int hvm_translate_linear_addr(
-     struct sh_emulate_ctxt *sh_ctxt,
-     unsigned long *paddr)
- {
--    struct segment_register *reg = hvm_get_seg_reg(seg, sh_ctxt);
-+    struct segment_register *reg;
-     int okay;
- 
-+    /*
-+     * Can arrive here with non-user segments.  However, no such cirucmstance
-+     * is part of a legitimate pagetable update, so fail the emulation.
-+     */
-+    if ( !is_x86_user_segment(seg) )
-+        return X86EMUL_UNHANDLEABLE;
-+
-+    reg = hvm_get_seg_reg(seg, sh_ctxt);
-+
-     okay = hvm_virtual_to_linear_addr(
-         seg, reg, offset, bytes, access_type, sh_ctxt->ctxt.addr_size, paddr);
- 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Wed, 7 Sep 2016 18:37:15 +0100
-Subject: [PATCH] Subject: x86/segment: Bounds check accesses to emulation
- ctxt->seg_reg[]
-
-HVM HAP codepaths have space for all segment registers in the seg_reg[]
-cache (with x86_seg_none still risking an array overrun), while the shadow
-codepaths only have space for the user segments.
-
-Range check the input segment of *_get_seg_reg() against the size of the array
-used to cache the results, to avoid overruns in the case that the callers
-don't filter their input suitably.
-
-Subsume the is_x86_user_segment(seg) checks from the shadow code, which were
-an incomplete attempt at range checking, and are now superceeded.  Make
-hvm_get_seg_reg() static, as it is not used outside of shadow/common.c
-
-No functional change, but far easier to reason that no overflow is possible.
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Acked-by: Tim Deegan <tim@xen.org>
-Acked-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/hvm/emulate.c        | 16 ++++++++++++++++
- xen/arch/x86/mm/shadow/common.c   | 28 +++++++++++++---------------
- xen/arch/x86/mm/shadow/private.h  |  2 --
- xen/include/asm-x86/hvm/emulate.h |  1 +
- 4 files changed, 30 insertions(+), 17 deletions(-)
-
-diff --git a/xen/arch/x86/hvm/emulate.c b/xen/arch/x86/hvm/emulate.c
-index 848f46e..602dca1 100644
---- a/xen/arch/x86/hvm/emulate.c
-+++ b/xen/arch/x86/hvm/emulate.c
-@@ -526,6 +526,8 @@ static int hvmemul_virtual_to_linear(
-                            ? 1 : 4096);
- 
-     reg = hvmemul_get_seg_reg(seg, hvmemul_ctxt);
-+    if ( IS_ERR(reg) )
-+        return -PTR_ERR(reg);
- 
-     if ( (hvmemul_ctxt->ctxt.regs->eflags & X86_EFLAGS_DF) && (*reps > 1) )
-     {
-@@ -1360,6 +1362,10 @@ static int hvmemul_read_segment(
-     struct hvm_emulate_ctxt *hvmemul_ctxt =
-         container_of(ctxt, struct hvm_emulate_ctxt, ctxt);
-     struct segment_register *sreg = hvmemul_get_seg_reg(seg, hvmemul_ctxt);
-+
-+    if ( IS_ERR(sreg) )
-+         return -PTR_ERR(sreg);
-+
-     memcpy(reg, sreg, sizeof(struct segment_register));
-     return X86EMUL_OKAY;
- }
-@@ -1373,6 +1379,9 @@ static int hvmemul_write_segment(
-         container_of(ctxt, struct hvm_emulate_ctxt, ctxt);
-     struct segment_register *sreg = hvmemul_get_seg_reg(seg, hvmemul_ctxt);
- 
-+    if ( IS_ERR(sreg) )
-+         return -PTR_ERR(sreg);
-+
-     memcpy(sreg, reg, sizeof(struct segment_register));
-     __set_bit(seg, &hvmemul_ctxt->seg_reg_dirty);
- 
-@@ -1911,10 +1920,17 @@ void hvm_emulate_writeback(
-     }
- }
- 
-+/*
-+ * Callers which pass a known in-range x86_segment can rely on the return
-+ * pointer being valid.  Other callers must explicitly check for errors.
-+ */
- struct segment_register *hvmemul_get_seg_reg(
-     enum x86_segment seg,
-     struct hvm_emulate_ctxt *hvmemul_ctxt)
- {
-+    if ( seg < 0 || seg >= ARRAY_SIZE(hvmemul_ctxt->seg_reg) )
-+        return ERR_PTR(-X86EMUL_UNHANDLEABLE);
-+
-     if ( !__test_and_set_bit(seg, &hvmemul_ctxt->seg_reg_accessed) )
-         hvm_get_segment_register(current, seg, &hvmemul_ctxt->seg_reg[seg]);
-     return &hvmemul_ctxt->seg_reg[seg];
-diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
-index 83f6938..73f1230 100644
---- a/xen/arch/x86/mm/shadow/common.c
-+++ b/xen/arch/x86/mm/shadow/common.c
-@@ -125,10 +125,19 @@ __initcall(shadow_audit_key_init);
- /* x86 emulator support for the shadow code
-  */
- 
--struct segment_register *hvm_get_seg_reg(
-+/*
-+ * Callers which pass a known in-range x86_segment can rely on the return
-+ * pointer being valid.  Other callers must explicitly check for errors.
-+ */
-+static struct segment_register *hvm_get_seg_reg(
-     enum x86_segment seg, struct sh_emulate_ctxt *sh_ctxt)
- {
--    struct segment_register *seg_reg = &sh_ctxt->seg_reg[seg];
-+    struct segment_register *seg_reg;
-+
-+    if ( seg < 0 || seg >= ARRAY_SIZE(sh_ctxt->seg_reg) )
-+        return ERR_PTR(-X86EMUL_UNHANDLEABLE);
-+
-+    seg_reg = &sh_ctxt->seg_reg[seg];
-     if ( !__test_and_set_bit(seg, &sh_ctxt->valid_seg_regs) )
-         hvm_get_segment_register(current, seg, seg_reg);
-     return seg_reg;
-@@ -145,14 +154,9 @@ static int hvm_translate_linear_addr(
-     struct segment_register *reg;
-     int okay;
- 
--    /*
--     * Can arrive here with non-user segments.  However, no such cirucmstance
--     * is part of a legitimate pagetable update, so fail the emulation.
--     */
--    if ( !is_x86_user_segment(seg) )
--        return X86EMUL_UNHANDLEABLE;
--
-     reg = hvm_get_seg_reg(seg, sh_ctxt);
-+    if ( IS_ERR(reg) )
-+        return -PTR_ERR(reg);
- 
-     okay = hvm_virtual_to_linear_addr(
-         seg, reg, offset, bytes, access_type, sh_ctxt->ctxt.addr_size, paddr);
-@@ -254,9 +258,6 @@ hvm_emulate_write(enum x86_segment seg,
-     unsigned long addr;
-     int rc;
- 
--    if ( !is_x86_user_segment(seg) )
--        return X86EMUL_UNHANDLEABLE;
--
-     /* How many emulations could we save if we unshadowed on stack writes? */
-     if ( seg == x86_seg_ss )
-         perfc_incr(shadow_fault_emulate_stack);
-@@ -284,9 +285,6 @@ hvm_emulate_cmpxchg(enum x86_segment seg,
-     unsigned long addr, old[2], new[2];
-     int rc;
- 
--    if ( !is_x86_user_segment(seg) )
--        return X86EMUL_UNHANDLEABLE;
--
-     rc = hvm_translate_linear_addr(
-         seg, offset, bytes, hvm_access_write, sh_ctxt, &addr);
-     if ( rc )
-diff --git a/xen/arch/x86/mm/shadow/private.h b/xen/arch/x86/mm/shadow/private.h
-index 2d146cf..61cc18d 100644
---- a/xen/arch/x86/mm/shadow/private.h
-+++ b/xen/arch/x86/mm/shadow/private.h
-@@ -731,8 +731,6 @@ const struct x86_emulate_ops *shadow_init_emulation(
-     struct sh_emulate_ctxt *sh_ctxt, struct cpu_user_regs *regs);
- void shadow_continue_emulation(
-     struct sh_emulate_ctxt *sh_ctxt, struct cpu_user_regs *regs);
--struct segment_register *hvm_get_seg_reg(
--    enum x86_segment seg, struct sh_emulate_ctxt *sh_ctxt);
- 
- #if (SHADOW_OPTIMIZATIONS & SHOPT_VIRTUAL_TLB)
- /**************************************************************************/
-diff --git a/xen/include/asm-x86/hvm/emulate.h b/xen/include/asm-x86/hvm/emulate.h
-index 142d1b6..3aabcbe 100644
---- a/xen/include/asm-x86/hvm/emulate.h
-+++ b/xen/include/asm-x86/hvm/emulate.h
-@@ -13,6 +13,7 @@
- #define __ASM_X86_HVM_EMULATE_H__
- 
- #include <xen/config.h>
-+#include <xen/err.h>
- #include <asm/hvm/hvm.h>
- #include <asm/x86_emulate.h>
- 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@citrix.com>
-Date: Mon, 3 Oct 2016 18:23:33 +0100
-Subject: [PATCH] x86emul: honor guest CR0.TS and CR0.EM
-
-We must not emulate any instructions accessing respective registers
-when either of these flags is set in the guest view of the register, or
-else we may do so on data not belonging to the guest's current task.
-
-Being architecturally required behavior, the logic gets place in the
-instruction emulator instead of hvmemul_get_fpu(). It should be noted,
-though, that hvmemul_get_fpu() being the only current handler for the
-get_fpu() callback, we don't have an active problem with CR4: Both
-CR4.OSFXSR and CR4.OSXSAVE get handled as necessary by that function.
-
-This is XSA-190.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- tools/tests/x86_emulator/test_x86_emulator.c | 17 +++++++++++++
- xen/arch/x86/hvm/emulate.c                   |  1 -
- xen/arch/x86/x86_emulate/x86_emulate.c       | 38 +++++++++++++++++++++++++---
- 3 files changed, 52 insertions(+), 4 deletions(-)
-
-diff --git a/tools/tests/x86_emulator/test_x86_emulator.c b/tools/tests/x86_emulator/test_x86_emulator.c
-index 1b78bf7..65c4c97 100644
---- a/tools/tests/x86_emulator/test_x86_emulator.c
-+++ b/tools/tests/x86_emulator/test_x86_emulator.c
-@@ -129,6 +129,22 @@ static inline uint64_t xgetbv(uint32_t xcr)
-     (ebx & (1U << 5)) != 0; \
- })
- 
-+static int read_cr(
-+    unsigned int reg,
-+    unsigned long *val,
-+    struct x86_emulate_ctxt *ctxt)
-+{
-+    /* Fake just enough state for the emulator's _get_fpu() to be happy. */
-+    switch ( reg )
-+    {
-+    case 0:
-+        *val = 0x00000001; /* PE */
-+        return X86EMUL_OKAY;
-+    }
-+
-+    return X86EMUL_UNHANDLEABLE;
-+}
-+
- int get_fpu(
-     void (*exception_callback)(void *, struct cpu_user_regs *),
-     void *exception_callback_arg,
-@@ -160,6 +176,7 @@ static struct x86_emulate_ops emulops = {
-     .write      = write,
-     .cmpxchg    = cmpxchg,
-     .cpuid      = cpuid,
-+    .read_cr    = read_cr,
-     .get_fpu    = get_fpu,
- };
- 
-diff --git a/xen/arch/x86/hvm/emulate.c b/xen/arch/x86/hvm/emulate.c
-index 602dca1..806fa0f 100644
---- a/xen/arch/x86/hvm/emulate.c
-+++ b/xen/arch/x86/hvm/emulate.c
-@@ -1564,7 +1564,6 @@ static int hvmemul_get_fpu(
-         break;
-     case X86EMUL_FPU_xmm:
-         if ( !cpu_has_xmm ||
--             (curr->arch.hvm_vcpu.guest_cr[0] & X86_CR0_EM) ||
-              !(curr->arch.hvm_vcpu.guest_cr[4] & X86_CR4_OSFXSR) )
-             return X86EMUL_UNHANDLEABLE;
-         break;
-diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index af90884..3caf114 100644
---- a/xen/arch/x86/x86_emulate/x86_emulate.c
-+++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -366,6 +366,8 @@ typedef union {
- 
- /* Control register flags. */
- #define CR0_PE    (1<<0)
-+#define CR0_EM    (1<<2)
-+#define CR0_TS    (1<<3)
- #define CR4_TSD   (1<<2)
- 
- /* EFLAGS bit definitions. */
-@@ -393,6 +395,7 @@ typedef union {
- #define EXC_OF  4
- #define EXC_BR  5
- #define EXC_UD  6
-+#define EXC_NM  7
- #define EXC_TS 10
- #define EXC_NP 11
- #define EXC_SS 12
-@@ -674,10 +677,39 @@ static void fpu_handle_exception(void *_fic, struct cpu_user_regs *regs)
-     regs->eip += fic->insn_bytes;
- }
- 
-+static int _get_fpu(
-+    enum x86_emulate_fpu_type type,
-+    struct fpu_insn_ctxt *fic,
-+    struct x86_emulate_ctxt *ctxt,
-+    const struct x86_emulate_ops *ops)
-+{
-+    int rc;
-+
-+    fic->exn_raised = 0;
-+
-+    fail_if(!ops->get_fpu);
-+    rc = ops->get_fpu(fpu_handle_exception, fic, type, ctxt);
-+
-+    if ( rc == X86EMUL_OKAY )
-+    {
-+        unsigned long cr0;
-+
-+        fail_if(!ops->read_cr);
-+        rc = ops->read_cr(0, &cr0, ctxt);
-+        if ( rc != X86EMUL_OKAY )
-+            return rc;
-+        generate_exception_if((cr0 & CR0_TS) ||
-+                              ((type <= X86EMUL_FPU_xmm) && (cr0 & CR0_EM)),
-+                              EXC_NM, -1);
-+    }
-+
-+ done:
-+    return rc;
-+}
-+
- #define get_fpu(_type, _fic)                                    \
--do{ (_fic)->exn_raised = 0;                                     \
--    fail_if(ops->get_fpu == NULL);                              \
--    rc = ops->get_fpu(fpu_handle_exception, _fic, _type, ctxt); \
-+do {                                                            \
-+    rc = _get_fpu(_type, _fic, ctxt, ops);                      \
-     if ( rc ) goto done;                                        \
- } while (0)
- #define _put_fpu()                                              \
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Tue, 22 Nov 2016 11:29:12 +0000
-Subject: [PATCH] x86/hvm: Fix the handling of non-present segments
-
-In 32bit, the data segments may be NULL to indicate that the segment is
-ineligible for use.  In both 32bit and 64bit, the LDT selector may be NULL to
-indicate that the entire LDT is ineligible for use.  However, nothing in Xen
-actually checks for this condition when performing other segmentation
-checks.  (Note however that limit and writeability checks are correctly
-performed).
-
-Neither Intel nor AMD specify the exact behaviour of loading a NULL segment.
-Experimentally, AMD zeroes all attributes but leaves the base and limit
-unmodified.  Intel zeroes the base, sets the limit to 0xfffffff and resets the
-attributes to just .G and .D/B.
-
-The use of the segment information in the VMCB/VMCS is equivalent to a native
-pipeline interacting with the segment cache.  The present bit can therefore
-have a subtly different meaning, and it is now cooked to uniformly indicate
-whether the segment is usable or not.
-
-GDTR and IDTR don't have access rights like the other segments, but for
-consistency, they are treated as being present so no special casing is needed
-elsewhere in the segmentation logic.
-
-AMD hardware does not consider the present bit for %cs and %tr, and will
-function as if they were present.  They are therefore unconditionally set to
-present when reading information from the VMCB, to maintain the new meaning of
-usability.
-
-Intel hardware has a separate unusable bit in the VMCS segment attributes.
-This bit is inverted and stored in the present field, so the hvm code can work
-with architecturally-common state.
-
-This is XSA-191.
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/hvm/hvm.c                 |  8 ++++++++
- xen/arch/x86/hvm/svm/svm.c             |  4 ++++
- xen/arch/x86/hvm/vmx/vmx.c             | 20 +++++++++++---------
- xen/arch/x86/x86_emulate/x86_emulate.c |  4 ++++
- 4 files changed, 27 insertions(+), 9 deletions(-)
-
-diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
-index a24f30f..5339d91 100644
---- a/xen/arch/x86/hvm/hvm.c
-+++ b/xen/arch/x86/hvm/hvm.c
-@@ -3642,6 +3642,10 @@ int hvm_virtual_to_linear_addr(
-          * COMPATIBILITY MODE: Apply segment checks and add base.
-          */
- 
-+        /* Segment not valid for use (cooked meaning of .p)? */
-+        if ( !reg->attr.fields.p )
-+            return 0;
-+
-         switch ( access_type )
-         {
-         case hvm_access_read:
-@@ -3847,6 +3851,10 @@ static int hvm_load_segment_selector(
-     hvm_get_segment_register(
-         v, (sel & 4) ? x86_seg_ldtr : x86_seg_gdtr, &desctab);
- 
-+    /* Segment not valid for use (cooked meaning of .p)? */
-+    if ( !desctab.attr.fields.p )
-+        goto fail;
-+
-     /* Check against descriptor table limit. */
-     if ( ((sel & 0xfff8) + 7) > desctab.limit )
-         goto fail;
-diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
-index 74fb733..b34ccc2 100644
---- a/xen/arch/x86/hvm/svm/svm.c
-+++ b/xen/arch/x86/hvm/svm/svm.c
-@@ -620,6 +620,7 @@ static void svm_get_segment_register(struct vcpu *v, enum x86_segment seg,
-     {
-     case x86_seg_cs:
-         memcpy(reg, &vmcb->cs, sizeof(*reg));
-+        reg->attr.fields.p = 1;
-         reg->attr.fields.g = reg->limit > 0xFFFFF;
-         break;
-     case x86_seg_ds:
-@@ -653,13 +654,16 @@ static void svm_get_segment_register(struct vcpu *v, enum x86_segment seg,
-     case x86_seg_tr:
-         svm_sync_vmcb(v);
-         memcpy(reg, &vmcb->tr, sizeof(*reg));
-+        reg->attr.fields.p = 1;
-         reg->attr.fields.type |= 0x2;
-         break;
-     case x86_seg_gdtr:
-         memcpy(reg, &vmcb->gdtr, sizeof(*reg));
-+        reg->attr.bytes = 0x80;
-         break;
-     case x86_seg_idtr:
-         memcpy(reg, &vmcb->idtr, sizeof(*reg));
-+        reg->attr.bytes = 0x80;
-         break;
-     case x86_seg_ldtr:
-         svm_sync_vmcb(v);
-diff --git a/xen/arch/x86/hvm/vmx/vmx.c b/xen/arch/x86/hvm/vmx/vmx.c
-index df8198f..1884fae 100644
---- a/xen/arch/x86/hvm/vmx/vmx.c
-+++ b/xen/arch/x86/hvm/vmx/vmx.c
-@@ -865,10 +865,12 @@ void vmx_get_segment_register(struct vcpu *v, enum x86_segment seg,
-     reg->sel = sel;
-     reg->limit = limit;
- 
--    reg->attr.bytes = (attr & 0xff) | ((attr >> 4) & 0xf00);
--    /* Unusable flag is folded into Present flag. */
--    if ( attr & (1u<<16) )
--        reg->attr.fields.p = 0;
-+    /*
-+     * Fold VT-x representation into Xen's representation.  The Present bit is
-+     * unconditionally set to the inverse of unusable.
-+     */
-+    reg->attr.bytes =
-+        (!(attr & (1u << 16)) << 7) | (attr & 0x7f) | ((attr >> 4) & 0xf00);
- 
-     /* Adjust for virtual 8086 mode */
-     if ( v->arch.hvm_vmx.vmx_realmode && seg <= x86_seg_tr 
-@@ -948,11 +950,11 @@ static void vmx_set_segment_register(struct vcpu *v, enum x86_segment seg,
-         }
-     }
- 
--    attr = ((attr & 0xf00) << 4) | (attr & 0xff);
--
--    /* Not-present must mean unusable. */
--    if ( !reg->attr.fields.p )
--        attr |= (1u << 16);
-+    /*
-+     * Unfold Xen representation into VT-x representation.  The unusable bit
-+     * is unconditionally set to the inverse of present.
-+     */
-+    attr = (!(attr & (1u << 7)) << 16) | ((attr & 0xf00) << 4) | (attr & 0xff);
- 
-     /* VMX has strict consistency requirement for flag G. */
-     attr |= !!(limit >> 20) << 15;
-diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index 3caf114..55ed401 100644
---- a/xen/arch/x86/x86_emulate/x86_emulate.c
-+++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -1189,6 +1189,10 @@ protmode_load_seg(
-                                  &desctab, ctxt)) )
-         return rc;
- 
-+    /* Segment not valid for use (cooked meaning of .p)? */
-+    if ( !desctab.attr.fields.p )
-+        goto raise_exn;
-+
-     /* Check against descriptor table limit. */
-     if ( ((sel & 0xfff8) + 7) > desctab.limit )
-         goto raise_exn;
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Tue, 22 Nov 2016 11:30:03 +0000
-Subject: [PATCH] x86/HVM: don't load LDTR with VM86 mode attrs during task
- switch
-
-Just like TR, LDTR is purely a protected mode facility and hence needs
-to be loaded accordingly. Also move its loading to where it
-architecurally belongs.
-
-This is XSA-192.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Tested-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/arch/x86/hvm/hvm.c | 20 ++++++++++----------
- 1 file changed, 10 insertions(+), 10 deletions(-)
-
-diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
-index 5339d91..54f9848 100644
---- a/xen/arch/x86/hvm/hvm.c
-+++ b/xen/arch/x86/hvm/hvm.c
-@@ -3813,17 +3813,16 @@ static void hvm_unmap_entry(void *p)
- }
- 
- static int hvm_load_segment_selector(
--    enum x86_segment seg, uint16_t sel)
-+    enum x86_segment seg, uint16_t sel, unsigned int eflags)
- {
-     struct segment_register desctab, cs, segr;
-     struct desc_struct *pdesc, desc;
-     u8 dpl, rpl, cpl;
-     bool_t writable;
-     int fault_type = TRAP_invalid_tss;
--    struct cpu_user_regs *regs = guest_cpu_user_regs();
-     struct vcpu *v = current;
- 
--    if ( regs->eflags & X86_EFLAGS_VM )
-+    if ( eflags & X86_EFLAGS_VM )
-     {
-         segr.sel = sel;
-         segr.base = (uint32_t)sel << 4;
-@@ -4073,6 +4072,8 @@ void hvm_task_switch(
-     if ( rc != HVMCOPY_okay )
-         goto out;
- 
-+    if ( hvm_load_segment_selector(x86_seg_ldtr, tss.ldt, 0) )
-+        goto out;
- 
-     if ( hvm_set_cr3(tss.cr3, 1) )
-         goto out;
-@@ -4095,13 +4096,12 @@ void hvm_task_switch(
-     }
- 
-     exn_raised = 0;
--    if ( hvm_load_segment_selector(x86_seg_ldtr, tss.ldt) ||
--         hvm_load_segment_selector(x86_seg_es, tss.es) ||
--         hvm_load_segment_selector(x86_seg_cs, tss.cs) ||
--         hvm_load_segment_selector(x86_seg_ss, tss.ss) ||
--         hvm_load_segment_selector(x86_seg_ds, tss.ds) ||
--         hvm_load_segment_selector(x86_seg_fs, tss.fs) ||
--         hvm_load_segment_selector(x86_seg_gs, tss.gs) )
-+    if ( hvm_load_segment_selector(x86_seg_es, tss.es, tss.eflags) ||
-+         hvm_load_segment_selector(x86_seg_cs, tss.cs, tss.eflags) ||
-+         hvm_load_segment_selector(x86_seg_ss, tss.ss, tss.eflags) ||
-+         hvm_load_segment_selector(x86_seg_ds, tss.ds, tss.eflags) ||
-+         hvm_load_segment_selector(x86_seg_fs, tss.fs, tss.eflags) ||
-+         hvm_load_segment_selector(x86_seg_gs, tss.gs, tss.eflags) )
-         exn_raised = 1;
- 
-     rc = hvm_copy_to_guest_virt(
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Tue, 22 Nov 2016 11:30:22 +0000
-Subject: [PATCH] x86/PV: writes of %fs and %gs base MSRs require canonical
- addresses
-
-Commit c42494acb2 ("x86: fix FS/GS base handling when using the
-fsgsbase feature") replaced the use of wrmsr_safe() on these paths
-without recognizing that wr{f,g}sbase() use just wrmsrl() and that the
-WR{F,G}SBASE instructions also raise #GP for non-canonical input.
-
-Similarly arch_set_info_guest() needs to prevent non-canonical
-addresses from getting stored into state later to be loaded by context
-switch code. For consistency also check stack pointers and LDT base.
-DR0..3, otoh, already get properly checked in set_debugreg() (albeit
-we discard the error there).
-
-The SHADOW_GS_BASE check isn't strictly necessary, but I think we
-better avoid trying the WRMSR if we know it's going to fail.
-
-This is XSA-193.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/arch/x86/domain.c | 8 +++++++-
- xen/arch/x86/traps.c  | 9 ++++++---
- 2 files changed, 13 insertions(+), 4 deletions(-)
-
-diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
-index e166c1b..fa2aead 100644
---- a/xen/arch/x86/domain.c
-+++ b/xen/arch/x86/domain.c
-@@ -796,7 +796,13 @@ int arch_set_info_guest(
-     {
-         if ( !compat )
-         {
--            if ( !is_canonical_address(c.nat->user_regs.eip) ||
-+            if ( !is_canonical_address(c.nat->user_regs.rip) ||
-+                 !is_canonical_address(c.nat->user_regs.rsp) ||
-+                 !is_canonical_address(c.nat->kernel_sp) ||
-+                 (c.nat->ldt_ents && !is_canonical_address(c.nat->ldt_base)) ||
-+                 !is_canonical_address(c.nat->fs_base) ||
-+                 !is_canonical_address(c.nat->gs_base_kernel) ||
-+                 !is_canonical_address(c.nat->gs_base_user) ||
-                  !is_canonical_address(c.nat->event_callback_eip) ||
-                  !is_canonical_address(c.nat->syscall_callback_eip) ||
-                  !is_canonical_address(c.nat->failsafe_callback_eip) )
-diff --git a/xen/arch/x86/traps.c b/xen/arch/x86/traps.c
-index c6231b5..b634236 100644
---- a/xen/arch/x86/traps.c
-+++ b/xen/arch/x86/traps.c
-@@ -2515,19 +2515,22 @@ static int emulate_privileged_op(struct cpu_user_regs *regs)
-         switch ( regs->_ecx )
-         {
-         case MSR_FS_BASE:
--            if ( is_pv_32bit_domain(currd) )
-+            if ( is_pv_32bit_domain(currd) ||
-+                 !is_canonical_address(msr_content) )
-                 goto fail;
-             wrfsbase(msr_content);
-             v->arch.pv_vcpu.fs_base = msr_content;
-             break;
-         case MSR_GS_BASE:
--            if ( is_pv_32bit_domain(currd) )
-+            if ( is_pv_32bit_domain(currd) ||
-+                 !is_canonical_address(msr_content) )
-                 goto fail;
-             wrgsbase(msr_content);
-             v->arch.pv_vcpu.gs_base_kernel = msr_content;
-             break;
-         case MSR_SHADOW_GS_BASE:
--            if ( is_pv_32bit_domain(currd) )
-+            if ( is_pv_32bit_domain(currd) ||
-+                 !is_canonical_address(msr_content) )
-                 goto fail;
-             if ( wrmsr_safe(MSR_SHADOW_GS_BASE, msr_content) )
-                 goto fail;
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Tue, 22 Nov 2016 11:30:49 +0000
-Subject: [PATCH] x86emul: fix huge bit offset handling
-
-We must never chop off the high 32 bits.
-
-This is XSA-195.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/arch/x86/x86_emulate/x86_emulate.c | 13 ++++++++++---
- 1 file changed, 10 insertions(+), 3 deletions(-)
-
-diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index 55ed401..e581fa6 100644
---- a/xen/arch/x86/x86_emulate/x86_emulate.c
-+++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -1973,6 +1973,12 @@ x86_emulate(
-         else
-         {
-             /*
-+             * Instructions such as bt can reference an arbitrary offset from
-+             * their memory operand, but the instruction doing the actual
-+             * emulation needs the appropriate op_bytes read from memory.
-+             * Adjust both the source register and memory operand to make an
-+             * equivalent instruction.
-+             *
-              * EA       += BitOffset DIV op_bytes*8
-              * BitOffset = BitOffset MOD op_bytes*8
-              * DIV truncates towards negative infinity.
-@@ -1984,14 +1990,15 @@ x86_emulate(
-                 src.val = (int32_t)src.val;
-             if ( (long)src.val < 0 )
-             {
--                unsigned long byte_offset;
--                byte_offset = op_bytes + (((-src.val-1) >> 3) & ~(op_bytes-1));
-+                unsigned long byte_offset =
-+                    op_bytes + (((-src.val - 1) >> 3) & ~(op_bytes - 1L));
-+
-                 ea.mem.off -= byte_offset;
-                 src.val = (byte_offset << 3) + src.val;
-             }
-             else
-             {
--                ea.mem.off += (src.val >> 3) & ~(op_bytes - 1);
-+                ea.mem.off += (src.val >> 3) & ~(op_bytes - 1L);
-                 src.val &= (op_bytes << 3) - 1;
-             }
-         }
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Tue, 22 Nov 2016 11:31:32 +0000
-Subject: [PATCH] x86/emul: Correct the IDT entry calculation in inject_swint()
-
-The logic, as introduced in c/s 36ebf14ebe "x86/emulate: support for emulating
-software event injection" is buggy.  The size of an IDT entry depends on long
-mode being active, not the width of the code segment currently in use.
-
-In particular, this means that a compatibility code segment which hits
-emulation for software event injection will end up using an incorrect offset
-in the IDT for DPL/Presence checking.  In practice, this only occurs on old
-AMD hardware lacking NRip support; all newer AMD hardware, and all Intel
-hardware bypass this path in the emulator.
-
-While here, fix a minor issue with reading the IDT entry.  The return value
-from ops->read() wasn't checked, but in reality the only failure case is if a
-pagefault occurs.  This is not a realistic problem as the kernel will almost
-certainly crash with a double fault if this setup actually occured.
-
-This is part of XSA-196.
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/x86_emulate/x86_emulate.c | 15 +++++++++++----
- 1 file changed, 11 insertions(+), 4 deletions(-)
-
-diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index e581fa6..0167a55 100644
---- a/xen/arch/x86/x86_emulate/x86_emulate.c
-+++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -1438,10 +1438,16 @@ static int inject_swint(enum x86_swint_type type,
-     {
-         if ( !in_realmode(ctxt, ops) )
-         {
--            unsigned int idte_size = (ctxt->addr_size == 64) ? 16 : 8;
--            unsigned int idte_offset = vector * idte_size;
-+            unsigned int idte_size, idte_offset;
-             struct segment_register idtr;
-             uint32_t idte_ctl;
-+            int lm = in_longmode(ctxt, ops);
-+
-+            if ( lm < 0 )
-+                return X86EMUL_UNHANDLEABLE;
-+
-+            idte_size = lm ? 16 : 8;
-+            idte_offset = vector * idte_size;
- 
-             /* icebp sets the External Event bit despite being an instruction. */
-             error_code = (vector << 3) | ECODE_IDT |
-@@ -1469,8 +1475,9 @@ static int inject_swint(enum x86_swint_type type,
-              * Should strictly speaking read all 8/16 bytes of an entry,
-              * but we currently only care about the dpl and present bits.
-              */
--            ops->read(x86_seg_none, idtr.base + idte_offset + 4,
--                      &idte_ctl, sizeof(idte_ctl), ctxt);
-+            if ( (rc = ops->read(x86_seg_none, idtr.base + idte_offset + 4,
-+                                 &idte_ctl, sizeof(idte_ctl), ctxt)) )
-+                goto done;
- 
-             /* Is this entry present? */
-             if ( !(idte_ctl & (1u << 15)) )
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Tue, 22 Nov 2016 11:31:32 +0000
-Subject: [PATCH] x86/svm: Fix injection of software interrupts
-
-The non-NextRip logic in c/s 36ebf14eb "x86/emulate: support for emulating
-software event injection" was based on an older version of the AMD software
-manual.  The manual was later corrected, following findings from that series.
-
-I took the original wording of "not supported without NextRIP" to mean that
-X86_EVENTTYPE_SW_INTERRUPT was not eligible for use.  It turns out that this
-is not the case, and the new wording is clearer on the matter.
-
-Despite testing the original patch series on non-NRip hardware, the
-swint-emulation XTF test case focuses on the debug vectors; it never ended up
-executing an `int $n` instruction for a vector which wasn't also an exception.
-
-During a vmentry, the use of X86_EVENTTYPE_HW_EXCEPTION comes with a vector
-check to ensure that it is only used with exception vectors.  Xen's use of
-X86_EVENTTYPE_HW_EXCEPTION for `int $n` injection has always been buggy on AMD
-hardware.
-
-Fix this by always using X86_EVENTTYPE_SW_INTERRUPT.
-
-Print and decode the eventinj information in svm_vmcb_dump(), as it has
-several invalid combinations which cause vmentry failures.
-
-This is part of XSA-196.
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/hvm/svm/svm.c      | 13 +++++--------
- xen/arch/x86/hvm/svm/svmdebug.c |  4 ++++
- 2 files changed, 9 insertions(+), 8 deletions(-)
-
-diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
-index b34ccc2..6d1d644 100644
---- a/xen/arch/x86/hvm/svm/svm.c
-+++ b/xen/arch/x86/hvm/svm/svm.c
-@@ -1229,17 +1229,14 @@ static void svm_inject_trap(struct hvm_trap *trap)
-     {
-     case X86_EVENTTYPE_SW_INTERRUPT: /* int $n */
-         /*
--         * Injection type 4 (software interrupt) is only supported with
--         * NextRIP support.  Without NextRIP, the emulator will have performed
--         * DPL and presence checks for us.
-+         * Software interrupts (type 4) cannot be properly injected if the
-+         * processor doesn't support NextRIP.  Without NextRIP, the emulator
-+         * will have performed DPL and presence checks for us, and will have
-+         * moved eip forward if appropriate.
-          */
-         if ( cpu_has_svm_nrips )
--        {
-             vmcb->nextrip = regs->eip + _trap.insn_len;
--            event.fields.type = X86_EVENTTYPE_SW_INTERRUPT;
--        }
--        else
--            event.fields.type = X86_EVENTTYPE_HW_EXCEPTION;
-+        event.fields.type = X86_EVENTTYPE_SW_INTERRUPT;
-         break;
- 
-     case X86_EVENTTYPE_PRI_SW_EXCEPTION: /* icebp */
-diff --git a/xen/arch/x86/hvm/svm/svmdebug.c b/xen/arch/x86/hvm/svm/svmdebug.c
-index ded5d19..f93dfed 100644
---- a/xen/arch/x86/hvm/svm/svmdebug.c
-+++ b/xen/arch/x86/hvm/svm/svmdebug.c
-@@ -48,6 +48,10 @@ void svm_vmcb_dump(const char *from, struct vmcb_struct *vmcb)
-            vmcb->tlb_control,
-            (unsigned long long)vmcb->_vintr.bytes,
-            (unsigned long long)vmcb->interrupt_shadow);
-+    printk("eventinj %016"PRIx64", valid? %d, ec? %d, type %u, vector %#x\n",
-+           vmcb->eventinj.bytes, vmcb->eventinj.fields.v,
-+           vmcb->eventinj.fields.ev, vmcb->eventinj.fields.type,
-+           vmcb->eventinj.fields.vector);
-     printk("exitcode = %#Lx exitintinfo = %#Lx\n",
-            (unsigned long long)vmcb->exitcode,
-            (unsigned long long)vmcb->exitintinfo.bytes);
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Thu, 3 Nov 2016 16:37:40 +0000
-Subject: [PATCH] pygrub: Properly quote results, when returning them to the
- caller:
-
-* When the caller wants sexpr output, use `repr()'
-  This is what Xend expects.
-
-  The returned S-expressions are now escaped and quoted by Python,
-  generally using '...'.  Previously kernel and ramdisk were unquoted
-  and args was quoted with "..." but without proper escaping.  This
-  change may break toolstacks which do not properly dequote the
-  returned S-expressions.
-
-* When the caller wants "simple" output, crash if the delimiter is
-  contained in the returned value.
-
-  With --output-format=simple it does not seem like this could ever
-  happen, because the bootloader config parsers all take line-based
-  input from the various bootloader config files.
-
-  With --output-format=simple0, this can happen if the bootloader
-  config file contains nul bytes.
-
-This is XSA-198.
-
-Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
-Tested-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- tools/pygrub/src/pygrub | 9 ++++++---
- 1 file changed, 6 insertions(+), 3 deletions(-)
-
-diff --git a/tools/pygrub/src/pygrub b/tools/pygrub/src/pygrub
-index 40f9584..dd0c8f7 100755
---- a/tools/pygrub/src/pygrub
-+++ b/tools/pygrub/src/pygrub
-@@ -721,14 +721,17 @@ def sniff_netware(fs, cfg):
-     return cfg
- 
- def format_sxp(kernel, ramdisk, args):
--    s = "linux (kernel %s)" % kernel
-+    s = "linux (kernel %s)" % repr(kernel)
-     if ramdisk:
--        s += "(ramdisk %s)" % ramdisk
-+        s += "(ramdisk %s)" % repr(ramdisk)
-     if args:
--        s += "(args \"%s\")" % args
-+        s += "(args %s)" % repr(args)
-     return s
-                 
- def format_simple(kernel, ramdisk, args, sep):
-+    for check in (kernel, ramdisk, args):
-+        if check is not None and sep in check:
-+            raise RuntimeError, "simple format cannot represent delimiter-containing value"
-     s = ("kernel %s" % kernel) + sep
-     if ramdisk:
-         s += ("ramdisk %s" % ramdisk) + sep
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Fri, 23 Dec 2016 10:08:13 -0600
-Subject: [PATCH] x86emul: CMPXCHG8B ignores operand size prefix
-
-Otherwise besides mis-handling the instruction, the comparison failure
-case would result in uninitialized stack data being handed back to the
-guest in rDX:rAX (32 bits leaked for 32-bit guests, 96 bits for 64-bit
-ones).
-
-This is XSA-200.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
----
- tools/tests/x86_emulator/test_x86_emulator.c | 18 ++++++++++++++++++
- xen/arch/x86/x86_emulate/x86_emulate.c       |  6 +++++-
- 2 files changed, 23 insertions(+), 1 deletion(-)
-
-diff --git a/tools/tests/x86_emulator/test_x86_emulator.c b/tools/tests/x86_emulator/test_x86_emulator.c
-index 65c4c97..c63ac42 100644
---- a/tools/tests/x86_emulator/test_x86_emulator.c
-+++ b/tools/tests/x86_emulator/test_x86_emulator.c
-@@ -429,6 +429,24 @@ int main(int argc, char **argv)
-         goto fail;
-     printf("okay\n");
- 
-+    printf("%-40s", "Testing cmpxchg8b (%edi) [opsize]...");
-+    instr[0] = 0x66; instr[1] = 0x0f; instr[2] = 0xc7; instr[3] = 0x0f;
-+    res[0]      = 0x12345678;
-+    res[1]      = 0x87654321;
-+    regs.eflags = 0x200;
-+    regs.eip    = (unsigned long)&instr[0];
-+    regs.edi    = (unsigned long)res;
-+    rc = x86_emulate(&ctxt, &emulops);
-+    if ( (rc != X86EMUL_OKAY) ||
-+         (res[0] != 0x12345678) ||
-+         (res[1] != 0x87654321) ||
-+         (regs.eax != 0x12345678) ||
-+         (regs.edx != 0x87654321) ||
-+         ((regs.eflags&0x240) != 0x200) ||
-+         (regs.eip != (unsigned long)&instr[4]) )
-+        goto fail;
-+    printf("okay\n");
-+
-     printf("%-40s", "Testing movsxbd (%%eax),%%ecx...");
-     instr[0] = 0x0f; instr[1] = 0xbe; instr[2] = 0x08;
-     regs.eflags = 0x200;
-diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index 0167a55..65798db 100644
---- a/xen/arch/x86/x86_emulate/x86_emulate.c
-+++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -4711,8 +4711,12 @@ x86_emulate(
-         generate_exception_if((modrm_reg & 7) != 1, EXC_UD, -1);
-         generate_exception_if(ea.type != OP_MEM, EXC_UD, -1);
-         if ( op_bytes == 8 )
-+        {
-             vcpu_must_have_cx16();
--        op_bytes *= 2;
-+            op_bytes = 16;
-+        }
-+        else
-+            op_bytes = 8;
- 
-         /* Get actual old value. */
-         if ( (rc = ops->read(ea.mem.seg, ea.mem.off, old, op_bytes,
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Wei Chen <Wei.Chen@arm.com>
-Date: Fri, 23 Dec 2016 10:09:51 -0600
-Subject: [PATCH] arm64: handle guest-generated EL1 asynchronous abort
-
-In current code, when the hypervisor receives an asynchronous abort
-from a guest, the hypervisor will do panic, the host will be down.
-We have to prevent such security issue, so, in this patch we crash
-the guest, when the hypervisor receives an asynchronous abort from
-the guest.
-
-This is CVE-2016-9815, part of XSA-201.
-
-Signed-off-by: Wei Chen <Wei.Chen@arm.com>
-Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
-Reviewed-by: Steve Capper <steve.capper@arm.com>
-Reviewed-by: Julien Grall <Julien.Grall@arm.com>
----
- xen/arch/arm/arm64/entry.S | 18 ++++++++++++------
- xen/arch/arm/traps.c       | 15 +++++++++++++++
- 2 files changed, 27 insertions(+), 6 deletions(-)
-
-diff --git a/xen/arch/arm/arm64/entry.S b/xen/arch/arm/arm64/entry.S
-index 9cda8f1..0ed0073 100644
---- a/xen/arch/arm/arm64/entry.S
-+++ b/xen/arch/arm/arm64/entry.S
-@@ -204,9 +204,12 @@ guest_fiq_invalid:
-         entry   hyp=0, compat=0
-         invalid BAD_FIQ
- 
--guest_error_invalid:
-+guest_error:
-         entry   hyp=0, compat=0
--        invalid BAD_ERROR
-+        msr     daifclr, #2
-+        mov     x0, sp
-+        bl      do_trap_guest_error
-+        exit    hyp=0, compat=0
- 
- guest_sync_compat:
-         entry   hyp=0, compat=1
-@@ -225,9 +228,12 @@ guest_fiq_invalid_compat:
-         entry   hyp=0, compat=1
-         invalid BAD_FIQ
- 
--guest_error_invalid_compat:
-+guest_error_compat:
-         entry   hyp=0, compat=1
--        invalid BAD_ERROR
-+        msr     daifclr, #2
-+        mov     x0, sp
-+        bl      do_trap_guest_error
-+        exit    hyp=0, compat=1
- 
- ENTRY(return_to_new_vcpu32)
-         exit    hyp=0, compat=1
-@@ -286,12 +292,12 @@ ENTRY(hyp_traps_vector)
-         ventry  guest_sync                      // Synchronous 64-bit EL0/EL1
-         ventry  guest_irq                       // IRQ 64-bit EL0/EL1
-         ventry  guest_fiq_invalid               // FIQ 64-bit EL0/EL1
--        ventry  guest_error_invalid             // Error 64-bit EL0/EL1
-+        ventry  guest_error                     // Error 64-bit EL0/EL1
- 
-         ventry  guest_sync_compat               // Synchronous 32-bit EL0/EL1
-         ventry  guest_irq_compat                // IRQ 32-bit EL0/EL1
-         ventry  guest_fiq_invalid_compat        // FIQ 32-bit EL0/EL1
--        ventry  guest_error_invalid_compat      // Error 32-bit EL0/EL1
-+        ventry  guest_error_compat              // Error 32-bit EL0/EL1
- 
- /*
-  * struct vcpu *__context_switch(struct vcpu *prev, struct vcpu *next)
-diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
-index c8b27ba..083193f 100644
---- a/xen/arch/arm/traps.c
-+++ b/xen/arch/arm/traps.c
-@@ -2595,6 +2595,21 @@ asmlinkage void do_trap_hypervisor(struct cpu_user_regs *regs)
-     }
- }
- 
-+asmlinkage void do_trap_guest_error(struct cpu_user_regs *regs)
-+{
-+    enter_hypervisor_head(regs);
-+
-+    /*
-+     * Currently, to ensure hypervisor safety, when we received a
-+     * guest-generated vSerror/vAbort, we just crash the guest to protect
-+     * the hypervisor. In future we can better handle this by injecting
-+     * a vSerror/vAbort to the guest.
-+     */
-+    gdprintk(XENLOG_WARNING, "Guest(Dom-%u) will be crashed by vSError\n",
-+             current->domain->domain_id);
-+    domain_crash_synchronous();
-+}
-+
- asmlinkage void do_trap_irq(struct cpu_user_regs *regs)
- {
-     enter_hypervisor_head(regs);
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Wei Chen <Wei.Chen@arm.com>
-Date: Fri, 23 Dec 2016 10:09:59 -0600
-Subject: [PATCH] arm64: handle async aborts delivered while at EL2
-
-If EL1 generates an asynchronous abort and then traps into EL2
-(by HVC or IRQ) before the abort has been delivered, the hypervisor
-could not catch it, because the PSTATE.A bit is masked all the time
-in hypervisor. So this asynchronous abort may be slipped to next
-running guest with PSTATE.A bit unmasked.
-
-In order to avoid this, it is necessary to take the abort at EL2, by
-clearing the PSTATE.A bit. In this patch, we unmask the PSTATE.A bit
-to open a window to catch guest-generated asynchronous abort in all
-EL1 -> EL2 swich paths. If we catched such asynchronous abort in
-checking window, the hyp_error exception will be triggered and the
-abort source guest will be crashed.
-
-This is CVE-2016-9816, part of XSA-201.
-
-Signed-off-by: Wei Chen <Wei.Chen@arm.com>
-Reviewed-by: Julien Grall <julien.grall@arm.com>
----
- xen/arch/arm/arm64/entry.S | 123 ++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 122 insertions(+), 1 deletion(-)
-
-diff --git a/xen/arch/arm/arm64/entry.S b/xen/arch/arm/arm64/entry.S
-index 0ed0073..1840659 100644
---- a/xen/arch/arm/arm64/entry.S
-+++ b/xen/arch/arm/arm64/entry.S
-@@ -173,6 +173,43 @@ hyp_error_invalid:
-         entry   hyp=1
-         invalid BAD_ERROR
- 
-+hyp_error:
-+        /*
-+         * Only two possibilities:
-+         * 1) Either we come from the exit path, having just unmasked
-+         *    PSTATE.A: change the return code to an EL2 fault, and
-+         *    carry on, as we're already in a sane state to handle it.
-+         * 2) Or we come from anywhere else, and that's a bug: we panic.
-+         */
-+        entry   hyp=1
-+        msr     daifclr, #2
-+
-+        /*
-+         * The ELR_EL2 may be modified by an interrupt, so we have to use the
-+         * saved value in cpu_user_regs to check whether we come from 1) or
-+         * not.
-+         */
-+        ldr     x0, [sp, #UREGS_PC]
-+        adr     x1, abort_guest_exit_start
-+        cmp     x0, x1
-+        adr     x1, abort_guest_exit_end
-+        ccmp    x0, x1, #4, ne
-+        mov     x0, sp
-+        mov     x1, #BAD_ERROR
-+
-+        /*
-+         * Not equal, the exception come from 2). It's a bug, we have to
-+         * panic the hypervisor.
-+         */
-+        b.ne    do_bad_mode
-+
-+        /*
-+         * Otherwise, the exception come from 1). It happened because of
-+         * the guest. Crash this guest.
-+         */
-+        bl      do_trap_guest_error
-+        exit    hyp=1
-+
- /* Traps taken in Current EL with SP_ELx */
- hyp_sync:
-         entry   hyp=1
-@@ -189,15 +226,29 @@ hyp_irq:
- 
- guest_sync:
-         entry   hyp=0, compat=0
-+        bl      check_pending_vserror
-+        /*
-+         * If x0 is Non-zero, a vSError took place, the initial exception
-+         * doesn't have any significance to be handled. Exit ASAP
-+         */
-+        cbnz    x0, 1f
-         msr     daifclr, #2
-         mov     x0, sp
-         bl      do_trap_hypervisor
-+1:
-         exit    hyp=0, compat=0
- 
- guest_irq:
-         entry   hyp=0, compat=0
-+        bl      check_pending_vserror
-+        /*
-+         * If x0 is Non-zero, a vSError took place, the initial exception
-+         * doesn't have any significance to be handled. Exit ASAP
-+         */
-+        cbnz    x0, 1f
-         mov     x0, sp
-         bl      do_trap_irq
-+1:
-         exit    hyp=0, compat=0
- 
- guest_fiq_invalid:
-@@ -213,15 +264,29 @@ guest_error:
- 
- guest_sync_compat:
-         entry   hyp=0, compat=1
-+        bl      check_pending_vserror
-+        /*
-+         * If x0 is Non-zero, a vSError took place, the initial exception
-+         * doesn't have any significance to be handled. Exit ASAP
-+         */
-+        cbnz    x0, 1f
-         msr     daifclr, #2
-         mov     x0, sp
-         bl      do_trap_hypervisor
-+1:
-         exit    hyp=0, compat=1
- 
- guest_irq_compat:
-         entry   hyp=0, compat=1
-+        bl      check_pending_vserror
-+        /*
-+         * If x0 is Non-zero, a vSError took place, the initial exception
-+         * doesn't have any significance to be handled. Exit ASAP
-+         */
-+        cbnz    x0, 1f
-         mov     x0, sp
-         bl      do_trap_irq
-+1:
-         exit    hyp=0, compat=1
- 
- guest_fiq_invalid_compat:
-@@ -270,6 +335,62 @@ return_from_trap:
-         eret
- 
- /*
-+ * This function is used to check pending virtual SError in the gap of
-+ * EL1 -> EL2 world switch.
-+ * The x0 register will be used to indicate the results of detection.
-+ * x0 -- Non-zero indicates a pending virtual SError took place.
-+ * x0 -- Zero indicates no pending virtual SError took place.
-+ */
-+check_pending_vserror:
-+        /*
-+         * Save elr_el2 to check whether the pending SError exception takes
-+         * place while we are doing this sync exception.
-+         */
-+        mrs     x0, elr_el2
-+
-+        /* Synchronize against in-flight ld/st */
-+        dsb     sy
-+
-+        /*
-+         * Unmask PSTATE asynchronous abort bit. If there is a pending
-+         * SError, the EL2 error exception will happen after PSTATE.A
-+         * is cleared.
-+         */
-+        msr     daifclr, #4
-+
-+        /*
-+         * This is our single instruction exception window. A pending
-+         * SError is guaranteed to occur at the earliest when we unmask
-+         * it, and at the latest just after the ISB.
-+         *
-+         * If a pending SError occurs, the program will jump to EL2 error
-+         * exception handler, and the elr_el2 will be set to
-+         * abort_guest_exit_start or abort_guest_exit_end.
-+         */
-+abort_guest_exit_start:
-+
-+        isb
-+
-+abort_guest_exit_end:
-+        /* Mask PSTATE asynchronous abort bit, close the checking window. */
-+        msr     daifset, #4
-+
-+        /*
-+         * Compare elr_el2 and the saved value to check whether we are
-+         * returning from a valid exception caused by pending SError.
-+         */
-+        mrs     x1, elr_el2
-+        cmp     x0, x1
-+
-+        /*
-+         * Not equal, the pending SError exception took place, set
-+         * x0 to non-zero.
-+         */
-+        cset    x0, ne
-+
-+        ret
-+
-+/*
-  * Exception vectors.
-  */
-         .macro  ventry  label
-@@ -287,7 +408,7 @@ ENTRY(hyp_traps_vector)
-         ventry  hyp_sync                        // Synchronous EL2h
-         ventry  hyp_irq                         // IRQ EL2h
-         ventry  hyp_fiq_invalid                 // FIQ EL2h
--        ventry  hyp_error_invalid               // Error EL2h
-+        ventry  hyp_error                       // Error EL2h
- 
-         ventry  guest_sync                      // Synchronous 64-bit EL0/EL1
-         ventry  guest_irq                       // IRQ 64-bit EL0/EL1
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Wei Chen <Wei.Chen@arm.com>
-Date: Fri, 23 Dec 2016 10:10:07 -0600
-Subject: [PATCH] arm: crash the guest when it traps on external abort
-
-If we spot a data or prefetch abort bearing the ESR_EL2.EA bit set, we
-know that this is an external abort, and that should crash the guest.
-
-This is CVE-2016-9817, part of XSA-201.
-
-Signed-off-by: Wei Chen <Wei.Chen@arm.com>
-Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
-Reviewed-by: Steve Capper <steve.capper@arm.com>
-Reviewed-by: Julien Grall <Julien.Grall@arm.com>
----
- xen/arch/arm/traps.c | 18 ++++++++++++++++++
- 1 file changed, 18 insertions(+)
-
-diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
-index 083193f..f7198d4 100644
---- a/xen/arch/arm/traps.c
-+++ b/xen/arch/arm/traps.c
-@@ -2333,6 +2333,15 @@ static void do_trap_instr_abort_guest(struct cpu_user_regs *regs,
-     int rc;
-     register_t gva = READ_SYSREG(FAR_EL2);
- 
-+    /*
-+     * If this bit has been set, it means that this instruction abort is caused
-+     * by a guest external abort. Currently we crash the guest to protect the
-+     * hypervisor. In future one can better handle this by injecting a virtual
-+     * abort to the guest.
-+     */
-+    if ( hsr.iabt.eat )
-+        domain_crash_synchronous();
-+
-     switch ( hsr.iabt.ifsc & 0x3f )
-     {
-     case FSC_FLT_PERM ... FSC_FLT_PERM + 3:
-@@ -2387,6 +2396,15 @@ static void do_trap_data_abort_guest(struct cpu_user_regs *regs,
-         return;
-     }
- 
-+    /*
-+     * If this bit has been set, it means that this data abort is caused
-+     * by a guest external abort. Currently we crash the guest to protect the
-+     * hypervisor. In future one can better handle this by injecting a virtual
-+     * abort to the guest.
-+     */
-+    if ( dabt.eat )
-+        domain_crash_synchronous();
-+
-     info.dabt = dabt;
- #ifdef CONFIG_ARM_32
-     info.gva = READ_CP32(HDFAR);
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Wei Chen <Wei.Chen@arm.com>
-Date: Fri, 23 Dec 2016 10:10:14 -0600
-Subject: [PATCH] arm32: handle async aborts delivered while at HYP
-
-If guest generates an asynchronous abort and then traps into HYP
-(by HVC or IRQ) before the abort has been delivered, the hypervisor
-could not catch it, because the PSTATE.A bit is masked all the time
-in hypervisor. So this asynchronous abort may be slipped to next
-running guest with PSTATE.A bit unmasked.
-
-In order to avoid this, it is necessary to take the abort at HYP, by
-clearing the PSTATE.A bit. In this patch, we unmask the PSTATE.A bit
-to open a window to catch guest-generated asynchronous abort in all
-Guest -> HYP switch paths. If we caught such asynchronous abort in
-checking window, the HYP data abort exception will be triggered and
-the abort source guest will be crashed.
-
-This is CVE-2016-9818, part of XSA-201.
-
-Signed-off-by: Wei Chen <Wei.Chen@arm.com>
-Reviewed-by: Julien Grall <julien.grall@arm.com>
----
- xen/arch/arm/arm32/entry.S            | 55 +++++++++++++++++++++++++++++++++++
- xen/arch/arm/arm32/traps.c            |  5 +++-
- xen/include/asm-arm/arm32/processor.h | 11 +++++++
- xen/include/asm-arm/processor.h       |  2 ++
- 4 files changed, 72 insertions(+), 1 deletion(-)
-
-diff --git a/xen/arch/arm/arm32/entry.S b/xen/arch/arm/arm32/entry.S
-index 774e7c6..4b47f9b 100644
---- a/xen/arch/arm/arm32/entry.S
-+++ b/xen/arch/arm/arm32/entry.S
-@@ -42,6 +42,61 @@ save_guest_regs:
-         SAVE_BANKED(fiq)
-         SAVE_ONE_BANKED(R8_fiq); SAVE_ONE_BANKED(R9_fiq); SAVE_ONE_BANKED(R10_fiq)
-         SAVE_ONE_BANKED(R11_fiq); SAVE_ONE_BANKED(R12_fiq);
-+        /*
-+         * Start to check pending virtual abort in the gap of Guest -> HYP
-+         * world switch.
-+         *
-+         * Save ELR_hyp to check whether the pending virtual abort exception
-+         * takes place while we are doing this trap exception.
-+         */
-+        mrs r1, ELR_hyp
-+
-+        /*
-+         * Force loads and stores to complete before unmasking asynchronous
-+         * aborts and forcing the delivery of the exception.
-+         */
-+        dsb sy
-+
-+        /*
-+         * Unmask asynchronous abort bit. If there is a pending asynchronous
-+         * abort, the data_abort exception will happen after A bit is cleared.
-+         */
-+        cpsie a
-+
-+        /*
-+         * This is our single instruction exception window. A pending
-+         * asynchronous abort is guaranteed to occur at the earliest when we
-+         * unmask it, and at the latest just after the ISB.
-+         *
-+         * If a pending abort occurs, the program will jump to data_abort
-+         * exception handler, and the ELR_hyp will be set to
-+         * abort_guest_exit_start or abort_guest_exit_end.
-+         */
-+        .global abort_guest_exit_start
-+abort_guest_exit_start:
-+
-+        isb
-+
-+        .global abort_guest_exit_end
-+abort_guest_exit_end:
-+        /* Mask CPSR asynchronous abort bit, close the checking window. */
-+        cpsid a
-+
-+        /*
-+         * Compare ELR_hyp and the saved value to check whether we are
-+         * returning from a valid exception caused by pending virtual
-+         * abort.
-+         */
-+        mrs r2, ELR_hyp
-+        cmp r1, r2
-+
-+        /*
-+         * Not equal, the pending virtual abort exception took place, the
-+         * initial exception does not have any significance to be handled.
-+         * Exit ASAP.
-+         */
-+        bne return_from_trap
-+
-         mov pc, lr
- 
- #define DEFINE_TRAP_ENTRY(trap)                                         \
-diff --git a/xen/arch/arm/arm32/traps.c b/xen/arch/arm/arm32/traps.c
-index f8cf864..7bfc5ff 100644
---- a/xen/arch/arm/arm32/traps.c
-+++ b/xen/arch/arm/arm32/traps.c
-@@ -63,7 +63,10 @@ asmlinkage void do_trap_prefetch_abort(struct cpu_user_regs *regs)
- 
- asmlinkage void do_trap_data_abort(struct cpu_user_regs *regs)
- {
--    do_unexpected_trap("Data Abort", regs);
-+    if ( VABORT_GEN_BY_GUEST(regs) )
-+        do_trap_guest_error(regs);
-+    else
-+        do_unexpected_trap("Data Abort", regs);
- }
- 
- /*
-diff --git a/xen/include/asm-arm/arm32/processor.h b/xen/include/asm-arm/arm32/processor.h
-index f41644d..e3bd004 100644
---- a/xen/include/asm-arm/arm32/processor.h
-+++ b/xen/include/asm-arm/arm32/processor.h
-@@ -55,6 +55,17 @@ struct cpu_user_regs
- 
-     uint32_t pad1; /* Doubleword-align the user half of the frame */
- };
-+
-+/* Functions for pending virtual abort checking window. */
-+void abort_guest_exit_start(void);
-+void abort_guest_exit_end(void);
-+
-+#define VABORT_GEN_BY_GUEST(r)  \
-+( \
-+    ( (unsigned long)abort_guest_exit_start == (r)->pc ) || \
-+    ( (unsigned long)abort_guest_exit_end == (r)->pc ) \
-+)
-+
- #endif
- 
- /* Layout as used in assembly, with src/dest registers mixed in */
-diff --git a/xen/include/asm-arm/processor.h b/xen/include/asm-arm/processor.h
-index 6789cd0..04a3e37 100644
---- a/xen/include/asm-arm/processor.h
-+++ b/xen/include/asm-arm/processor.h
-@@ -642,6 +642,8 @@ void vcpu_regs_user_to_hyp(struct vcpu *vcpu,
- int call_smc(register_t function_id, register_t arg0, register_t arg1,
-              register_t arg2);
- 
-+void do_trap_guest_error(struct cpu_user_regs *regs);
-+
- #endif /* __ASSEMBLY__ */
- #endif /* __ASM_ARM_PROCESSOR_H */
- /*
 -- 
 
 
@@ -2725,10 +554,10 @@ Signed-off-by: Jan Beulich <jbeulich@suse.com>
  2 files changed, 12 insertions(+), 7 deletions(-)
 
 diff --git a/xen/arch/x86/x86_64/compat/entry.S b/xen/arch/x86/x86_64/compat/entry.S
-index 89c1e19..41e9537 100644
+index 3bb6b61646..474ffbc951 100644
 --- a/xen/arch/x86/x86_64/compat/entry.S
 +++ b/xen/arch/x86/x86_64/compat/entry.S
-@@ -174,6 +174,8 @@ compat_bad_hypercall:
+@@ -109,6 +109,8 @@ compat_process_trap:
  /* %rbx: struct vcpu, interrupts disabled */
  ENTRY(compat_restore_all_guest)
          ASSERT_INTERRUPTS_DISABLED
@@ -2737,7 +566,7 @@ index 89c1e19..41e9537 100644
  .Lcr4_orig:
          .skip .Lcr4_alt_end - .Lcr4_alt, 0x90
  .Lcr4_orig_end:
-@@ -209,6 +211,8 @@ ENTRY(compat_restore_all_guest)
+@@ -144,6 +146,8 @@ ENTRY(compat_restore_all_guest)
                               (.Lcr4_orig_end - .Lcr4_orig), \
                               (.Lcr4_alt_end - .Lcr4_alt)
          .popsection
@@ -2745,9 +574,9 @@ index 89c1e19..41e9537 100644
 +        mov   %r11d,UREGS_eflags(%rsp)
          RESTORE_ALL adj=8 compat=1
  .Lft0:  iretq
- 
+         _ASM_PRE_EXTABLE(.Lft0, handle_exception)
 diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
-index bdd1284..32a3361 100644
+index 66aefaa781..85f1a4b0ba 100644
 --- a/xen/arch/x86/x86_64/entry.S
 +++ b/xen/arch/x86/x86_64/entry.S
 @@ -40,28 +40,29 @@ restore_all_guest:
@@ -2786,7 +615,7 @@ index bdd1284..32a3361 100644
 +        orl   $X86_EFLAGS_IF,24(%rsp)
          addq  $8,%rsp
  .Lft0:  iretq
- 
+         _ASM_PRE_EXTABLE(.Lft0, handle_exception)
 -- 
 
 
@@ -2804,10 +633,10 @@ Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/xen/arch/x86/hvm/emulate.c b/xen/arch/x86/hvm/emulate.c
-index 806fa0f..071f56e 100644
+index f1f6e2f7de..f32b7dc210 100644
 --- a/xen/arch/x86/hvm/emulate.c
 +++ b/xen/arch/x86/hvm/emulate.c
-@@ -1619,6 +1619,8 @@ static int hvmemul_vmfunc(
+@@ -1694,6 +1694,8 @@ static int hvmemul_vmfunc(
  {
      int rc;
  
@@ -2815,7 +644,7 @@ index 806fa0f..071f56e 100644
 +        return X86EMUL_UNHANDLEABLE;
      rc = hvm_funcs.altp2m_vcpu_emulate_vmfunc(ctxt->regs);
      if ( rc != X86EMUL_OKAY )
-         hvmemul_inject_hw_exception(TRAP_invalid_op, 0, ctxt);
+         hvmemul_inject_hw_exception(TRAP_invalid_op, HVM_DELIVER_NO_ERROR_CODE,
 -- 
 
 
@@ -2830,43 +659,22 @@ execution of SYSCALL, not the original eflags value.
 By using the original eflags value, we negate the guest kernels attempt to
 protect itself from a privilege escalation by masking TF.
 
-Introduce a tf boolean and have the SYSCALL emulation recalculate it
-after the instruction is complete.
+Have the SYSCALL emulation recalculate tf after the instruction is complete.
 
 This is XSA-204
 
 Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
 Reviewed-by: Jan Beulich <jbeulich@suse.com>
 ---
- xen/arch/x86/x86_emulate/x86_emulate.c | 23 ++++++++++++++++++++---
- 1 file changed, 20 insertions(+), 3 deletions(-)
+ xen/arch/x86/x86_emulate/x86_emulate.c | 19 ++++++++++++++++++-
+ 1 file changed, 18 insertions(+), 1 deletion(-)
 
 diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index 65798db..df2f68f 100644
+index d82e85dcac..ff952a96f4 100644
 --- a/xen/arch/x86/x86_emulate/x86_emulate.c
 +++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -1534,6 +1534,7 @@ x86_emulate(
-     union vex vex = {};
-     unsigned int op_bytes, def_op_bytes, ad_bytes, def_ad_bytes;
-     bool_t lock_prefix = 0;
-+    bool_t tf = !!(ctxt->regs->eflags & EFLG_TF);
-     int override_seg = -1, rc = X86EMUL_OKAY;
-     struct operand src = { .reg = REG_POISON };
-     struct operand dst = { .reg = REG_POISON };
-@@ -3884,9 +3885,8 @@ x86_emulate(
-     }
- 
-  no_writeback:
--    /* Inject #DB if single-step tracing was enabled at instruction start. */
--    if ( (ctxt->regs->eflags & EFLG_TF) && (rc == X86EMUL_OKAY) &&
--         (ops->inject_hw_exception != NULL) )
-+    /* Should a singlestep #DB be raised? */
-+    if ( tf && (rc == X86EMUL_OKAY) && (ops->inject_hw_exception != NULL) )
-         rc = ops->inject_hw_exception(EXC_DB, -1, ctxt) ? : X86EMUL_EXCEPTION;
- 
-     /* Commit shadow register state. */
-@@ -4079,6 +4079,23 @@ x86_emulate(
-              (rc = ops->write_segment(x86_seg_ss, &ss, ctxt)) )
+@@ -4561,6 +4561,23 @@ x86_emulate(
+              (rc = ops->write_segment(x86_seg_ss, &sreg, ctxt)) )
              goto done;
  
 +        /*
@@ -2884,10 +692,19 @@ index 65798db..df2f68f 100644
 +         * mitigation is to use a task gate for handling #DB (or to not use
 +         * enable EFER.SCE to start with).
 +         */
-+        tf = !!(_regs.eflags & EFLG_TF);
++        tf = _regs.eflags & EFLG_TF;
 +
          break;
      }
+ 
+@@ -5412,7 +5429,7 @@ x86_emulate(
+ 
+     *ctxt->regs = _regs;
+ 
+-    /* Inject #DB if single-step tracing was enabled at instruction start. */
++    /* Should a singlestep #DB be raised? */
+     if ( tf && (rc == X86EMUL_OKAY) && ops->inject_hw_exception )
+         rc = ops->inject_hw_exception(EXC_DB, -1, ctxt) ? : X86EMUL_EXCEPTION;
  
 -- 
 
@@ -2895,7 +712,7 @@ index 65798db..df2f68f 100644
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: hughesjr <johnny@centos.org>
 Date: Wed, 15 Feb 2017 02:12:22 -0600
-Subject: [PATCH] IOMMU: always call teardown callback 
+Subject: [PATCH] IOMMU: always call teardown callback
 
 There is a possible scenario when (d)->need_iommu remains unset
 during guest domain execution. For example, when no devices
@@ -2916,10 +733,10 @@ Tested-by: Julien Grall <julien.grall@arm.com>
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/xen/drivers/passthrough/iommu.c b/xen/drivers/passthrough/iommu.c
-index 5d040b0..dfb0fdd 100644
+index d793f5de1a..5e81813942 100644
 --- a/xen/drivers/passthrough/iommu.c
 +++ b/xen/drivers/passthrough/iommu.c
-@@ -219,8 +219,7 @@ void iommu_domain_destroy(struct domain *d)
+@@ -244,8 +244,7 @@ void iommu_domain_destroy(struct domain *d)
      if ( !iommu_enabled || !dom_iommu(d)->platform_ops )
          return;
  
@@ -2929,5 +746,2435 @@ index 5d040b0..dfb0fdd 100644
  
      arch_iommu_domain_destroy(d);
  }
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Tue, 7 Mar 2017 16:09:12 +0000
+Subject: [PATCH] xenstored: apply a write transaction rate limit
+
+This avoids a rogue client being about to stall another client (eg the
+toolstack) indefinitely.
+
+This is XSA-206.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+
+Backported to 4.8 (not entirely trivial).
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+Acked-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+---
+ tools/xenstore/Makefile                |   3 +-
+ tools/xenstore/xenstored_core.c        |   9 ++
+ tools/xenstore/xenstored_core.h        |   6 +
+ tools/xenstore/xenstored_domain.c      | 215 +++++++++++++++++++++++++++++++++
+ tools/xenstore/xenstored_domain.h      |  25 ++++
+ tools/xenstore/xenstored_transaction.c |   5 +
+ 6 files changed, 262 insertions(+), 1 deletion(-)
+
+diff --git a/tools/xenstore/Makefile b/tools/xenstore/Makefile
+index 36b6fd4ae3..9cb54def21 100644
+--- a/tools/xenstore/Makefile
++++ b/tools/xenstore/Makefile
+@@ -32,6 +32,7 @@ XENSTORED_OBJS_$(CONFIG_FreeBSD) = xenstored_posix.o
+ XENSTORED_OBJS_$(CONFIG_MiniOS) = xenstored_minios.o
+ 
+ XENSTORED_OBJS += $(XENSTORED_OBJS_y)
++LDLIBS_xenstored += -lrt
+ 
+ ifneq ($(XENSTORE_STATIC_CLIENTS),y)
+ LIBXENSTORE := libxenstore.so
+@@ -73,7 +74,7 @@ endif
+ $(XENSTORED_OBJS): CFLAGS += $(CFLAGS_libxengnttab)
+ 
+ xenstored: $(XENSTORED_OBJS)
+-	$(CC) $^ $(LDFLAGS) $(LDLIBS_libxenevtchn) $(LDLIBS_libxengnttab) $(LDLIBS_libxenctrl) $(SOCKET_LIBS) -o $@ $(APPEND_LDFLAGS)
++	$(CC) $^ $(LDFLAGS) $(LDLIBS_libxenevtchn) $(LDLIBS_libxengnttab) $(LDLIBS_libxenctrl) $(LDLIBS_xenstored) $(SOCKET_LIBS) -o $@ $(APPEND_LDFLAGS)
+ 
+ xenstored.a: $(XENSTORED_OBJS)
+ 	$(AR) cr $@ $^
+diff --git a/tools/xenstore/xenstored_core.c b/tools/xenstore/xenstored_core.c
+index 3df977b0c8..d14f096150 100644
+--- a/tools/xenstore/xenstored_core.c
++++ b/tools/xenstore/xenstored_core.c
+@@ -358,6 +358,7 @@ static void initialize_fds(int sock, int *p_sock_pollfd_idx,
+ 			   int *ptimeout)
+ {
+ 	struct connection *conn;
++	struct wrl_timestampt now;
+ 
+ 	if (fds)
+ 		memset(fds, 0, sizeof(struct pollfd) * current_array_size);
+@@ -377,8 +378,11 @@ static void initialize_fds(int sock, int *p_sock_pollfd_idx,
+ 		xce_pollfd_idx = set_fd(xenevtchn_fd(xce_handle),
+ 					POLLIN|POLLPRI);
+ 
++	wrl_gettime_now(&now);
++
+ 	list_for_each_entry(conn, &connections, list) {
+ 		if (conn->domain) {
++			wrl_check_timeout(conn->domain, now, ptimeout);
+ 			if (domain_can_read(conn) ||
+ 			    (domain_can_write(conn) &&
+ 			     !list_empty(&conn->out_list)))
+@@ -833,6 +837,7 @@ static void delete_node_single(struct connection *conn, struct node *node)
+ 		corrupt(conn, "Could not delete '%s'", node->name);
+ 		return;
+ 	}
++
+ 	domain_entry_dec(conn, node);
+ }
+ 
+@@ -972,6 +977,7 @@ static void do_write(struct connection *conn, struct buffered_data *in)
+ 	}
+ 
+ 	add_change_node(conn->transaction, name, false);
++	wrl_apply_debit_direct(conn);
+ 	fire_watches(conn, in, name, false);
+ 	send_ack(conn, XS_WRITE);
+ }
+@@ -1003,6 +1009,7 @@ static void do_mkdir(struct connection *conn, struct buffered_data *in)
+ 			return;
+ 		}
+ 		add_change_node(conn->transaction, name, false);
++		wrl_apply_debit_direct(conn);
+ 		fire_watches(conn, in, name, false);
+ 	}
+ 	send_ack(conn, XS_MKDIR);
+@@ -1129,6 +1136,7 @@ static void do_rm(struct connection *conn, struct buffered_data *in)
+ 
+ 	if (_rm(conn, node, name)) {
+ 		add_change_node(conn->transaction, name, true);
++		wrl_apply_debit_direct(conn);
+ 		fire_watches(conn, in, name, true);
+ 		send_ack(conn, XS_RM);
+ 	}
+@@ -1205,6 +1213,7 @@ static void do_set_perms(struct connection *conn, struct buffered_data *in)
+ 	}
+ 
+ 	add_change_node(conn->transaction, name, false);
++	wrl_apply_debit_direct(conn);
+ 	fire_watches(conn, in, name, false);
+ 	send_ack(conn, XS_SET_PERMS);
+ }
+diff --git a/tools/xenstore/xenstored_core.h b/tools/xenstore/xenstored_core.h
+index ecc614f5e3..9e9d960247 100644
+--- a/tools/xenstore/xenstored_core.h
++++ b/tools/xenstore/xenstored_core.h
+@@ -33,6 +33,12 @@
+ #include "list.h"
+ #include "tdb.h"
+ 
++#define MIN(a, b) (((a) < (b))? (a) : (b))
++
++typedef int32_t wrl_creditt;
++#define WRL_CREDIT_MAX (1000*1000*1000)
++/* ^ satisfies non-overflow condition for wrl_xfer_credit */
++
+ struct buffered_data
+ {
+ 	struct list_head list;
+diff --git a/tools/xenstore/xenstored_domain.c b/tools/xenstore/xenstored_domain.c
+index 5de93d467f..012dfe6a90 100644
+--- a/tools/xenstore/xenstored_domain.c
++++ b/tools/xenstore/xenstored_domain.c
+@@ -21,6 +21,7 @@
+ #include <unistd.h>
+ #include <stdlib.h>
+ #include <stdarg.h>
++#include <time.h>
+ 
+ #include "utils.h"
+ #include "talloc.h"
+@@ -74,6 +75,10 @@ struct domain
+ 
+ 	/* number of watch for this domain */
+ 	int nbwatch;
++
++	/* write rate limit */
++	wrl_creditt wrl_credit; /* [ -wrl_config_writecost, +_dburst ] */
++	struct wrl_timestampt wrl_timestamp;
+ };
+ 
+ static LIST_HEAD(domains);
+@@ -206,6 +211,8 @@ static int destroy_domain(void *_domain)
+ 
+ 	fire_watches(NULL, domain, "@releaseDomain", false);
+ 
++	wrl_domain_destroy(domain);
++
+ 	return 0;
+ }
+ 
+@@ -253,6 +260,9 @@ void handle_event(void)
+ bool domain_can_read(struct connection *conn)
+ {
+ 	struct xenstore_domain_interface *intf = conn->domain->interface;
++
++	if (domain_is_unprivileged(conn) && conn->domain->wrl_credit < 0)
++		return false;
+ 	return (intf->req_cons != intf->req_prod);
+ }
+ 
+@@ -284,6 +294,8 @@ static struct domain *new_domain(void *context, unsigned int domid,
+ 	domain->domid = domid;
+ 	domain->path = talloc_domain_path(domain, domid);
+ 
++	wrl_domain_new(domain);
++
+ 	list_add(&domain->list, &domains);
+ 	talloc_set_destructor(domain, destroy_domain);
+ 
+@@ -751,6 +763,209 @@ int domain_watch(struct connection *conn)
+ 		: 0;
+ }
+ 
++static wrl_creditt wrl_config_writecost      = WRL_FACTOR;
++static wrl_creditt wrl_config_rate           = WRL_RATE   * WRL_FACTOR;
++static wrl_creditt wrl_config_dburst         = WRL_DBURST * WRL_FACTOR;
++static wrl_creditt wrl_config_gburst         = WRL_GBURST * WRL_FACTOR;
++static wrl_creditt wrl_config_newdoms_dburst =
++	                         WRL_DBURST * WRL_NEWDOMS * WRL_FACTOR;
++
++long wrl_ntransactions;
++
++static long wrl_ndomains;
++static wrl_creditt wrl_reserve; /* [-wrl_config_newdoms_dburst, +_gburst ] */
++
++void wrl_gettime_now(struct wrl_timestampt *now_wt)
++{
++	struct timespec now_ts;
++	int r;
++
++	r = clock_gettime(CLOCK_MONOTONIC, &now_ts);
++	if (r)
++		barf_perror("Could not find time (clock_gettime failed)");
++
++	now_wt->sec = now_ts.tv_sec;
++	now_wt->msec = now_ts.tv_nsec / 1000000;
++}
++
++static void wrl_xfer_credit(wrl_creditt *debit,  wrl_creditt debit_floor,
++			    wrl_creditt *credit, wrl_creditt credit_ceil)
++	/*
++	 * Transfers zero or more credit from "debit" to "credit".
++	 * Transfers as much as possible while maintaining
++	 * debit >= debit_floor and credit <= credit_ceil.
++	 * (If that's violated already, does nothing.)
++	 *
++	 * Sufficient conditions to avoid overflow, either of:
++	 *  |every argument| <= 0x3fffffff
++	 *  |every argument| <= 1E9
++	 *  |every argument| <= WRL_CREDIT_MAX
++	 * (And this condition is preserved.)
++	 */
++{
++	wrl_creditt xfer = MIN( *debit      - debit_floor,
++			        credit_ceil - *credit      );
++	if (xfer > 0) {
++		*debit -= xfer;
++		*credit += xfer;
++	}
++}
++
++void wrl_domain_new(struct domain *domain)
++{
++	domain->wrl_credit = 0;
++	wrl_gettime_now(&domain->wrl_timestamp);
++	wrl_ndomains++;
++	/* Steal up to DBURST from the reserve */
++	wrl_xfer_credit(&wrl_reserve, -wrl_config_newdoms_dburst,
++			&domain->wrl_credit, wrl_config_dburst);
++}
++
++void wrl_domain_destroy(struct domain *domain)
++{
++	wrl_ndomains--;
++	/*
++	 * Don't bother recalculating domain's credit - this just
++	 * means we don't give the reserve the ending domain's credit
++	 * for time elapsed since last update.
++	 */
++	wrl_xfer_credit(&domain->wrl_credit, 0,
++			&wrl_reserve, wrl_config_dburst);
++}
++
++void wrl_credit_update(struct domain *domain, struct wrl_timestampt now)
++{
++	/*
++	 * We want to calculate
++	 *    credit += (now - timestamp) * RATE / ndoms;
++	 * But we want it to saturate, and to avoid floating point.
++	 * To avoid rounding errors from constantly adding small
++	 * amounts of credit, we only add credit for whole milliseconds.
++	 */
++	long seconds      = now.sec -  domain->wrl_timestamp.sec;
++	long milliseconds = now.msec - domain->wrl_timestamp.msec;
++	long msec;
++	int64_t denom, num;
++	wrl_creditt surplus;
++
++	seconds = MIN(seconds, 1000*1000); /* arbitrary, prevents overflow */
++	msec = seconds * 1000 + milliseconds;
++
++	if (msec < 0)
++                /* shouldn't happen with CLOCK_MONOTONIC */
++		msec = 0;
++
++	/* 32x32 -> 64 cannot overflow */
++	denom = (int64_t)msec * wrl_config_rate;
++	num  =  (int64_t)wrl_ndomains * 1000;
++	/* denom / num <= 1E6 * wrl_config_rate, so with
++	   reasonable wrl_config_rate, denom / num << 2^64 */
++
++	/* at last! */
++	domain->wrl_credit = MIN( (int64_t)domain->wrl_credit + denom / num,
++				  WRL_CREDIT_MAX );
++	/* (maybe briefly violating the DBURST cap on wrl_credit) */
++
++	/* maybe take from the reserve to make us nonnegative */
++	wrl_xfer_credit(&wrl_reserve,        0,
++			&domain->wrl_credit, 0);
++
++	/* return any surplus (over DBURST) to the reserve */
++	surplus = 0;
++	wrl_xfer_credit(&domain->wrl_credit, wrl_config_dburst,
++			&surplus,            WRL_CREDIT_MAX);
++	wrl_xfer_credit(&surplus,     0,
++			&wrl_reserve, wrl_config_gburst);
++	/* surplus is now implicitly discarded */
++
++	domain->wrl_timestamp = now;
++
++	trace("wrl: dom %4d %6ld  msec  %9ld credit   %9ld reserve"
++	      "  %9ld discard\n",
++	      domain->domid,
++	      msec,
++	      (long)domain->wrl_credit, (long)wrl_reserve,
++	      (long)surplus);
++}
++
++void wrl_check_timeout(struct domain *domain,
++		       struct wrl_timestampt now,
++		       int *ptimeout)
++{
++	uint64_t num, denom;
++	int wakeup;
++
++	wrl_credit_update(domain, now);
++
++	if (domain->wrl_credit >= 0)
++		/* not blocked */
++		return;
++
++	if (!*ptimeout)
++		/* already decided on immediate wakeup,
++		   so no need to calculate our timeout */
++		return;
++
++	/* calculate  wakeup = now + -credit / (RATE / ndoms); */
++
++	/* credit cannot go more -ve than one transaction,
++	 * so the first multiplication cannot overflow even 32-bit */
++	num   = (uint64_t)(-domain->wrl_credit * 1000) * wrl_ndomains;
++	denom = wrl_config_rate;
++
++	wakeup = MIN( num / denom /* uint64_t */, INT_MAX );
++	if (*ptimeout==-1 || wakeup < *ptimeout)
++		*ptimeout = wakeup;
++
++	trace("wrl: domain %u credit=%ld (reserve=%ld) SLEEPING for %d\n",
++	      domain->domid,
++	      (long)domain->wrl_credit, (long)wrl_reserve,
++	      wakeup);
++}
++
++void wrl_apply_debit_actual(struct domain *domain)
++{
++	struct wrl_timestampt now;
++
++	if (!domain)
++		/* sockets escape the write rate limit */
++		return;
++
++	wrl_gettime_now(&now);
++	wrl_credit_update(domain, now);
++
++	domain->wrl_credit -= wrl_config_writecost;
++	trace("wrl: domain %u credit=%ld (reserve=%ld)\n",
++	      domain->domid,
++	      (long)domain->wrl_credit, (long)wrl_reserve);
++}
++
++void wrl_apply_debit_direct(struct connection *conn)
++{
++	if (!conn)
++		/* some writes are generated internally */
++		return;
++
++	if (conn->transaction)
++		/* these are accounted for when the transaction ends */
++		return;
++
++	if (!wrl_ntransactions)
++		/* we don't conflict with anyone */
++		return;
++
++	wrl_apply_debit_actual(conn->domain);
++}
++
++void wrl_apply_debit_trans_commit(struct connection *conn)
++{
++	if (wrl_ntransactions <= 1)
++		/* our own transaction appears in the counter */
++		return;
++
++	wrl_apply_debit_actual(conn->domain);
++}
++
+ /*
+  * Local variables:
+  *  c-file-style: "linux"
+diff --git a/tools/xenstore/xenstored_domain.h b/tools/xenstore/xenstored_domain.h
+index 2554423f00..cec341e0f3 100644
+--- a/tools/xenstore/xenstored_domain.h
++++ b/tools/xenstore/xenstored_domain.h
+@@ -65,4 +65,29 @@ void domain_watch_inc(struct connection *conn);
+ void domain_watch_dec(struct connection *conn);
+ int domain_watch(struct connection *conn);
+ 
++/* Write rate limiting */
++
++#define WRL_FACTOR   1000 /* for fixed-point arithmetic */
++#define WRL_RATE      200
++#define WRL_DBURST     10
++#define WRL_GBURST   1000
++#define WRL_NEWDOMS     5
++
++struct wrl_timestampt {
++	time_t sec;
++	int msec;
++};
++
++extern long wrl_ntransactions;
++
++void wrl_gettime_now(struct wrl_timestampt *now_ts);
++void wrl_domain_new(struct domain *domain);
++void wrl_domain_destroy(struct domain *domain);
++void wrl_credit_update(struct domain *domain, struct wrl_timestampt now);
++void wrl_check_timeout(struct domain *domain,
++                       struct wrl_timestampt now,
++                       int *ptimeout);
++void wrl_apply_debit_direct(struct connection *conn);
++void wrl_apply_debit_trans_commit(struct connection *conn);
++
+ #endif /* _XENSTORED_DOMAIN_H */
+diff --git a/tools/xenstore/xenstored_transaction.c b/tools/xenstore/xenstored_transaction.c
+index 84cb0bfac5..5059a11b6b 100644
+--- a/tools/xenstore/xenstored_transaction.c
++++ b/tools/xenstore/xenstored_transaction.c
+@@ -120,6 +120,7 @@ static int destroy_transaction(void *_transaction)
+ {
+ 	struct transaction *trans = _transaction;
+ 
++	wrl_ntransactions--;
+ 	trace_destroy(trans, "transaction");
+ 	if (trans->tdb)
+ 		tdb_close(trans->tdb);
+@@ -183,6 +184,7 @@ void do_transaction_start(struct connection *conn, struct buffered_data *in)
+ 	talloc_steal(conn, trans);
+ 	talloc_set_destructor(trans, destroy_transaction);
+ 	conn->transaction_started++;
++	wrl_ntransactions++;
+ 
+ 	snprintf(id_str, sizeof(id_str), "%u", trans->id);
+ 	send_reply(conn, XS_TRANSACTION_START, id_str, strlen(id_str)+1);
+@@ -218,6 +220,9 @@ void do_transaction_end(struct connection *conn, struct buffered_data *in)
+ 			send_error(conn, EAGAIN);
+ 			return;
+ 		}
++
++		wrl_apply_debit_trans_commit(conn);
++
+ 		if (!replace_tdb(trans->tdb_name, trans->tdb)) {
+ 			send_error(conn, errno);
+ 			return;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Tue, 7 Mar 2017 16:09:13 +0000
+Subject: [PATCH] xenstored: Log when the write transaction rate limit bites
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/xenstore/xenstored_core.c   |  1 +
+ tools/xenstore/xenstored_domain.c | 25 +++++++++++++++++++++++++
+ tools/xenstore/xenstored_domain.h |  2 ++
+ 3 files changed, 28 insertions(+)
+
+diff --git a/tools/xenstore/xenstored_core.c b/tools/xenstore/xenstored_core.c
+index d14f096150..dc9a26f1dc 100644
+--- a/tools/xenstore/xenstored_core.c
++++ b/tools/xenstore/xenstored_core.c
+@@ -379,6 +379,7 @@ static void initialize_fds(int sock, int *p_sock_pollfd_idx,
+ 					POLLIN|POLLPRI);
+ 
+ 	wrl_gettime_now(&now);
++	wrl_log_periodic(now);
+ 
+ 	list_for_each_entry(conn, &connections, list) {
+ 		if (conn->domain) {
+diff --git a/tools/xenstore/xenstored_domain.c b/tools/xenstore/xenstored_domain.c
+index 012dfe6a90..fd9ca391b4 100644
+--- a/tools/xenstore/xenstored_domain.c
++++ b/tools/xenstore/xenstored_domain.c
+@@ -22,6 +22,7 @@
+ #include <stdlib.h>
+ #include <stdarg.h>
+ #include <time.h>
++#include <syslog.h>
+ 
+ #include "utils.h"
+ #include "talloc.h"
+@@ -79,6 +80,7 @@ struct domain
+ 	/* write rate limit */
+ 	wrl_creditt wrl_credit; /* [ -wrl_config_writecost, +_dburst ] */
+ 	struct wrl_timestampt wrl_timestamp;
++	bool wrl_delay_logged;
+ };
+ 
+ static LIST_HEAD(domains);
+@@ -774,6 +776,7 @@ long wrl_ntransactions;
+ 
+ static long wrl_ndomains;
+ static wrl_creditt wrl_reserve; /* [-wrl_config_newdoms_dburst, +_gburst ] */
++static time_t wrl_log_last_warning; /* 0: no previous warning */
+ 
+ void wrl_gettime_now(struct wrl_timestampt *now_wt)
+ {
+@@ -923,6 +926,9 @@ void wrl_check_timeout(struct domain *domain,
+ 	      wakeup);
+ }
+ 
++#define WRL_LOG(now, ...) \
++	(syslog(LOG_WARNING, "write rate limit: " __VA_ARGS__))
++
+ void wrl_apply_debit_actual(struct domain *domain)
+ {
+ 	struct wrl_timestampt now;
+@@ -938,6 +944,25 @@ void wrl_apply_debit_actual(struct domain *domain)
+ 	trace("wrl: domain %u credit=%ld (reserve=%ld)\n",
+ 	      domain->domid,
+ 	      (long)domain->wrl_credit, (long)wrl_reserve);
++
++	if (domain->wrl_credit < 0) {
++		if (!domain->wrl_delay_logged++) {
++			WRL_LOG(now, "domain %ld is affected",
++				(long)domain->domid);
++		} else if (!wrl_log_last_warning) {
++			WRL_LOG(now, "rate limiting restarts");
++		}
++		wrl_log_last_warning = now.sec;
++	}
++}
++
++void wrl_log_periodic(struct wrl_timestampt now)
++{
++	if (wrl_log_last_warning &&
++	    (now.sec - wrl_log_last_warning) > WRL_LOGEVERY) {
++		WRL_LOG(now, "not in force recently");
++		wrl_log_last_warning = 0;
++	}
+ }
+ 
+ void wrl_apply_debit_direct(struct connection *conn)
+diff --git a/tools/xenstore/xenstored_domain.h b/tools/xenstore/xenstored_domain.h
+index cec341e0f3..561ab5daff 100644
+--- a/tools/xenstore/xenstored_domain.h
++++ b/tools/xenstore/xenstored_domain.h
+@@ -72,6 +72,7 @@ int domain_watch(struct connection *conn);
+ #define WRL_DBURST     10
+ #define WRL_GBURST   1000
+ #define WRL_NEWDOMS     5
++#define WRL_LOGEVERY  120 /* seconds */
+ 
+ struct wrl_timestampt {
+ 	time_t sec;
+@@ -87,6 +88,7 @@ void wrl_credit_update(struct domain *domain, struct wrl_timestampt now);
+ void wrl_check_timeout(struct domain *domain,
+                        struct wrl_timestampt now,
+                        int *ptimeout);
++void wrl_log_periodic(struct wrl_timestampt now);
+ void wrl_apply_debit_direct(struct connection *conn);
+ void wrl_apply_debit_trans_commit(struct connection *conn);
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Tue, 14 Mar 2017 12:15:52 +0000
+Subject: [PATCH] oxenstored: comments explaining some variables
+
+It took a while of reading and reasoning to work out what these are
+for, so here are comments to make life easier for everyone reading
+this code in future.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/store.ml       |  1 +
+ tools/ocaml/xenstored/transaction.ml | 10 +++++++---
+ 2 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/store.ml b/tools/ocaml/xenstored/store.ml
+index 223ee21ebb..9f619b8fd5 100644
+--- a/tools/ocaml/xenstored/store.ml
++++ b/tools/ocaml/xenstored/store.ml
+@@ -211,6 +211,7 @@ let apply rnode path fct =
+ 	lookup rnode path fct
+ end
+ 
++(* The Store.t type *)
+ type t =
+ {
+ 	mutable stat_transaction_coalesce: int;
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index 6b37fc2ad0..51d5d6a404 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -69,11 +69,15 @@ let can_coalesce oldroot currentroot path =
+ 	else
+ 		false
+ 
+-type ty = No | Full of (int * Store.Node.t * Store.t)
++type ty = No | Full of (
++	int *          (* Transaction id *)
++	Store.Node.t * (* Original root *)
++	Store.t        (* A pointer to the canonical store: its root changes on each transaction-commit *)
++)
+ 
+ type t = {
+ 	ty: ty;
+-	store: Store.t;
++	store: Store.t; (* This is the store that we change in write operations. *)
+ 	quota: Quota.t;
+ 	mutable paths: (Xenbus.Xb.Op.operation * Store.Path.t) list;
+ 	mutable operations: (Packet.request * Packet.response) list;
+@@ -155,7 +159,7 @@ let commit ~con t =
+ 	let has_commited =
+ 	match t.ty with
+ 	| No                         -> true
+-	| Full (id, oldroot, cstore) ->
++	| Full (id, oldroot, cstore) ->       (* "cstore" meaning current canonical store *)
+ 		let commit_partial oldroot cstore store =
+ 			(* get the lowest path of the query and verify that it hasn't
+ 			   been modified by others transactions. *)
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Tue, 14 Mar 2017 12:15:52 +0000
+Subject: [PATCH] oxenstored: handling of domain conflict-credit
+
+This commit gives each domain a conflict-credit variable, which will
+later be used for limiting how often a domain can cause other domain's
+transaction-commits to fail.
+
+This commit also provides functions and data for manipulating domains
+and their conflict-credit, and checking whether they have credit.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/connection.ml      |   5 ++
+ tools/ocaml/xenstored/define.ml          |   3 +
+ tools/ocaml/xenstored/domain.ml          |  11 +++-
+ tools/ocaml/xenstored/domains.ml         | 103 ++++++++++++++++++++++++++++++-
+ tools/ocaml/xenstored/oxenstored.conf.in |  32 ++++++++++
+ tools/ocaml/xenstored/transaction.ml     |   2 +
+ tools/ocaml/xenstored/xenstored.ml       |   2 +
+ 7 files changed, 154 insertions(+), 4 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/connection.ml b/tools/ocaml/xenstored/connection.ml
+index 3ffd35bc8b..a66d2f7db5 100644
+--- a/tools/ocaml/xenstored/connection.ml
++++ b/tools/ocaml/xenstored/connection.ml
+@@ -296,3 +296,8 @@ let debug con =
+ 	let domid = get_domstr con in
+ 	let watches = List.map (fun (path, token) -> Printf.sprintf "watch %s: %s %s\n" domid path token) (list_watches con) in
+ 	String.concat "" watches
++
++let decr_conflict_credit doms con =
++	match con.dom with
++	| None -> () (* It's a socket connection. We don't know which domain we're in, so treat it as if it's free to conflict *)
++	| Some dom -> Domains.decr_conflict_credit doms dom
+diff --git a/tools/ocaml/xenstored/define.ml b/tools/ocaml/xenstored/define.ml
+index e9d957ff6a..816b493834 100644
+--- a/tools/ocaml/xenstored/define.ml
++++ b/tools/ocaml/xenstored/define.ml
+@@ -29,6 +29,9 @@ let maxwatch = ref (50)
+ let maxtransaction = ref (20)
+ let maxrequests = ref (-1)   (* maximum requests per transaction *)
+ 
++let conflict_burst_limit = ref 5.0
++let conflict_rate_limit_is_aggregate = ref true
++
+ let domid_self = 0x7FF0
+ 
+ exception Not_a_directory of string
+diff --git a/tools/ocaml/xenstored/domain.ml b/tools/ocaml/xenstored/domain.ml
+index ab343142eb..e677aa3372 100644
+--- a/tools/ocaml/xenstored/domain.ml
++++ b/tools/ocaml/xenstored/domain.ml
+@@ -31,8 +31,12 @@ type t =
+ 	mutable io_credit: int; (* the rounds of ring process left to do, default is 0,
+ 	                           usually set to 1 when there is work detected, could
+ 	                           also set to n to give "lazy" clients extra credit *)
++	mutable conflict_credit: float; (* Must be positive to perform writes; a commit
++	                                   that later causes conflict with another
++	                                   domain's transaction costs credit. *)
+ }
+ 
++let is_dom0 d = d.id = 0
+ let get_path dom = "/local/domain/" ^ (sprintf "%u" dom.id)
+ let get_id domain = domain.id
+ let get_interface d = d.interface
+@@ -48,6 +52,10 @@ let set_io_credit ?(n=1) domain = domain.io_credit <- max 0 n
+ let incr_io_credit domain = domain.io_credit <- domain.io_credit + 1
+ let decr_io_credit domain = domain.io_credit <- max 0 (domain.io_credit - 1)
+ 
++let is_paused_for_conflict dom = dom.conflict_credit <= 0.0
++
++let is_free_to_conflict = is_dom0
++
+ let string_of_port = function
+ | None -> "None"
+ | Some x -> string_of_int (Xeneventchn.to_int x)
+@@ -84,6 +92,5 @@ let make id mfn remote_port interface eventchn = {
+ 	port = None;
+ 	bad_client = false;
+ 	io_credit = 0;
++	conflict_credit = !Define.conflict_burst_limit;
+ }
+-
+-let is_dom0 d = d.id = 0
+diff --git a/tools/ocaml/xenstored/domains.ml b/tools/ocaml/xenstored/domains.ml
+index 395f3a9f77..3d29cc8358 100644
+--- a/tools/ocaml/xenstored/domains.ml
++++ b/tools/ocaml/xenstored/domains.ml
+@@ -15,20 +15,58 @@
+  *)
+ 
+ let debug fmt = Logging.debug "domains" fmt
++let error fmt = Logging.error "domains" fmt
++let warn fmt  = Logging.warn  "domains" fmt
+ 
+ type domains = {
+ 	eventchn: Event.t;
+ 	table: (Xenctrl.domid, Domain.t) Hashtbl.t;
++
++	(* N.B. the Queue module is not thread-safe but oxenstored is single-threaded. *)
++	(* Domains queue up to regain conflict-credit; we have a queue for
++	   domains that are carrying some penalty and so are below the
++	   maximum credit, and another queue for domains that have run out of
++	   credit and so have had their access paused. *)
++	doms_conflict_paused: (Domain.t option ref) Queue.t;
++	doms_with_conflict_penalty: (Domain.t option ref) Queue.t;
++
++	(* A callback function to be called when we go from zero to one paused domain.
++	   This will be to reset the countdown until the next unit of credit is issued. *)
++	on_first_conflict_pause: unit -> unit;
++
++	(* If config is set to use individual instead of aggregate conflict-rate-limiting,
++	   we use this instead of the queues. *)
++	mutable n_paused: int;
+ }
+ 
+-let init eventchn =
+-	{ eventchn = eventchn; table = Hashtbl.create 10 }
++let init eventchn = {
++	eventchn = eventchn;
++	table = Hashtbl.create 10;
++	doms_conflict_paused = Queue.create ();
++	doms_with_conflict_penalty = Queue.create ();
++	on_first_conflict_pause = (fun () -> ()); (* Dummy value for now, pending subsequent commit. *)
++	n_paused = 0;
++}
+ let del doms id = Hashtbl.remove doms.table id
+ let exist doms id = Hashtbl.mem doms.table id
+ let find doms id = Hashtbl.find doms.table id
+ let number doms = Hashtbl.length doms.table
+ let iter doms fct = Hashtbl.iter (fun _ b -> fct b) doms.table
+ 
++(* Functions to handle queues of domains given that the domain might be deleted while in a queue. *)
++let push dom queue =
++	Queue.push (ref (Some dom)) queue
++
++let rec pop queue =
++	match !(Queue.pop queue) with
++	| None -> pop queue
++	| Some x -> x
++
++let remove_from_queue dom queue =
++	Queue.iter (fun d -> match !d with
++		| None -> ()
++		| Some x -> if x=dom then d := None) queue
++
+ let cleanup xc doms =
+ 	let notify = ref false in
+ 	let dead_dom = ref [] in
+@@ -52,6 +90,11 @@ let cleanup xc doms =
+ 		let dom = Hashtbl.find doms.table id in
+ 		Domain.close dom;
+ 		Hashtbl.remove doms.table id;
++		if dom.Domain.conflict_credit <= !Define.conflict_burst_limit
++		then (
++			remove_from_queue dom doms.doms_with_conflict_penalty;
++			if (dom.Domain.conflict_credit <= 0.) then remove_from_queue dom doms.doms_conflict_paused
++		)
+ 	) !dead_dom;
+ 	!notify, !dead_dom
+ 
+@@ -82,3 +125,59 @@ let create0 doms =
+ 	Domain.bind_interdomain dom;
+ 	Domain.notify dom;
+ 	dom
++
++let decr_conflict_credit doms dom =
++	let before = dom.Domain.conflict_credit in
++	let after = max (-1.0) (before -. 1.0) in
++	dom.Domain.conflict_credit <- after;
++	if !Define.conflict_rate_limit_is_aggregate then (
++		if before >= !Define.conflict_burst_limit
++		&& after < !Define.conflict_burst_limit
++		&& after > 0.0
++		then (
++			push dom doms.doms_with_conflict_penalty
++		) else if before > 0.0 && after <= 0.0
++		then (
++			let first_pause = Queue.is_empty doms.doms_conflict_paused in
++			push dom doms.doms_conflict_paused;
++			if first_pause then doms.on_first_conflict_pause ()
++		) else (
++			(* The queues are correct already: no further action needed. *)
++		)
++	) else if before > 0.0 && after <= 0.0 then (
++		doms.n_paused <- doms.n_paused + 1;
++		if doms.n_paused = 1 then doms.on_first_conflict_pause ()
++	)
++
++(* Give one point of credit to one domain, and update the queues appropriately. *)
++let incr_conflict_credit_from_queue doms =
++	let process_queue q requeue_test =
++		let d = pop q in
++		d.Domain.conflict_credit <- min (d.Domain.conflict_credit +. 1.0) !Define.conflict_burst_limit;
++		if requeue_test d.Domain.conflict_credit then (
++			push d q (* Make it queue up again for its next point of credit. *)
++		)
++	in
++	let paused_queue_test cred = cred <= 0.0 in
++	let penalty_queue_test cred = cred < !Define.conflict_burst_limit in
++	try process_queue doms.doms_conflict_paused paused_queue_test
++	with Queue.Empty -> (
++		try process_queue doms.doms_with_conflict_penalty penalty_queue_test
++		with Queue.Empty -> () (* Both queues are empty: nothing to do here. *)
++	)
++
++let incr_conflict_credit doms =
++	if !Define.conflict_rate_limit_is_aggregate
++	then incr_conflict_credit_from_queue doms
++	else (
++		(* Give a point of credit to every domain, subject only to the cap. *)
++		let inc dom =
++			let before = dom.Domain.conflict_credit in
++			let after = min (before +. 1.0) !Define.conflict_burst_limit in
++			dom.Domain.conflict_credit <- after;
++			if before <= 0.0 && after > 0.0
++			then doms.n_paused <- doms.n_paused - 1
++		in
++		(* Scope for optimisation (probably tiny): avoid iteration if all domains are at max credit *)
++		iter doms inc
++	)
+diff --git a/tools/ocaml/xenstored/oxenstored.conf.in b/tools/ocaml/xenstored/oxenstored.conf.in
+index 82117a9b18..edd4335293 100644
+--- a/tools/ocaml/xenstored/oxenstored.conf.in
++++ b/tools/ocaml/xenstored/oxenstored.conf.in
+@@ -9,6 +9,38 @@ test-eagain = false
+ # Activate transaction merge support
+ merge-activate = true
+ 
++# Limits applied to domains whose writes cause other domains' transaction
++# commits to fail. Must include decimal point.
++
++# The burst limit is the number of conflicts a domain can cause to
++# fail in a short period; this value is used for both the initial and
++# the maximum value of each domain's conflict-credit, which falls by
++# one point for each conflict caused, and when it reaches zero the
++# domain's requests are ignored.
++conflict-burst-limit = 5.0
++
++# The conflict-credit is replenished over time:
++# one point is issued after each conflict-max-history-seconds, so this
++# is the minimum pause-time during which a domain will be ignored.
++# conflict-max-history-seconds = 0.05
++
++# If the conflict-rate-limit-is-aggregate flag is true then after each
++# tick one point of conflict-credit is given to just one domain: the
++# one at the front of the queue. If false, then after each tick each
++# domain gets a point of conflict-credit.
++# 
++# In environments where it is known that every transaction will
++# involve a set of nodes that is writable by at most one other domain,
++# then it is safe to set this aggregate-limit flag to false for better
++# performance. (This can be determined by considering the layout of
++# the xenstore tree and permissions, together with the content of the
++# transactions that require protection.)
++# 
++# A transaction which involves a set of nodes which can be modified by
++# multiple other domains can suffer conflicts caused by any of those
++# domains, so the flag must be set to true.
++conflict-rate-limit-is-aggregate = true
++
+ # Activate node permission system
+ perms-activate = true
+ 
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index 51d5d6a404..6f758ff58b 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -14,6 +14,8 @@
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU Lesser General Public License for more details.
+  *)
++let error fmt = Logging.error "transaction" fmt
++
+ open Stdext
+ 
+ let none = 0
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 2efcce6cdb..20473d555a 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -89,6 +89,8 @@ let parse_config filename =
+ 	let pidfile = ref default_pidfile in
+ 	let options = [
+ 		("merge-activate", Config.Set_bool Transaction.do_coalesce);
++		("conflict-burst-limit", Config.Set_float Define.conflict_burst_limit);
++		("conflict-rate-limit-is-aggregate", Config.Set_bool Define.conflict_rate_limit_is_aggregate);
+ 		("perms-activate", Config.Set_bool Perms.activate);
+ 		("quota-activate", Config.Set_bool Quota.activate);
+ 		("quota-maxwatch", Config.Set_int Define.maxwatch);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Tue, 14 Mar 2017 12:15:52 +0000
+Subject: [PATCH] oxenstored: ignore domains with no conflict-credit
+
+When processing connections, skip those from domains with no remaining
+conflict-credit.
+
+Also, issue a point of conflict-credit at regular intervals, the
+period being set by the configuration option "conflict-max-history-
+seconds".  When issuing conflict-credit, we give a point either to
+every domain at once (one each) or only to the single domain at the
+front of the queue, depending on the configuration option
+"conflict-rate-limit-is-aggregate".
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/connections.ml     | 14 ++++---
+ tools/ocaml/xenstored/define.ml          |  1 +
+ tools/ocaml/xenstored/domains.ml         |  4 +-
+ tools/ocaml/xenstored/oxenstored.conf.in |  2 +-
+ tools/ocaml/xenstored/xenstored.ml       | 65 +++++++++++++++++++++++---------
+ 5 files changed, 60 insertions(+), 26 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/connections.ml b/tools/ocaml/xenstored/connections.ml
+index f9bc225a06..ae7692819d 100644
+--- a/tools/ocaml/xenstored/connections.ml
++++ b/tools/ocaml/xenstored/connections.ml
+@@ -44,12 +44,14 @@ let add_domain cons dom =
+ 	| Some p -> Hashtbl.add cons.ports p con;
+ 	| None -> ()
+ 
+-let select cons =
+-	Hashtbl.fold
+-		(fun _ con (ins, outs) ->
+-		 let fd = Connection.get_fd con in
+-		 (fd :: ins,  if Connection.has_output con then fd :: outs else outs))
+-		cons.anonymous ([], [])
++let select ?(only_if = (fun _ -> true)) cons =
++	Hashtbl.fold (fun _ con (ins, outs) ->
++		if (only_if con) then (
++			let fd = Connection.get_fd con in
++			(fd :: ins,  if Connection.has_output con then fd :: outs else outs)
++		) else (ins, outs)
++	)
++	cons.anonymous ([], [])
+ 
+ let find cons =
+ 	Hashtbl.find cons.anonymous
+diff --git a/tools/ocaml/xenstored/define.ml b/tools/ocaml/xenstored/define.ml
+index 816b493834..5a604d1bea 100644
+--- a/tools/ocaml/xenstored/define.ml
++++ b/tools/ocaml/xenstored/define.ml
+@@ -30,6 +30,7 @@ let maxtransaction = ref (20)
+ let maxrequests = ref (-1)   (* maximum requests per transaction *)
+ 
+ let conflict_burst_limit = ref 5.0
++let conflict_max_history_seconds = ref 0.05
+ let conflict_rate_limit_is_aggregate = ref true
+ 
+ let domid_self = 0x7FF0
+diff --git a/tools/ocaml/xenstored/domains.ml b/tools/ocaml/xenstored/domains.ml
+index 3d29cc8358..99f68c7d4b 100644
+--- a/tools/ocaml/xenstored/domains.ml
++++ b/tools/ocaml/xenstored/domains.ml
+@@ -39,12 +39,12 @@ type domains = {
+ 	mutable n_paused: int;
+ }
+ 
+-let init eventchn = {
++let init eventchn on_first_conflict_pause = {
+ 	eventchn = eventchn;
+ 	table = Hashtbl.create 10;
+ 	doms_conflict_paused = Queue.create ();
+ 	doms_with_conflict_penalty = Queue.create ();
+-	on_first_conflict_pause = (fun () -> ()); (* Dummy value for now, pending subsequent commit. *)
++	on_first_conflict_pause = on_first_conflict_pause;
+ 	n_paused = 0;
+ }
+ let del doms id = Hashtbl.remove doms.table id
+diff --git a/tools/ocaml/xenstored/oxenstored.conf.in b/tools/ocaml/xenstored/oxenstored.conf.in
+index edd4335293..536611e8d0 100644
+--- a/tools/ocaml/xenstored/oxenstored.conf.in
++++ b/tools/ocaml/xenstored/oxenstored.conf.in
+@@ -22,7 +22,7 @@ conflict-burst-limit = 5.0
+ # The conflict-credit is replenished over time:
+ # one point is issued after each conflict-max-history-seconds, so this
+ # is the minimum pause-time during which a domain will be ignored.
+-# conflict-max-history-seconds = 0.05
++conflict-max-history-seconds = 0.05
+ 
+ # If the conflict-rate-limit-is-aggregate flag is true then after each
+ # tick one point of conflict-credit is given to just one domain: the
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 20473d555a..f562f597bf 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -53,14 +53,16 @@ let process_connection_fds store cons domains rset wset =
+ 
+ let process_domains store cons domains =
+ 	let do_io_domain domain =
+-		if not (Domain.is_bad_domain domain) then
+-			let io_credit = Domain.get_io_credit domain in
+-			if io_credit > 0 then (
+-				let con = Connections.find_domain cons (Domain.get_id domain) in
+-				Process.do_input store cons domains con;
+-				Process.do_output store cons domains con;
+-				Domain.decr_io_credit domain;
+-			) in
++		if Domain.is_bad_domain domain
++		|| Domain.get_io_credit domain <= 0
++		|| Domain.is_paused_for_conflict domain
++		then () (* nothing to do *)
++		else (
++			let con = Connections.find_domain cons (Domain.get_id domain) in
++			Process.do_input store cons domains con;
++			Process.do_output store cons domains con;
++			Domain.decr_io_credit domain
++		) in
+ 	Domains.iter domains do_io_domain
+ 
+ let sigusr1_handler store =
+@@ -90,6 +92,7 @@ let parse_config filename =
+ 	let options = [
+ 		("merge-activate", Config.Set_bool Transaction.do_coalesce);
+ 		("conflict-burst-limit", Config.Set_float Define.conflict_burst_limit);
++		("conflict-max-history-seconds", Config.Set_float Define.conflict_max_history_seconds);
+ 		("conflict-rate-limit-is-aggregate", Config.Set_bool Define.conflict_rate_limit_is_aggregate);
+ 		("perms-activate", Config.Set_bool Perms.activate);
+ 		("quota-activate", Config.Set_bool Quota.activate);
+@@ -262,7 +265,22 @@ let _ =
+ 
+ 	let store = Store.create () in
+ 	let eventchn = Event.init () in
+-	let domains = Domains.init eventchn in
++	let next_frequent_ops = ref 0. in
++	let advance_next_frequent_ops () =
++		next_frequent_ops := (Unix.gettimeofday () +. !Define.conflict_max_history_seconds)
++	in
++	let delay_next_frequent_ops_by duration =
++		next_frequent_ops := !next_frequent_ops +. duration
++	in
++	let domains = Domains.init eventchn advance_next_frequent_ops in
++
++	(* For things that need to be done periodically but more often
++	 * than the periodic_ops function *)
++	let frequent_ops () =
++		if Unix.gettimeofday () > !next_frequent_ops then (
++			Domains.incr_conflict_credit domains;
++			advance_next_frequent_ops ()
++		) in
+ 	let cons = Connections.create () in
+ 
+ 	let quit = ref false in
+@@ -394,23 +412,34 @@ let _ =
+ 			     gc.Gc.heap_words gc.Gc.heap_chunks
+ 			     gc.Gc.live_words gc.Gc.live_blocks
+ 			     gc.Gc.free_words gc.Gc.free_blocks
+-		)
+-		in
++		);
++		let elapsed = Unix.gettimeofday () -. now in
++		delay_next_frequent_ops_by elapsed
++	in
+ 
+-		let period_ops_interval = 15. in
+-		let period_start = ref 0. in
++	let period_ops_interval = 15. in
++	let period_start = ref 0. in
+ 
+ 	let main_loop () =
+-
++		let is_peaceful c =
++			match Connection.get_domain c with
++			| None -> true (* Treat socket-connections as exempt, and free to conflict. *)
++			| Some dom -> not (Domain.is_paused_for_conflict dom)
++		in
++		frequent_ops ();
+ 		let mw = Connections.has_more_work cons in
++		let peaceful_mw = List.filter is_peaceful mw in
+ 		List.iter
+ 			(fun c ->
+ 			 match Connection.get_domain c with
+ 			 | None -> () | Some d -> Domain.incr_io_credit d)
+-			mw;
++			peaceful_mw;
++		let start_time = Unix.gettimeofday () in
+ 		let timeout =
+-			if List.length mw > 0 then 0. else period_ops_interval in
+-		let inset, outset = Connections.select cons in
++			let until_next_activity = min (max 0. (!next_frequent_ops -. start_time)) period_ops_interval in
++			if peaceful_mw <> [] then 0. else until_next_activity
++		in
++		let inset, outset = Connections.select ~only_if:is_peaceful cons in
+ 		let rset, wset, _ =
+ 		try
+ 			Select.select (spec_fds @ inset) outset [] timeout
+@@ -420,6 +449,7 @@ let _ =
+ 			List.partition (fun fd -> List.mem fd spec_fds) rset in
+ 		if List.length sfds > 0 then
+ 			process_special_fds sfds;
++
+ 		if List.length cfds > 0 || List.length wset > 0 then
+ 			process_connection_fds store cons domains cfds wset;
+ 		if timeout <> 0. then (
+@@ -427,6 +457,7 @@ let _ =
+ 			if now > !period_start +. period_ops_interval then
+ 				(period_start := now; periodic_ops now)
+ 		);
++
+ 		process_domains store cons domains
+ 		in
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Tue, 14 Mar 2017 12:17:38 +0000
+Subject: [PATCH] oxenstored: add transaction info relevant to history-tracking
+
+Specifically:
+ * retain the original store (not just the root) in full transactions
+ * store commit count at the time of the start of the transaction
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/process.ml     |  2 +-
+ tools/ocaml/xenstored/transaction.ml | 12 ++++++++----
+ 2 files changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 7b60376cdd..5f92044c7e 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -301,7 +301,7 @@ let transaction_replay c t doms cons =
+ 	| Transaction.No ->
+ 		error "attempted to replay a non-full transaction";
+ 		false
+-	| Transaction.Full(id, oldroot, cstore) ->
++	| Transaction.Full(id, oldstore, cstore) ->
+ 		let tid = Connection.start_transaction c cstore in
+ 		let new_t = Transaction.make tid cstore in
+ 		let con = sprintf "r(%d):%s" id (Connection.get_domstr c) in
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index 6f758ff58b..b1791b3af5 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -73,12 +73,13 @@ let can_coalesce oldroot currentroot path =
+ 
+ type ty = No | Full of (
+ 	int *          (* Transaction id *)
+-	Store.Node.t * (* Original root *)
++	Store.t *      (* Original store *)
+ 	Store.t        (* A pointer to the canonical store: its root changes on each transaction-commit *)
+ )
+ 
+ type t = {
+ 	ty: ty;
++	start_count: int64;
+ 	store: Store.t; (* This is the store that we change in write operations. *)
+ 	quota: Quota.t;
+ 	mutable paths: (Xenbus.Xb.Op.operation * Store.Path.t) list;
+@@ -87,10 +88,13 @@ type t = {
+ 	mutable write_lowpath: Store.Path.t option;
+ }
+ 
++let counter = ref 0L
++
+ let make id store =
+-	let ty = if id = none then No else Full(id, Store.get_root store, store) in
++	let ty = if id = none then No else Full(id, Store.copy store, store) in
+ 	{
+ 		ty = ty;
++		start_count = !counter;
+ 		store = if id = none then store else Store.copy store;
+ 		quota = Quota.copy store.Store.quota;
+ 		paths = [];
+@@ -161,7 +165,7 @@ let commit ~con t =
+ 	let has_commited =
+ 	match t.ty with
+ 	| No                         -> true
+-	| Full (id, oldroot, cstore) ->       (* "cstore" meaning current canonical store *)
++	| Full (id, oldstore, cstore) ->       (* "cstore" meaning current canonical store *)
+ 		let commit_partial oldroot cstore store =
+ 			(* get the lowest path of the query and verify that it hasn't
+ 			   been modified by others transactions. *)
+@@ -204,7 +208,7 @@ let commit ~con t =
+ 		if !test_eagain && Random.int 3 = 0 then
+ 			false
+ 		else
+-			try_commit oldroot cstore t.store
++			try_commit (Store.get_root oldstore) cstore t.store
+ 		in
+ 	if has_commited && has_write_ops then
+ 		Disk.write t.store;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Tue, 14 Mar 2017 13:20:07 +0000
+Subject: [PATCH] oxenstored: support commit history tracking
+
+Add ability to track xenstore tree operations -- either non-transactional
+operations or committed transactions.
+
+For now, the call to actually retain commits is commented out because history
+can grow without bound.
+
+For now, we call record_commit for all non-transactional operations. A
+subsequent patch will make it retain only the ones with side-effects.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/Makefile     |  1 +
+ tools/ocaml/xenstored/history.ml   | 43 ++++++++++++++++++++++++++++++++++++++
+ tools/ocaml/xenstored/process.ml   | 24 +++++++++++++++++++--
+ tools/ocaml/xenstored/xenstored.ml |  1 +
+ 4 files changed, 67 insertions(+), 2 deletions(-)
+ create mode 100644 tools/ocaml/xenstored/history.ml
+
+diff --git a/tools/ocaml/xenstored/Makefile b/tools/ocaml/xenstored/Makefile
+index 1769e55810..d23883683d 100644
+--- a/tools/ocaml/xenstored/Makefile
++++ b/tools/ocaml/xenstored/Makefile
+@@ -53,6 +53,7 @@ OBJS = paths \
+ 	domains \
+ 	connection \
+ 	connections \
++	history \
+ 	parse_arg \
+ 	process \
+ 	xenstored
+diff --git a/tools/ocaml/xenstored/history.ml b/tools/ocaml/xenstored/history.ml
+new file mode 100644
+index 0000000000..e4b4d70be7
+--- /dev/null
++++ b/tools/ocaml/xenstored/history.ml
+@@ -0,0 +1,43 @@
++(*
++ * Copyright (c) 2017 Citrix Systems Ltd.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License as published
++ * by the Free Software Foundation; version 2.1 only. with the special
++ * exception on linking described in file LICENSE.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License for more details.
++ *)
++
++type history_record = {
++	con: Connection.t;   (* connection that made a change *)
++	tid: int;            (* transaction id of the change (may be Transaction.none) *)
++	before: Store.t;     (* the store before the change *)
++	after: Store.t;      (* the store after the change *)
++	finish_count: int64; (* the commit-count at which the transaction finished *)
++}
++
++let history : history_record list ref = ref []
++
++(* Called from periodic_ops to ensure we don't discard symbols that are still needed. *)
++(* There is scope for optimisation here, since in consecutive commits one commit's `after`
++ * is the same thing as the next commit's `before`, but not all commits in history are
++ * consecutive. *)
++let mark_symbols () =
++	(* There are gaps where dom0's commits are missing. Otherwise we could assume that
++	 * each element's `before` is the same thing as the next element's `after`
++	 * since the next element is the previous commit *)
++	List.iter (fun hist_rec ->
++			Store.mark_symbols hist_rec.before;
++			Store.mark_symbols hist_rec.after;
++		)
++		!history
++
++let push (x: history_record) =
++	let dom = x.con.Connection.dom in
++	match dom with
++	| None -> () (* treat socket connections as always free to conflict *)
++	| Some d -> if not (Domain.is_free_to_conflict d) then history := x :: !history
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 5f92044c7e..964c044b27 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -293,6 +293,16 @@ let write_response_log ~ty ~tid ~con ~response =
+ 	| Packet.Reply x -> write_answer_log ~ty ~tid ~con ~data:x
+ 	| Packet.Error e -> write_answer_log ~ty:(Xenbus.Xb.Op.Error) ~tid ~con ~data:e
+ 
++let record_commit ~con ~tid ~before ~after =
++	let inc r = r := Int64.add 1L !r in
++	let finish_count = inc Transaction.counter; !Transaction.counter in
++	(* This call would leak memory if historic activity is retained forever
++	   so can only be uncommented if history is guaranteed not to grow
++	   unboundedly.
++	History.push {History.con=con; tid=tid; before=before; after=after; finish_count=finish_count}
++	*)
++	()
++
+ (* Replay a stored transaction against a fresh store, check the responses are
+    all equivalent: if so, commit the transaction. Otherwise send the abort to
+    the client. *)
+@@ -363,8 +373,14 @@ let do_transaction_end con t domains cons data =
+ 		Connection.end_transaction con (Transaction.get_id t) commit in
+ 	if not success then
+ 		raise Transaction_again;
+-	if commit then
+-		process_watch (List.rev (Transaction.get_paths t)) cons
++	if commit then begin
++		process_watch (List.rev (Transaction.get_paths t)) cons;
++		match t.Transaction.ty with
++		| Transaction.No ->
++			() (* no need to record anything *)
++		| Transaction.Full(id, oldstore, cstore) ->
++			record_commit ~con ~tid:id ~before:oldstore ~after:cstore
++	end
+ 
+ let do_introduce con t domains cons data =
+ 	if not (Connection.is_dom0 con)
+@@ -448,7 +464,11 @@ let process_packet ~store ~cons ~doms ~con ~req =
+ 			else
+ 				Connection.get_transaction con tid
+ 			in
++
++		let before = Store.copy store in
+ 		let response = input_handle_error ~cons ~doms ~fct ~con ~t ~req in
++		let after = Store.copy store in
++		if tid = Transaction.none then record_commit ~con ~tid ~before ~after;
+ 
+ 		let response = try
+ 			if tid <> Transaction.none then
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index f562f597bf..d5c50fde52 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -385,6 +385,7 @@ let _ =
+ 			Symbol.mark_all_as_unused ();
+ 			Store.mark_symbols store;
+ 			Connections.iter cons Connection.mark_symbols;
++			History.mark_symbols ();
+ 			Symbol.garbage ()
+ 		end;
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 14:20:33 +0000
+Subject: [PATCH] oxenstored: only record operations with side-effects in
+ history
+
+There is no need to record "read" operations as they will never cause another
+transaction to fail.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Thomas Sanders <thomas.sanders@citrix.com>
+---
+ tools/ocaml/xenstored/process.ml | 47 ++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 43 insertions(+), 4 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 964c044b27..b435a4a906 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -450,6 +450,37 @@ let function_of_type ty =
+ 	| _                              -> function_of_type_simple_op ty
+ 
+ (**
++ * Determines which individual (non-transactional) operations we want to retain.
++ * We only want to retain operations that have side-effects in the store since
++ * these can be the cause of transactions failing.
++ *)
++let retain_op_in_history ty =
++	match ty with
++	| Xenbus.Xb.Op.Write
++	| Xenbus.Xb.Op.Mkdir
++	| Xenbus.Xb.Op.Rm
++	| Xenbus.Xb.Op.Setperms          -> true
++	| Xenbus.Xb.Op.Debug
++	| Xenbus.Xb.Op.Directory
++	| Xenbus.Xb.Op.Read
++	| Xenbus.Xb.Op.Getperms
++	| Xenbus.Xb.Op.Watch
++	| Xenbus.Xb.Op.Unwatch
++	| Xenbus.Xb.Op.Transaction_start
++	| Xenbus.Xb.Op.Transaction_end
++	| Xenbus.Xb.Op.Introduce
++	| Xenbus.Xb.Op.Release
++	| Xenbus.Xb.Op.Getdomainpath
++	| Xenbus.Xb.Op.Watchevent
++	| Xenbus.Xb.Op.Error
++	| Xenbus.Xb.Op.Isintroduced
++	| Xenbus.Xb.Op.Resume
++	| Xenbus.Xb.Op.Set_target
++	| Xenbus.Xb.Op.Restrict
++	| Xenbus.Xb.Op.Reset_watches
++	| Xenbus.Xb.Op.Invalid           -> false
++
++(**
+  * Nothrow guarantee.
+  *)
+ let process_packet ~store ~cons ~doms ~con ~req =
+@@ -465,10 +496,18 @@ let process_packet ~store ~cons ~doms ~con ~req =
+ 				Connection.get_transaction con tid
+ 			in
+ 
+-		let before = Store.copy store in
+-		let response = input_handle_error ~cons ~doms ~fct ~con ~t ~req in
+-		let after = Store.copy store in
+-		if tid = Transaction.none then record_commit ~con ~tid ~before ~after;
++		let execute () = input_handle_error ~cons ~doms ~fct ~con ~t ~req in
++
++		let response =
++			(* Note that transactions are recorded in history separately. *)
++			if tid = Transaction.none && retain_op_in_history ty then begin
++				let before = Store.copy store in
++				let response = execute () in
++				let after = Store.copy store in
++				record_commit ~con ~tid ~before ~after;
++				response
++			end else execute ()
++		in
+ 
+ 		let response = try
+ 			if tid <> Transaction.none then
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Thu, 23 Mar 2017 14:25:16 +0000
+Subject: [PATCH] oxenstored: discard old commit-history on txn end
+
+The history of commits is to be used for working out which historical
+commit(s) (including atomic writes) caused conflicts with a
+currently-failing commit of a transaction. Any commit that was made
+before the current transaction started cannot be relevant. Therefore
+we never need to keep history from before the start of the
+longest-running transaction that is open at any given time: whenever a
+transaction ends (with or without a commit) then if it was the
+longest-running open transaction we can delete history up until start
+of the the next-longest-running open transaction.
+
+Some transactions might stay open for a very long time, so if any
+transaction exceeds conflict_max_history_seconds then we remove it
+from consideration in this context, and will not guarantee to keep
+remembering about historical commits made during such a transaction.
+
+We implement this by keeping a list of all open transactions that have
+not been open too long. When a transaction ends, we remove it from the
+list, along with any that have been open longer than the maximum; then
+we delete any history from before the start of the longest-running
+transaction remaining in the list.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/history.ml     | 17 +++++++++++++++++
+ tools/ocaml/xenstored/process.ml     |  4 ++--
+ tools/ocaml/xenstored/transaction.ml | 29 +++++++++++++++++++++++++----
+ 3 files changed, 44 insertions(+), 6 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/history.ml b/tools/ocaml/xenstored/history.ml
+index e4b4d70be7..6f7a282541 100644
+--- a/tools/ocaml/xenstored/history.ml
++++ b/tools/ocaml/xenstored/history.ml
+@@ -36,6 +36,23 @@ let mark_symbols () =
+ 		)
+ 		!history
+ 
++(* Keep only enough commit-history to protect the running transactions that we are still tracking *)
++(* There is scope for optimisation here, replacing List.filter with something more efficient,
++ * probably on a different list-like structure. *)
++let trim () =
++	history := match Transaction.oldest_short_running_transaction () with
++	| None -> [] (* We have no open transaction, so no history is needed *)
++	| Some (_, txn) -> (
++		(* keep records with finish_count recent enough to be relevant *)
++		List.filter (fun r -> r.finish_count > txn.Transaction.start_count) !history
++	)
++
++let end_transaction txn con tid commit =
++	let success = Connection.end_transaction con tid commit in
++	Transaction.end_transaction txn;
++	trim ();
++	success
++
+ let push (x: history_record) =
+ 	let dom = x.con.Connection.dom in
+ 	match dom with
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index b435a4a906..6f4d11893a 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -313,7 +313,7 @@ let transaction_replay c t doms cons =
+ 		false
+ 	| Transaction.Full(id, oldstore, cstore) ->
+ 		let tid = Connection.start_transaction c cstore in
+-		let new_t = Transaction.make tid cstore in
++		let new_t = Transaction.make ~internal:true tid cstore in
+ 		let con = sprintf "r(%d):%s" id (Connection.get_domstr c) in
+ 		let perform_exn (request, response) =
+ 			write_access_log ~ty:request.Packet.ty ~tid ~con ~data:request.Packet.data;
+@@ -370,7 +370,7 @@ let do_transaction_end con t domains cons data =
+ 		in
+ 	let success =
+ 		let commit = if commit then Some (fun con trans -> transaction_replay con trans domains cons) else None in
+-		Connection.end_transaction con (Transaction.get_id t) commit in
++		History.end_transaction t con (Transaction.get_id t) commit in
+ 	if not success then
+ 		raise Transaction_again;
+ 	if commit then begin
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index b1791b3af5..edd1178d80 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -87,12 +87,29 @@ type t = {
+ 	mutable read_lowpath: Store.Path.t option;
+ 	mutable write_lowpath: Store.Path.t option;
+ }
++let get_id t = match t.ty with No -> none | Full (id, _, _) -> id
+ 
+ let counter = ref 0L
+ 
+-let make id store =
++(* Scope for optimisation: different data-structure and functions to search/filter it *)
++let short_running_txns = ref []
++
++let oldest_short_running_transaction () =
++	let rec last = function
++		| [] -> None
++		| [x] -> Some x
++		| x :: xs -> last xs
++	in last !short_running_txns
++
++let end_transaction txn =
++	let cutoff = Unix.gettimeofday () -. !Define.conflict_max_history_seconds in
++	short_running_txns := List.filter
++		(function (start_time, tx) -> start_time >= cutoff && tx != txn)
++		!short_running_txns
++
++let make ?(internal=false) id store =
+ 	let ty = if id = none then No else Full(id, Store.copy store, store) in
+-	{
++	let txn = {
+ 		ty = ty;
+ 		start_count = !counter;
+ 		store = if id = none then store else Store.copy store;
+@@ -101,9 +118,13 @@ let make id store =
+ 		operations = [];
+ 		read_lowpath = None;
+ 		write_lowpath = None;
+-	}
++	} in
++	if id <> none && not internal then (
++		let now = Unix.gettimeofday () in
++		short_running_txns := (now, txn) :: !short_running_txns
++	);
++	txn
+ 
+-let get_id t = match t.ty with No -> none | Full (id, _, _) -> id
+ let get_store t = t.store
+ let get_paths t = t.paths
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Mon, 27 Mar 2017 08:58:29 +0000
+Subject: [PATCH] oxenstored: track commit history
+
+Since the list of historic activity cannot grow without bound, it is safe to use
+this to track commits.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Thomas Sanders <thomas.sanders@citrix.com>
+---
+ tools/ocaml/xenstored/process.ml | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 6f4d11893a..1ed1a8f03a 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -296,12 +296,7 @@ let write_response_log ~ty ~tid ~con ~response =
+ let record_commit ~con ~tid ~before ~after =
+ 	let inc r = r := Int64.add 1L !r in
+ 	let finish_count = inc Transaction.counter; !Transaction.counter in
+-	(* This call would leak memory if historic activity is retained forever
+-	   so can only be uncommented if history is guaranteed not to grow
+-	   unboundedly.
+ 	History.push {History.con=con; tid=tid; before=before; after=after; finish_count=finish_count}
+-	*)
+-	()
+ 
+ (* Replay a stored transaction against a fresh store, check the responses are
+    all equivalent: if so, commit the transaction. Otherwise send the abort to
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 14:28:16 +0000
+Subject: [PATCH] oxenstored: blame the connection that caused a transaction
+ conflict
+
+Blame each connection found to have made a commit that would cause this
+transaction to fail. Each blamed connection is penalised by having its
+conflict-credit decremented.
+
+Note the change in semantics for the replay function: we no longer stop after
+finding the first operation that can't be replayed. This allows us to identify
+all operations that conflicted with this transaction, not just the one that
+conflicted first.
+
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+v1 Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+
+Changes since v1:
+ * use correct log levels for informational messages
+Changes since v2:
+ * fix the blame algorithm and improve logging
+   (fix was reviewed by Jonathan Davies)
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+---
+ tools/ocaml/xenstored/history.ml | 12 ++++++++++
+ tools/ocaml/xenstored/process.ml | 50 ++++++++++++++++++++++++++++++++--------
+ 2 files changed, 52 insertions(+), 10 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/history.ml b/tools/ocaml/xenstored/history.ml
+index 6f7a282541..e941e2bfb5 100644
+--- a/tools/ocaml/xenstored/history.ml
++++ b/tools/ocaml/xenstored/history.ml
+@@ -58,3 +58,15 @@ let push (x: history_record) =
+ 	match dom with
+ 	| None -> () (* treat socket connections as always free to conflict *)
+ 	| Some d -> if not (Domain.is_free_to_conflict d) then history := x :: !history
++
++(* Find the connections from records since commit-count [since] for which [f record] returns [true] *)
++let filter_connections ~since ~f =
++	(* The "mem" call is an optimisation, to avoid calling f if we have picked con already. *)
++	(* Using a hash table rather than a list is to optimise the "mem" call. *)
++	List.fold_left (fun acc hist_rec ->
++		if hist_rec.finish_count > since
++		&& not (Hashtbl.mem acc hist_rec.con)
++		&& f hist_rec
++		then Hashtbl.replace acc hist_rec.con ();
++		acc
++	) (Hashtbl.create 1023) !history
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 1ed1a8f03a..5e5a1ab983 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -16,6 +16,7 @@
+ 
+ let error fmt = Logging.error "process" fmt
+ let info fmt = Logging.info "process" fmt
++let debug fmt = Logging.debug "process" fmt
+ 
+ open Printf
+ open Stdext
+@@ -25,6 +26,7 @@ exception Transaction_nested
+ exception Domain_not_match
+ exception Invalid_Cmd_Args
+ 
++(* This controls the do_debug fn in this module, not the debug logging-function. *)
+ let allow_debug = ref false
+ 
+ let c_int_of_string s =
+@@ -308,23 +310,51 @@ let transaction_replay c t doms cons =
+ 		false
+ 	| Transaction.Full(id, oldstore, cstore) ->
+ 		let tid = Connection.start_transaction c cstore in
+-		let new_t = Transaction.make ~internal:true tid cstore in
++		let replay_t = Transaction.make ~internal:true tid cstore in
+ 		let con = sprintf "r(%d):%s" id (Connection.get_domstr c) in
+-		let perform_exn (request, response) =
+-			write_access_log ~ty:request.Packet.ty ~tid ~con ~data:request.Packet.data;
++
++		let perform_exn ~wlog txn (request, response) =
++			if wlog then write_access_log ~ty:request.Packet.ty ~tid ~con ~data:request.Packet.data;
+ 			let fct = function_of_type_simple_op request.Packet.ty in
+-			let response' = input_handle_error ~cons ~doms ~fct ~con:c ~t:new_t ~req:request in
+-			write_response_log ~ty:request.Packet.ty ~tid ~con ~response:response';
+-			if not(Packet.response_equal response response') then raise Transaction_again in
++			let response' = input_handle_error ~cons ~doms ~fct ~con:c ~t:txn ~req:request in
++			if wlog then write_response_log ~ty:request.Packet.ty ~tid ~con ~response:response';
++			if not(Packet.response_equal response response') then raise Transaction_again
++		in
+ 		finally
+ 		(fun () ->
+ 			try
+ 				Logging.start_transaction ~con ~tid;
+-				List.iter perform_exn (Transaction.get_operations t);
+-				Logging.end_transaction ~con ~tid;
++				List.iter (perform_exn ~wlog:true replay_t) (Transaction.get_operations t); (* May throw EAGAIN *)
+ 
+-				Transaction.commit ~con new_t
+-			with e ->
++				Logging.end_transaction ~con ~tid;
++				Transaction.commit ~con replay_t
++			with
++			| Transaction_again -> (
++				let victim_domstr = Connection.get_domstr c in
++				debug "Apportioning blame for EAGAIN in txn %d, domain=%s" id victim_domstr;
++				let punish guilty_con =
++					debug "Blaming domain %s for conflict with domain %s txn %d"
++						(Connection.get_domstr guilty_con) victim_domstr id;
++					Connection.decr_conflict_credit doms guilty_con
++				in
++				let judge_and_sentence hist_rec = (
++					let can_apply_on store = (
++						let store = Store.copy store in
++						let trial_t = Transaction.make ~internal:true Transaction.none store in
++						try List.iter (perform_exn ~wlog:false trial_t) (Transaction.get_operations t);
++							true
++						with Transaction_again -> false
++					) in
++					if can_apply_on hist_rec.History.before
++					&& not (can_apply_on hist_rec.History.after)
++					then (punish hist_rec.History.con; true)
++					else false
++				) in
++				let guilty_cons = History.filter_connections ~since:t.Transaction.start_count ~f:judge_and_sentence in
++				if Hashtbl.length guilty_cons = 0 then debug "Found no culprit for conflict in %s: must be self or not in history." con;
++				false
++			)
++			| e ->
+ 				info "transaction_replay %d caught: %s" tid (Printexc.to_string e);
+ 				false
+ 			)
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Thu, 23 Mar 2017 19:06:54 +0000
+Subject: [PATCH] oxenstored: allow self-conflicts
+
+We already avoid inter-domain conflicts but now allow intra-domain
+conflicts.  Although there are no known practical examples of a domain
+that might perform operations that conflict with its own transactions,
+this is conceivable, so here we avoid changing those semantics
+unnecessarily.
+
+When a transaction commit fails with a conflict and we look through
+the history of commits to see which connection(s) to blame, ignore
+historical commits that were made by the same connection as the
+failing commit.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+---
+ tools/ocaml/xenstored/history.ml | 3 ++-
+ tools/ocaml/xenstored/process.ml | 2 +-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/history.ml b/tools/ocaml/xenstored/history.ml
+index e941e2bfb5..4079588896 100644
+--- a/tools/ocaml/xenstored/history.ml
++++ b/tools/ocaml/xenstored/history.ml
+@@ -60,11 +60,12 @@ let push (x: history_record) =
+ 	| Some d -> if not (Domain.is_free_to_conflict d) then history := x :: !history
+ 
+ (* Find the connections from records since commit-count [since] for which [f record] returns [true] *)
+-let filter_connections ~since ~f =
++let filter_connections ~ignore ~since ~f =
+ 	(* The "mem" call is an optimisation, to avoid calling f if we have picked con already. *)
+ 	(* Using a hash table rather than a list is to optimise the "mem" call. *)
+ 	List.fold_left (fun acc hist_rec ->
+ 		if hist_rec.finish_count > since
++		&& not (hist_rec.con == ignore)
+ 		&& not (Hashtbl.mem acc hist_rec.con)
+ 		&& f hist_rec
+ 		then Hashtbl.replace acc hist_rec.con ();
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 5e5a1ab983..b56e3fcbaa 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -350,7 +350,7 @@ let transaction_replay c t doms cons =
+ 					then (punish hist_rec.History.con; true)
+ 					else false
+ 				) in
+-				let guilty_cons = History.filter_connections ~since:t.Transaction.start_count ~f:judge_and_sentence in
++				let guilty_cons = History.filter_connections ~ignore:c ~since:t.Transaction.start_count ~f:judge_and_sentence in
+ 				if Hashtbl.length guilty_cons = 0 then debug "Found no culprit for conflict in %s: must be self or not in history." con;
+ 				false
+ 			)
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Fri, 24 Mar 2017 16:16:10 +0000
+Subject: [PATCH] oxenstored: do not commit read-only transactions
+
+The packet telling us to end the transaction has always carried an
+argument telling us whether to commit.
+
+If the transaction made no modifications to the tree, now we ignore
+that argument and do not commit: it is just a waste of effort.
+
+This makes read-only transactions immune to conflicts, and means that
+we do not need to store any of their details in the history that is
+used for assigning blame for conflicts.
+
+We count a transaction as a read-only transaction only if it contains
+no operations that modified the tree.
+
+This means that (for example) a transaction that creates a new node
+then deletes it would NOT count as read-only, even though it makes no
+change overall. A more sophisticated algorithm could judge the
+transaction based on comparison of its initial and final states, but
+this would add complexity and computational cost.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+---
+ tools/ocaml/xenstored/process.ml     | 1 +
+ tools/ocaml/xenstored/transaction.ml | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index b56e3fcbaa..adfc7a4c58 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -393,6 +393,7 @@ let do_transaction_end con t domains cons data =
+ 		| x :: _   -> raise (Invalid_argument x)
+ 		| _        -> raise Invalid_Cmd_Args
+ 		in
++	let commit = commit && not (Transaction.is_read_only t) in
+ 	let success =
+ 		let commit = if commit then Some (fun con trans -> transaction_replay con trans domains cons) else None in
+ 		History.end_transaction t con (Transaction.get_id t) commit in
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index edd1178d80..8f95301953 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -128,6 +128,7 @@ let make ?(internal=false) id store =
+ let get_store t = t.store
+ let get_paths t = t.paths
+ 
++let is_read_only t = t.paths = []
+ let add_wop t ty path = t.paths <- (ty, path) :: t.paths
+ let add_operation ~perm t request response =
+ 	if !Define.maxrequests >= 0
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Fri, 24 Mar 2017 19:55:03 +0000
+Subject: [PATCH] oxenstored: don't wake to issue no conflict-credit
+
+In the main loop, when choosing the timeout for the select function
+call, we were setting it so as to wake up to issue conflict-credit to
+any domains that could accept it. When xenstore is idle, this would
+mean waking up every 50ms (by default) to do no work. With this
+commit, we check whether any domain is below its cap, and if not then
+we set the timeout for longer (the same timeout as before the
+conflict-protection feature was added).
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+---
+ tools/ocaml/xenstored/domains.ml   | 51 ++++++++++++++++++++++++++++++--------
+ tools/ocaml/xenstored/xenstored.ml |  5 +++-
+ 2 files changed, 44 insertions(+), 12 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/domains.ml b/tools/ocaml/xenstored/domains.ml
+index 99f68c7d4b..61d1e2ee0e 100644
+--- a/tools/ocaml/xenstored/domains.ml
++++ b/tools/ocaml/xenstored/domains.ml
+@@ -35,8 +35,9 @@ type domains = {
+ 	on_first_conflict_pause: unit -> unit;
+ 
+ 	(* If config is set to use individual instead of aggregate conflict-rate-limiting,
+-	   we use this instead of the queues. *)
+-	mutable n_paused: int;
++	   we use these counts instead of the queues. The second one includes the first. *)
++	mutable n_paused: int;    (* Number of domains with zero or negative credit *)
++	mutable n_penalised: int; (* Number of domains with less than maximum credit *)
+ }
+ 
+ let init eventchn on_first_conflict_pause = {
+@@ -46,6 +47,7 @@ let init eventchn on_first_conflict_pause = {
+ 	doms_with_conflict_penalty = Queue.create ();
+ 	on_first_conflict_pause = on_first_conflict_pause;
+ 	n_paused = 0;
++	n_penalised = 0;
+ }
+ let del doms id = Hashtbl.remove doms.table id
+ let exist doms id = Hashtbl.mem doms.table id
+@@ -53,6 +55,23 @@ let find doms id = Hashtbl.find doms.table id
+ let number doms = Hashtbl.length doms.table
+ let iter doms fct = Hashtbl.iter (fun _ b -> fct b) doms.table
+ 
++let rec is_empty_queue q =
++	Queue.is_empty q ||
++		if !(Queue.peek q) = None
++		then (
++			ignore (Queue.pop q);
++			is_empty_queue q
++		) else false
++
++let all_at_max_credit doms =
++	if !Define.conflict_rate_limit_is_aggregate
++	then
++		(* Check both becuase if burst limit is 1.0 then a domain can go straight
++		 * from max-credit to paused without getting into the penalty queue. *)
++		is_empty_queue doms.doms_with_conflict_penalty
++		&& is_empty_queue doms.doms_conflict_paused
++	else doms.n_penalised = 0
++
+ (* Functions to handle queues of domains given that the domain might be deleted while in a queue. *)
+ let push dom queue =
+ 	Queue.push (ref (Some dom)) queue
+@@ -130,13 +149,16 @@ let decr_conflict_credit doms dom =
+ 	let before = dom.Domain.conflict_credit in
+ 	let after = max (-1.0) (before -. 1.0) in
+ 	dom.Domain.conflict_credit <- after;
++	let newly_penalised =
++		before >= !Define.conflict_burst_limit
++		&& after < !Define.conflict_burst_limit in
++	let newly_paused = before > 0.0 && after <= 0.0 in
+ 	if !Define.conflict_rate_limit_is_aggregate then (
+-		if before >= !Define.conflict_burst_limit
+-		&& after < !Define.conflict_burst_limit
++		if newly_penalised
+ 		&& after > 0.0
+ 		then (
+ 			push dom doms.doms_with_conflict_penalty
+-		) else if before > 0.0 && after <= 0.0
++		) else if newly_paused
+ 		then (
+ 			let first_pause = Queue.is_empty doms.doms_conflict_paused in
+ 			push dom doms.doms_conflict_paused;
+@@ -144,9 +166,12 @@ let decr_conflict_credit doms dom =
+ 		) else (
+ 			(* The queues are correct already: no further action needed. *)
+ 		)
+-	) else if before > 0.0 && after <= 0.0 then (
+-		doms.n_paused <- doms.n_paused + 1;
+-		if doms.n_paused = 1 then doms.on_first_conflict_pause ()
++	) else (
++		if newly_penalised then doms.n_penalised <- doms.n_penalised + 1;
++		if newly_paused then (
++			doms.n_paused <- doms.n_paused + 1;
++			if doms.n_paused = 1 then doms.on_first_conflict_pause ()
++		)
+ 	)
+ 
+ (* Give one point of credit to one domain, and update the queues appropriately. *)
+@@ -175,9 +200,13 @@ let incr_conflict_credit doms =
+ 			let before = dom.Domain.conflict_credit in
+ 			let after = min (before +. 1.0) !Define.conflict_burst_limit in
+ 			dom.Domain.conflict_credit <- after;
++
+ 			if before <= 0.0 && after > 0.0
+-			then doms.n_paused <- doms.n_paused - 1
++			then doms.n_paused <- doms.n_paused - 1;
++
++			if before < !Define.conflict_burst_limit
++			&& after >= !Define.conflict_burst_limit
++			then doms.n_penalised <- doms.n_penalised - 1
+ 		in
+-		(* Scope for optimisation (probably tiny): avoid iteration if all domains are at max credit *)
+-		iter doms inc
++		if doms.n_penalised > 0 then iter doms inc
+ 	)
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index d5c50fde52..06387a80b1 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -437,7 +437,10 @@ let _ =
+ 			peaceful_mw;
+ 		let start_time = Unix.gettimeofday () in
+ 		let timeout =
+-			let until_next_activity = min (max 0. (!next_frequent_ops -. start_time)) period_ops_interval in
++			let until_next_activity =
++				if Domains.all_at_max_credit domains
++				then period_ops_interval
++				else min (max 0. (!next_frequent_ops -. start_time)) period_ops_interval in
+ 			if peaceful_mw <> [] then 0. else until_next_activity
+ 		in
+ 		let inset, outset = Connections.select ~only_if:is_peaceful cons in
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Mon, 27 Mar 2017 14:36:34 +0100
+Subject: [PATCH] oxenstored transaction conflicts: improve logging
+
+For information related to transaction conflicts, potentially frequent
+logging at "info" priority has been changed to "debug" priority, and
+once per two minutes there is an "info" priority summary.
+
+Additional detailed logging has been added at "debug" priority.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+---
+ tools/ocaml/xenstored/domain.ml      | 8 ++++++++
+ tools/ocaml/xenstored/domains.ml     | 5 +++++
+ tools/ocaml/xenstored/process.ml     | 6 +++++-
+ tools/ocaml/xenstored/transaction.ml | 5 +++++
+ tools/ocaml/xenstored/xenstored.ml   | 6 ++++++
+ 5 files changed, 29 insertions(+), 1 deletion(-)
+
+diff --git a/tools/ocaml/xenstored/domain.ml b/tools/ocaml/xenstored/domain.ml
+index e677aa3372..4515650d51 100644
+--- a/tools/ocaml/xenstored/domain.ml
++++ b/tools/ocaml/xenstored/domain.ml
+@@ -34,6 +34,7 @@ type t =
+ 	mutable conflict_credit: float; (* Must be positive to perform writes; a commit
+ 	                                   that later causes conflict with another
+ 	                                   domain's transaction costs credit. *)
++	mutable caused_conflicts: int64;
+ }
+ 
+ let is_dom0 d = d.id = 0
+@@ -93,4 +94,11 @@ let make id mfn remote_port interface eventchn = {
+ 	bad_client = false;
+ 	io_credit = 0;
+ 	conflict_credit = !Define.conflict_burst_limit;
++	caused_conflicts = 0L;
+ }
++
++let log_and_reset_conflict_stats logfn dom =
++	if dom.caused_conflicts > 0L then (
++		logfn dom.id dom.caused_conflicts;
++		dom.caused_conflicts <- 0L
++	)
+diff --git a/tools/ocaml/xenstored/domains.ml b/tools/ocaml/xenstored/domains.ml
+index 61d1e2ee0e..fdae298613 100644
+--- a/tools/ocaml/xenstored/domains.ml
++++ b/tools/ocaml/xenstored/domains.ml
+@@ -146,8 +146,10 @@ let create0 doms =
+ 	dom
+ 
+ let decr_conflict_credit doms dom =
++	dom.Domain.caused_conflicts <- Int64.add 1L dom.Domain.caused_conflicts;
+ 	let before = dom.Domain.conflict_credit in
+ 	let after = max (-1.0) (before -. 1.0) in
++	debug "decr_conflict_credit dom%d %F -> %F" (Domain.get_id dom) before after;
+ 	dom.Domain.conflict_credit <- after;
+ 	let newly_penalised =
+ 		before >= !Define.conflict_burst_limit
+@@ -178,7 +180,9 @@ let decr_conflict_credit doms dom =
+ let incr_conflict_credit_from_queue doms =
+ 	let process_queue q requeue_test =
+ 		let d = pop q in
++		let before = d.Domain.conflict_credit in (* just for debug-logging *)
+ 		d.Domain.conflict_credit <- min (d.Domain.conflict_credit +. 1.0) !Define.conflict_burst_limit;
++		debug "incr_conflict_credit_from_queue: dom%d: %F -> %F" (Domain.get_id d) before d.Domain.conflict_credit;
+ 		if requeue_test d.Domain.conflict_credit then (
+ 			push d q (* Make it queue up again for its next point of credit. *)
+ 		)
+@@ -200,6 +204,7 @@ let incr_conflict_credit doms =
+ 			let before = dom.Domain.conflict_credit in
+ 			let after = min (before +. 1.0) !Define.conflict_burst_limit in
+ 			dom.Domain.conflict_credit <- after;
++			debug "incr_conflict_credit dom%d: %F -> %F" (Domain.get_id dom) before after;
+ 
+ 			if before <= 0.0 && after > 0.0
+ 			then doms.n_paused <- doms.n_paused - 1;
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index adfc7a4c58..8a688c4c16 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -330,6 +330,7 @@ let transaction_replay c t doms cons =
+ 				Transaction.commit ~con replay_t
+ 			with
+ 			| Transaction_again -> (
++				Transaction.failed_commits := Int64.add !Transaction.failed_commits 1L;
+ 				let victim_domstr = Connection.get_domstr c in
+ 				debug "Apportioning blame for EAGAIN in txn %d, domain=%s" id victim_domstr;
+ 				let punish guilty_con =
+@@ -351,7 +352,10 @@ let transaction_replay c t doms cons =
+ 					else false
+ 				) in
+ 				let guilty_cons = History.filter_connections ~ignore:c ~since:t.Transaction.start_count ~f:judge_and_sentence in
+-				if Hashtbl.length guilty_cons = 0 then debug "Found no culprit for conflict in %s: must be self or not in history." con;
++				if Hashtbl.length guilty_cons = 0 then (
++					debug "Found no culprit for conflict in %s: must be self or not in history." con;
++					Transaction.failed_commits_no_culprit := Int64.add !Transaction.failed_commits_no_culprit 1L
++				);
+ 				false
+ 			)
+ 			| e ->
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index 8f95301953..da4a3e367f 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -90,6 +90,11 @@ type t = {
+ let get_id t = match t.ty with No -> none | Full (id, _, _) -> id
+ 
+ let counter = ref 0L
++let failed_commits = ref 0L
++let failed_commits_no_culprit = ref 0L
++let reset_conflict_stats () =
++	failed_commits := 0L;
++	failed_commits_no_culprit := 0L
+ 
+ (* Scope for optimisation: different data-structure and functions to search/filter it *)
+ let short_running_txns = ref []
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 06387a80b1..05ace4dfc6 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -376,6 +376,7 @@ let _ =
+ 	let last_scan_time = ref 0. in
+ 
+ 	let periodic_ops now =
++		debug "periodic_ops starting";
+ 		(* we garbage collect the string->int dictionary after a sizeable amount of operations,
+ 		 * there's no need to be really fast even if we got loose
+ 		 * objects since names are often reuse.
+@@ -395,7 +396,11 @@ let _ =
+ 
+ 		(* make sure we don't print general stats faster than 2 min *)
+ 		if now > (!last_stat_time +. 120.) then (
++			info "Transaction conflict statistics for last %F seconds:" (now -. !last_stat_time);
+ 			last_stat_time := now;
++			Domains.iter domains (Domain.log_and_reset_conflict_stats (info "Dom%d caused %Ld conflicts"));
++			info "%Ld failed transactions; of these no culprit was found for %Ld" !Transaction.failed_commits !Transaction.failed_commits_no_culprit;
++			Transaction.reset_conflict_stats ();
+ 
+ 			let gc = Gc.stat () in
+ 			let (lanon, lanon_ops, lanon_watchs,
+@@ -415,6 +420,7 @@ let _ =
+ 			     gc.Gc.free_words gc.Gc.free_blocks
+ 		);
+ 		let elapsed = Unix.gettimeofday () -. now in
++		debug "periodic_ops took %F seconds." elapsed;
+ 		delay_next_frequent_ops_by elapsed
+ 	in
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Tue, 28 Mar 2017 18:57:52 +0100
+Subject: [PATCH] oxenstored: trim history in the frequent_ops function
+
+We were trimming the history of commits only at the end of each
+transaction (regardless of how it ended).
+
+Therefore if non-transactional writes were being made but no
+transactions were being ended, the history would grow
+indefinitely. Now we trim the history at regular intervals.
+
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+---
+ tools/ocaml/xenstored/history.ml     | 6 +++---
+ tools/ocaml/xenstored/transaction.ml | 8 ++++++--
+ tools/ocaml/xenstored/xenstored.ml   | 1 +
+ 3 files changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/history.ml b/tools/ocaml/xenstored/history.ml
+index 4079588896..f39565bff5 100644
+--- a/tools/ocaml/xenstored/history.ml
++++ b/tools/ocaml/xenstored/history.ml
+@@ -39,7 +39,8 @@ let mark_symbols () =
+ (* Keep only enough commit-history to protect the running transactions that we are still tracking *)
+ (* There is scope for optimisation here, replacing List.filter with something more efficient,
+  * probably on a different list-like structure. *)
+-let trim () =
++let trim ?txn () =
++	Transaction.trim_short_running_transactions txn;
+ 	history := match Transaction.oldest_short_running_transaction () with
+ 	| None -> [] (* We have no open transaction, so no history is needed *)
+ 	| Some (_, txn) -> (
+@@ -49,8 +50,7 @@ let trim () =
+ 
+ let end_transaction txn con tid commit =
+ 	let success = Connection.end_transaction con tid commit in
+-	Transaction.end_transaction txn;
+-	trim ();
++	trim ~txn ();
+ 	success
+ 
+ let push (x: history_record) =
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index da4a3e367f..23e7ccff1b 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -106,10 +106,14 @@ let oldest_short_running_transaction () =
+ 		| x :: xs -> last xs
+ 	in last !short_running_txns
+ 
+-let end_transaction txn =
++let trim_short_running_transactions txn =
+ 	let cutoff = Unix.gettimeofday () -. !Define.conflict_max_history_seconds in
++	let keep = match txn with
++		| None -> (function (start_time, _) -> start_time >= cutoff)
++		| Some t -> (function (start_time, tx) -> start_time >= cutoff && tx != t)
++	in
+ 	short_running_txns := List.filter
+-		(function (start_time, tx) -> start_time >= cutoff && tx != txn)
++		keep
+ 		!short_running_txns
+ 
+ let make ?(internal=false) id store =
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 05ace4dfc6..5474ece118 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -278,6 +278,7 @@ let _ =
+ 	 * than the periodic_ops function *)
+ 	let frequent_ops () =
+ 		if Unix.gettimeofday () > !next_frequent_ops then (
++			History.trim ();
+ 			Domains.incr_conflict_credit domains;
+ 			advance_next_frequent_ops ()
+ 		) in
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Julien Grall <julien.grall@arm.com>
+Date: Fri, 7 Apr 2017 14:23:48 +0100
+Subject: [PATCH] arm/p2m: remove the page from p2m->pages list before freeing
+ it
+
+The p2m code is using the page list field to link all the pages used
+for the stage-2 page tables. The page is added into the p2m->pages
+list just after the allocation but never removed from the list.
+
+The page list field is also used by the allocator, not removing may
+result a later Xen crash due to inconsistency (see [1]).
+
+This bug was introduced by the reworking of p2m code in commit 2ef3e36ec7
+"xen/arm: p2m: Introduce p2m_set_entry and __p2m_set_entry".
+
+[1] https://lists.xenproject.org/archives/html/xen-devel/2017-02/msg00524.html
+
+Reported-by: Vijaya Kumar K <Vijaya.Kumar@cavium.com>
+Signed-off-by: Julien Grall <julien.grall@arm.com>
+Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
+---
+ xen/arch/arm/p2m.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/arm/p2m.c b/xen/arch/arm/p2m.c
+index cc5634bd17..e750b2ded4 100644
+--- a/xen/arch/arm/p2m.c
++++ b/xen/arch/arm/p2m.c
+@@ -734,6 +734,7 @@ static void p2m_free_entry(struct p2m_domain *p2m,
+     unsigned int i;
+     lpae_t *table;
+     mfn_t mfn;
++    struct page_info *pg;
+ 
+     /* Nothing to do if the entry is invalid. */
+     if ( !p2m_valid(entry) )
+@@ -771,7 +772,10 @@ static void p2m_free_entry(struct p2m_domain *p2m,
+     mfn = _mfn(entry.p2m.base);
+     ASSERT(mfn_valid(mfn_x(mfn)));
+ 
+-    free_domheap_page(mfn_to_page(mfn_x(mfn)));
++    pg = mfn_to_page(mfn_x(mfn));
++
++    page_list_del(pg, &p2m->pages);
++    free_domheap_page(pg);
+ }
+ 
+ static bool p2m_split_superpage(struct p2m_domain *p2m, lpae_t *entry,
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Fri, 7 Apr 2017 14:27:44 +0100
+Subject: [PATCH] memory: properly check guest memory ranges in XENMEM_exchange
+ handling
+
+The use of guest_handle_okay() here (as introduced by the XSA-29 fix)
+is insufficient here, guest_handle_subrange_okay() needs to be used
+instead.
+
+Note that the uses are okay in
+- XENMEM_add_to_physmap_batch handling due to the size field being only
+  16 bits wide,
+- livepatch_list() due to the limit of 1024 enforced on the
+  number-of-entries input (leaving aside the fact that this can be
+  called by a privileged domain only anyway),
+- compat mode handling due to counts there being limited to 32 bits,
+- everywhere else due to guest arrays being accessed sequentially from
+  index zero.
+
+This is XSA-212.
+
+Reported-by: Jann Horn <jannh@google.com>
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/common/memory.c                  | 20 ++++++++++++++++++--
+ xen/include/asm-x86/x86_64/uaccess.h |  8 +++++---
+ 2 files changed, 23 insertions(+), 5 deletions(-)
+
+diff --git a/xen/common/memory.c b/xen/common/memory.c
+index 21797ca953..17f9e1ef35 100644
+--- a/xen/common/memory.c
++++ b/xen/common/memory.c
+@@ -437,8 +437,8 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+         goto fail_early;
+     }
+ 
+-    if ( !guest_handle_okay(exch.in.extent_start, exch.in.nr_extents) ||
+-         !guest_handle_okay(exch.out.extent_start, exch.out.nr_extents) )
++    if ( !guest_handle_subrange_okay(exch.in.extent_start, exch.nr_exchanged,
++                                     exch.in.nr_extents - 1) )
+     {
+         rc = -EFAULT;
+         goto fail_early;
+@@ -448,11 +448,27 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+     {
+         in_chunk_order  = exch.out.extent_order - exch.in.extent_order;
+         out_chunk_order = 0;
++
++        if ( !guest_handle_subrange_okay(exch.out.extent_start,
++                                         exch.nr_exchanged >> in_chunk_order,
++                                         exch.out.nr_extents - 1) )
++        {
++            rc = -EFAULT;
++            goto fail_early;
++        }
+     }
+     else
+     {
+         in_chunk_order  = 0;
+         out_chunk_order = exch.in.extent_order - exch.out.extent_order;
++
++        if ( !guest_handle_subrange_okay(exch.out.extent_start,
++                                         exch.nr_exchanged << out_chunk_order,
++                                         exch.out.nr_extents - 1) )
++        {
++            rc = -EFAULT;
++            goto fail_early;
++        }
+     }
+ 
+     d = rcu_lock_domain_by_any_id(exch.in.domid);
+diff --git a/xen/include/asm-x86/x86_64/uaccess.h b/xen/include/asm-x86/x86_64/uaccess.h
+index 953abe7693..4275e66f40 100644
+--- a/xen/include/asm-x86/x86_64/uaccess.h
++++ b/xen/include/asm-x86/x86_64/uaccess.h
+@@ -29,8 +29,9 @@ extern void *xlat_malloc(unsigned long *xlat_page_current, size_t size);
+ /*
+  * Valid if in +ve half of 48-bit address space, or above Xen-reserved area.
+  * This is also valid for range checks (addr, addr+size). As long as the
+- * start address is outside the Xen-reserved area then we will access a
+- * non-canonical address (and thus fault) before ever reaching VIRT_START.
++ * start address is outside the Xen-reserved area, sequential accesses
++ * (starting at addr) will hit a non-canonical address (and thus fault)
++ * before ever reaching VIRT_START.
+  */
+ #define __addr_ok(addr) \
+     (((unsigned long)(addr) < (1UL<<47)) || \
+@@ -40,7 +41,8 @@ extern void *xlat_malloc(unsigned long *xlat_page_current, size_t size);
+     (__addr_ok(addr) || is_compat_arg_xlat_range(addr, size))
+ 
+ #define array_access_ok(addr, count, size) \
+-    (access_ok(addr, (count)*(size)))
++    (likely(((count) ?: 0UL) < (~0UL / (size))) && \
++     access_ok(addr, (count) * (size)))
+ 
+ #define __compat_addr_ok(d, addr) \
+     ((unsigned long)(addr) < HYPERVISOR_COMPAT_VIRT_START(d))
 -- 
 
