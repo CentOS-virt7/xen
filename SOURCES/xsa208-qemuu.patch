@@ -33,11 +33,10 @@ Signed-off-by: Stefano Stabellini <sstabellini@kernel.org>
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/hw/display/cirrus_vga.c b/hw/display/cirrus_vga.c
-index bdb092e..3bbe3d5 100644
 --- a/hw/display/cirrus_vga.c
 +++ b/hw/display/cirrus_vga.c
-@@ -277,10 +277,9 @@ static bool blit_region_is_unsafe(struct CirrusVGAState *s,
-     }
+@@ -274,10 +274,9 @@ static bool blit_region_is_unsafe(struct
+ {
      if (pitch < 0) {
          int64_t min = addr
 -            + ((int64_t)s->cirrus_blt_height-1) * pitch;
@@ -50,5 +49,3 @@ index bdb092e..3bbe3d5 100644
              return true;
          }
      } else {
--- 
-1.8.3.1
