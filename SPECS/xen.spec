@@ -47,16 +47,16 @@
 
 
 # Hypervisor ABI
-%define hv_abi  4.6
+%define hv_abi  4.8
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.6.3
-Release: 9%{?dist}
+Version: 4.8.0
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
-URL:     http://xen.org/
-Source0: http://bits.xensource.com/oss-xen/release/%{version}/xen-%{version}.tar.gz
+URL:     https://www.xenproject.org/
+Source0: https://downloads.xenproject.org/release/xen/%{version}/xen-%{version}.tar.gz
 Source1: xen.modules
 Source2: xen.logrotate
 # used by stubdoms
@@ -74,7 +74,7 @@ Source49: tmpfiles.d.xen.conf
 Source50: xen-kernel.x86_64
 Source51: xen-kernel.aarch64
 Source52: efi-xen.cfg.aarch64
-Source53: edk2-0cebfe81f94be36116af66d0a3134ce18d89eec1.tar.gz
+Source53: edk2-bc54e50e0fe03c570014f363b547426913e92449.tar.gz
 
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 

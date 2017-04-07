@@ -1,13 +1,13 @@
 #!/bin/bash
-XEN_VERSION=4.6.3
-XEN_RELEASE_BASE=http://bits.xensource.com/oss-xen/release/
+XEN_VERSION=4.8.0
+XEN_RELEASE_BASE=https://downloads.xenproject.org/release/xen
 XEN_RELEASE_FILE=xen-$XEN_VERSION.tar.gz
 echo "Checking Xen $XEN_VERSION release tarball"
 if [[ ! -e SOURCES/$XEN_RELEASE_FILE ]] ; then
     wget -P SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE || exit 1
 fi
 
-XEN_EXTLIB_URL=http://xenbits.xen.org/xen-extfiles
+XEN_EXTLIB_URL=https://xenbits.xen.org/xen-extfiles
 XEN_EXTLIB_FILES="grub-0.97.tar.gz \
 	     lwip-1.3.0.tar.gz \
 	     newlib-1.16.0.tar.gz \
@@ -41,7 +41,7 @@ if [[ ! -e SOURCES/$BLKTAP_FILE ]] ; then
 fi
 
 EDK2_URL=https://github.com/tianocore/edk2.git
-EDK2_CSET=0cebfe81f94be36116af66d0a3134ce18d89eec1
+EDK2_CSET=bc54e50e0fe03c570014f363b547426913e92449
 EDK2_FILE=edk2-$EDK2_CSET.tar.gz
 echo "Checking edk2 (tianocore)..."
 if [[ ! -e SOURCES/$EDK2_FILE ]] ; then
