@@ -97,14 +97,6 @@ Patch2014: xsa209-qemuu-0001-display-cirrus-ignore-source-pitch-value-as-needed-
 Patch2015: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cput.patch 
 Patch2016: xsa211-qemuu-4.8.patch
 
-Patch3001: xsa179-qemut-unstable-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
-Patch3002: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
-Patch3003: xsa179-qemut-unstable-0003-vga-factor-out-vga-register-setup.patch
-Patch3004: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-changes.patch
-Patch3005: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
-Patch3010: xsa180-qemut.patch
-Patch3011: xsa184-qemut-master.patch
-Patch3012: xsa197-qemut.patch
 Patch3013: xsa199-trad.patch
 Patch3014: xsa208-qemut.patch
 Patch3015: xsa209-qemut.patch
@@ -329,8 +321,6 @@ popd
 
 pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
-%patch3011 -p1
-%patch3012 -p1
 %patch3013 -p1
 %patch3014 -p1
 %patch3015 -p1
