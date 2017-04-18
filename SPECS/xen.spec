@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 20%{?dist}
+Release: 21%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -88,7 +88,7 @@ Patch2023: xsa197-4.4-qemuu.patch
 Patch2024: xsa208-qemuu-4.7.patch
 Patch2025: xsa209-qemuu-0001-display-cirrus-ignore-source-pitch-value-as-needed-i.patch
 Patch2026: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cput.patch 
-Patch2027:  xsa211-qemuu-4.4.patch
+Patch2027: xsa211-qemuu-4.4.patch
 
 Patch3004: xsa164.patch
 Patch3005: usb-linux.c-fix-buffer-overflow.qemut.patch
@@ -897,6 +897,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Apr 18 2017 Johnny Hughes <johnny@centos.org> 4.4.4-21.el6.centos
+- Import XSA-212
+
 * Wed Mar 15 2017 Johnny Hughes <johnny@centos.org> 4.4.4-20.el6.centos
 - Import XSA-211
 
