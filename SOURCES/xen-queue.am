@@ -4005,3 +4005,4126 @@ index 953abe7..4275e66 100644
 -- 
 1.8.3.1
 
+
+From 11f8ec2efc184cd5d11e68770c1ab527c32f19f6 Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Sat, 18 Mar 2017 17:12:39 +0000
+Subject: [PATCH] From 7df6157ccf3dd8f9d6fae690be3f6216b0c2dd2b Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 01/30] xenstored: apply a write transaction
+ rate limit
+
+This avoids a rogue client being about to stall another client (eg the
+toolstack) indefinitely.
+
+This is XSA-206.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+---
+ tools/xenstore/Makefile                |   3 +-
+ tools/xenstore/xenstored_core.c        |   9 ++
+ tools/xenstore/xenstored_core.h        |   6 +
+ tools/xenstore/xenstored_domain.c      | 215 +++++++++++++++++++++++++++++++++
+ tools/xenstore/xenstored_domain.h      |  25 ++++
+ tools/xenstore/xenstored_transaction.c |   5 +
+ 6 files changed, 262 insertions(+), 1 deletion(-)
+
+diff --git a/tools/xenstore/Makefile b/tools/xenstore/Makefile
+index 262f401..0622c63 100644
+--- a/tools/xenstore/Makefile
++++ b/tools/xenstore/Makefile
+@@ -19,6 +19,7 @@ XENSTORED_OBJS_$(CONFIG_NetBSD) = xenstored_netbsd.o xenstored_posix.o
+ XENSTORED_OBJS_$(CONFIG_MiniOS) = xenstored_minios.o
+ 
+ XENSTORED_OBJS += $(XENSTORED_OBJS_y)
++LDLIBS_xenstored += -lrt
+ 
+ ifneq ($(XENSTORE_STATIC_CLIENTS),y)
+ LIBXENSTORE := libxenstore.so
+@@ -61,7 +62,7 @@ init-xenstore-domain: init-xenstore-domain.o $(LIBXENSTORE)
+ 	$(CC) $(LDFLAGS) $^ $(LDLIBS_libxenctrl) $(LDLIBS_libxenguest) $(LDLIBS_libxenstore) -o $@ $(APPEND_LDFLAGS)
+ 
+ xenstored: $(XENSTORED_OBJS)
+-	$(CC) $(LDFLAGS) $^ $(LDLIBS_libxenctrl) $(SOCKET_LIBS) -o $@ $(APPEND_LDFLAGS)
++	$(CC) $(LDFLAGS) $^ $(LDLIBS_libxenctrl) $(LDLIBS_xenstored) $(SOCKET_LIBS) -o $@ $(APPEND_LDFLAGS)
+ 
+ xenstored.a: $(XENSTORED_OBJS)
+ 	$(AR) cr $@ $^
+diff --git a/tools/xenstore/xenstored_core.c b/tools/xenstore/xenstored_core.c
+index 2324e53..beb630b 100644
+--- a/tools/xenstore/xenstored_core.c
++++ b/tools/xenstore/xenstored_core.c
+@@ -342,6 +342,7 @@ static void initialize_fds(int sock, int *p_sock_pollfd_idx,
+ 			   int *ptimeout)
+ {
+ 	struct connection *conn;
++	struct wrl_timestampt now;
+ 
+ 	if (fds)
+ 		memset(fds, 0, sizeof(struct pollfd) * current_array_size);
+@@ -361,8 +362,11 @@ static void initialize_fds(int sock, int *p_sock_pollfd_idx,
+ 		xce_pollfd_idx = set_fd(xc_evtchn_fd(xce_handle),
+ 					POLLIN|POLLPRI);
+ 
++	wrl_gettime_now(&now);
++
+ 	list_for_each_entry(conn, &connections, list) {
+ 		if (conn->domain) {
++			wrl_check_timeout(conn->domain, now, ptimeout);
+ 			if (domain_can_read(conn) ||
+ 			    (domain_can_write(conn) &&
+ 			     !list_empty(&conn->out_list)))
+@@ -795,6 +799,7 @@ static void delete_node_single(struct connection *conn, struct node *node)
+ 		corrupt(conn, "Could not delete '%s'", node->name);
+ 		return;
+ 	}
++
+ 	domain_entry_dec(conn, node);
+ }
+ 
+@@ -934,6 +939,7 @@ static void do_write(struct connection *conn, struct buffered_data *in)
+ 	}
+ 
+ 	add_change_node(conn->transaction, name, false);
++	wrl_apply_debit_direct(conn);
+ 	fire_watches(conn, name, false);
+ 	send_ack(conn, XS_WRITE);
+ }
+@@ -958,6 +964,7 @@ static void do_mkdir(struct connection *conn, const char *name)
+ 			return;
+ 		}
+ 		add_change_node(conn->transaction, name, false);
++		wrl_apply_debit_direct(conn);
+ 		fire_watches(conn, name, false);
+ 	}
+ 	send_ack(conn, XS_MKDIR);
+@@ -1083,6 +1090,7 @@ static void do_rm(struct connection *conn, const char *name)
+ 
+ 	if (_rm(conn, node, name)) {
+ 		add_change_node(conn->transaction, name, true);
++		wrl_apply_debit_direct(conn);
+ 		fire_watches(conn, name, true);
+ 		send_ack(conn, XS_RM);
+ 	}
+@@ -1158,6 +1166,7 @@ static void do_set_perms(struct connection *conn, struct buffered_data *in)
+ 	}
+ 
+ 	add_change_node(conn->transaction, name, false);
++	wrl_apply_debit_direct(conn);
+ 	fire_watches(conn, name, false);
+ 	send_ack(conn, XS_SET_PERMS);
+ }
+diff --git a/tools/xenstore/xenstored_core.h b/tools/xenstore/xenstored_core.h
+index cfbcf6f..fb4d0e0 100644
+--- a/tools/xenstore/xenstored_core.h
++++ b/tools/xenstore/xenstored_core.h
+@@ -31,6 +31,12 @@
+ #include "list.h"
+ #include "tdb.h"
+ 
++#define MIN(a, b) (((a) < (b))? (a) : (b))
++
++typedef int32_t wrl_creditt;
++#define WRL_CREDIT_MAX (1000*1000*1000)
++/* ^ satisfies non-overflow condition for wrl_xfer_credit */
++
+ struct buffered_data
+ {
+ 	struct list_head list;
+diff --git a/tools/xenstore/xenstored_domain.c b/tools/xenstore/xenstored_domain.c
+index f24bd6b..16c303e 100644
+--- a/tools/xenstore/xenstored_domain.c
++++ b/tools/xenstore/xenstored_domain.c
+@@ -23,6 +23,7 @@
+ #include <stdlib.h>
+ #include <stdarg.h>
+ #include <xenctrl.h>
++#include <time.h>
+ 
+ #include "utils.h"
+ #include "talloc.h"
+@@ -75,6 +76,10 @@ struct domain
+ 
+ 	/* number of watch for this domain */
+ 	int nbwatch;
++
++	/* write rate limit */
++	wrl_creditt wrl_credit; /* [ -wrl_config_writecost, +_dburst ] */
++	struct wrl_timestampt wrl_timestamp;
+ };
+ 
+ static LIST_HEAD(domains);
+@@ -207,6 +212,8 @@ static int destroy_domain(void *_domain)
+ 
+ 	fire_watches(NULL, "@releaseDomain", false);
+ 
++	wrl_domain_destroy(domain);
++
+ 	return 0;
+ }
+ 
+@@ -254,6 +261,9 @@ void handle_event(void)
+ bool domain_can_read(struct connection *conn)
+ {
+ 	struct xenstore_domain_interface *intf = conn->domain->interface;
++
++	if (domain_is_unprivileged(conn) && conn->domain->wrl_credit < 0)
++		return false;
+ 	return (intf->req_cons != intf->req_prod);
+ }
+ 
+@@ -285,6 +295,8 @@ static struct domain *new_domain(void *context, unsigned int domid,
+ 	domain->domid = domid;
+ 	domain->path = talloc_domain_path(domain, domid);
+ 
++	wrl_domain_new(domain);
++
+ 	list_add(&domain->list, &domains);
+ 	talloc_set_destructor(domain, destroy_domain);
+ 
+@@ -748,6 +760,209 @@ int domain_watch(struct connection *conn)
+ 		: 0;
+ }
+ 
++static wrl_creditt wrl_config_writecost      = WRL_FACTOR;
++static wrl_creditt wrl_config_rate           = WRL_RATE   * WRL_FACTOR;
++static wrl_creditt wrl_config_dburst         = WRL_DBURST * WRL_FACTOR;
++static wrl_creditt wrl_config_gburst         = WRL_GBURST * WRL_FACTOR;
++static wrl_creditt wrl_config_newdoms_dburst =
++	                         WRL_DBURST * WRL_NEWDOMS * WRL_FACTOR;
++
++long wrl_ntransactions;
++
++static long wrl_ndomains;
++static wrl_creditt wrl_reserve; /* [-wrl_config_newdoms_dburst, +_gburst ] */
++
++void wrl_gettime_now(struct wrl_timestampt *now_wt)
++{
++	struct timespec now_ts;
++	int r;
++
++	r = clock_gettime(CLOCK_MONOTONIC, &now_ts);
++	if (r)
++		barf_perror("Could not find time (clock_gettime failed)");
++
++	now_wt->sec = now_ts.tv_sec;
++	now_wt->msec = now_ts.tv_nsec / 1000000;
++}
++
++static void wrl_xfer_credit(wrl_creditt *debit,  wrl_creditt debit_floor,
++			    wrl_creditt *credit, wrl_creditt credit_ceil)
++	/*
++	 * Transfers zero or more credit from "debit" to "credit".
++	 * Transfers as much as possible while maintaining
++	 * debit >= debit_floor and credit <= credit_ceil.
++	 * (If that's violated already, does nothing.)
++	 *
++	 * Sufficient conditions to avoid overflow, either of:
++	 *  |every argument| <= 0x3fffffff
++	 *  |every argument| <= 1E9
++	 *  |every argument| <= WRL_CREDIT_MAX
++	 * (And this condition is preserved.)
++	 */
++{
++	wrl_creditt xfer = MIN( *debit      - debit_floor,
++			        credit_ceil - *credit      );
++	if (xfer > 0) {
++		*debit -= xfer;
++		*credit += xfer;
++	}
++}
++
++void wrl_domain_new(struct domain *domain)
++{
++	domain->wrl_credit = 0;
++	wrl_gettime_now(&domain->wrl_timestamp);
++	wrl_ndomains++;
++	/* Steal up to DBURST from the reserve */
++	wrl_xfer_credit(&wrl_reserve, -wrl_config_newdoms_dburst,
++			&domain->wrl_credit, wrl_config_dburst);
++}
++
++void wrl_domain_destroy(struct domain *domain)
++{
++	wrl_ndomains--;
++	/*
++	 * Don't bother recalculating domain's credit - this just
++	 * means we don't give the reserve the ending domain's credit
++	 * for time elapsed since last update.
++	 */
++	wrl_xfer_credit(&domain->wrl_credit, 0,
++			&wrl_reserve, wrl_config_dburst);
++}
++
++void wrl_credit_update(struct domain *domain, struct wrl_timestampt now)
++{
++	/*
++	 * We want to calculate
++	 *    credit += (now - timestamp) * RATE / ndoms;
++	 * But we want it to saturate, and to avoid floating point.
++	 * To avoid rounding errors from constantly adding small
++	 * amounts of credit, we only add credit for whole milliseconds.
++	 */
++	long seconds      = now.sec -  domain->wrl_timestamp.sec;
++	long milliseconds = now.msec - domain->wrl_timestamp.msec;
++	long msec;
++	int64_t denom, num;
++	wrl_creditt surplus;
++
++	seconds = MIN(seconds, 1000*1000); /* arbitrary, prevents overflow */
++	msec = seconds * 1000 + milliseconds;
++
++	if (msec < 0)
++                /* shouldn't happen with CLOCK_MONOTONIC */
++		msec = 0;
++
++	/* 32x32 -> 64 cannot overflow */
++	denom = (int64_t)msec * wrl_config_rate;
++	num  =  (int64_t)wrl_ndomains * 1000;
++	/* denom / num <= 1E6 * wrl_config_rate, so with
++	   reasonable wrl_config_rate, denom / num << 2^64 */
++
++	/* at last! */
++	domain->wrl_credit = MIN( (int64_t)domain->wrl_credit + denom / num,
++				  WRL_CREDIT_MAX );
++	/* (maybe briefly violating the DBURST cap on wrl_credit) */
++
++	/* maybe take from the reserve to make us nonnegative */
++	wrl_xfer_credit(&wrl_reserve,        0,
++			&domain->wrl_credit, 0);
++
++	/* return any surplus (over DBURST) to the reserve */
++	surplus = 0;
++	wrl_xfer_credit(&domain->wrl_credit, wrl_config_dburst,
++			&surplus,            WRL_CREDIT_MAX);
++	wrl_xfer_credit(&surplus,     0,
++			&wrl_reserve, wrl_config_gburst);
++	/* surplus is now implicitly discarded */
++
++	domain->wrl_timestamp = now;
++
++	trace("wrl: dom %4d %6ld  msec  %9ld credit   %9ld reserve"
++	      "  %9ld discard\n",
++	      domain->domid,
++	      msec,
++	      (long)domain->wrl_credit, (long)wrl_reserve,
++	      (long)surplus);
++}
++			
++void wrl_check_timeout(struct domain *domain,
++		       struct wrl_timestampt now,
++		       int *ptimeout)
++{
++	uint64_t num, denom;
++	int wakeup;
++
++	wrl_credit_update(domain, now);
++
++	if (domain->wrl_credit >= 0)
++		/* not blocked */
++		return;
++
++	if (!*ptimeout)
++		/* already decided on immediate wakeup,
++		   so no need to calculate our timeout */
++		return;
++
++	/* calculate  wakeup = now + -credit / (RATE / ndoms); */
++
++	/* credit cannot go more -ve than one transaction,
++	 * so the first multiplication cannot overflow even 32-bit */
++	num   = (uint64_t)(-domain->wrl_credit * 1000) * wrl_ndomains;
++	denom = wrl_config_rate;
++
++	wakeup = MIN( num / denom /* uint64_t */, INT_MAX );
++	if (*ptimeout==-1 || wakeup < *ptimeout)
++		*ptimeout = wakeup;
++
++	trace("wrl: domain %u credit=%ld (reserve=%ld) SLEEPING for %d\n",
++	      domain->domid,
++	      (long)domain->wrl_credit, (long)wrl_reserve,
++	      wakeup);
++}
++
++void wrl_apply_debit_actual(struct domain *domain)
++{
++	struct wrl_timestampt now;
++
++	if (!domain)
++		/* sockets escape the write rate limit */
++		return;
++
++	wrl_gettime_now(&now);
++	wrl_credit_update(domain, now);
++
++	domain->wrl_credit -= wrl_config_writecost;
++	trace("wrl: domain %u credit=%ld (reserve=%ld)\n",
++	      domain->domid,
++	      (long)domain->wrl_credit, (long)wrl_reserve);
++}
++
++void wrl_apply_debit_direct(struct connection *conn)
++{
++	if (!conn)
++		/* some writes are generated internally */
++		return;
++
++	if (conn->transaction)
++		/* these are accounted for when the transaction ends */
++		return;
++
++	if (!wrl_ntransactions)
++		/* we don't conflict with anyone */
++		return;
++
++	wrl_apply_debit_actual(conn->domain);
++}
++
++void wrl_apply_debit_trans_commit(struct connection *conn)
++{
++	if (wrl_ntransactions <= 1)
++		/* our own transaction appears in the counter */
++		return;
++
++	wrl_apply_debit_actual(conn->domain);
++}
++
+ /*
+  * Local variables:
+  *  c-file-style: "linux"
+diff --git a/tools/xenstore/xenstored_domain.h b/tools/xenstore/xenstored_domain.h
+index 9e2afae..a008554 100644
+--- a/tools/xenstore/xenstored_domain.h
++++ b/tools/xenstore/xenstored_domain.h
+@@ -66,4 +66,29 @@ void domain_watch_inc(struct connection *conn);
+ void domain_watch_dec(struct connection *conn);
+ int domain_watch(struct connection *conn);
+ 
++/* Write rate limiting */
++
++#define WRL_FACTOR   1000 /* for fixed-point arithmetic */
++#define WRL_RATE      200
++#define WRL_DBURST     10
++#define WRL_GBURST   1000
++#define WRL_NEWDOMS     5
++
++struct wrl_timestampt {
++	time_t sec;
++	int msec;
++};
++
++extern long wrl_ntransactions;
++
++void wrl_gettime_now(struct wrl_timestampt *now_ts);
++void wrl_domain_new(struct domain *domain);
++void wrl_domain_destroy(struct domain *domain);
++void wrl_credit_update(struct domain *domain, struct wrl_timestampt now);
++void wrl_check_timeout(struct domain *domain,
++                       struct wrl_timestampt now,
++                       int *ptimeout);
++void wrl_apply_debit_direct(struct connection *conn);
++void wrl_apply_debit_trans_commit(struct connection *conn);
++
+ #endif /* _XENSTORED_DOMAIN_H */
+diff --git a/tools/xenstore/xenstored_transaction.c b/tools/xenstore/xenstored_transaction.c
+index 50a32fb..4ddc8c8 100644
+--- a/tools/xenstore/xenstored_transaction.c
++++ b/tools/xenstore/xenstored_transaction.c
+@@ -117,6 +117,7 @@ static int destroy_transaction(void *_transaction)
+ {
+ 	struct transaction *trans = _transaction;
+ 
++	wrl_ntransactions--;
+ 	trace_destroy(trans, "transaction");
+ 	if (trans->tdb)
+ 		tdb_close(trans->tdb);
+@@ -180,6 +181,7 @@ void do_transaction_start(struct connection *conn, struct buffered_data *in)
+ 	talloc_steal(conn, trans);
+ 	talloc_set_destructor(trans, destroy_transaction);
+ 	conn->transaction_started++;
++	wrl_ntransactions++;
+ 
+ 	snprintf(id_str, sizeof(id_str), "%u", trans->id);
+ 	send_reply(conn, XS_TRANSACTION_START, id_str, strlen(id_str)+1);
+@@ -214,6 +216,9 @@ void do_transaction_end(struct connection *conn, const char *arg)
+ 			send_error(conn, EAGAIN);
+ 			return;
+ 		}
++
++		wrl_apply_debit_trans_commit(conn);
++
+ 		if (!replace_tdb(trans->tdb_name, trans->tdb)) {
+ 			send_error(conn, errno);
+ 			return;
+-- 
+1.8.3.1
+
+
+From 215cb5caca5df223b6324bfd552a15d6f6fd41a0 Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Sat, 18 Mar 2017 17:13:27 +0000
+Subject: [PATCH] From 8153049d49e5669418dd1ee88b2d793ccbabede6 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 02/30] xenstored: Log when the write
+ transaction rate limit  bites
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/xenstore/xenstored_core.c   |  1 +
+ tools/xenstore/xenstored_domain.c | 25 +++++++++++++++++++++++++
+ tools/xenstore/xenstored_domain.h |  2 ++
+ 3 files changed, 28 insertions(+)
+
+diff --git a/tools/xenstore/xenstored_core.c b/tools/xenstore/xenstored_core.c
+index beb630b..55d4b3b 100644
+--- a/tools/xenstore/xenstored_core.c
++++ b/tools/xenstore/xenstored_core.c
+@@ -363,6 +363,7 @@ static void initialize_fds(int sock, int *p_sock_pollfd_idx,
+ 					POLLIN|POLLPRI);
+ 
+ 	wrl_gettime_now(&now);
++	wrl_log_periodic(now);
+ 
+ 	list_for_each_entry(conn, &connections, list) {
+ 		if (conn->domain) {
+diff --git a/tools/xenstore/xenstored_domain.c b/tools/xenstore/xenstored_domain.c
+index 16c303e..ca0fa76 100644
+--- a/tools/xenstore/xenstored_domain.c
++++ b/tools/xenstore/xenstored_domain.c
+@@ -24,6 +24,7 @@
+ #include <stdarg.h>
+ #include <xenctrl.h>
+ #include <time.h>
++#include <syslog.h>
+ 
+ #include "utils.h"
+ #include "talloc.h"
+@@ -80,6 +81,7 @@ struct domain
+ 	/* write rate limit */
+ 	wrl_creditt wrl_credit; /* [ -wrl_config_writecost, +_dburst ] */
+ 	struct wrl_timestampt wrl_timestamp;
++	bool wrl_delay_logged;
+ };
+ 
+ static LIST_HEAD(domains);
+@@ -771,6 +773,7 @@ long wrl_ntransactions;
+ 
+ static long wrl_ndomains;
+ static wrl_creditt wrl_reserve; /* [-wrl_config_newdoms_dburst, +_gburst ] */
++static time_t wrl_log_last_warning; /* 0: no previous warning */
+ 
+ void wrl_gettime_now(struct wrl_timestampt *now_wt)
+ {
+@@ -920,6 +923,9 @@ void wrl_check_timeout(struct domain *domain,
+ 	      wakeup);
+ }
+ 
++#define WRL_LOG(now, ...) \
++	(syslog(LOG_WARNING, "write rate limit: " __VA_ARGS__))
++
+ void wrl_apply_debit_actual(struct domain *domain)
+ {
+ 	struct wrl_timestampt now;
+@@ -935,6 +941,25 @@ void wrl_apply_debit_actual(struct domain *domain)
+ 	trace("wrl: domain %u credit=%ld (reserve=%ld)\n",
+ 	      domain->domid,
+ 	      (long)domain->wrl_credit, (long)wrl_reserve);
++
++	if (domain->wrl_credit < 0) {
++		if (!domain->wrl_delay_logged++) {
++			WRL_LOG(now, "domain %ld is affected",
++				(long)domain->domid);
++		} else if (!wrl_log_last_warning) {
++			WRL_LOG(now, "rate limiting restarts");
++		}
++		wrl_log_last_warning = now.sec;
++	}
++}
++
++void wrl_log_periodic(struct wrl_timestampt now)
++{
++	if (wrl_log_last_warning &&
++	    (now.sec - wrl_log_last_warning) > WRL_LOGEVERY) {
++		WRL_LOG(now, "not in force recently");
++		wrl_log_last_warning = 0;
++	}
+ }
+ 
+ void wrl_apply_debit_direct(struct connection *conn)
+diff --git a/tools/xenstore/xenstored_domain.h b/tools/xenstore/xenstored_domain.h
+index a008554..a9650cc 100644
+--- a/tools/xenstore/xenstored_domain.h
++++ b/tools/xenstore/xenstored_domain.h
+@@ -73,6 +73,7 @@ int domain_watch(struct connection *conn);
+ #define WRL_DBURST     10
+ #define WRL_GBURST   1000
+ #define WRL_NEWDOMS     5
++#define WRL_LOGEVERY  120 /* seconds */
+ 
+ struct wrl_timestampt {
+ 	time_t sec;
+@@ -88,6 +89,7 @@ void wrl_credit_update(struct domain *domain, struct wrl_timestampt now);
+ void wrl_check_timeout(struct domain *domain,
+                        struct wrl_timestampt now,
+                        int *ptimeout);
++void wrl_log_periodic(struct wrl_timestampt now);
+ void wrl_apply_debit_direct(struct connection *conn);
+ void wrl_apply_debit_trans_commit(struct connection *conn);
+ 
+-- 
+1.8.3.1
+
+
+From e80cdb389b88f35ec658aa69dcf444ff3de5d404 Mon Sep 17 00:00:00 2001
+From: Vincent Bernardoff <vincent.bernardoff@citrix.com>
+Date: Fri, 24 Mar 2017 16:57:02 +0000
+Subject: [PATCH] From 59bb62aa888cd4b94510e4d16003077ab1d77e9b Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 03/30] oxenstored: exempt dom0 from domU node
+ quotas
+
+If a domU has exhausted its quota we still want the toolstack in dom0 to
+be able to create new nodes in places like
+  /local/domain/%d/control/shutdown
+
+Without this patch, a domU which has exhausted its quota can only be
+powered off, which is not as good as being able to request a clean
+shutdown.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Signed-off-by: Euan Harris <euan.harris@citrix.com>
+Acked-by: David Scott <dave.scott@citrix.com>
+---
+ tools/ocaml/xenstored/store.ml | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/store.ml b/tools/ocaml/xenstored/store.ml
+index cac0b44..3efe515 100644
+--- a/tools/ocaml/xenstored/store.ml
++++ b/tools/ocaml/xenstored/store.ml
+@@ -383,7 +383,7 @@ let set_node store path node =
+ let write store perm path value =
+ 	let node, existing = get_deepest_existing_node store path in
+ 	let owner = Node.get_owner node in
+-	if existing then
++	if existing || (Perms.Connection.is_dom0 perm) then
+ 		(* Only check the string length limit *)
+ 		Quota.check store.quota (-1) (String.length value)
+ 	else
+@@ -398,7 +398,7 @@ let mkdir store perm path =
+ 	let node, existing = get_deepest_existing_node store path in
+ 	let owner = Node.get_owner node in
+ 	(* It's upt to the mkdir logic to decide what to do with existing path *)
+-	if not existing then Quota.check store.quota owner 0;
++	if not (existing || (Perms.Connection.is_dom0 perm)) then Quota.check store.quota owner 0;
+ 	store.root <- path_mkdir store perm path;
+ 	Quota.add_entry store.quota owner
+ 
+@@ -416,7 +416,7 @@ let setperms store perm path nperms =
+ 	| Some node ->
+ 		let old_owner = Node.get_owner node in
+ 		let new_owner = Perms.Node.get_owner nperms in
+-		if old_owner <> new_owner then Quota.check store.quota new_owner 0;
++		if not ((old_owner = new_owner) || (Perms.Connection.is_dom0 perm)) then Quota.check store.quota new_owner 0;
+ 		store.root <- path_setperms store perm path nperms;
+ 		Quota.del_entry store.quota old_owner;
+ 		Quota.add_entry store.quota new_owner
+-- 
+1.8.3.1
+
+
+From 5df61cf62a19143edf75086ed9211a7cddb31a5d Mon Sep 17 00:00:00 2001
+From: Jerome Maloberti <jerome.maloberti@citrix.com>
+Date: Fri, 24 Mar 2017 16:57:40 +0000
+Subject: [PATCH] From a0cdc0e823117ff32560822e16f44260983b5142 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 04/30] oxenstored: perform a 3-way merge of the
+ quota after a  transaction
+
+At a beginning of a transaction, the quotas from the global store
+are duplicated and modified by the transaction. If during the
+transaction, an action associated to no transaction is concurrently
+executed, the quotas of the global store are updated, and then the
+updates are lost when the transaction merges.
+
+We fix this problem by keeping another copy of the quota at the
+beginning of the transaction, and performing a 3-way merge between
+the quotas from the transaction and the "original" copy of the quota
+onto the quota of the global store.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jerome Maloberti <jerome.maloberti@citrix.com>
+Signed-off-by: Euan Harris <euan.harris@citrix.com>
+Acked-by: David Scott <dave.scott@citrix.com>
+---
+ tools/ocaml/xenstored/quota.ml       |  5 +++++
+ tools/ocaml/xenstored/store.ml       | 13 +++++--------
+ tools/ocaml/xenstored/transaction.ml |  4 +++-
+ 3 files changed, 13 insertions(+), 9 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/quota.ml b/tools/ocaml/xenstored/quota.ml
+index c668302..e6953c6 100644
+--- a/tools/ocaml/xenstored/quota.ml
++++ b/tools/ocaml/xenstored/quota.ml
+@@ -81,3 +81,8 @@ let add_entry quota id =
+ 
+ let add quota diff =
+ 	Hashtbl.iter (fun id nb -> set_entry quota id (get_entry quota id + nb)) diff.cur
++
++let merge orig_quota mod_quota dest_quota =
++	  Hashtbl.iter (fun id nb -> let diff = nb - (get_entry orig_quota id) in
++				if diff <> 0 then
++					set_entry dest_quota id ((get_entry dest_quota id) + diff)) mod_quota.cur
+diff --git a/tools/ocaml/xenstored/store.ml b/tools/ocaml/xenstored/store.ml
+index 3efe515..223ee21 100644
+--- a/tools/ocaml/xenstored/store.ml
++++ b/tools/ocaml/xenstored/store.ml
+@@ -188,20 +188,17 @@ let rec get_deepest_existing_node node = function
+ 		with Not_found -> node, false
+ 
+ let set_node rnode path nnode =
+-	let quota = Quota.create () in
+-	if !Quota.activate then Node.recurse (fun node -> Quota.add_entry quota (Node.get_owner node)) nnode;
+ 	if path = [] then
+-		nnode, quota
++		nnode
+ 	else
+ 		let set_node node name =
+ 			try
+ 				let ent = Node.find node name in
+-				if !Quota.activate then Node.recurse (fun node -> Quota.del_entry quota (Node.get_owner node)) ent;
+ 				Node.replace_child node ent nnode
+ 			with Not_found ->
+ 				Node.add_child node nnode
+ 			in
+-		apply_modify rnode path set_node, quota
++		apply_modify rnode path set_node
+ 
+ (* read | ls | getperms use this *)
+ let rec lookup node path fct =
+@@ -375,10 +372,10 @@ let dump_buffer store = dump_store_buf store.root
+ 
+ 
+ (* modifying functions with quota udpate *)
+-let set_node store path node =
+-	let root, quota_diff = Path.set_node store.root path node in
++let set_node store path node orig_quota mod_quota =
++	let root = Path.set_node store.root path node in
+ 	store.root <- root;
+-	Quota.add store.quota quota_diff
++	Quota.merge orig_quota mod_quota store.quota
+ 
+ let write store perm path value =
+ 	let node, existing = get_deepest_existing_node store path in
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index e59d681..77de4e8 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -74,6 +74,7 @@ type ty = No | Full of (int * Store.Node.t * Store.t)
+ type t = {
+ 	ty: ty;
+ 	store: Store.t;
++	quota: Quota.t;
+ 	mutable ops: (Xenbus.Xb.Op.operation * Store.Path.t) list;
+ 	mutable read_lowpath: Store.Path.t option;
+ 	mutable write_lowpath: Store.Path.t option;
+@@ -84,6 +85,7 @@ let make id store =
+ 	{
+ 		ty = ty;
+ 		store = if id = none then store else Store.copy store;
++		quota = Quota.copy store.Store.quota;
+ 		ops = [];
+ 		read_lowpath = None;
+ 		write_lowpath = None;
+@@ -155,7 +157,7 @@ let commit ~con t =
+ 
+ 					(* it has to be in the store, otherwise it means bugs
+ 					   in the lowpath registration. we don't need to handle none. *)
+-					maybe (fun n -> Store.set_node cstore p n) n;
++					maybe (fun n -> Store.set_node cstore p n t.quota store.Store.quota) n;
+ 					Logging.write_coalesce ~tid:(get_id t) ~con (Store.Path.to_string p);
+ 				) t.write_lowpath;
+ 				maybe (fun p ->
+-- 
+1.8.3.1
+
+
+From cd2417ef321c89667eebb491b4ccc757813360cb Mon Sep 17 00:00:00 2001
+From: Zheng Li <dev@zheng.li>
+Date: Fri, 24 Mar 2017 17:01:08 +0000
+Subject: [PATCH] From 63e01804c4ba80816af7f5a12786fb45ee2d194b Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 05/30] oxenstored: catch the error when a
+ connection is  already deleted
+
+The function process_fdset_with is called on the read set connections first.
+During the process, it might destroy a connection and remove it from the
+connections database if some errors occur. However, a reference to the same
+connection might still exist in the write set, which is awaiting to be
+processed next. In this case, a Not_found error will be raised and the process
+is aborted.
+
+This patch changes the logic to ignore connections just missing from the
+connection database and continue the rest part of the work.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Zheng Li <dev@zheng.li>
+Reviewed-by: David Scott <dave.scott@citrix.com>
+---
+ tools/ocaml/xenstored/xenstored.ml | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 438ecb9..d74846c 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -43,8 +43,11 @@ let process_connection_fds store cons domains rset wset =
+ 			debug "closing socket connection"
+ 		in
+ 	let process_fdset_with fds fct =
+-		List.iter (fun fd -> try_fct fct (Connections.find cons fd)) fds
+-	in
++		List.iter
++			(fun fd ->
++			 try try_fct fct (Connections.find cons fd)
++			 with Not_found -> ()
++			) fds in
+ 	process_fdset_with rset Process.do_input;
+ 	process_fdset_with wset Process.do_output
+ 
+-- 
+1.8.3.1
+
+
+From 9ea9dc232080a354a6e248c13bb9a68a826760d5 Mon Sep 17 00:00:00 2001
+From: Zheng Li <dev@zheng.li>
+Date: Fri, 24 Mar 2017 17:02:08 +0000
+Subject: [PATCH] From efa34c63e8a62dab87918c7854e51291bd8fabeb Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 06/30] oxenstored: use hash table to store
+ socket connections
+
+Currently we use list to store socket connections. This is fine for smaller
+number of connections. But when we scale up, traveling through a list of
+hundreds or thousands of connections just to find a single one of them is very
+low efficient.
+
+This patch replaces the list with a (Unix.file_descr -> Connection.t) hash table.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Zheng Li <dev@zheng.li>
+Reviewed-by: David Scott <dave.scott@citrix.com>
+---
+ tools/ocaml/xenstored/connections.ml | 28 ++++++++++++++--------------
+ 1 file changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/connections.ml b/tools/ocaml/xenstored/connections.ml
+index f4550f9..3e6a48b 100644
+--- a/tools/ocaml/xenstored/connections.ml
++++ b/tools/ocaml/xenstored/connections.ml
+@@ -18,17 +18,17 @@
+ let debug fmt = Logging.debug "connections" fmt
+ 
+ type t = {
+-	mutable anonymous: Connection.t list;
++	anonymous: (Unix.file_descr, Connection.t) Hashtbl.t;
+ 	domains: (int, Connection.t) Hashtbl.t;
+ 	mutable watches: (string, Connection.watch list) Trie.t;
+ }
+ 
+-let create () = { anonymous = []; domains = Hashtbl.create 8; watches = Trie.create () }
++let create () = { anonymous = Hashtbl.create 37; domains = Hashtbl.create 37; watches = Trie.create () }
+ 
+ let add_anonymous cons fd can_write =
+ 	let xbcon = Xenbus.Xb.open_fd fd in
+ 	let con = Connection.create xbcon None in
+-	cons.anonymous <- con :: cons.anonymous
++	Hashtbl.add cons.anonymous (Xenbus.Xb.get_fd xbcon) con
+ 
+ let add_domain cons dom =
+ 	let xbcon = Xenbus.Xb.open_mmap (Domain.get_interface dom) (fun () -> Domain.notify dom) in
+@@ -36,14 +36,14 @@ let add_domain cons dom =
+ 	Hashtbl.add cons.domains (Domain.get_id dom) con
+ 
+ let select cons =
+-	let inset = List.map (fun c -> Connection.get_fd c) cons.anonymous
+-	and outset = List.fold_left (fun l c -> if Connection.has_output c
+-						then Connection.get_fd c :: l
+-						else l) [] cons.anonymous in
+-	inset, outset
++	Hashtbl.fold
++		(fun _ con (ins, outs) ->
++		 let fd = Connection.get_fd con in
++		 (fd :: ins,  if Connection.has_output con then fd :: outs else outs))
++		cons.anonymous ([], [])
+ 
+-let find cons fd =
+-	List.find (fun c -> Connection.get_fd c = fd) cons.anonymous
++let find cons =
++	Hashtbl.find cons.anonymous
+ 
+ let find_domain cons id =
+ 	Hashtbl.find cons.domains id
+@@ -55,7 +55,7 @@ let del_watches_of_con con watches =
+ 
+ let del_anonymous cons con =
+ 	try
+-		cons.anonymous <- Utils.list_remove con cons.anonymous;
++		Hashtbl.remove cons.anonymous (Connection.get_fd con);
+ 		cons.watches <- Trie.map (del_watches_of_con con) cons.watches;
+ 		Connection.close con
+ 	with exn ->
+@@ -74,7 +74,7 @@ let iter_domains cons fct =
+ 	Hashtbl.iter (fun k c -> fct c) cons.domains
+ 
+ let iter_anonymous cons fct =
+-	List.iter (fun c -> fct c) (List.rev cons.anonymous)
++	Hashtbl.iter (fun _ c -> fct c) cons.anonymous
+ 
+ let iter cons fct =
+ 	iter_domains cons fct; iter_anonymous cons fct
+@@ -163,10 +163,10 @@ let stats cons =
+ 		nb_ops_dom := !nb_ops_dom + con_ops;
+ 		nb_watchs_dom := !nb_watchs_dom + con_watchs;
+ 	);
+-	(List.length cons.anonymous, !nb_ops_anon, !nb_watchs_anon,
++	(Hashtbl.length cons.anonymous, !nb_ops_anon, !nb_watchs_anon,
+ 	 Hashtbl.length cons.domains, !nb_ops_dom, !nb_watchs_dom)
+ 
+ let debug cons =
+-	let anonymous = List.map Connection.debug cons.anonymous in
++	let anonymous = Hashtbl.fold (fun _ con accu -> Connection.debug con :: accu) cons.anonymous [] in
+ 	let domains = Hashtbl.fold (fun _ con accu -> Connection.debug con :: accu) cons.domains [] in
+ 	String.concat "" (domains @ anonymous)
+-- 
+1.8.3.1
+
+
+From a35c83ba4f21f9573480cabe60f74a3ca2374570 Mon Sep 17 00:00:00 2001
+From: Zheng Li <dev@zheng.li>
+Date: Fri, 24 Mar 2017 17:02:55 +0000
+Subject: [PATCH] From 3595258f4a60dd49a75b6229e623ec478eaf239b Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 07/30] oxenstored: enable domain connection
+ indexing based on  eventchn port
+
+Currently in xenstore connection database,  we use a hash table of
+(domid -> connection) to store domain connections. This allows fast indexing
+based on dom ids.
+
+This patch adds another dimention of fast indexing that is based on eventchn
+port number. This is useful when doing selective connection processing
+based on the port numbers of incoming events.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Zheng Li <dev@zheng.li>
+Reviewed-by: David Scott <dave.scott@citrix.com>
+---
+ tools/ocaml/xenstored/connections.ml | 26 ++++++++++++++++++++++----
+ tools/ocaml/xenstored/domain.ml      |  1 +
+ 2 files changed, 23 insertions(+), 4 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/connections.ml b/tools/ocaml/xenstored/connections.ml
+index 3e6a48b..1c8d911 100644
+--- a/tools/ocaml/xenstored/connections.ml
++++ b/tools/ocaml/xenstored/connections.ml
+@@ -20,10 +20,16 @@ let debug fmt = Logging.debug "connections" fmt
+ type t = {
+ 	anonymous: (Unix.file_descr, Connection.t) Hashtbl.t;
+ 	domains: (int, Connection.t) Hashtbl.t;
++	ports: (Xeneventchn.t, Connection.t) Hashtbl.t;
+ 	mutable watches: (string, Connection.watch list) Trie.t;
+ }
+ 
+-let create () = { anonymous = Hashtbl.create 37; domains = Hashtbl.create 37; watches = Trie.create () }
++let create () = {
++	anonymous = Hashtbl.create 37;
++	domains = Hashtbl.create 37;
++	ports = Hashtbl.create 37;
++	watches = Trie.create ()
++}
+ 
+ let add_anonymous cons fd can_write =
+ 	let xbcon = Xenbus.Xb.open_fd fd in
+@@ -33,7 +39,10 @@ let add_anonymous cons fd can_write =
+ let add_domain cons dom =
+ 	let xbcon = Xenbus.Xb.open_mmap (Domain.get_interface dom) (fun () -> Domain.notify dom) in
+ 	let con = Connection.create xbcon (Some dom) in
+-	Hashtbl.add cons.domains (Domain.get_id dom) con
++	Hashtbl.add cons.domains (Domain.get_id dom) con;
++	match Domain.get_port dom with
++	| Some p -> Hashtbl.add cons.ports p con;
++	| None -> ()
+ 
+ let select cons =
+ 	Hashtbl.fold
+@@ -45,8 +54,11 @@ let select cons =
+ let find cons =
+ 	Hashtbl.find cons.anonymous
+ 
+-let find_domain cons id =
+-	Hashtbl.find cons.domains id
++let find_domain cons =
++	Hashtbl.find cons.domains
++
++let find_domain_by_port cons port =
++	Hashtbl.find cons.ports port
+ 
+ let del_watches_of_con con watches =
+ 	match List.filter (fun w -> Connection.get_con w != con) watches with
+@@ -65,6 +77,12 @@ let del_domain cons id =
+ 	try
+ 		let con = find_domain cons id in
+ 		Hashtbl.remove cons.domains id;
++		(match Connection.get_domain con with
++		 | Some d ->
++		   (match Domain.get_port d with
++		    | Some p -> Hashtbl.remove cons.ports p
++		    | None -> ())
++		 | None -> ());
+ 		cons.watches <- Trie.map (del_watches_of_con con) cons.watches;
+ 		Connection.close con
+ 	with exn ->
+diff --git a/tools/ocaml/xenstored/domain.ml b/tools/ocaml/xenstored/domain.ml
+index 444069d..06d5749 100644
+--- a/tools/ocaml/xenstored/domain.ml
++++ b/tools/ocaml/xenstored/domain.ml
+@@ -35,6 +35,7 @@ let get_id domain = domain.id
+ let get_interface d = d.interface
+ let get_mfn d = d.mfn
+ let get_remote_port d = d.remote_port
++let get_port d = d.port
+ 
+ let is_bad_domain domain = domain.bad_client
+ let mark_as_bad domain = domain.bad_client <- true
+-- 
+1.8.3.1
+
+
+From 0a33371fe7fcafdc6af999d6676a1abaa89b6cfe Mon Sep 17 00:00:00 2001
+From: Zheng Li <dev@zheng.li>
+Date: Fri, 24 Mar 2017 17:03:31 +0000
+Subject: [PATCH] From b10466d49d925e5c9bb360847e92a8cb7f899ac9 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 08/30] oxenstored: only process domain
+ connections that notify  us by events
+
+Currently, upon receiving an event, oxenstored will always scan/process all
+the domain connections (xs rings), disregarding which domain sent that event.
+This is rather costy and inefficient. It also shadows and indulges client
+for not correctly communicating with us on message/space availability.
+
+With this patch, oxenstore will only scan/process the domain connections
+that have correctly notified us by events or have IO actions leftover from
+previous communication.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Zheng Li <dev@zheng.li>
+Reviewed-by: David Scott <dave.scott@citrix.com>
+---
+ tools/ocaml/xenstored/connection.ml  |  4 ++++
+ tools/ocaml/xenstored/connections.ml |  9 ++++-----
+ tools/ocaml/xenstored/xenstored.ml   | 13 ++++++++++---
+ 3 files changed, 18 insertions(+), 8 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/connection.ml b/tools/ocaml/xenstored/connection.ml
+index 47695f8..807fc00 100644
+--- a/tools/ocaml/xenstored/connection.ml
++++ b/tools/ocaml/xenstored/connection.ml
+@@ -223,10 +223,14 @@ let pop_in con = Xenbus.Xb.get_in_packet con.xb
+ let has_more_input con = Xenbus.Xb.has_more_input con.xb
+ 
+ let has_output con = Xenbus.Xb.has_output con.xb
++let has_old_output con = Xenbus.Xb.has_old_output con.xb
+ let has_new_output con = Xenbus.Xb.has_new_output con.xb
+ let peek_output con = Xenbus.Xb.peek_output con.xb
+ let do_output con = Xenbus.Xb.output con.xb
+ 
++let has_more_work con =
++	has_more_input con || not (has_old_output con) && has_new_output con
++
+ let incr_ops con = con.stat_nb_ops <- con.stat_nb_ops + 1
+ 
+ let mark_symbols con =
+diff --git a/tools/ocaml/xenstored/connections.ml b/tools/ocaml/xenstored/connections.ml
+index 1c8d911..f9bc225 100644
+--- a/tools/ocaml/xenstored/connections.ml
++++ b/tools/ocaml/xenstored/connections.ml
+@@ -98,11 +98,10 @@ let iter cons fct =
+ 	iter_domains cons fct; iter_anonymous cons fct
+ 
+ let has_more_work cons =
+-	Hashtbl.fold (fun id con acc ->
+-		if Connection.has_more_input con then
+-			con :: acc
+-		else
+-			acc) cons.domains []
++	Hashtbl.fold
++		(fun id con acc ->
++		 if Connection.has_more_work con then con :: acc else acc)
++		cons.domains []
+ 
+ let key_of_str path =
+ 	if path.[0] = '@'
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index d74846c..4a1d027 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -57,7 +57,10 @@ let process_domains store cons domains =
+ 			let con = Connections.find_domain cons (Domain.get_id domain) in
+ 				Process.do_input store cons domains con;
+ 				Process.do_output store cons domains con in
+-	Domains.iter domains do_io_domain
++	List.iter
++		(fun c ->
++		 match Connection.get_domain c with
++		 | Some d -> do_io_domain d | _ -> ())
+ 
+ let sigusr1_handler store =
+ 	try
+@@ -303,6 +306,7 @@ let _ =
+ 			Connections.add_anonymous cons cfd can_write
+ 		and handle_eventchn fd =
+ 			let port = Event.pending eventchn in
++			debug "pending port %d" (Xeneventchn.to_int port);
+ 			finally (fun () ->
+ 				if Some port = eventchn.Event.virq_port then (
+ 					let (notify, deaddom) = Domains.cleanup xc domains in
+@@ -310,7 +314,10 @@ let _ =
+ 					if deaddom <> [] || notify then
+ 						Connections.fire_spec_watches cons "@releaseDomain"
+ 				)
+-			) (fun () -> Event.unmask eventchn port);
++				else
++					let c = Connections.find_domain_by_port cons port in
++					process_domains store cons domains [c]
++				) (fun () -> Event.unmask eventchn port)
+ 		and do_if_set fd set fct =
+ 			if List.mem fd set then
+ 				fct fd in
+@@ -380,7 +387,7 @@ let _ =
+ 			process_special_fds sfds;
+ 		if List.length cfds > 0 || List.length wset > 0 then
+ 			process_connection_fds store cons domains cfds wset;
+-		process_domains store cons domains
++		process_domains store cons domains mw
+ 		in
+ 
+ 	while not !quit
+-- 
+1.8.3.1
+
+
+From cf549ebbfdd7eee152ba4806d6f495a72be6bbb3 Mon Sep 17 00:00:00 2001
+From: Zheng Li <dev@zheng.li>
+Date: Fri, 24 Mar 2017 17:04:23 +0000
+Subject: [PATCH] From af37817fe5c03f17855b27f7b768783797318987 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 09/30] oxenstored: add a safe net mechanism for
+ existing  ill-behaved clients
+
+In previous commit, we moved from exhaustively scanning all domain connections
+to only processing those have correctly notified us by events. The benefits are
+not only efficiency but also correctness, because it could potentially block an
+ill-behaved client and have it waiting on its own mistake. If someone makes a
+mistake on this when developing a piece of code, he/she would immediately
+notice the problem (as the process being blocked), so that he/she could fix it
+rightaway before anything else. Note that the chances of making such mistakes
+are rare in reality, because most client code would use the libxenstore library
+(which has all the notification logic built in correctly) instead of having to
+implement raw accessing from scratch.
+
+On the other hand, we did notice that there were some legacy code that didn't do
+the notification correctly. As some code might be still running in wild, it
+would be bad if they break by this change (e.g. after an upgrade). This patch
+introduces a safe net mechanism to ensure ill-behaved clients continue to work,
+but still retain most of the performance benefits here.
+
+  * We add a checker to still scan all the rings periodically, so that we can
+    still pick up these messages at an acceptable frequency.
+
+  * Internally, we introduce an io_credit concept for domain connections. It
+    represents the rounds of ring scan we are going to perform on a domain
+    connection. For well-behaved connections, this value is changing between 0
+    and 1; but for connections detected as ill-behaved, we'll bump its credit
+    to a high value so that we'll unconditionally scan its ring for the next
+    $n$ rounds. This way, the client won't hiccupped by the interval between
+    checker's running (especially during periods when it continously interacts
+    with oxenstored); and oxenstored doesn't have to keep scanning these
+    rings indefinitely (with the credit running out), as they are usually quite
+    most of the time.
+
+  * We log an message when a domain connection is suspected as ill-behaved.
+    Enable [info] level logging if you want/need to see it in action. Note that
+    this information won't be accurate, as false positives are possible due to
+    time window (e.g. we detect a client has written to the ring and we get no
+    notificiation from it for the time being, but still the notification could
+    potentially arrive at some time later). It's no harm to give a domain
+    connection extra credit though.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Zheng Li <dev@zheng.li>
+Reviewed-by: David Scott <dave.scott@citrix.com>
+---
+ tools/ocaml/xenstored/domain.ml       | 11 ++++-
+ tools/ocaml/xenstored/oxenstored.conf |  3 ++
+ tools/ocaml/xenstored/xenstored.ml    | 76 ++++++++++++++++++++++++++---------
+ 3 files changed, 69 insertions(+), 21 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/domain.ml b/tools/ocaml/xenstored/domain.ml
+index 06d5749..ab34314 100644
+--- a/tools/ocaml/xenstored/domain.ml
++++ b/tools/ocaml/xenstored/domain.ml
+@@ -28,6 +28,9 @@ type t =
+ 	eventchn: Event.t;
+ 	mutable port: Xeneventchn.t option;
+ 	mutable bad_client: bool;
++	mutable io_credit: int; (* the rounds of ring process left to do, default is 0,
++	                           usually set to 1 when there is work detected, could
++	                           also set to n to give "lazy" clients extra credit *)
+ }
+ 
+ let get_path dom = "/local/domain/" ^ (sprintf "%u" dom.id)
+@@ -40,6 +43,11 @@ let get_port d = d.port
+ let is_bad_domain domain = domain.bad_client
+ let mark_as_bad domain = domain.bad_client <- true
+ 
++let get_io_credit domain = domain.io_credit
++let set_io_credit ?(n=1) domain = domain.io_credit <- max 0 n
++let incr_io_credit domain = domain.io_credit <- domain.io_credit + 1
++let decr_io_credit domain = domain.io_credit <- max 0 (domain.io_credit - 1)
++
+ let string_of_port = function
+ | None -> "None"
+ | Some x -> string_of_int (Xeneventchn.to_int x)
+@@ -74,7 +82,8 @@ let make id mfn remote_port interface eventchn = {
+ 	interface = interface;
+ 	eventchn = eventchn;
+ 	port = None;
+-	bad_client = false
++	bad_client = false;
++	io_credit = 0;
+ }
+ 
+ let is_dom0 d = d.id = 0
+diff --git a/tools/ocaml/xenstored/oxenstored.conf b/tools/ocaml/xenstored/oxenstored.conf
+index 13ee770..dd20eda 100644
+--- a/tools/ocaml/xenstored/oxenstored.conf
++++ b/tools/ocaml/xenstored/oxenstored.conf
+@@ -33,3 +33,6 @@ persistent = false
+ # acesss-log-nb-chars = 180
+ # access-log-special-ops = false
+ 
++# Perodically scanning all the rings as a safenet for lazy clients.
++# Define the interval in seconds, set to negative to disable.
++# ring-scan-interval = 20
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 4a1d027..58a1ffc 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -54,13 +54,14 @@ let process_connection_fds store cons domains rset wset =
+ let process_domains store cons domains =
+ 	let do_io_domain domain =
+ 		if not (Domain.is_bad_domain domain) then
+-			let con = Connections.find_domain cons (Domain.get_id domain) in
++			let io_credit = Domain.get_io_credit domain in
++			if io_credit > 0 then (
++				let con = Connections.find_domain cons (Domain.get_id domain) in
+ 				Process.do_input store cons domains con;
+-				Process.do_output store cons domains con in
+-	List.iter
+-		(fun c ->
+-		 match Connection.get_domain c with
+-		 | Some d -> do_io_domain d | _ -> ())
++				Process.do_output store cons domains con;
++				Domain.decr_io_credit domain;
++			) in
++	Domains.iter domains do_io_domain
+ 
+ let sigusr1_handler store =
+ 	try
+@@ -82,6 +83,8 @@ let config_filename cf =
+ 
+ let default_pidfile = "/var/run/xenstored.pid"
+ 
++let ring_scan_interval = ref 20
++
+ let parse_config filename =
+ 	let pidfile = ref default_pidfile in
+ 	let options = [
+@@ -108,6 +111,7 @@ let parse_config filename =
+ 		("access-log-transactions-ops", Config.Set_bool Logging.access_log_transaction_ops);
+ 		("access-log-special-ops", Config.Set_bool Logging.access_log_special_ops);
+ 		("allow-debug", Config.Set_bool Process.allow_debug);
++		("ring-scan-interval", Config.Set_int ring_scan_interval);
+ 		("pid-file", Config.Set_string pidfile); ] in
+ 	begin try Config.read filename options (fun _ _ -> raise Not_found)
+ 	with
+@@ -316,7 +320,8 @@ let _ =
+ 				)
+ 				else
+ 					let c = Connections.find_domain_by_port cons port in
+-					process_domains store cons domains [c]
++					match Connection.get_domain c with
++					| Some dom -> Domain.incr_io_credit dom | None -> ()
+ 				) (fun () -> Event.unmask eventchn port)
+ 		and do_if_set fd set fct =
+ 			if List.mem fd set then
+@@ -325,11 +330,30 @@ let _ =
+ 		maybe (fun fd -> do_if_set fd rset (accept_connection true)) rw_sock;
+ 		maybe (fun fd -> do_if_set fd rset (accept_connection false)) ro_sock;
+ 		do_if_set (Event.fd eventchn) rset (handle_eventchn)
+-		in
++	in
++
++	let ring_scan_checker dom =
++		(* no need to scan domains already marked as for processing *)
++		if not (Domain.get_io_credit dom > 0) then
++			let con = Connections.find_domain cons (Domain.get_id dom) in
++			if not (Connection.has_more_work con) then (
++				Process.do_output store cons domains con;
++				Process.do_input store cons domains con;
++				if Connection.has_more_work con then
++					(* Previously thought as no work, but detect some after scan (as
++					   processing a new message involves multiple steps.) It's very
++					   likely to be a "lazy" client, bump its credit. It could be false
++					   positive though (due to time window), but it's no harm to give a
++					   domain extra credit. *)
++					let n = 32 + 2 * (Domains.number domains) in
++					info "found lazy domain %d, credit %d" (Domain.get_id dom) n;
++					Domain.set_io_credit ~n dom
++			) in
+ 
+ 	let last_stat_time = ref 0. in
+-	let periodic_ops_counter = ref 0 in
+-	let periodic_ops () =
++	let last_scan_time = ref 0. in
++
++	let periodic_ops now =
+ 		(* we garbage collect the string->int dictionary after a sizeable amount of operations,
+ 		 * there's no need to be really fast even if we got loose
+ 		 * objects since names are often reuse.
+@@ -342,10 +366,13 @@ let _ =
+ 			Symbol.garbage ()
+ 		end;
+ 
++		(* scan all the xs rings as a safenet for ill-behaved clients *)
++		if !ring_scan_interval >= 0 && now > (!last_scan_time +. float !ring_scan_interval) then
++			(last_scan_time := now; Domains.iter domains ring_scan_checker);
++
+ 		(* make sure we don't print general stats faster than 2 min *)
+-		let ntime = Unix.gettimeofday () in
+-		if ntime > (!last_stat_time +. 120.) then (
+-			last_stat_time := ntime;
++		if now > (!last_stat_time +. 120.) then (
++			last_stat_time := now;
+ 
+ 			let gc = Gc.stat () in
+ 			let (lanon, lanon_ops, lanon_watchs,
+@@ -366,16 +393,20 @@ let _ =
+ 		)
+ 		in
+ 
++		let period_ops_interval = 15. in
++		let period_start = ref 0. in
++
+ 	let main_loop () =
+-		incr periodic_ops_counter;
+-		if !periodic_ops_counter > 20 then (
+-			periodic_ops_counter := 0;
+-			periodic_ops ();
+-		);
+ 
+ 		let mw = Connections.has_more_work cons in
++		List.iter
++			(fun c ->
++			 match Connection.get_domain c with
++			 | None -> () | Some d -> Domain.incr_io_credit d)
++			mw;
++		let timeout =
++			if List.length mw > 0 then 0. else period_ops_interval in
+ 		let inset, outset = Connections.select cons in
+-		let timeout = if List.length mw > 0 then 0. else -1. in
+ 		let rset, wset, _ =
+ 		try
+ 			Unix.select (spec_fds @ inset) outset [] timeout
+@@ -387,7 +418,12 @@ let _ =
+ 			process_special_fds sfds;
+ 		if List.length cfds > 0 || List.length wset > 0 then
+ 			process_connection_fds store cons domains cfds wset;
+-		process_domains store cons domains mw
++		if timeout <> 0. then (
++			let now = Unix.gettimeofday () in
++			if now > !period_start +. period_ops_interval then
++				(period_start := now; periodic_ops now)
++		);
++		process_domains store cons domains
+ 		in
+ 
+ 	while not !quit
+-- 
+1.8.3.1
+
+
+From a00243e4cb550b72fbef31bc834f707b198c3797 Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 17:40:00 +0000
+Subject: [PATCH] From 3d3b87010ff9ede82cfb79aee445a30d2c9f88b8 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 10/30] oxenstored: refactor putting response on
+ wire
+
+Previously, the functions reply_{ack,data,data_or_ack} and input_handle_error
+put the response on the wire by invoking Connection.send_{ack,reply,error}.
+
+Instead, these functions now return a value indicating what needs to be put on
+the wire, and that action is done by a send_response function called
+afterwards.
+
+This refactoring gives us a chance to store the value of the response, useful
+for replaying transactions.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jon Ludlam <jonathan.ludlam@citrix.com>
+Reviewed-by: Euan Harris <euan.harris@citrix.com>
+Acked-by: David Scott <dave@recoil.org>
+---
+ tools/ocaml/xenstored/Makefile   |  1 +
+ tools/ocaml/xenstored/packet.ml  |  4 ++++
+ tools/ocaml/xenstored/process.ml | 34 ++++++++++++++++++++++++----------
+ 3 files changed, 29 insertions(+), 10 deletions(-)
+ create mode 100644 tools/ocaml/xenstored/packet.ml
+
+diff --git a/tools/ocaml/xenstored/Makefile b/tools/ocaml/xenstored/Makefile
+index b18f190..7a4c317 100644
+--- a/tools/ocaml/xenstored/Makefile
++++ b/tools/ocaml/xenstored/Makefile
+@@ -17,6 +17,7 @@ OBJS = define \
+ 	stdext \
+ 	trie \
+ 	config \
++	packet \
+ 	logging \
+ 	quota \
+ 	perms \
+diff --git a/tools/ocaml/xenstored/packet.ml b/tools/ocaml/xenstored/packet.ml
+new file mode 100644
+index 0000000..c8ecfe5
+--- /dev/null
++++ b/tools/ocaml/xenstored/packet.ml
+@@ -0,0 +1,4 @@
++type response =
++	| Ack of (unit -> unit)  (* function is the action to execute after sending the ack *)
++	| Reply of string
++	| Error of string
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 89db56c..8be2ff1 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -126,8 +126,7 @@ let do_watch con t rid domains cons data =
+ 		| _                   -> raise Invalid_Cmd_Args
+ 		in
+ 	let watch = Connections.add_watch cons con node token in
+-	Connection.send_ack con (Transaction.get_id t) rid Xenbus.Xb.Op.Watch;
+-	Connection.fire_single_watch watch
++	Packet.Ack (fun () -> Connection.fire_single_watch watch)
+ 
+ let do_unwatch con t domains cons data =
+ 	let (node, token) =
+@@ -284,20 +283,32 @@ let do_set_target con t domains cons data =
+ 		| _                           -> raise Invalid_Cmd_Args
+ 
+ (*------------- Generic handling of ty ------------------*)
++let send_response ty con t rid response =
++	match response with
++	| Packet.Ack f ->
++		Connection.send_ack con (Transaction.get_id t) rid ty;
++		(* Now do any necessary follow-up actions *)
++		f ()
++	| Packet.Reply ret ->
++		Connection.send_reply con (Transaction.get_id t) rid ty ret
++	| Packet.Error e ->
++		Connection.send_error con (Transaction.get_id t) rid e
++
+ let reply_ack fct ty con t rid doms cons data =
+ 	fct con t doms cons data;
+-	Connection.send_ack con (Transaction.get_id t) rid ty;
+-	if Transaction.get_id t = Transaction.none then
+-		process_watch (Transaction.get_ops t) cons
++	Packet.Ack (fun () ->
++		if Transaction.get_id t = Transaction.none then
++			process_watch (Transaction.get_ops t) cons
++	)
+ 
+ let reply_data fct ty con t rid doms cons data =
+ 	let ret = fct con t doms cons data in
+-	Connection.send_reply con (Transaction.get_id t) rid ty ret
++	Packet.Reply ret
+ 
+ let reply_data_or_ack fct ty con t rid doms cons data =
+ 	match fct con t doms cons data with
+-		| Some ret -> Connection.send_reply con (Transaction.get_id t) rid ty ret
+-		| None -> Connection.send_ack con (Transaction.get_id t) rid ty
++		| Some ret -> Packet.Reply ret
++		| None -> Packet.Ack (fun () -> ())
+ 
+ let reply_none fct ty con t rid doms cons data =
+ 	(* let the function reply *)
+@@ -329,7 +340,7 @@ let function_of_type ty =
+ 
+ let input_handle_error ~cons ~doms ~fct ~ty ~con ~t ~rid ~data =
+ 	let reply_error e =
+-		Connection.send_error con (Transaction.get_id t) rid e in
++		Packet.Error e in
+ 	try
+ 		fct ty con t rid doms cons data
+ 	with
+@@ -362,7 +373,10 @@ let process_packet ~store ~cons ~doms ~con ~tid ~rid ~ty ~data =
+ 			else
+ 				Connection.get_transaction con tid
+ 			in
+-		input_handle_error ~cons ~doms ~fct ~ty ~con ~t ~rid ~data;
++		let response = input_handle_error ~cons ~doms ~fct ~ty ~con ~t ~rid ~data in
++
++		(* Put the response on the wire *)
++		send_response ty con t rid response
+ 	with exn ->
+ 		error "process packet: %s" (Printexc.to_string exn);
+ 		Connection.send_error con tid rid "EIO"
+-- 
+1.8.3.1
+
+
+From e8a6346215485747cb81f0f7c7c81eff72e47c31 Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 17:40:08 +0000
+Subject: [PATCH] From 7b5f1b6957edbcf514a74a38b6d5d810b3d9dcda Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 11/30] oxenstored: remove some unused
+ parameters
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jon Ludlam <jonathan.ludlam@citrix.com>
+Reviewed-by: Euan Harris <euan.harris@citrix.com>
+Acked-by: David Scott <dave@recoil.org>
+---
+ tools/ocaml/xenstored/process.ml | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 8be2ff1..7026727 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -119,7 +119,7 @@ let do_getperms con t domains cons data =
+ 	let perms = Transaction.getperms t (Connection.get_perm con) path in
+ 	Perms.Node.to_string perms ^ "\000"
+ 
+-let do_watch con t rid domains cons data =
++let do_watch con t domains cons data =
+ 	let (node, token) = 
+ 		match (split None '\000' data) with
+ 		| [node; token; ""]   -> node, token
+@@ -294,25 +294,25 @@ let send_response ty con t rid response =
+ 	| Packet.Error e ->
+ 		Connection.send_error con (Transaction.get_id t) rid e
+ 
+-let reply_ack fct ty con t rid doms cons data =
++let reply_ack fct con t doms cons data =
+ 	fct con t doms cons data;
+ 	Packet.Ack (fun () ->
+ 		if Transaction.get_id t = Transaction.none then
+ 			process_watch (Transaction.get_ops t) cons
+ 	)
+ 
+-let reply_data fct ty con t rid doms cons data =
++let reply_data fct con t doms cons data =
+ 	let ret = fct con t doms cons data in
+ 	Packet.Reply ret
+ 
+-let reply_data_or_ack fct ty con t rid doms cons data =
++let reply_data_or_ack fct con t doms cons data =
+ 	match fct con t doms cons data with
+ 		| Some ret -> Packet.Reply ret
+ 		| None -> Packet.Ack (fun () -> ())
+ 
+-let reply_none fct ty con t rid doms cons data =
++let reply_none fct con t doms cons data =
+ 	(* let the function reply *)
+-	fct con t rid doms cons data
++	fct con t doms cons data
+ 
+ let function_of_type ty =
+ 	match ty with
+@@ -342,7 +342,7 @@ let input_handle_error ~cons ~doms ~fct ~ty ~con ~t ~rid ~data =
+ 	let reply_error e =
+ 		Packet.Error e in
+ 	try
+-		fct ty con t rid doms cons data
++		fct con t doms cons data
+ 	with
+ 	| Define.Invalid_path          -> reply_error "EINVAL"
+ 	| Define.Already_exist         -> reply_error "EEXIST"
+-- 
+1.8.3.1
+
+
+From e81a290fbf371c942dd21f835475000f51e8417a Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 17:40:27 +0000
+Subject: [PATCH] From 37102e74b4e974348d62082d6f68eb4313207f27 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 12/30] oxenstored: refactor request processing
+
+Encapsulate the request in a record that is passed from do_input to
+process_packet and input_handle_error.
+
+This will be helpful when keeping track of the requests made as part of a
+transaction.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jon Ludlam <jonathan.ludlam@citrix.com>
+Reviewed-by: Euan Harris <euan.harris@citrix.com>
+Acked-by: David Scott <dave@recoil.org>
+---
+ tools/ocaml/xenstored/packet.ml  |  7 +++++++
+ tools/ocaml/xenstored/process.ml | 15 ++++++++++-----
+ 2 files changed, 17 insertions(+), 5 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/packet.ml b/tools/ocaml/xenstored/packet.ml
+index c8ecfe5..22cae1d 100644
+--- a/tools/ocaml/xenstored/packet.ml
++++ b/tools/ocaml/xenstored/packet.ml
+@@ -1,3 +1,10 @@
++type request = {
++	tid: int;
++	rid: int;
++	ty: Xenbus.Xb.Op.operation;
++	data: string;
++}
++
+ type response =
+ 	| Ack of (unit -> unit)  (* function is the action to execute after sending the ack *)
+ 	| Reply of string
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 7026727..b8bcb46 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -338,11 +338,11 @@ let function_of_type ty =
+ 	| Xenbus.Xb.Op.Invalid           -> reply_ack do_error
+ 	| _                              -> reply_ack do_error
+ 
+-let input_handle_error ~cons ~doms ~fct ~ty ~con ~t ~rid ~data =
++let input_handle_error ~cons ~doms ~fct ~con ~t ~req =
+ 	let reply_error e =
+ 		Packet.Error e in
+ 	try
+-		fct con t doms cons data
++		fct con t doms cons req.Packet.data
+ 	with
+ 	| Define.Invalid_path          -> reply_error "EINVAL"
+ 	| Define.Already_exist         -> reply_error "EEXIST"
+@@ -364,7 +364,10 @@ let input_handle_error ~cons ~doms ~fct ~ty ~con ~t ~rid ~data =
+ (**
+  * Nothrow guarantee.
+  *)
+-let process_packet ~store ~cons ~doms ~con ~tid ~rid ~ty ~data =
++let process_packet ~store ~cons ~doms ~con ~req =
++	let ty = req.Packet.ty in
++	let tid = req.Packet.tid in
++	let rid = req.Packet.rid in
+ 	try
+ 		let fct = function_of_type ty in
+ 		let t =
+@@ -373,7 +376,7 @@ let process_packet ~store ~cons ~doms ~con ~tid ~rid ~ty ~data =
+ 			else
+ 				Connection.get_transaction con tid
+ 			in
+-		let response = input_handle_error ~cons ~doms ~fct ~ty ~con ~t ~rid ~data in
++		let response = input_handle_error ~cons ~doms ~fct ~con ~t ~req in
+ 
+ 		(* Put the response on the wire *)
+ 		send_response ty con t rid response
+@@ -401,11 +404,13 @@ let do_input store cons doms con =
+ 	if newpacket then (
+ 		let packet = Connection.pop_in con in
+ 		let tid, rid, ty, data = Xenbus.Xb.Packet.unpack packet in
++		let req = {Packet.tid; Packet.rid; Packet.ty; Packet.data} in
++
+ 		(* As we don't log IO, do not call an unnecessary sanitize_data 
+ 		   info "[%s] -> [%d] %s \"%s\""
+ 		         (Connection.get_domstr con) tid
+ 		         (Xenbus.Xb.Op.to_string ty) (sanitize_data data); *)
+-		process_packet ~store ~cons ~doms ~con ~tid ~rid ~ty ~data;
++		process_packet ~store ~cons ~doms ~con ~req;
+ 		write_access_log ~ty ~tid ~con ~data;
+ 		Connection.incr_ops con;
+ 	)
+-- 
+1.8.3.1
+
+
+From bacf702df44ddd986b119b9b96f336f6fe5982fa Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 17:40:35 +0000
+Subject: [PATCH] From 7f3129ec15c1c459962401d2edcd9e693c698a09 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 13/30] oxenstored: keep track of each
+ transaction's operations
+
+A list of (request, response) pairs from the operations performed within the
+transaction will be useful to support transaction replay.
+
+Since this consumes memory, the number of requests per transaction must not be
+left unbounded. Hence a new quota for this is introduced. This quota, configured
+via the configuration key 'quota-maxrequests', limits the size of transactions
+initiated by domUs.
+
+After the maximum number of requests has been exhausted, any further requests
+will result in EQUOTA errors. The client may then choose to end the transaction;
+a successful commit will result in the retention of only the prior requests.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jon Ludlam <jonathan.ludlam@citrix.com>
+Reviewed-by: Euan Harris <euan.harris@citrix.com>
+Acked-by: David Scott <dave@recoil.org>
+---
+ tools/ocaml/xenstored/define.ml       |  1 +
+ tools/ocaml/xenstored/oxenstored.conf |  1 +
+ tools/ocaml/xenstored/process.ml      | 13 +++++++++++--
+ tools/ocaml/xenstored/transaction.ml  | 21 +++++++++++++++------
+ tools/ocaml/xenstored/xenstored.ml    |  1 +
+ 5 files changed, 29 insertions(+), 8 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/define.ml b/tools/ocaml/xenstored/define.ml
+index 89a6aac..d60861c 100644
+--- a/tools/ocaml/xenstored/define.ml
++++ b/tools/ocaml/xenstored/define.ml
+@@ -27,6 +27,7 @@ let default_config_dir = "/etc/xen"
+ 
+ let maxwatch = ref (50)
+ let maxtransaction = ref (20)
++let maxrequests = ref (-1)   (* maximum requests per transaction *)
+ 
+ let domid_self = 0x7FF0
+ 
+diff --git a/tools/ocaml/xenstored/oxenstored.conf b/tools/ocaml/xenstored/oxenstored.conf
+index dd20eda..ac60f49 100644
+--- a/tools/ocaml/xenstored/oxenstored.conf
++++ b/tools/ocaml/xenstored/oxenstored.conf
+@@ -18,6 +18,7 @@ quota-maxentity = 1000
+ quota-maxsize = 2048
+ quota-maxwatch = 100
+ quota-transaction = 10
++quota-maxrequests = 1024
+ 
+ # Activate filed base backend
+ persistent = false
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index b8bcb46..34fb66c 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -155,7 +155,7 @@ let do_transaction_end con t domains cons data =
+ 	if not success then
+ 		raise Transaction_again;
+ 	if commit then
+-		process_watch (List.rev (Transaction.get_ops t)) cons
++		process_watch (List.rev (Transaction.get_paths t)) cons
+ 
+ let do_introduce con t domains cons data =
+ 	if not (Connection.is_dom0 con)
+@@ -298,7 +298,7 @@ let reply_ack fct con t doms cons data =
+ 	fct con t doms cons data;
+ 	Packet.Ack (fun () ->
+ 		if Transaction.get_id t = Transaction.none then
+-			process_watch (Transaction.get_ops t) cons
++			process_watch (Transaction.get_paths t) cons
+ 	)
+ 
+ let reply_data fct con t doms cons data =
+@@ -378,6 +378,15 @@ let process_packet ~store ~cons ~doms ~con ~req =
+ 			in
+ 		let response = input_handle_error ~cons ~doms ~fct ~con ~t ~req in
+ 
++		let response = try
++			if tid <> Transaction.none then
++				(* Remember the request and response for this operation in case we need to replay the transaction *)
++				Transaction.add_operation ~perm:(Connection.get_perm con) t req response;
++			response
++		with Quota.Limit_reached ->
++			Packet.Error "EQUOTA"
++		in
++
+ 		(* Put the response on the wire *)
+ 		send_response ty con t rid response
+ 	with exn ->
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index 77de4e8..6b37fc2 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -75,7 +75,8 @@ type t = {
+ 	ty: ty;
+ 	store: Store.t;
+ 	quota: Quota.t;
+-	mutable ops: (Xenbus.Xb.Op.operation * Store.Path.t) list;
++	mutable paths: (Xenbus.Xb.Op.operation * Store.Path.t) list;
++	mutable operations: (Packet.request * Packet.response) list;
+ 	mutable read_lowpath: Store.Path.t option;
+ 	mutable write_lowpath: Store.Path.t option;
+ }
+@@ -86,16 +87,24 @@ let make id store =
+ 		ty = ty;
+ 		store = if id = none then store else Store.copy store;
+ 		quota = Quota.copy store.Store.quota;
+-		ops = [];
++		paths = [];
++		operations = [];
+ 		read_lowpath = None;
+ 		write_lowpath = None;
+ 	}
+ 
+ let get_id t = match t.ty with No -> none | Full (id, _, _) -> id
+ let get_store t = t.store
+-let get_ops t = t.ops
+-
+-let add_wop t ty path = t.ops <- (ty, path) :: t.ops
++let get_paths t = t.paths
++
++let add_wop t ty path = t.paths <- (ty, path) :: t.paths
++let add_operation ~perm t request response =
++	if !Define.maxrequests >= 0
++		&& not (Perms.Connection.is_dom0 perm)
++		&& List.length t.operations >= !Define.maxrequests
++		then raise Quota.Limit_reached;
++	t.operations <- (request, response) :: t.operations
++let get_operations t = List.rev t.operations
+ let set_read_lowpath t path = t.read_lowpath <- get_lowest path t.read_lowpath
+ let set_write_lowpath t path = t.write_lowpath <- get_lowest path t.write_lowpath
+ 
+@@ -141,7 +150,7 @@ let getperms t perm path =
+ 	r
+ 
+ let commit ~con t =
+-	let has_write_ops = List.length t.ops > 0 in
++	let has_write_ops = List.length t.paths > 0 in
+ 	let has_coalesced = ref false in
+ 	let has_commited =
+ 	match t.ty with
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 58a1ffc..656a79b 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -95,6 +95,7 @@ let parse_config filename =
+ 		("quota-transaction", Config.Set_int Define.maxtransaction);
+ 		("quota-maxentity", Config.Set_int Quota.maxent);
+ 		("quota-maxsize", Config.Set_int Quota.maxsize);
++		("quota-maxrequests", Config.Set_int Define.maxrequests);
+ 		("test-eagain", Config.Set_bool Transaction.test_eagain);
+ 		("persistent", Config.Set_bool Disk.enable);
+ 		("xenstored-log-file", Config.String Logging.set_xenstored_log_destination);
+-- 
+1.8.3.1
+
+
+From 543ac952cbdc5425c0718dc0202ad76f3b49323b Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 17:53:03 +0000
+Subject: [PATCH] From c8a7bd3fff923dd7747a45aa5f5b3222921f9728 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 14/30] oxenstored: move functions that process
+ simple  operations
+
+Separate the functions which process operations that can be done as part of a
+transaction. Specifically, these operations are: read, write, rm, getperms,
+setperms, getdomainpath, directory, mkdir.
+
+Also split function_of_type into two functions: one for processing the simple
+operations and one for processing the rest.
+
+This will help allow replay of transactions, allowing us to invoke the functions
+that process the simple operations as part of the processing of transaction_end.
+
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jon Ludlam <jonathan.ludlam@citrix.com>
+Reviewed-by: Euan Harris <euan.harris@citrix.com>
+Acked-by: David Scott <dave@recoil.org>
+
+Backporting to 4.5:
+
+- Removed references to Reset_watches, which was introduced in 4.6.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+---
+ tools/ocaml/xenstored/process.ml | 220 +++++++++++++++++++++------------------
+ 1 file changed, 119 insertions(+), 101 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 34fb66c..77660bd 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -119,94 +119,6 @@ let do_getperms con t domains cons data =
+ 	let perms = Transaction.getperms t (Connection.get_perm con) path in
+ 	Perms.Node.to_string perms ^ "\000"
+ 
+-let do_watch con t domains cons data =
+-	let (node, token) = 
+-		match (split None '\000' data) with
+-		| [node; token; ""]   -> node, token
+-		| _                   -> raise Invalid_Cmd_Args
+-		in
+-	let watch = Connections.add_watch cons con node token in
+-	Packet.Ack (fun () -> Connection.fire_single_watch watch)
+-
+-let do_unwatch con t domains cons data =
+-	let (node, token) =
+-		match (split None '\000' data) with
+-		| [node; token; ""]   -> node, token
+-		| _                   -> raise Invalid_Cmd_Args
+-		in
+-	Connections.del_watch cons con node token
+-
+-let do_transaction_start con t domains cons data =
+-	if Transaction.get_id t <> Transaction.none then
+-		raise Transaction_nested;
+-	let store = Transaction.get_store t in
+-	string_of_int (Connection.start_transaction con store) ^ "\000"
+-
+-let do_transaction_end con t domains cons data =
+-	let commit =
+-		match (split None '\000' data) with
+-		| "T" :: _ -> true
+-		| "F" :: _ -> false
+-		| x :: _   -> raise (Invalid_argument x)
+-		| _        -> raise Invalid_Cmd_Args
+-		in
+-	let success =
+-		Connection.end_transaction con (Transaction.get_id t) commit in
+-	if not success then
+-		raise Transaction_again;
+-	if commit then
+-		process_watch (List.rev (Transaction.get_paths t)) cons
+-
+-let do_introduce con t domains cons data =
+-	if not (Connection.is_dom0 con)
+-	then raise Define.Permission_denied;
+-	let (domid, mfn, port) =
+-		match (split None '\000' data) with
+-		| domid :: mfn :: port :: _ ->
+-			int_of_string domid, Nativeint.of_string mfn, int_of_string port
+-		| _                         -> raise Invalid_Cmd_Args;
+-		in
+-	let dom =
+-		if Domains.exist domains domid then
+-			Domains.find domains domid
+-		else try
+-			let ndom = Xenctrl.with_intf (fun xc ->
+-				Domains.create xc domains domid mfn port) in
+-			Connections.add_domain cons ndom;
+-			Connections.fire_spec_watches cons "@introduceDomain";
+-			ndom
+-		with _ -> raise Invalid_Cmd_Args
+-	in
+-	if (Domain.get_remote_port dom) <> port || (Domain.get_mfn dom) <> mfn then
+-		raise Domain_not_match
+-
+-let do_release con t domains cons data =
+-	if not (Connection.is_dom0 con)
+-	then raise Define.Permission_denied;
+-	let domid =
+-		match (split None '\000' data) with
+-		| [domid;""] -> int_of_string domid
+-		| _          -> raise Invalid_Cmd_Args
+-		in
+-	let fire_spec_watches = Domains.exist domains domid in
+-	Domains.del domains domid;
+-	Connections.del_domain cons domid;
+-	if fire_spec_watches 
+-	then Connections.fire_spec_watches cons "@releaseDomain"
+-	else raise Invalid_Cmd_Args
+-
+-let do_resume con t domains cons data =
+-	if not (Connection.is_dom0 con)
+-	then raise Define.Permission_denied;
+-	let domid =
+-		match (split None '\000' data) with
+-		| domid :: _ -> int_of_string domid
+-		| _          -> raise Invalid_Cmd_Args
+-		in
+-	if Domains.exist domains domid
+-	then Domains.resume domains domid
+-	else raise Invalid_Cmd_Args
+-
+ let do_getdomainpath con t domains cons data =
+ 	let domid =
+ 		match (split None '\000' data) with
+@@ -314,28 +226,30 @@ let reply_none fct con t doms cons data =
+ 	(* let the function reply *)
+ 	fct con t doms cons data
+ 
+-let function_of_type ty =
++(* Functions for 'simple' operations that cannot be part of a transaction *)
++let function_of_type_simple_op ty =
+ 	match ty with
+-	| Xenbus.Xb.Op.Debug             -> reply_data_or_ack do_debug
++	| Xenbus.Xb.Op.Debug
++	| Xenbus.Xb.Op.Watch
++	| Xenbus.Xb.Op.Unwatch
++	| Xenbus.Xb.Op.Transaction_start
++	| Xenbus.Xb.Op.Transaction_end
++	| Xenbus.Xb.Op.Introduce
++	| Xenbus.Xb.Op.Release
++	| Xenbus.Xb.Op.Isintroduced
++	| Xenbus.Xb.Op.Resume
++	| Xenbus.Xb.Op.Set_target
++	| Xenbus.Xb.Op.Restrict
++	| Xenbus.Xb.Op.Invalid           -> error "called function_of_type_simple_op on operation %s" (Xenbus.Xb.Op.to_string ty);
++	                                    raise (Invalid_argument (Xenbus.Xb.Op.to_string ty))
+ 	| Xenbus.Xb.Op.Directory         -> reply_data do_directory
+ 	| Xenbus.Xb.Op.Read              -> reply_data do_read
+ 	| Xenbus.Xb.Op.Getperms          -> reply_data do_getperms
+-	| Xenbus.Xb.Op.Watch             -> reply_none do_watch
+-	| Xenbus.Xb.Op.Unwatch           -> reply_ack do_unwatch
+-	| Xenbus.Xb.Op.Transaction_start -> reply_data do_transaction_start
+-	| Xenbus.Xb.Op.Transaction_end   -> reply_ack do_transaction_end
+-	| Xenbus.Xb.Op.Introduce         -> reply_ack do_introduce
+-	| Xenbus.Xb.Op.Release           -> reply_ack do_release
+ 	| Xenbus.Xb.Op.Getdomainpath     -> reply_data do_getdomainpath
+ 	| Xenbus.Xb.Op.Write             -> reply_ack do_write
+ 	| Xenbus.Xb.Op.Mkdir             -> reply_ack do_mkdir
+ 	| Xenbus.Xb.Op.Rm                -> reply_ack do_rm
+ 	| Xenbus.Xb.Op.Setperms          -> reply_ack do_setperms
+-	| Xenbus.Xb.Op.Isintroduced      -> reply_data do_isintroduced
+-	| Xenbus.Xb.Op.Resume            -> reply_ack do_resume
+-	| Xenbus.Xb.Op.Set_target        -> reply_ack do_set_target
+-	| Xenbus.Xb.Op.Restrict          -> reply_ack do_restrict
+-	| Xenbus.Xb.Op.Invalid           -> reply_ack do_error
+ 	| _                              -> reply_ack do_error
+ 
+ let input_handle_error ~cons ~doms ~fct ~con ~t ~req =
+@@ -361,6 +275,110 @@ let input_handle_error ~cons ~doms ~fct ~con ~t ~req =
+ 	| (Failure "int_of_string")    -> reply_error "EINVAL"
+ 	| Define.Unknown_operation     -> reply_error "ENOSYS"
+ 
++let do_watch con t domains cons data =
++	let (node, token) = 
++		match (split None '\000' data) with
++		| [node; token; ""]   -> node, token
++		| _                   -> raise Invalid_Cmd_Args
++		in
++	let watch = Connections.add_watch cons con node token in
++	Packet.Ack (fun () -> Connection.fire_single_watch watch)
++
++let do_unwatch con t domains cons data =
++	let (node, token) =
++		match (split None '\000' data) with
++		| [node; token; ""]   -> node, token
++		| _                   -> raise Invalid_Cmd_Args
++		in
++	Connections.del_watch cons con node token
++
++let do_transaction_start con t domains cons data =
++	if Transaction.get_id t <> Transaction.none then
++		raise Transaction_nested;
++	let store = Transaction.get_store t in
++	string_of_int (Connection.start_transaction con store) ^ "\000"
++
++let do_transaction_end con t domains cons data =
++	let commit =
++		match (split None '\000' data) with
++		| "T" :: _ -> true
++		| "F" :: _ -> false
++		| x :: _   -> raise (Invalid_argument x)
++		| _        -> raise Invalid_Cmd_Args
++		in
++	let success =
++		Connection.end_transaction con (Transaction.get_id t) commit in
++	if not success then
++		raise Transaction_again;
++	if commit then
++		process_watch (List.rev (Transaction.get_paths t)) cons
++
++let do_introduce con t domains cons data =
++	if not (Connection.is_dom0 con)
++	then raise Define.Permission_denied;
++	let (domid, mfn, port) =
++		match (split None '\000' data) with
++		| domid :: mfn :: port :: _ ->
++			int_of_string domid, Nativeint.of_string mfn, int_of_string port
++		| _                         -> raise Invalid_Cmd_Args;
++		in
++	let dom =
++		if Domains.exist domains domid then
++			Domains.find domains domid
++		else try
++			let ndom = Xenctrl.with_intf (fun xc ->
++				Domains.create xc domains domid mfn port) in
++			Connections.add_domain cons ndom;
++			Connections.fire_spec_watches cons "@introduceDomain";
++			ndom
++		with _ -> raise Invalid_Cmd_Args
++	in
++	if (Domain.get_remote_port dom) <> port || (Domain.get_mfn dom) <> mfn then
++		raise Domain_not_match
++
++let do_release con t domains cons data =
++	if not (Connection.is_dom0 con)
++	then raise Define.Permission_denied;
++	let domid =
++		match (split None '\000' data) with
++		| [domid;""] -> int_of_string domid
++		| _          -> raise Invalid_Cmd_Args
++		in
++	let fire_spec_watches = Domains.exist domains domid in
++	Domains.del domains domid;
++	Connections.del_domain cons domid;
++	if fire_spec_watches 
++	then Connections.fire_spec_watches cons "@releaseDomain"
++	else raise Invalid_Cmd_Args
++
++let do_resume con t domains cons data =
++	if not (Connection.is_dom0 con)
++	then raise Define.Permission_denied;
++	let domid =
++		match (split None '\000' data) with
++		| domid :: _ -> int_of_string domid
++		| _          -> raise Invalid_Cmd_Args
++		in
++	if Domains.exist domains domid
++	then Domains.resume domains domid
++	else raise Invalid_Cmd_Args
++
++let function_of_type ty =
++	match ty with
++	| Xenbus.Xb.Op.Debug             -> reply_data_or_ack do_debug
++	| Xenbus.Xb.Op.Watch             -> reply_none do_watch
++	| Xenbus.Xb.Op.Unwatch           -> reply_ack do_unwatch
++	| Xenbus.Xb.Op.Transaction_start -> reply_data do_transaction_start
++	| Xenbus.Xb.Op.Transaction_end   -> reply_ack do_transaction_end
++	| Xenbus.Xb.Op.Introduce         -> reply_ack do_introduce
++	| Xenbus.Xb.Op.Release           -> reply_ack do_release
++	| Xenbus.Xb.Op.Isintroduced      -> reply_data do_isintroduced
++	| Xenbus.Xb.Op.Resume            -> reply_ack do_resume
++	| Xenbus.Xb.Op.Set_target        -> reply_ack do_set_target
++	| Xenbus.Xb.Op.Restrict          -> reply_ack do_restrict
++	| Xenbus.Xb.Op.Invalid           -> reply_ack do_error
++	| _                              -> function_of_type_simple_op ty
++
+ (**
+  * Nothrow guarantee.
+  *)
+-- 
+1.8.3.1
+
+
+From da80a280b407af78e3bee22212616bdc99861c8b Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 17:54:17 +0000
+Subject: [PATCH] From ce0ca538ccc5e59b9407f983babfb0dd098e1a0b Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 15/30] oxenstored: replay transaction upon
+ conflict
+
+The existing transaction merge algorithm keeps track of the least upper bound
+(longest common prefix) of all the nodes which have been read and written, and
+will re-combine two stores which have disjoint upper bounds. This works well for
+small transactions but causes unnecessary conflicts for ones that span a large
+subtree, such as the following ones used by the xapi toolstack:
+
+ * VM start: creates /vm/... /vss/... /local/domain/...
+   The least upper bound of this transaction is / and so all
+   these transactions conflict with everything.
+
+ * Device hotplug: creates /local/domain/0/... /local/domain/n/...
+   The least upper bound of this transaction is /local/domain so
+   all these transactions conflict with each other.
+
+If the existing merge algorithm cannot merge and commit, we attempt
+a /replay/ of the failed transaction against the new store.
+
+When we replay the requests we check whether the response sent to the client is
+the same as during the first attempt at the transaction. If the responses are
+all the same then the transaction replay can be committed. If any differ then
+the transaction replay must be aborted and the client must retry.
+
+This algorithm uses the intuition that the transactions made by the toolstack
+are designed to be for separate domains, and should fundamentally not conflict
+in the sense that they don't read or write any shared keys. By replaying the
+transaction on the server side we do what the client would have to do anyway,
+only we can do it quickly without allowing any other requests to interfere.
+
+Performing 300 parallel simulated VM start and shutdowns without this code:
+
+300 parallel starts and shutdowns: 268.92
+
+Performing 300 parallel simulated VM start and shutdowns with this code:
+
+300 parallel starts and shutdowns: 3.80
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Dave Scott <dave@recoil.org>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jon Ludlam <jonathan.ludlam@citrix.com>
+Reviewed-by: Euan Harris <euan.harris@citrix.com>
+Acked-by: David Scott <dave@recoil.org>
+---
+ tools/ocaml/xenstored/connection.ml |  5 ++++-
+ tools/ocaml/xenstored/packet.ml     |  5 +++++
+ tools/ocaml/xenstored/process.ml    | 33 +++++++++++++++++++++++++++++++++
+ 3 files changed, 42 insertions(+), 1 deletion(-)
+
+diff --git a/tools/ocaml/xenstored/connection.ml b/tools/ocaml/xenstored/connection.ml
+index 807fc00..15ff2b3 100644
+--- a/tools/ocaml/xenstored/connection.ml
++++ b/tools/ocaml/xenstored/connection.ml
+@@ -212,7 +212,10 @@ let end_transaction con tid commit =
+ 	let trans = Hashtbl.find con.transactions tid in
+ 	Hashtbl.remove con.transactions tid;
+ 	Logging.end_transaction ~tid ~con:(get_domstr con);
+-	if commit then Transaction.commit ~con:(get_domstr con) trans else true
++	match commit with
++	| None -> true
++	| Some transaction_replay_f ->
++		Transaction.commit ~con:(get_domstr con) trans || transaction_replay_f con trans
+ 
+ let get_transaction con tid =
+ 	Hashtbl.find con.transactions tid
+diff --git a/tools/ocaml/xenstored/packet.ml b/tools/ocaml/xenstored/packet.ml
+index 22cae1d..aeae0a4 100644
+--- a/tools/ocaml/xenstored/packet.ml
++++ b/tools/ocaml/xenstored/packet.ml
+@@ -9,3 +9,8 @@ type response =
+ 	| Ack of (unit -> unit)  (* function is the action to execute after sending the ack *)
+ 	| Reply of string
+ 	| Error of string
++
++let response_equal a b =
++	match (a, b) with
++	| (Ack _, Ack _) -> true (* just consider the response, not the post-response action *)
++	| (x, y) -> x = y
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 77660bd..3ade42d 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -275,6 +275,38 @@ let input_handle_error ~cons ~doms ~fct ~con ~t ~req =
+ 	| (Failure "int_of_string")    -> reply_error "EINVAL"
+ 	| Define.Unknown_operation     -> reply_error "ENOSYS"
+ 
++(* Replay a stored transaction against a fresh store, check the responses are
++   all equivalent: if so, commit the transaction. Otherwise send the abort to
++   the client. *)
++let transaction_replay c t doms cons =
++	match t.Transaction.ty with
++	| Transaction.No ->
++		error "attempted to replay a non-full transaction";
++		false
++	| Transaction.Full(id, oldroot, cstore) ->
++		let tid = Connection.start_transaction c cstore in
++		let new_t = Transaction.make tid cstore in
++		let con = sprintf "r(%d):%s" id (Connection.get_domstr c) in
++		let perform_exn (request, response) =
++			let fct = function_of_type_simple_op request.Packet.ty in
++			let response' = input_handle_error ~cons ~doms ~fct ~con:c ~t:new_t ~req:request in
++			if not(Packet.response_equal response response') then raise Transaction_again in
++		finally
++		(fun () ->
++			try
++				Logging.start_transaction ~con ~tid;
++				List.iter perform_exn (Transaction.get_operations t);
++				Logging.end_transaction ~con ~tid;
++
++				Transaction.commit ~con new_t
++			with e ->
++				info "transaction_replay %d caught: %s" tid (Printexc.to_string e);
++				false
++			)
++		(fun () ->
++			Connection.end_transaction c tid None
++		)
++
+ let do_watch con t domains cons data =
+ 	let (node, token) = 
+ 		match (split None '\000' data) with
+@@ -307,6 +339,7 @@ let do_transaction_end con t domains cons data =
+ 		| _        -> raise Invalid_Cmd_Args
+ 		in
+ 	let success =
++		let commit = if commit then Some (fun con trans -> transaction_replay con trans domains cons) else None in
+ 		Connection.end_transaction con (Transaction.get_id t) commit in
+ 	if not success then
+ 		raise Transaction_again;
+-- 
+1.8.3.1
+
+
+From c9ef463d274e1d114f110f795cb4305f5dbde22b Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 17:54:28 +0000
+Subject: [PATCH] From c89859c4735ce717d4115a4f056c9565363b05a1 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 16/30] oxenstored: log request and response
+ during transaction  replay
+
+During a transaction replay, the replayed requests and the new responses are
+logged in the same way as the original requests and the original responses.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jon Ludlam <jonathan.ludlam@citrix.com>
+Reviewed-by: Euan Harris <euan.harris@citrix.com>
+Acked-by: David Scott <dave@recoil.org>
+---
+ tools/ocaml/xenstored/process.ml | 24 ++++++++++++++++--------
+ 1 file changed, 16 insertions(+), 8 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 3ade42d..10b7357 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -275,6 +275,18 @@ let input_handle_error ~cons ~doms ~fct ~con ~t ~req =
+ 	| (Failure "int_of_string")    -> reply_error "EINVAL"
+ 	| Define.Unknown_operation     -> reply_error "ENOSYS"
+ 
++let write_access_log ~ty ~tid ~con ~data =
++	Logging.xb_op ~ty ~tid ~con data
++
++let write_answer_log ~ty ~tid ~con ~data =
++	Logging.xb_answer ~ty ~tid ~con data
++
++let write_response_log ~ty ~tid ~con ~response =
++	match response with
++	| Packet.Ack _   -> write_answer_log ~ty ~tid ~con ~data:""
++	| Packet.Reply x -> write_answer_log ~ty ~tid ~con ~data:x
++	| Packet.Error e -> write_answer_log ~ty:(Xenbus.Xb.Op.Error) ~tid ~con ~data:e
++
+ (* Replay a stored transaction against a fresh store, check the responses are
+    all equivalent: if so, commit the transaction. Otherwise send the abort to
+    the client. *)
+@@ -288,8 +300,10 @@ let transaction_replay c t doms cons =
+ 		let new_t = Transaction.make tid cstore in
+ 		let con = sprintf "r(%d):%s" id (Connection.get_domstr c) in
+ 		let perform_exn (request, response) =
++			write_access_log ~ty:request.Packet.ty ~tid ~con ~data:request.Packet.data;
+ 			let fct = function_of_type_simple_op request.Packet.ty in
+ 			let response' = input_handle_error ~cons ~doms ~fct ~con:c ~t:new_t ~req:request in
++			write_response_log ~ty:request.Packet.ty ~tid ~con ~response:response';
+ 			if not(Packet.response_equal response response') then raise Transaction_again in
+ 		finally
+ 		(fun () ->
+@@ -444,12 +458,6 @@ let process_packet ~store ~cons ~doms ~con ~req =
+ 		error "process packet: %s" (Printexc.to_string exn);
+ 		Connection.send_error con tid rid "EIO"
+ 
+-let write_access_log ~ty ~tid ~con ~data =
+-	Logging.xb_op ~ty ~tid ~con:(Connection.get_domstr con) data
+-
+-let write_answer_log ~ty ~tid ~con ~data =
+-	Logging.xb_answer ~ty ~tid ~con:(Connection.get_domstr con) data
+-
+ let do_input store cons doms con =
+ 	let newpacket =
+ 		try
+@@ -471,7 +479,7 @@ let do_input store cons doms con =
+ 		         (Connection.get_domstr con) tid
+ 		         (Xenbus.Xb.Op.to_string ty) (sanitize_data data); *)
+ 		process_packet ~store ~cons ~doms ~con ~req;
+-		write_access_log ~ty ~tid ~con ~data;
++		write_access_log ~ty ~tid ~con:(Connection.get_domstr con) ~data;
+ 		Connection.incr_ops con;
+ 	)
+ 
+@@ -484,7 +492,7 @@ let do_output store cons doms con =
+ 			   info "[%s] <- %s \"%s\""
+ 			         (Connection.get_domstr con)
+ 			         (Xenbus.Xb.Op.to_string ty) (sanitize_data data);*)
+-			write_answer_log ~ty ~tid ~con ~data;
++			write_answer_log ~ty ~tid ~con:(Connection.get_domstr con) ~data;
+ 		);
+ 		ignore (Connection.do_output con)
+ 	)
+-- 
+1.8.3.1
+
+
+From e9cd73a56cbc1689711ff0ec44a2d709a1a16d8b Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 17:54:35 +0000
+Subject: [PATCH] From 88f59d22230b304ac861cea9759bd8861a6c3867 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 17/30] oxenstored: allow compilation prior to
+ OCaml 3.12.0
+
+Commit 363ae55c8 used an OCaml feature called record field punning. This broke
+the build on compilers prior to OCaml 3.12.0.
+
+This patch makes no semantic change but now uses backwards-compatible syntax.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reported-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Tested-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+---
+ tools/ocaml/xenstored/process.ml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 10b7357..9cf2b46 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -472,7 +472,7 @@ let do_input store cons doms con =
+ 	if newpacket then (
+ 		let packet = Connection.pop_in con in
+ 		let tid, rid, ty, data = Xenbus.Xb.Packet.unpack packet in
+-		let req = {Packet.tid; Packet.rid; Packet.ty; Packet.data} in
++		let req = {Packet.tid=tid; Packet.rid=rid; Packet.ty=ty; Packet.data=data} in
+ 
+ 		(* As we don't log IO, do not call an unnecessary sanitize_data 
+ 		   info "[%s] -> [%d] %s \"%s\""
+-- 
+1.8.3.1
+
+
+From e4116bb00ed596b8e24e7fd36cc5e49a0ff9c887 Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Tue, 14 Mar 2017 12:15:52 +0000
+Subject: [PATCH] From 4782ccf2f68941fa591cfa72275b678613314fea Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 18/30] oxenstored: comments explaining some
+ variables
+
+It took a while of reading and reasoning to work out what these are
+for, so here are comments to make life easier for everyone reading
+this code in future.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/store.ml       |  1 +
+ tools/ocaml/xenstored/transaction.ml | 10 +++++++---
+ 2 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/store.ml b/tools/ocaml/xenstored/store.ml
+index 223ee21..9f619b8 100644
+--- a/tools/ocaml/xenstored/store.ml
++++ b/tools/ocaml/xenstored/store.ml
+@@ -211,6 +211,7 @@ let apply rnode path fct =
+ 	lookup rnode path fct
+ end
+ 
++(* The Store.t type *)
+ type t =
+ {
+ 	mutable stat_transaction_coalesce: int;
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index 6b37fc2..51d5d6a 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -69,11 +69,15 @@ let can_coalesce oldroot currentroot path =
+ 	else
+ 		false
+ 
+-type ty = No | Full of (int * Store.Node.t * Store.t)
++type ty = No | Full of (
++	int *          (* Transaction id *)
++	Store.Node.t * (* Original root *)
++	Store.t        (* A pointer to the canonical store: its root changes on each transaction-commit *)
++)
+ 
+ type t = {
+ 	ty: ty;
+-	store: Store.t;
++	store: Store.t; (* This is the store that we change in write operations. *)
+ 	quota: Quota.t;
+ 	mutable paths: (Xenbus.Xb.Op.operation * Store.Path.t) list;
+ 	mutable operations: (Packet.request * Packet.response) list;
+@@ -155,7 +159,7 @@ let commit ~con t =
+ 	let has_commited =
+ 	match t.ty with
+ 	| No                         -> true
+-	| Full (id, oldroot, cstore) ->
++	| Full (id, oldroot, cstore) ->       (* "cstore" meaning current canonical store *)
+ 		let commit_partial oldroot cstore store =
+ 			(* get the lowest path of the query and verify that it hasn't
+ 			   been modified by others transactions. *)
+-- 
+1.8.3.1
+
+
+From 6ab1bbdd79f01fe209424106900a319ccb2c9c09 Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Tue, 14 Mar 2017 12:15:52 +0000
+Subject: [PATCH] From 6118099bec07d77bfd73a032d8b411cab29a9f3e Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 19/30] oxenstored: handling of domain
+ conflict-credit
+
+This commit gives each domain a conflict-credit variable, which will
+later be used for limiting how often a domain can cause other domain's
+transaction-commits to fail.
+
+This commit also provides functions and data for manipulating domains
+and their conflict-credit, and checking whether they have credit.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/connection.ml   |   5 ++
+ tools/ocaml/xenstored/define.ml       |   3 +
+ tools/ocaml/xenstored/domain.ml       |  11 +++-
+ tools/ocaml/xenstored/domains.ml      | 103 +++++++++++++++++++++++++++++++++-
+ tools/ocaml/xenstored/oxenstored.conf |  32 +++++++++++
+ tools/ocaml/xenstored/transaction.ml  |   2 +
+ tools/ocaml/xenstored/xenstored.ml    |   2 +
+ 7 files changed, 154 insertions(+), 4 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/connection.ml b/tools/ocaml/xenstored/connection.ml
+index 15ff2b3..b52e8af 100644
+--- a/tools/ocaml/xenstored/connection.ml
++++ b/tools/ocaml/xenstored/connection.ml
+@@ -258,3 +258,8 @@ let debug con =
+ 	let domid = get_domstr con in
+ 	let watches = List.map (fun (path, token) -> Printf.sprintf "watch %s: %s %s\n" domid path token) (list_watches con) in
+ 	String.concat "" watches
++
++let decr_conflict_credit doms con =
++	match con.dom with
++	| None -> () (* It's a socket connection. We don't know which domain we're in, so treat it as if it's free to conflict *)
++	| Some dom -> Domains.decr_conflict_credit doms dom
+diff --git a/tools/ocaml/xenstored/define.ml b/tools/ocaml/xenstored/define.ml
+index d60861c..df1e91c 100644
+--- a/tools/ocaml/xenstored/define.ml
++++ b/tools/ocaml/xenstored/define.ml
+@@ -29,6 +29,9 @@ let maxwatch = ref (50)
+ let maxtransaction = ref (20)
+ let maxrequests = ref (-1)   (* maximum requests per transaction *)
+ 
++let conflict_burst_limit = ref 5.0
++let conflict_rate_limit_is_aggregate = ref true
++
+ let domid_self = 0x7FF0
+ 
+ exception Not_a_directory of string
+diff --git a/tools/ocaml/xenstored/domain.ml b/tools/ocaml/xenstored/domain.ml
+index ab34314..e677aa3 100644
+--- a/tools/ocaml/xenstored/domain.ml
++++ b/tools/ocaml/xenstored/domain.ml
+@@ -31,8 +31,12 @@ type t =
+ 	mutable io_credit: int; (* the rounds of ring process left to do, default is 0,
+ 	                           usually set to 1 when there is work detected, could
+ 	                           also set to n to give "lazy" clients extra credit *)
++	mutable conflict_credit: float; (* Must be positive to perform writes; a commit
++	                                   that later causes conflict with another
++	                                   domain's transaction costs credit. *)
+ }
+ 
++let is_dom0 d = d.id = 0
+ let get_path dom = "/local/domain/" ^ (sprintf "%u" dom.id)
+ let get_id domain = domain.id
+ let get_interface d = d.interface
+@@ -48,6 +52,10 @@ let set_io_credit ?(n=1) domain = domain.io_credit <- max 0 n
+ let incr_io_credit domain = domain.io_credit <- domain.io_credit + 1
+ let decr_io_credit domain = domain.io_credit <- max 0 (domain.io_credit - 1)
+ 
++let is_paused_for_conflict dom = dom.conflict_credit <= 0.0
++
++let is_free_to_conflict = is_dom0
++
+ let string_of_port = function
+ | None -> "None"
+ | Some x -> string_of_int (Xeneventchn.to_int x)
+@@ -84,6 +92,5 @@ let make id mfn remote_port interface eventchn = {
+ 	port = None;
+ 	bad_client = false;
+ 	io_credit = 0;
++	conflict_credit = !Define.conflict_burst_limit;
+ }
+-
+-let is_dom0 d = d.id = 0
+diff --git a/tools/ocaml/xenstored/domains.ml b/tools/ocaml/xenstored/domains.ml
+index 92e438f..041d222 100644
+--- a/tools/ocaml/xenstored/domains.ml
++++ b/tools/ocaml/xenstored/domains.ml
+@@ -15,20 +15,58 @@
+  *)
+ 
+ let debug fmt = Logging.debug "domains" fmt
++let error fmt = Logging.error "domains" fmt
++let warn fmt  = Logging.warn  "domains" fmt
+ 
+ type domains = {
+ 	eventchn: Event.t;
+ 	table: (Xenctrl.domid, Domain.t) Hashtbl.t;
++
++	(* N.B. the Queue module is not thread-safe but oxenstored is single-threaded. *)
++	(* Domains queue up to regain conflict-credit; we have a queue for
++	   domains that are carrying some penalty and so are below the
++	   maximum credit, and another queue for domains that have run out of
++	   credit and so have had their access paused. *)
++	doms_conflict_paused: (Domain.t option ref) Queue.t;
++	doms_with_conflict_penalty: (Domain.t option ref) Queue.t;
++
++	(* A callback function to be called when we go from zero to one paused domain.
++	   This will be to reset the countdown until the next unit of credit is issued. *)
++	on_first_conflict_pause: unit -> unit;
++
++	(* If config is set to use individual instead of aggregate conflict-rate-limiting,
++	   we use this instead of the queues. *)
++	mutable n_paused: int;
+ }
+ 
+-let init eventchn =
+-	{ eventchn = eventchn; table = Hashtbl.create 10 }
++let init eventchn = {
++	eventchn = eventchn;
++	table = Hashtbl.create 10;
++	doms_conflict_paused = Queue.create ();
++	doms_with_conflict_penalty = Queue.create ();
++	on_first_conflict_pause = (fun () -> ()); (* Dummy value for now, pending subsequent commit. *)
++	n_paused = 0;
++}
+ let del doms id = Hashtbl.remove doms.table id
+ let exist doms id = Hashtbl.mem doms.table id
+ let find doms id = Hashtbl.find doms.table id
+ let number doms = Hashtbl.length doms.table
+ let iter doms fct = Hashtbl.iter (fun _ b -> fct b) doms.table
+ 
++(* Functions to handle queues of domains given that the domain might be deleted while in a queue. *)
++let push dom queue =
++	Queue.push (ref (Some dom)) queue
++
++let rec pop queue =
++	match !(Queue.pop queue) with
++	| None -> pop queue
++	| Some x -> x
++
++let remove_from_queue dom queue =
++	Queue.iter (fun d -> match !d with
++		| None -> ()
++		| Some x -> if x=dom then d := None) queue
++
+ let cleanup xc doms =
+ 	let notify = ref false in
+ 	let dead_dom = ref [] in
+@@ -52,6 +90,11 @@ let cleanup xc doms =
+ 		let dom = Hashtbl.find doms.table id in
+ 		Domain.close dom;
+ 		Hashtbl.remove doms.table id;
++		if dom.Domain.conflict_credit <= !Define.conflict_burst_limit
++		then (
++			remove_from_queue dom doms.doms_with_conflict_penalty;
++			if (dom.Domain.conflict_credit <= 0.) then remove_from_queue dom doms.doms_conflict_paused
++		)
+ 	) !dead_dom;
+ 	!notify, !dead_dom
+ 
+@@ -84,3 +127,59 @@ let create0 fake doms =
+ 	Domain.bind_interdomain dom;
+ 	Domain.notify dom;
+ 	dom
++
++let decr_conflict_credit doms dom =
++	let before = dom.Domain.conflict_credit in
++	let after = max (-1.0) (before -. 1.0) in
++	dom.Domain.conflict_credit <- after;
++	if !Define.conflict_rate_limit_is_aggregate then (
++		if before >= !Define.conflict_burst_limit
++		&& after < !Define.conflict_burst_limit
++		&& after > 0.0
++		then (
++			push dom doms.doms_with_conflict_penalty
++		) else if before > 0.0 && after <= 0.0
++		then (
++			let first_pause = Queue.is_empty doms.doms_conflict_paused in
++			push dom doms.doms_conflict_paused;
++			if first_pause then doms.on_first_conflict_pause ()
++		) else (
++			(* The queues are correct already: no further action needed. *)
++		)
++	) else if before > 0.0 && after <= 0.0 then (
++		doms.n_paused <- doms.n_paused + 1;
++		if doms.n_paused = 1 then doms.on_first_conflict_pause ()
++	)
++
++(* Give one point of credit to one domain, and update the queues appropriately. *)
++let incr_conflict_credit_from_queue doms =
++	let process_queue q requeue_test =
++		let d = pop q in
++		d.Domain.conflict_credit <- min (d.Domain.conflict_credit +. 1.0) !Define.conflict_burst_limit;
++		if requeue_test d.Domain.conflict_credit then (
++			push d q (* Make it queue up again for its next point of credit. *)
++		)
++	in
++	let paused_queue_test cred = cred <= 0.0 in
++	let penalty_queue_test cred = cred < !Define.conflict_burst_limit in
++	try process_queue doms.doms_conflict_paused paused_queue_test
++	with Queue.Empty -> (
++		try process_queue doms.doms_with_conflict_penalty penalty_queue_test
++		with Queue.Empty -> () (* Both queues are empty: nothing to do here. *)
++	)
++
++let incr_conflict_credit doms =
++	if !Define.conflict_rate_limit_is_aggregate
++	then incr_conflict_credit_from_queue doms
++	else (
++		(* Give a point of credit to every domain, subject only to the cap. *)
++		let inc dom =
++			let before = dom.Domain.conflict_credit in
++			let after = min (before +. 1.0) !Define.conflict_burst_limit in
++			dom.Domain.conflict_credit <- after;
++			if before <= 0.0 && after > 0.0
++			then doms.n_paused <- doms.n_paused - 1
++		in
++		(* Scope for optimisation (probably tiny): avoid iteration if all domains are at max credit *)
++		iter doms inc
++	)
+diff --git a/tools/ocaml/xenstored/oxenstored.conf b/tools/ocaml/xenstored/oxenstored.conf
+index ac60f49..a100936 100644
+--- a/tools/ocaml/xenstored/oxenstored.conf
++++ b/tools/ocaml/xenstored/oxenstored.conf
+@@ -9,6 +9,38 @@ test-eagain = false
+ # Activate transaction merge support
+ merge-activate = true
+ 
++# Limits applied to domains whose writes cause other domains' transaction
++# commits to fail. Must include decimal point.
++
++# The burst limit is the number of conflicts a domain can cause to
++# fail in a short period; this value is used for both the initial and
++# the maximum value of each domain's conflict-credit, which falls by
++# one point for each conflict caused, and when it reaches zero the
++# domain's requests are ignored.
++conflict-burst-limit = 5.0
++
++# The conflict-credit is replenished over time:
++# one point is issued after each conflict-max-history-seconds, so this
++# is the minimum pause-time during which a domain will be ignored.
++# conflict-max-history-seconds = 0.05
++
++# If the conflict-rate-limit-is-aggregate flag is true then after each
++# tick one point of conflict-credit is given to just one domain: the
++# one at the front of the queue. If false, then after each tick each
++# domain gets a point of conflict-credit.
++# 
++# In environments where it is known that every transaction will
++# involve a set of nodes that is writable by at most one other domain,
++# then it is safe to set this aggregate-limit flag to false for better
++# performance. (This can be determined by considering the layout of
++# the xenstore tree and permissions, together with the content of the
++# transactions that require protection.)
++# 
++# A transaction which involves a set of nodes which can be modified by
++# multiple other domains can suffer conflicts caused by any of those
++# domains, so the flag must be set to true.
++conflict-rate-limit-is-aggregate = true
++
+ # Activate node permission system
+ perms-activate = true
+ 
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index 51d5d6a..6f758ff 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -14,6 +14,8 @@
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU Lesser General Public License for more details.
+  *)
++let error fmt = Logging.error "transaction" fmt
++
+ open Stdext
+ 
+ let none = 0
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 656a79b..ea511de 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -89,6 +89,8 @@ let parse_config filename =
+ 	let pidfile = ref default_pidfile in
+ 	let options = [
+ 		("merge-activate", Config.Set_bool Transaction.do_coalesce);
++		("conflict-burst-limit", Config.Set_float Define.conflict_burst_limit);
++		("conflict-rate-limit-is-aggregate", Config.Set_bool Define.conflict_rate_limit_is_aggregate);
+ 		("perms-activate", Config.Set_bool Perms.activate);
+ 		("quota-activate", Config.Set_bool Quota.activate);
+ 		("quota-maxwatch", Config.Set_int Define.maxwatch);
+-- 
+1.8.3.1
+
+
+From 7cd5419b73732bc56a5591df52222d4b021ee0cb Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Tue, 14 Mar 2017 12:15:52 +0000
+Subject: [PATCH] From c72a4976b66887b12126810d240fdd2d3f74ec0a Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 20/30] oxenstored: ignore domains with no
+ conflict-credit
+
+When processing connections, skip those from domains with no remaining
+conflict-credit.
+
+Also, issue a point of conflict-credit at regular intervals, the
+period being set by the configuration option "conflict-max-history-
+seconds".  When issuing conflict-credit, we give a point either to
+every domain at once (one each) or only to the single domain at the
+front of the queue, depending on the configuration option
+"conflict-rate-limit-is-aggregate".
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/connections.ml  | 14 ++++----
+ tools/ocaml/xenstored/define.ml       |  1 +
+ tools/ocaml/xenstored/domains.ml      |  4 +--
+ tools/ocaml/xenstored/oxenstored.conf |  2 +-
+ tools/ocaml/xenstored/xenstored.ml    | 65 ++++++++++++++++++++++++++---------
+ 5 files changed, 60 insertions(+), 26 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/connections.ml b/tools/ocaml/xenstored/connections.ml
+index f9bc225..ae76928 100644
+--- a/tools/ocaml/xenstored/connections.ml
++++ b/tools/ocaml/xenstored/connections.ml
+@@ -44,12 +44,14 @@ let add_domain cons dom =
+ 	| Some p -> Hashtbl.add cons.ports p con;
+ 	| None -> ()
+ 
+-let select cons =
+-	Hashtbl.fold
+-		(fun _ con (ins, outs) ->
+-		 let fd = Connection.get_fd con in
+-		 (fd :: ins,  if Connection.has_output con then fd :: outs else outs))
+-		cons.anonymous ([], [])
++let select ?(only_if = (fun _ -> true)) cons =
++	Hashtbl.fold (fun _ con (ins, outs) ->
++		if (only_if con) then (
++			let fd = Connection.get_fd con in
++			(fd :: ins,  if Connection.has_output con then fd :: outs else outs)
++		) else (ins, outs)
++	)
++	cons.anonymous ([], [])
+ 
+ let find cons =
+ 	Hashtbl.find cons.anonymous
+diff --git a/tools/ocaml/xenstored/define.ml b/tools/ocaml/xenstored/define.ml
+index df1e91c..016ef18 100644
+--- a/tools/ocaml/xenstored/define.ml
++++ b/tools/ocaml/xenstored/define.ml
+@@ -30,6 +30,7 @@ let maxtransaction = ref (20)
+ let maxrequests = ref (-1)   (* maximum requests per transaction *)
+ 
+ let conflict_burst_limit = ref 5.0
++let conflict_max_history_seconds = ref 0.05
+ let conflict_rate_limit_is_aggregate = ref true
+ 
+ let domid_self = 0x7FF0
+diff --git a/tools/ocaml/xenstored/domains.ml b/tools/ocaml/xenstored/domains.ml
+index 041d222..63c6ad5 100644
+--- a/tools/ocaml/xenstored/domains.ml
++++ b/tools/ocaml/xenstored/domains.ml
+@@ -39,12 +39,12 @@ type domains = {
+ 	mutable n_paused: int;
+ }
+ 
+-let init eventchn = {
++let init eventchn on_first_conflict_pause = {
+ 	eventchn = eventchn;
+ 	table = Hashtbl.create 10;
+ 	doms_conflict_paused = Queue.create ();
+ 	doms_with_conflict_penalty = Queue.create ();
+-	on_first_conflict_pause = (fun () -> ()); (* Dummy value for now, pending subsequent commit. *)
++	on_first_conflict_pause = on_first_conflict_pause;
+ 	n_paused = 0;
+ }
+ let del doms id = Hashtbl.remove doms.table id
+diff --git a/tools/ocaml/xenstored/oxenstored.conf b/tools/ocaml/xenstored/oxenstored.conf
+index a100936..dd9649b 100644
+--- a/tools/ocaml/xenstored/oxenstored.conf
++++ b/tools/ocaml/xenstored/oxenstored.conf
+@@ -22,7 +22,7 @@ conflict-burst-limit = 5.0
+ # The conflict-credit is replenished over time:
+ # one point is issued after each conflict-max-history-seconds, so this
+ # is the minimum pause-time during which a domain will be ignored.
+-# conflict-max-history-seconds = 0.05
++conflict-max-history-seconds = 0.05
+ 
+ # If the conflict-rate-limit-is-aggregate flag is true then after each
+ # tick one point of conflict-credit is given to just one domain: the
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index ea511de..9480b21 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -53,14 +53,16 @@ let process_connection_fds store cons domains rset wset =
+ 
+ let process_domains store cons domains =
+ 	let do_io_domain domain =
+-		if not (Domain.is_bad_domain domain) then
+-			let io_credit = Domain.get_io_credit domain in
+-			if io_credit > 0 then (
+-				let con = Connections.find_domain cons (Domain.get_id domain) in
+-				Process.do_input store cons domains con;
+-				Process.do_output store cons domains con;
+-				Domain.decr_io_credit domain;
+-			) in
++		if Domain.is_bad_domain domain
++		|| Domain.get_io_credit domain <= 0
++		|| Domain.is_paused_for_conflict domain
++		then () (* nothing to do *)
++		else (
++			let con = Connections.find_domain cons (Domain.get_id domain) in
++			Process.do_input store cons domains con;
++			Process.do_output store cons domains con;
++			Domain.decr_io_credit domain
++		) in
+ 	Domains.iter domains do_io_domain
+ 
+ let sigusr1_handler store =
+@@ -90,6 +92,7 @@ let parse_config filename =
+ 	let options = [
+ 		("merge-activate", Config.Set_bool Transaction.do_coalesce);
+ 		("conflict-burst-limit", Config.Set_float Define.conflict_burst_limit);
++		("conflict-max-history-seconds", Config.Set_float Define.conflict_max_history_seconds);
+ 		("conflict-rate-limit-is-aggregate", Config.Set_bool Define.conflict_rate_limit_is_aggregate);
+ 		("perms-activate", Config.Set_bool Perms.activate);
+ 		("quota-activate", Config.Set_bool Quota.activate);
+@@ -262,7 +265,22 @@ let _ =
+ 
+ 	let store = Store.create () in
+ 	let eventchn = Event.init () in
+-	let domains = Domains.init eventchn in
++	let next_frequent_ops = ref 0. in
++	let advance_next_frequent_ops () =
++		next_frequent_ops := (Unix.gettimeofday () +. !Define.conflict_max_history_seconds)
++	in
++	let delay_next_frequent_ops_by duration =
++		next_frequent_ops := !next_frequent_ops +. duration
++	in
++	let domains = Domains.init eventchn advance_next_frequent_ops in
++
++	(* For things that need to be done periodically but more often
++	 * than the periodic_ops function *)
++	let frequent_ops () =
++		if Unix.gettimeofday () > !next_frequent_ops then (
++			Domains.incr_conflict_credit domains;
++			advance_next_frequent_ops ()
++		) in
+ 	let cons = Connections.create () in
+ 
+ 	let quit = ref false in
+@@ -393,23 +411,34 @@ let _ =
+ 			     gc.Gc.heap_words gc.Gc.heap_chunks
+ 			     gc.Gc.live_words gc.Gc.live_blocks
+ 			     gc.Gc.free_words gc.Gc.free_blocks
+-		)
+-		in
++		);
++		let elapsed = Unix.gettimeofday () -. now in
++		delay_next_frequent_ops_by elapsed
++	in
+ 
+-		let period_ops_interval = 15. in
+-		let period_start = ref 0. in
++	let period_ops_interval = 15. in
++	let period_start = ref 0. in
+ 
+ 	let main_loop () =
+-
++		let is_peaceful c =
++			match Connection.get_domain c with
++			| None -> true (* Treat socket-connections as exempt, and free to conflict. *)
++			| Some dom -> not (Domain.is_paused_for_conflict dom)
++		in
++		frequent_ops ();
+ 		let mw = Connections.has_more_work cons in
++		let peaceful_mw = List.filter is_peaceful mw in
+ 		List.iter
+ 			(fun c ->
+ 			 match Connection.get_domain c with
+ 			 | None -> () | Some d -> Domain.incr_io_credit d)
+-			mw;
++			peaceful_mw;
++		let start_time = Unix.gettimeofday () in
+ 		let timeout =
+-			if List.length mw > 0 then 0. else period_ops_interval in
+-		let inset, outset = Connections.select cons in
++			let until_next_activity = min (max 0. (!next_frequent_ops -. start_time)) period_ops_interval in
++			if peaceful_mw <> [] then 0. else until_next_activity
++		in
++		let inset, outset = Connections.select ~only_if:is_peaceful cons in
+ 		let rset, wset, _ =
+ 		try
+ 			Unix.select (spec_fds @ inset) outset [] timeout
+@@ -419,6 +448,7 @@ let _ =
+ 			List.partition (fun fd -> List.mem fd spec_fds) rset in
+ 		if List.length sfds > 0 then
+ 			process_special_fds sfds;
++
+ 		if List.length cfds > 0 || List.length wset > 0 then
+ 			process_connection_fds store cons domains cfds wset;
+ 		if timeout <> 0. then (
+@@ -426,6 +456,7 @@ let _ =
+ 			if now > !period_start +. period_ops_interval then
+ 				(period_start := now; periodic_ops now)
+ 		);
++
+ 		process_domains store cons domains
+ 		in
+ 
+-- 
+1.8.3.1
+
+
+From 1166bb9fdf72a041f844e64af951e8d141f05de7 Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Tue, 14 Mar 2017 12:17:38 +0000
+Subject: [PATCH] From 38e49e8b7d270ce641cfaee649f24e506a2b3ff8 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 21/30] oxenstored: add transaction info
+ relevant to  history-tracking
+
+Specifically:
+ * retain the original store (not just the root) in full transactions
+ * store commit count at the time of the start of the transaction
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/process.ml     |  2 +-
+ tools/ocaml/xenstored/transaction.ml | 12 ++++++++----
+ 2 files changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 9cf2b46..ff5fc24 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -295,7 +295,7 @@ let transaction_replay c t doms cons =
+ 	| Transaction.No ->
+ 		error "attempted to replay a non-full transaction";
+ 		false
+-	| Transaction.Full(id, oldroot, cstore) ->
++	| Transaction.Full(id, oldstore, cstore) ->
+ 		let tid = Connection.start_transaction c cstore in
+ 		let new_t = Transaction.make tid cstore in
+ 		let con = sprintf "r(%d):%s" id (Connection.get_domstr c) in
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index 6f758ff..b1791b3 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -73,12 +73,13 @@ let can_coalesce oldroot currentroot path =
+ 
+ type ty = No | Full of (
+ 	int *          (* Transaction id *)
+-	Store.Node.t * (* Original root *)
++	Store.t *      (* Original store *)
+ 	Store.t        (* A pointer to the canonical store: its root changes on each transaction-commit *)
+ )
+ 
+ type t = {
+ 	ty: ty;
++	start_count: int64;
+ 	store: Store.t; (* This is the store that we change in write operations. *)
+ 	quota: Quota.t;
+ 	mutable paths: (Xenbus.Xb.Op.operation * Store.Path.t) list;
+@@ -87,10 +88,13 @@ type t = {
+ 	mutable write_lowpath: Store.Path.t option;
+ }
+ 
++let counter = ref 0L
++
+ let make id store =
+-	let ty = if id = none then No else Full(id, Store.get_root store, store) in
++	let ty = if id = none then No else Full(id, Store.copy store, store) in
+ 	{
+ 		ty = ty;
++		start_count = !counter;
+ 		store = if id = none then store else Store.copy store;
+ 		quota = Quota.copy store.Store.quota;
+ 		paths = [];
+@@ -161,7 +165,7 @@ let commit ~con t =
+ 	let has_commited =
+ 	match t.ty with
+ 	| No                         -> true
+-	| Full (id, oldroot, cstore) ->       (* "cstore" meaning current canonical store *)
++	| Full (id, oldstore, cstore) ->       (* "cstore" meaning current canonical store *)
+ 		let commit_partial oldroot cstore store =
+ 			(* get the lowest path of the query and verify that it hasn't
+ 			   been modified by others transactions. *)
+@@ -204,7 +208,7 @@ let commit ~con t =
+ 		if !test_eagain && Random.int 3 = 0 then
+ 			false
+ 		else
+-			try_commit oldroot cstore t.store
++			try_commit (Store.get_root oldstore) cstore t.store
+ 		in
+ 	if has_commited && has_write_ops then
+ 		Disk.write t.store;
+-- 
+1.8.3.1
+
+
+From b07763389831198c4aacef9374888cf1e307214d Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Tue, 14 Mar 2017 13:20:07 +0000
+Subject: [PATCH] From 4d0479387d5abd326810a0e6af17cbed50641ca9 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 22/30] oxenstored: support commit history
+ tracking
+
+Add ability to track xenstore tree operations -- either non-transactional
+operations or committed transactions.
+
+For now, the call to actually retain commits is commented out because history
+can grow without bound.
+
+For now, we call record_commit for all non-transactional operations. A
+subsequent patch will make it retain only the ones with side-effects.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/Makefile     |  1 +
+ tools/ocaml/xenstored/history.ml   | 43 ++++++++++++++++++++++++++++++++++++++
+ tools/ocaml/xenstored/process.ml   | 24 +++++++++++++++++++--
+ tools/ocaml/xenstored/xenstored.ml |  1 +
+ 4 files changed, 67 insertions(+), 2 deletions(-)
+ create mode 100644 tools/ocaml/xenstored/history.ml
+
+diff --git a/tools/ocaml/xenstored/Makefile b/tools/ocaml/xenstored/Makefile
+index 7a4c317..ff3eed9 100644
+--- a/tools/ocaml/xenstored/Makefile
++++ b/tools/ocaml/xenstored/Makefile
+@@ -31,6 +31,7 @@ OBJS = define \
+ 	domains \
+ 	connection \
+ 	connections \
++	history \
+ 	parse_arg \
+ 	process \
+ 	xenstored
+diff --git a/tools/ocaml/xenstored/history.ml b/tools/ocaml/xenstored/history.ml
+new file mode 100644
+index 0000000..e4b4d70
+--- /dev/null
++++ b/tools/ocaml/xenstored/history.ml
+@@ -0,0 +1,43 @@
++(*
++ * Copyright (c) 2017 Citrix Systems Ltd.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License as published
++ * by the Free Software Foundation; version 2.1 only. with the special
++ * exception on linking described in file LICENSE.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License for more details.
++ *)
++
++type history_record = {
++	con: Connection.t;   (* connection that made a change *)
++	tid: int;            (* transaction id of the change (may be Transaction.none) *)
++	before: Store.t;     (* the store before the change *)
++	after: Store.t;      (* the store after the change *)
++	finish_count: int64; (* the commit-count at which the transaction finished *)
++}
++
++let history : history_record list ref = ref []
++
++(* Called from periodic_ops to ensure we don't discard symbols that are still needed. *)
++(* There is scope for optimisation here, since in consecutive commits one commit's `after`
++ * is the same thing as the next commit's `before`, but not all commits in history are
++ * consecutive. *)
++let mark_symbols () =
++	(* There are gaps where dom0's commits are missing. Otherwise we could assume that
++	 * each element's `before` is the same thing as the next element's `after`
++	 * since the next element is the previous commit *)
++	List.iter (fun hist_rec ->
++			Store.mark_symbols hist_rec.before;
++			Store.mark_symbols hist_rec.after;
++		)
++		!history
++
++let push (x: history_record) =
++	let dom = x.con.Connection.dom in
++	match dom with
++	| None -> () (* treat socket connections as always free to conflict *)
++	| Some d -> if not (Domain.is_free_to_conflict d) then history := x :: !history
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index ff5fc24..b48df05 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -287,6 +287,16 @@ let write_response_log ~ty ~tid ~con ~response =
+ 	| Packet.Reply x -> write_answer_log ~ty ~tid ~con ~data:x
+ 	| Packet.Error e -> write_answer_log ~ty:(Xenbus.Xb.Op.Error) ~tid ~con ~data:e
+ 
++let record_commit ~con ~tid ~before ~after =
++	let inc r = r := Int64.add 1L !r in
++	let finish_count = inc Transaction.counter; !Transaction.counter in
++	(* This call would leak memory if historic activity is retained forever
++	   so can only be uncommented if history is guaranteed not to grow
++	   unboundedly.
++	History.push {History.con=con; tid=tid; before=before; after=after; finish_count=finish_count}
++	*)
++	()
++
+ (* Replay a stored transaction against a fresh store, check the responses are
+    all equivalent: if so, commit the transaction. Otherwise send the abort to
+    the client. *)
+@@ -357,8 +367,14 @@ let do_transaction_end con t domains cons data =
+ 		Connection.end_transaction con (Transaction.get_id t) commit in
+ 	if not success then
+ 		raise Transaction_again;
+-	if commit then
+-		process_watch (List.rev (Transaction.get_paths t)) cons
++	if commit then begin
++		process_watch (List.rev (Transaction.get_paths t)) cons;
++		match t.Transaction.ty with
++		| Transaction.No ->
++			() (* no need to record anything *)
++		| Transaction.Full(id, oldstore, cstore) ->
++			record_commit ~con ~tid:id ~before:oldstore ~after:cstore
++	end
+ 
+ let do_introduce con t domains cons data =
+ 	if not (Connection.is_dom0 con)
+@@ -441,7 +457,11 @@ let process_packet ~store ~cons ~doms ~con ~req =
+ 			else
+ 				Connection.get_transaction con tid
+ 			in
++
++		let before = Store.copy store in
+ 		let response = input_handle_error ~cons ~doms ~fct ~con ~t ~req in
++		let after = Store.copy store in
++		if tid = Transaction.none then record_commit ~con ~tid ~before ~after;
+ 
+ 		let response = try
+ 			if tid <> Transaction.none then
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 9480b21..c009701 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -384,6 +384,7 @@ let _ =
+ 			Symbol.mark_all_as_unused ();
+ 			Store.mark_symbols store;
+ 			Connections.iter cons Connection.mark_symbols;
++			History.mark_symbols ();
+ 			Symbol.garbage ()
+ 		end;
+ 
+-- 
+1.8.3.1
+
+
+From 32ae894829325ded5e7a9cfa9cea278ef24aaa6e Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 14:20:33 +0000
+Subject: [PATCH] From b05fcb4ee2e09991ad43226370cac2a38b41de82 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 23/30] oxenstored: only record operations with
+ side-effects in  history
+
+There is no need to record "read" operations as they will never cause another
+transaction to fail.
+
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Thomas Sanders <thomas.sanders@citrix.com>
+
+Backport 4.6 -> 4.5 by removing reference to XS_RESET_WATCHES.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/ocaml/xenstored/process.ml | 46 ++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 42 insertions(+), 4 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index b48df05..502e1d6 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -443,6 +443,36 @@ let function_of_type ty =
+ 	| _                              -> function_of_type_simple_op ty
+ 
+ (**
++ * Determines which individual (non-transactional) operations we want to retain.
++ * We only want to retain operations that have side-effects in the store since
++ * these can be the cause of transactions failing.
++ *)
++let retain_op_in_history ty =
++	match ty with
++	| Xenbus.Xb.Op.Write
++	| Xenbus.Xb.Op.Mkdir
++	| Xenbus.Xb.Op.Rm
++	| Xenbus.Xb.Op.Setperms          -> true
++	| Xenbus.Xb.Op.Debug
++	| Xenbus.Xb.Op.Directory
++	| Xenbus.Xb.Op.Read
++	| Xenbus.Xb.Op.Getperms
++	| Xenbus.Xb.Op.Watch
++	| Xenbus.Xb.Op.Unwatch
++	| Xenbus.Xb.Op.Transaction_start
++	| Xenbus.Xb.Op.Transaction_end
++	| Xenbus.Xb.Op.Introduce
++	| Xenbus.Xb.Op.Release
++	| Xenbus.Xb.Op.Getdomainpath
++	| Xenbus.Xb.Op.Watchevent
++	| Xenbus.Xb.Op.Error
++	| Xenbus.Xb.Op.Isintroduced
++	| Xenbus.Xb.Op.Resume
++	| Xenbus.Xb.Op.Set_target
++	| Xenbus.Xb.Op.Restrict
++	| Xenbus.Xb.Op.Invalid           -> false
++
++(**
+  * Nothrow guarantee.
+  *)
+ let process_packet ~store ~cons ~doms ~con ~req =
+@@ -458,10 +488,18 @@ let process_packet ~store ~cons ~doms ~con ~req =
+ 				Connection.get_transaction con tid
+ 			in
+ 
+-		let before = Store.copy store in
+-		let response = input_handle_error ~cons ~doms ~fct ~con ~t ~req in
+-		let after = Store.copy store in
+-		if tid = Transaction.none then record_commit ~con ~tid ~before ~after;
++		let execute () = input_handle_error ~cons ~doms ~fct ~con ~t ~req in
++
++		let response =
++			(* Note that transactions are recorded in history separately. *)
++			if tid = Transaction.none && retain_op_in_history ty then begin
++				let before = Store.copy store in
++				let response = execute () in
++				let after = Store.copy store in
++				record_commit ~con ~tid ~before ~after;
++				response
++			end else execute ()
++		in
+ 
+ 		let response = try
+ 			if tid <> Transaction.none then
+-- 
+1.8.3.1
+
+
+From 03b7f1a0efd9b5ba87b7f7258812e795c6d9a721 Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Thu, 23 Mar 2017 14:25:16 +0000
+Subject: [PATCH] From c9fb09ca7384fa1952de7a470c52d93c5b4d2eea Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 24/30] oxenstored: discard old commit-history
+ on txn end
+
+The history of commits is to be used for working out which historical
+commit(s) (including atomic writes) caused conflicts with a
+currently-failing commit of a transaction. Any commit that was made
+before the current transaction started cannot be relevant. Therefore
+we never need to keep history from before the start of the
+longest-running transaction that is open at any given time: whenever a
+transaction ends (with or without a commit) then if it was the
+longest-running open transaction we can delete history up until start
+of the the next-longest-running open transaction.
+
+Some transactions might stay open for a very long time, so if any
+transaction exceeds conflict_max_history_seconds then we remove it
+from consideration in this context, and will not guarantee to keep
+remembering about historical commits made during such a transaction.
+
+We implement this by keeping a list of all open transactions that have
+not been open too long. When a transaction ends, we remove it from the
+list, along with any that have been open longer than the maximum; then
+we delete any history from before the start of the longest-running
+transaction remaining in the list.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+---
+ tools/ocaml/xenstored/history.ml     | 17 +++++++++++++++++
+ tools/ocaml/xenstored/process.ml     |  4 ++--
+ tools/ocaml/xenstored/transaction.ml | 29 +++++++++++++++++++++++++----
+ 3 files changed, 44 insertions(+), 6 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/history.ml b/tools/ocaml/xenstored/history.ml
+index e4b4d70..6f7a282 100644
+--- a/tools/ocaml/xenstored/history.ml
++++ b/tools/ocaml/xenstored/history.ml
+@@ -36,6 +36,23 @@ let mark_symbols () =
+ 		)
+ 		!history
+ 
++(* Keep only enough commit-history to protect the running transactions that we are still tracking *)
++(* There is scope for optimisation here, replacing List.filter with something more efficient,
++ * probably on a different list-like structure. *)
++let trim () =
++	history := match Transaction.oldest_short_running_transaction () with
++	| None -> [] (* We have no open transaction, so no history is needed *)
++	| Some (_, txn) -> (
++		(* keep records with finish_count recent enough to be relevant *)
++		List.filter (fun r -> r.finish_count > txn.Transaction.start_count) !history
++	)
++
++let end_transaction txn con tid commit =
++	let success = Connection.end_transaction con tid commit in
++	Transaction.end_transaction txn;
++	trim ();
++	success
++
+ let push (x: history_record) =
+ 	let dom = x.con.Connection.dom in
+ 	match dom with
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 502e1d6..f95992d 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -307,7 +307,7 @@ let transaction_replay c t doms cons =
+ 		false
+ 	| Transaction.Full(id, oldstore, cstore) ->
+ 		let tid = Connection.start_transaction c cstore in
+-		let new_t = Transaction.make tid cstore in
++		let new_t = Transaction.make ~internal:true tid cstore in
+ 		let con = sprintf "r(%d):%s" id (Connection.get_domstr c) in
+ 		let perform_exn (request, response) =
+ 			write_access_log ~ty:request.Packet.ty ~tid ~con ~data:request.Packet.data;
+@@ -364,7 +364,7 @@ let do_transaction_end con t domains cons data =
+ 		in
+ 	let success =
+ 		let commit = if commit then Some (fun con trans -> transaction_replay con trans domains cons) else None in
+-		Connection.end_transaction con (Transaction.get_id t) commit in
++		History.end_transaction t con (Transaction.get_id t) commit in
+ 	if not success then
+ 		raise Transaction_again;
+ 	if commit then begin
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index b1791b3..edd1178 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -87,12 +87,29 @@ type t = {
+ 	mutable read_lowpath: Store.Path.t option;
+ 	mutable write_lowpath: Store.Path.t option;
+ }
++let get_id t = match t.ty with No -> none | Full (id, _, _) -> id
+ 
+ let counter = ref 0L
+ 
+-let make id store =
++(* Scope for optimisation: different data-structure and functions to search/filter it *)
++let short_running_txns = ref []
++
++let oldest_short_running_transaction () =
++	let rec last = function
++		| [] -> None
++		| [x] -> Some x
++		| x :: xs -> last xs
++	in last !short_running_txns
++
++let end_transaction txn =
++	let cutoff = Unix.gettimeofday () -. !Define.conflict_max_history_seconds in
++	short_running_txns := List.filter
++		(function (start_time, tx) -> start_time >= cutoff && tx != txn)
++		!short_running_txns
++
++let make ?(internal=false) id store =
+ 	let ty = if id = none then No else Full(id, Store.copy store, store) in
+-	{
++	let txn = {
+ 		ty = ty;
+ 		start_count = !counter;
+ 		store = if id = none then store else Store.copy store;
+@@ -101,9 +118,13 @@ let make id store =
+ 		operations = [];
+ 		read_lowpath = None;
+ 		write_lowpath = None;
+-	}
++	} in
++	if id <> none && not internal then (
++		let now = Unix.gettimeofday () in
++		short_running_txns := (now, txn) :: !short_running_txns
++	);
++	txn
+ 
+-let get_id t = match t.ty with No -> none | Full (id, _, _) -> id
+ let get_store t = t.store
+ let get_paths t = t.paths
+ 
+-- 
+1.8.3.1
+
+
+From 78b4faab558925f15256615a5f95bc393eaf3b30 Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Mon, 27 Mar 2017 08:58:29 +0000
+Subject: [PATCH] From dd5758b85234356ad03615160433c0b0347a4aec Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 25/30] oxenstored: track commit history
+
+Since the list of historic activity cannot grow without bound, it is safe to use
+this to track commits.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Reviewed-by: Thomas Sanders <thomas.sanders@citrix.com>
+---
+ tools/ocaml/xenstored/process.ml | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index f95992d..706b8a0 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -290,12 +290,7 @@ let write_response_log ~ty ~tid ~con ~response =
+ let record_commit ~con ~tid ~before ~after =
+ 	let inc r = r := Int64.add 1L !r in
+ 	let finish_count = inc Transaction.counter; !Transaction.counter in
+-	(* This call would leak memory if historic activity is retained forever
+-	   so can only be uncommented if history is guaranteed not to grow
+-	   unboundedly.
+ 	History.push {History.con=con; tid=tid; before=before; after=after; finish_count=finish_count}
+-	*)
+-	()
+ 
+ (* Replay a stored transaction against a fresh store, check the responses are
+    all equivalent: if so, commit the transaction. Otherwise send the abort to
+-- 
+1.8.3.1
+
+
+From 80e66e7706b7edebd67126286ce6fb3e680ae794 Mon Sep 17 00:00:00 2001
+From: Jonathan Davies <jonathan.davies@citrix.com>
+Date: Thu, 23 Mar 2017 14:28:16 +0000
+Subject: [PATCH] From a6edf151e5eb4f401745e13a803e713accd22bee Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 26/30] oxenstored: blame the connection that
+ caused a  transaction conflict
+
+Blame each connection found to have made a commit that would cause this
+transaction to fail. Each blamed connection is penalised by having its
+conflict-credit decremented.
+
+Note the change in semantics for the replay function: we no longer stop after
+finding the first operation that can't be replayed. This allows us to identify
+all operations that conflicted with this transaction, not just the one that
+conflicted first.
+
+Signed-off-by: Jonathan Davies <jonathan.davies@citrix.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+v1 Reviewed-by: Christian Lindig <christian.lindig@citrix.com>
+
+Changes since v1:
+ * use correct log levels for informational messages
+Changes since v2:
+ * fix the blame algorithm and improve logging
+   (fix was reviewed by Jonathan Davies)
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+---
+ tools/ocaml/xenstored/history.ml | 12 ++++++++++
+ tools/ocaml/xenstored/process.ml | 50 ++++++++++++++++++++++++++++++++--------
+ 2 files changed, 52 insertions(+), 10 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/history.ml b/tools/ocaml/xenstored/history.ml
+index 6f7a282..e941e2b 100644
+--- a/tools/ocaml/xenstored/history.ml
++++ b/tools/ocaml/xenstored/history.ml
+@@ -58,3 +58,15 @@ let push (x: history_record) =
+ 	match dom with
+ 	| None -> () (* treat socket connections as always free to conflict *)
+ 	| Some d -> if not (Domain.is_free_to_conflict d) then history := x :: !history
++
++(* Find the connections from records since commit-count [since] for which [f record] returns [true] *)
++let filter_connections ~since ~f =
++	(* The "mem" call is an optimisation, to avoid calling f if we have picked con already. *)
++	(* Using a hash table rather than a list is to optimise the "mem" call. *)
++	List.fold_left (fun acc hist_rec ->
++		if hist_rec.finish_count > since
++		&& not (Hashtbl.mem acc hist_rec.con)
++		&& f hist_rec
++		then Hashtbl.replace acc hist_rec.con ();
++		acc
++	) (Hashtbl.create 1023) !history
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 706b8a0..698a456 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -16,6 +16,7 @@
+ 
+ let error fmt = Logging.error "process" fmt
+ let info fmt = Logging.info "process" fmt
++let debug fmt = Logging.debug "process" fmt
+ 
+ open Printf
+ open Stdext
+@@ -25,6 +26,7 @@ exception Transaction_nested
+ exception Domain_not_match
+ exception Invalid_Cmd_Args
+ 
++(* This controls the do_debug fn in this module, not the debug logging-function. *)
+ let allow_debug = ref false
+ 
+ let c_int_of_string s =
+@@ -302,23 +304,51 @@ let transaction_replay c t doms cons =
+ 		false
+ 	| Transaction.Full(id, oldstore, cstore) ->
+ 		let tid = Connection.start_transaction c cstore in
+-		let new_t = Transaction.make ~internal:true tid cstore in
++		let replay_t = Transaction.make ~internal:true tid cstore in
+ 		let con = sprintf "r(%d):%s" id (Connection.get_domstr c) in
+-		let perform_exn (request, response) =
+-			write_access_log ~ty:request.Packet.ty ~tid ~con ~data:request.Packet.data;
++
++		let perform_exn ~wlog txn (request, response) =
++			if wlog then write_access_log ~ty:request.Packet.ty ~tid ~con ~data:request.Packet.data;
+ 			let fct = function_of_type_simple_op request.Packet.ty in
+-			let response' = input_handle_error ~cons ~doms ~fct ~con:c ~t:new_t ~req:request in
+-			write_response_log ~ty:request.Packet.ty ~tid ~con ~response:response';
+-			if not(Packet.response_equal response response') then raise Transaction_again in
++			let response' = input_handle_error ~cons ~doms ~fct ~con:c ~t:txn ~req:request in
++			if wlog then write_response_log ~ty:request.Packet.ty ~tid ~con ~response:response';
++			if not(Packet.response_equal response response') then raise Transaction_again
++		in
+ 		finally
+ 		(fun () ->
+ 			try
+ 				Logging.start_transaction ~con ~tid;
+-				List.iter perform_exn (Transaction.get_operations t);
+-				Logging.end_transaction ~con ~tid;
++				List.iter (perform_exn ~wlog:true replay_t) (Transaction.get_operations t); (* May throw EAGAIN *)
+ 
+-				Transaction.commit ~con new_t
+-			with e ->
++				Logging.end_transaction ~con ~tid;
++				Transaction.commit ~con replay_t
++			with
++			| Transaction_again -> (
++				let victim_domstr = Connection.get_domstr c in
++				debug "Apportioning blame for EAGAIN in txn %d, domain=%s" id victim_domstr;
++				let punish guilty_con =
++					debug "Blaming domain %s for conflict with domain %s txn %d"
++						(Connection.get_domstr guilty_con) victim_domstr id;
++					Connection.decr_conflict_credit doms guilty_con
++				in
++				let judge_and_sentence hist_rec = (
++					let can_apply_on store = (
++						let store = Store.copy store in
++						let trial_t = Transaction.make ~internal:true Transaction.none store in
++						try List.iter (perform_exn ~wlog:false trial_t) (Transaction.get_operations t);
++							true
++						with Transaction_again -> false
++					) in
++					if can_apply_on hist_rec.History.before
++					&& not (can_apply_on hist_rec.History.after)
++					then (punish hist_rec.History.con; true)
++					else false
++				) in
++				let guilty_cons = History.filter_connections ~since:t.Transaction.start_count ~f:judge_and_sentence in
++				if Hashtbl.length guilty_cons = 0 then debug "Found no culprit for conflict in %s: must be self or not in history." con;
++				false
++			)
++			| e ->
+ 				info "transaction_replay %d caught: %s" tid (Printexc.to_string e);
+ 				false
+ 			)
+-- 
+1.8.3.1
+
+
+From d5f5e41bf8748d2abe97ec83fa93e3bcc3f0cbaa Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Thu, 23 Mar 2017 19:06:54 +0000
+Subject: [PATCH] From 0c7841d03e182585fcb9444b4799f432e2a444cb Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 27/30] oxenstored: allow self-conflicts
+
+We already avoid inter-domain conflicts but now allow intra-domain
+conflicts.  Although there are no known practical examples of a domain
+that might perform operations that conflict with its own transactions,
+this is conceivable, so here we avoid changing those semantics
+unnecessarily.
+
+When a transaction commit fails with a conflict and we look through
+the history of commits to see which connection(s) to blame, ignore
+historical commits that were made by the same connection as the
+failing commit.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+---
+ tools/ocaml/xenstored/history.ml | 3 ++-
+ tools/ocaml/xenstored/process.ml | 2 +-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/history.ml b/tools/ocaml/xenstored/history.ml
+index e941e2b..4079588 100644
+--- a/tools/ocaml/xenstored/history.ml
++++ b/tools/ocaml/xenstored/history.ml
+@@ -60,11 +60,12 @@ let push (x: history_record) =
+ 	| Some d -> if not (Domain.is_free_to_conflict d) then history := x :: !history
+ 
+ (* Find the connections from records since commit-count [since] for which [f record] returns [true] *)
+-let filter_connections ~since ~f =
++let filter_connections ~ignore ~since ~f =
+ 	(* The "mem" call is an optimisation, to avoid calling f if we have picked con already. *)
+ 	(* Using a hash table rather than a list is to optimise the "mem" call. *)
+ 	List.fold_left (fun acc hist_rec ->
+ 		if hist_rec.finish_count > since
++		&& not (hist_rec.con == ignore)
+ 		&& not (Hashtbl.mem acc hist_rec.con)
+ 		&& f hist_rec
+ 		then Hashtbl.replace acc hist_rec.con ();
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index 698a456..ff2ca65 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -344,7 +344,7 @@ let transaction_replay c t doms cons =
+ 					then (punish hist_rec.History.con; true)
+ 					else false
+ 				) in
+-				let guilty_cons = History.filter_connections ~since:t.Transaction.start_count ~f:judge_and_sentence in
++				let guilty_cons = History.filter_connections ~ignore:c ~since:t.Transaction.start_count ~f:judge_and_sentence in
+ 				if Hashtbl.length guilty_cons = 0 then debug "Found no culprit for conflict in %s: must be self or not in history." con;
+ 				false
+ 			)
+-- 
+1.8.3.1
+
+
+From cf48907e2459a7daf1ceb767a2f8191a0e4b405b Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Fri, 24 Mar 2017 16:16:10 +0000
+Subject: [PATCH] From f44d628a0101d4c5318b3b14d7c19ace10a18a61 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 28/30] oxenstored: do not commit read-only
+ transactions
+
+The packet telling us to end the transaction has always carried an
+argument telling us whether to commit.
+
+If the transaction made no modifications to the tree, now we ignore
+that argument and do not commit: it is just a waste of effort.
+
+This makes read-only transactions immune to conflicts, and means that
+we do not need to store any of their details in the history that is
+used for assigning blame for conflicts.
+
+We count a transaction as a read-only transaction only if it contains
+no operations that modified the tree.
+
+This means that (for example) a transaction that creates a new node
+then deletes it would NOT count as read-only, even though it makes no
+change overall. A more sophisticated algorithm could judge the
+transaction based on comparison of its initial and final states, but
+this would add complexity and computational cost.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+---
+ tools/ocaml/xenstored/process.ml     | 1 +
+ tools/ocaml/xenstored/transaction.ml | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index ff2ca65..a983b49 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -387,6 +387,7 @@ let do_transaction_end con t domains cons data =
+ 		| x :: _   -> raise (Invalid_argument x)
+ 		| _        -> raise Invalid_Cmd_Args
+ 		in
++	let commit = commit && not (Transaction.is_read_only t) in
+ 	let success =
+ 		let commit = if commit then Some (fun con trans -> transaction_replay con trans domains cons) else None in
+ 		History.end_transaction t con (Transaction.get_id t) commit in
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index edd1178..8f95301 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -128,6 +128,7 @@ let make ?(internal=false) id store =
+ let get_store t = t.store
+ let get_paths t = t.paths
+ 
++let is_read_only t = t.paths = []
+ let add_wop t ty path = t.paths <- (ty, path) :: t.paths
+ let add_operation ~perm t request response =
+ 	if !Define.maxrequests >= 0
+-- 
+1.8.3.1
+
+
+From 7a3623014cca9fbc8ee12df1f057d859bfe99524 Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Fri, 24 Mar 2017 19:55:03 +0000
+Subject: [PATCH] From b0c7a48af6d0b0dedf638bef6cf166c245057229 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 29/30] oxenstored: don't wake to issue no
+ conflict-credit
+
+In the main loop, when choosing the timeout for the select function
+call, we were setting it so as to wake up to issue conflict-credit to
+any domains that could accept it. When xenstore is idle, this would
+mean waking up every 50ms (by default) to do no work. With this
+commit, we check whether any domain is below its cap, and if not then
+we set the timeout for longer (the same timeout as before the
+conflict-protection feature was added).
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+Reviewed-by: Jonathan Davies <jonathan.davies@citrix.com>
+---
+ tools/ocaml/xenstored/domains.ml   | 51 ++++++++++++++++++++++++++++++--------
+ tools/ocaml/xenstored/xenstored.ml |  5 +++-
+ 2 files changed, 44 insertions(+), 12 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/domains.ml b/tools/ocaml/xenstored/domains.ml
+index 63c6ad5..25fd592 100644
+--- a/tools/ocaml/xenstored/domains.ml
++++ b/tools/ocaml/xenstored/domains.ml
+@@ -35,8 +35,9 @@ type domains = {
+ 	on_first_conflict_pause: unit -> unit;
+ 
+ 	(* If config is set to use individual instead of aggregate conflict-rate-limiting,
+-	   we use this instead of the queues. *)
+-	mutable n_paused: int;
++	   we use these counts instead of the queues. The second one includes the first. *)
++	mutable n_paused: int;    (* Number of domains with zero or negative credit *)
++	mutable n_penalised: int; (* Number of domains with less than maximum credit *)
+ }
+ 
+ let init eventchn on_first_conflict_pause = {
+@@ -46,6 +47,7 @@ let init eventchn on_first_conflict_pause = {
+ 	doms_with_conflict_penalty = Queue.create ();
+ 	on_first_conflict_pause = on_first_conflict_pause;
+ 	n_paused = 0;
++	n_penalised = 0;
+ }
+ let del doms id = Hashtbl.remove doms.table id
+ let exist doms id = Hashtbl.mem doms.table id
+@@ -53,6 +55,23 @@ let find doms id = Hashtbl.find doms.table id
+ let number doms = Hashtbl.length doms.table
+ let iter doms fct = Hashtbl.iter (fun _ b -> fct b) doms.table
+ 
++let rec is_empty_queue q =
++	Queue.is_empty q ||
++		if !(Queue.peek q) = None
++		then (
++			ignore (Queue.pop q);
++			is_empty_queue q
++		) else false
++
++let all_at_max_credit doms =
++	if !Define.conflict_rate_limit_is_aggregate
++	then
++		(* Check both becuase if burst limit is 1.0 then a domain can go straight
++		 * from max-credit to paused without getting into the penalty queue. *)
++		is_empty_queue doms.doms_with_conflict_penalty
++		&& is_empty_queue doms.doms_conflict_paused
++	else doms.n_penalised = 0
++
+ (* Functions to handle queues of domains given that the domain might be deleted while in a queue. *)
+ let push dom queue =
+ 	Queue.push (ref (Some dom)) queue
+@@ -132,13 +151,16 @@ let decr_conflict_credit doms dom =
+ 	let before = dom.Domain.conflict_credit in
+ 	let after = max (-1.0) (before -. 1.0) in
+ 	dom.Domain.conflict_credit <- after;
++	let newly_penalised =
++		before >= !Define.conflict_burst_limit
++		&& after < !Define.conflict_burst_limit in
++	let newly_paused = before > 0.0 && after <= 0.0 in
+ 	if !Define.conflict_rate_limit_is_aggregate then (
+-		if before >= !Define.conflict_burst_limit
+-		&& after < !Define.conflict_burst_limit
++		if newly_penalised
+ 		&& after > 0.0
+ 		then (
+ 			push dom doms.doms_with_conflict_penalty
+-		) else if before > 0.0 && after <= 0.0
++		) else if newly_paused
+ 		then (
+ 			let first_pause = Queue.is_empty doms.doms_conflict_paused in
+ 			push dom doms.doms_conflict_paused;
+@@ -146,9 +168,12 @@ let decr_conflict_credit doms dom =
+ 		) else (
+ 			(* The queues are correct already: no further action needed. *)
+ 		)
+-	) else if before > 0.0 && after <= 0.0 then (
+-		doms.n_paused <- doms.n_paused + 1;
+-		if doms.n_paused = 1 then doms.on_first_conflict_pause ()
++	) else (
++		if newly_penalised then doms.n_penalised <- doms.n_penalised + 1;
++		if newly_paused then (
++			doms.n_paused <- doms.n_paused + 1;
++			if doms.n_paused = 1 then doms.on_first_conflict_pause ()
++		)
+ 	)
+ 
+ (* Give one point of credit to one domain, and update the queues appropriately. *)
+@@ -177,9 +202,13 @@ let incr_conflict_credit doms =
+ 			let before = dom.Domain.conflict_credit in
+ 			let after = min (before +. 1.0) !Define.conflict_burst_limit in
+ 			dom.Domain.conflict_credit <- after;
++
+ 			if before <= 0.0 && after > 0.0
+-			then doms.n_paused <- doms.n_paused - 1
++			then doms.n_paused <- doms.n_paused - 1;
++
++			if before < !Define.conflict_burst_limit
++			&& after >= !Define.conflict_burst_limit
++			then doms.n_penalised <- doms.n_penalised - 1
+ 		in
+-		(* Scope for optimisation (probably tiny): avoid iteration if all domains are at max credit *)
+-		iter doms inc
++		if doms.n_penalised > 0 then iter doms inc
+ 	)
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index c009701..8c82fe9 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -436,7 +436,10 @@ let _ =
+ 			peaceful_mw;
+ 		let start_time = Unix.gettimeofday () in
+ 		let timeout =
+-			let until_next_activity = min (max 0. (!next_frequent_ops -. start_time)) period_ops_interval in
++			let until_next_activity =
++				if Domains.all_at_max_credit domains
++				then period_ops_interval
++				else min (max 0. (!next_frequent_ops -. start_time)) period_ops_interval in
+ 			if peaceful_mw <> [] then 0. else until_next_activity
+ 		in
+ 		let inset, outset = Connections.select ~only_if:is_peaceful cons in
+-- 
+1.8.3.1
+
+
+From e9298a99f99958250d96a25db18ee8bf60e8710e Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Mon, 27 Mar 2017 14:36:34 +0100
+Subject: [PATCH] From cc5c2188f39bd707fd8b29df5d488c47aab189ca Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 30/30] oxenstored transaction conflicts:
+ improve logging
+
+For information related to transaction conflicts, potentially frequent
+logging at "info" priority has been changed to "debug" priority, and
+once per two minutes there is an "info" priority summary.
+
+Additional detailed logging has been added at "debug" priority.
+
+Reported-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+---
+ tools/ocaml/xenstored/domain.ml      | 8 ++++++++
+ tools/ocaml/xenstored/domains.ml     | 5 +++++
+ tools/ocaml/xenstored/process.ml     | 6 +++++-
+ tools/ocaml/xenstored/transaction.ml | 5 +++++
+ tools/ocaml/xenstored/xenstored.ml   | 6 ++++++
+ 5 files changed, 29 insertions(+), 1 deletion(-)
+
+diff --git a/tools/ocaml/xenstored/domain.ml b/tools/ocaml/xenstored/domain.ml
+index e677aa3..4515650 100644
+--- a/tools/ocaml/xenstored/domain.ml
++++ b/tools/ocaml/xenstored/domain.ml
+@@ -34,6 +34,7 @@ type t =
+ 	mutable conflict_credit: float; (* Must be positive to perform writes; a commit
+ 	                                   that later causes conflict with another
+ 	                                   domain's transaction costs credit. *)
++	mutable caused_conflicts: int64;
+ }
+ 
+ let is_dom0 d = d.id = 0
+@@ -93,4 +94,11 @@ let make id mfn remote_port interface eventchn = {
+ 	bad_client = false;
+ 	io_credit = 0;
+ 	conflict_credit = !Define.conflict_burst_limit;
++	caused_conflicts = 0L;
+ }
++
++let log_and_reset_conflict_stats logfn dom =
++	if dom.caused_conflicts > 0L then (
++		logfn dom.id dom.caused_conflicts;
++		dom.caused_conflicts <- 0L
++	)
+diff --git a/tools/ocaml/xenstored/domains.ml b/tools/ocaml/xenstored/domains.ml
+index 25fd592..ca749fa 100644
+--- a/tools/ocaml/xenstored/domains.ml
++++ b/tools/ocaml/xenstored/domains.ml
+@@ -148,8 +148,10 @@ let create0 fake doms =
+ 	dom
+ 
+ let decr_conflict_credit doms dom =
++	dom.Domain.caused_conflicts <- Int64.add 1L dom.Domain.caused_conflicts;
+ 	let before = dom.Domain.conflict_credit in
+ 	let after = max (-1.0) (before -. 1.0) in
++	debug "decr_conflict_credit dom%d %F -> %F" (Domain.get_id dom) before after;
+ 	dom.Domain.conflict_credit <- after;
+ 	let newly_penalised =
+ 		before >= !Define.conflict_burst_limit
+@@ -180,7 +182,9 @@ let decr_conflict_credit doms dom =
+ let incr_conflict_credit_from_queue doms =
+ 	let process_queue q requeue_test =
+ 		let d = pop q in
++		let before = d.Domain.conflict_credit in (* just for debug-logging *)
+ 		d.Domain.conflict_credit <- min (d.Domain.conflict_credit +. 1.0) !Define.conflict_burst_limit;
++		debug "incr_conflict_credit_from_queue: dom%d: %F -> %F" (Domain.get_id d) before d.Domain.conflict_credit;
+ 		if requeue_test d.Domain.conflict_credit then (
+ 			push d q (* Make it queue up again for its next point of credit. *)
+ 		)
+@@ -202,6 +206,7 @@ let incr_conflict_credit doms =
+ 			let before = dom.Domain.conflict_credit in
+ 			let after = min (before +. 1.0) !Define.conflict_burst_limit in
+ 			dom.Domain.conflict_credit <- after;
++			debug "incr_conflict_credit dom%d: %F -> %F" (Domain.get_id dom) before after;
+ 
+ 			if before <= 0.0 && after > 0.0
+ 			then doms.n_paused <- doms.n_paused - 1;
+diff --git a/tools/ocaml/xenstored/process.ml b/tools/ocaml/xenstored/process.ml
+index a983b49..b7fb75d 100644
+--- a/tools/ocaml/xenstored/process.ml
++++ b/tools/ocaml/xenstored/process.ml
+@@ -324,6 +324,7 @@ let transaction_replay c t doms cons =
+ 				Transaction.commit ~con replay_t
+ 			with
+ 			| Transaction_again -> (
++				Transaction.failed_commits := Int64.add !Transaction.failed_commits 1L;
+ 				let victim_domstr = Connection.get_domstr c in
+ 				debug "Apportioning blame for EAGAIN in txn %d, domain=%s" id victim_domstr;
+ 				let punish guilty_con =
+@@ -345,7 +346,10 @@ let transaction_replay c t doms cons =
+ 					else false
+ 				) in
+ 				let guilty_cons = History.filter_connections ~ignore:c ~since:t.Transaction.start_count ~f:judge_and_sentence in
+-				if Hashtbl.length guilty_cons = 0 then debug "Found no culprit for conflict in %s: must be self or not in history." con;
++				if Hashtbl.length guilty_cons = 0 then (
++					debug "Found no culprit for conflict in %s: must be self or not in history." con;
++					Transaction.failed_commits_no_culprit := Int64.add !Transaction.failed_commits_no_culprit 1L
++				);
+ 				false
+ 			)
+ 			| e ->
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index 8f95301..da4a3e3 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -90,6 +90,11 @@ type t = {
+ let get_id t = match t.ty with No -> none | Full (id, _, _) -> id
+ 
+ let counter = ref 0L
++let failed_commits = ref 0L
++let failed_commits_no_culprit = ref 0L
++let reset_conflict_stats () =
++	failed_commits := 0L;
++	failed_commits_no_culprit := 0L
+ 
+ (* Scope for optimisation: different data-structure and functions to search/filter it *)
+ let short_running_txns = ref []
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 8c82fe9..979b769 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -375,6 +375,7 @@ let _ =
+ 	let last_scan_time = ref 0. in
+ 
+ 	let periodic_ops now =
++		debug "periodic_ops starting";
+ 		(* we garbage collect the string->int dictionary after a sizeable amount of operations,
+ 		 * there's no need to be really fast even if we got loose
+ 		 * objects since names are often reuse.
+@@ -394,7 +395,11 @@ let _ =
+ 
+ 		(* make sure we don't print general stats faster than 2 min *)
+ 		if now > (!last_stat_time +. 120.) then (
++			info "Transaction conflict statistics for last %F seconds:" (now -. !last_stat_time);
+ 			last_stat_time := now;
++			Domains.iter domains (Domain.log_and_reset_conflict_stats (info "Dom%d caused %Ld conflicts"));
++			info "%Ld failed transactions; of these no culprit was found for %Ld" !Transaction.failed_commits !Transaction.failed_commits_no_culprit;
++			Transaction.reset_conflict_stats ();
+ 
+ 			let gc = Gc.stat () in
+ 			let (lanon, lanon_ops, lanon_watchs,
+@@ -414,6 +419,7 @@ let _ =
+ 			     gc.Gc.free_words gc.Gc.free_blocks
+ 		);
+ 		let elapsed = Unix.gettimeofday () -. now in
++		debug "periodic_ops took %F seconds." elapsed;
+ 		delay_next_frequent_ops_by elapsed
+ 	in
+ 
+-- 
+1.8.3.1
+
+
+From e32128ec0cd9df96e4452d519593017ac28039a3 Mon Sep 17 00:00:00 2001
+From: Thomas Sanders <thomas.sanders@citrix.com>
+Date: Tue, 28 Mar 2017 18:57:52 +0100
+Subject: [PATCH] From 26b15d4eb7ac71fcab28a7fca664afa0549c135c Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 31/30] oxenstored: trim history in the
+ frequent_ops function
+
+We were trimming the history of commits only at the end of each
+transaction (regardless of how it ended).
+
+Therefore if non-transactional writes were being made but no
+transactions were being ended, the history would grow
+indefinitely. Now we trim the history at regular intervals.
+
+Signed-off-by: Thomas Sanders <thomas.sanders@citrix.com>
+---
+ tools/ocaml/xenstored/history.ml     | 6 +++---
+ tools/ocaml/xenstored/transaction.ml | 8 ++++++--
+ tools/ocaml/xenstored/xenstored.ml   | 1 +
+ 3 files changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/tools/ocaml/xenstored/history.ml b/tools/ocaml/xenstored/history.ml
+index 4079588..f39565b 100644
+--- a/tools/ocaml/xenstored/history.ml
++++ b/tools/ocaml/xenstored/history.ml
+@@ -39,7 +39,8 @@ let mark_symbols () =
+ (* Keep only enough commit-history to protect the running transactions that we are still tracking *)
+ (* There is scope for optimisation here, replacing List.filter with something more efficient,
+  * probably on a different list-like structure. *)
+-let trim () =
++let trim ?txn () =
++	Transaction.trim_short_running_transactions txn;
+ 	history := match Transaction.oldest_short_running_transaction () with
+ 	| None -> [] (* We have no open transaction, so no history is needed *)
+ 	| Some (_, txn) -> (
+@@ -49,8 +50,7 @@ let trim () =
+ 
+ let end_transaction txn con tid commit =
+ 	let success = Connection.end_transaction con tid commit in
+-	Transaction.end_transaction txn;
+-	trim ();
++	trim ~txn ();
+ 	success
+ 
+ let push (x: history_record) =
+diff --git a/tools/ocaml/xenstored/transaction.ml b/tools/ocaml/xenstored/transaction.ml
+index da4a3e3..23e7ccf 100644
+--- a/tools/ocaml/xenstored/transaction.ml
++++ b/tools/ocaml/xenstored/transaction.ml
+@@ -106,10 +106,14 @@ let oldest_short_running_transaction () =
+ 		| x :: xs -> last xs
+ 	in last !short_running_txns
+ 
+-let end_transaction txn =
++let trim_short_running_transactions txn =
+ 	let cutoff = Unix.gettimeofday () -. !Define.conflict_max_history_seconds in
++	let keep = match txn with
++		| None -> (function (start_time, _) -> start_time >= cutoff)
++		| Some t -> (function (start_time, tx) -> start_time >= cutoff && tx != t)
++	in
+ 	short_running_txns := List.filter
+-		(function (start_time, tx) -> start_time >= cutoff && tx != txn)
++		keep
+ 		!short_running_txns
+ 
+ let make ?(internal=false) id store =
+diff --git a/tools/ocaml/xenstored/xenstored.ml b/tools/ocaml/xenstored/xenstored.ml
+index 979b769..180edd6 100644
+--- a/tools/ocaml/xenstored/xenstored.ml
++++ b/tools/ocaml/xenstored/xenstored.ml
+@@ -278,6 +278,7 @@ let _ =
+ 	 * than the periodic_ops function *)
+ 	let frequent_ops () =
+ 		if Unix.gettimeofday () > !next_frequent_ops then (
++			History.trim ();
+ 			Domains.incr_conflict_credit domains;
+ 			advance_next_frequent_ops ()
+ 		) in
+-- 
+1.8.3.1
+
