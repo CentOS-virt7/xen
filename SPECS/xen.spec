@@ -689,9 +689,8 @@ rm -rf %{buildroot}
 %{_unitdir}/xen-watchdog.service
 %{_unitdir}/xen-init-dom0.service
 %{_unitdir}/xen-qemu-dom0-disk-backend.service
-%{_unitdir}/xenstored_ro.socket
-%{_unitdir}/xenstored.socket
 %{_unitdir}/xendomains.service
+%{_unitdir}/xendriverdomain.service
 /usr/lib/tmpfiles.d/xen.conf
 %endif
 
@@ -719,12 +718,10 @@ rm -rf %{buildroot}
 # QEMU-xen runtime files
 %dir %{_datadir}/qemu-xen
 %{_datadir}/qemu-xen/*
-%dir %{_sysconfdir}/qemu/
 %{_datadir}/locale/*/LC_MESSAGES/qemu.mo
 
 %ifarch x86_64
 # QEMU runtime files
-%{_sysconfdir}/qemu/target-%{_arch}.conf
 %dir %{_datadir}/%{name}/qemu
 %dir %{_datadir}/%{name}/qemu/keymaps
 %{_datadir}/%{name}/qemu/keymaps/*
@@ -795,9 +792,11 @@ rm -rf %{buildroot}
 %{_sbindir}/xentrace_setmask
 %{_sbindir}/xentrace_setsize
 %{_bindir}/xentrace_format
+%{_sbindir}/flask-*
 # Misc stuff
-%{_sbindir}/gtrace*
+%{_bindir}/xen-cpuid
 %{_sbindir}/xen-bugtool
+%{_sbindir}/xen-livepatch
 %{_sbindir}/xen-tmem-list-parse
 %{_sbindir}/xenconsoled
 %{_sbindir}/xenlockprof
@@ -846,6 +845,7 @@ rm -rf %{buildroot}
 %files hypervisor
 %defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/xen-kernel
+/boot/xen-%{version}-*.config
 %ifarch x86_64
 /boot/xen-*.gz
 /boot/xen.gz
