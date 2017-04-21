@@ -494,8 +494,6 @@ do
 done
 rm -f %{buildroot}/%{_mandir}/man1/qemu*
 rm -f %{buildroot}/%{_mandir}/man8/qemu*
-mkdir -p %{buildroot}/%{_sysconfdir}/qemu/
-mv %{buildroot}/%{_prefix}/%{_sysconfdir}/qemu/* %{buildroot}/%{_sysconfdir}/qemu/
 rm -rf %{buildroot}/%{_prefix}/%{_sysconfdir}
 
 # README's not intended for end users
