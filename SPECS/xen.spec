@@ -451,8 +451,8 @@ find %{buildroot} -print | xargs ls -ld | sed -e 's|.*%{buildroot}||' > f1.list
 rm -rf %{buildroot}/usr/*-xen-elf
 
 # hypervisor symlinks
-rm -rf %{buildroot}/boot/xen-4.0.gz
-rm -rf %{buildroot}/boot/xen-4.gz
+rm %{buildroot}/boot/xen-$(sed 's/\.[0-9]\+$//' <<<"%{version}").gz
+rm %{buildroot}/boot/xen-$(sed 's/^\([0-9]\+\)\..*/\1/' <<<"%{version}").gz
 
 # silly doc dir fun
 rm -fr %{buildroot}%{_datadir}/doc/xen
@@ -830,9 +830,10 @@ rm -rf %{buildroot}
 %files hypervisor
 %defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/xen-kernel
-/boot/xen-%{version}-*.config
+/boot/xen-%{version}-%{release}.config
+/boot/xenpolicy-%{version}-%{release}
 %ifarch x86_64
-/boot/xen-*.gz
+/boot/xen-%{version}-%{release}.gz
 /boot/xen.gz
 %endif
 %ifarch aarch64
