@@ -51,7 +51,7 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.8.0
+Version: 4.8.1
 Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
@@ -92,15 +92,7 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 # aarch64-only
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
-Patch2013: xsa208-qemuu.patch
-Patch2014: xsa209-qemuu-0001-display-cirrus-ignore-source-pitch-value-as-needed-i.patch
-Patch2015: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cput.patch 
-Patch2016: xsa211-qemuu-4.8.patch
 
-Patch3013: xsa199-trad.patch
-Patch3014: xsa208-qemut.patch
-Patch3015: xsa209-qemut.patch
-Patch3016: xsa211-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -313,18 +305,10 @@ pushd tools/qemu-xen
 %ifarch aarch64
 %patch2001 -p1
 %endif
-%patch2013 -p1
-%patch2014 -p1
-%patch2015 -p1
-%patch2016 -p1
 popd
 
 pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
-%patch3013 -p1
-%patch3014 -p1
-%patch3015 -p1
-%patch3016 -p1
 popd
 
 %if %{with_blktap}
