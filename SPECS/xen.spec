@@ -178,6 +178,7 @@ Group: Development/Libraries
 Requires: xen-libs = %{version}-%{release}
 %ifarch x86_64
 Requires: /usr/bin/qemu-img
+Requires: seabios
 %endif
 # Ensure we at least have a suitable kernel installed, though we can't
 # force user to actually boot it.
