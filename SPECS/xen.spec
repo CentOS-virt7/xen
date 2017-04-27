@@ -831,7 +831,6 @@ rm -rf %{buildroot}
 %defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/xen-kernel
 /boot/xen-%{version}-%{release}.config
-/boot/xenpolicy-%{version}-%{release}
 %ifarch x86_64
 /boot/xen-%{version}-%{release}.gz
 /boot/xen.gz
