@@ -47,16 +47,16 @@
 
 
 # Hypervisor ABI
-%define hv_abi  4.6
+%define hv_abi  4.8
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.6.3
-Release: 9%{?dist}
+Version: 4.8.1
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
-URL:     http://xen.org/
-Source0: http://bits.xensource.com/oss-xen/release/%{version}/xen-%{version}.tar.gz
+URL:     https://www.xenproject.org/
+Source0: https://downloads.xenproject.org/release/xen/%{version}/xen-%{version}.tar.gz
 Source1: xen.modules
 Source2: xen.logrotate
 # used by stubdoms
@@ -74,7 +74,7 @@ Source49: tmpfiles.d.xen.conf
 Source50: xen-kernel.x86_64
 Source51: xen-kernel.aarch64
 Source52: efi-xen.cfg.aarch64
-Source53: edk2-0cebfe81f94be36116af66d0a3134ce18d89eec1.tar.gz
+Source53: edk2-bc54e50e0fe03c570014f363b547426913e92449.tar.gz
 
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
@@ -92,25 +92,7 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 # aarch64-only
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
-Patch2011: xsa184-qemuu-4.6.patch
-Patch2012: xsa197-4.6-qemuu.patch
-Patch2013: xsa208-qemuu-4.7.patch
-Patch2014: xsa209-qemuu-0001-display-cirrus-ignore-source-pitch-value-as-needed-i.patch
-Patch2015: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cput.patch 
-Patch2016: xsa211-qemuu-4.6.patch
 
-Patch3001: xsa179-qemut-unstable-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
-Patch3002: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
-Patch3003: xsa179-qemut-unstable-0003-vga-factor-out-vga-register-setup.patch
-Patch3004: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-changes.patch
-Patch3005: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
-Patch3010: xsa180-qemut.patch
-Patch3011: xsa184-qemut-master.patch
-Patch3012: xsa197-qemut.patch
-Patch3013: xsa199-trad.patch
-Patch3014: xsa208-qemut.patch
-Patch3015: xsa209-qemut.patch
-Patch3016: xsa211-qemut.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -196,6 +178,7 @@ Group: Development/Libraries
 Requires: xen-libs = %{version}-%{release}
 %ifarch x86_64
 Requires: /usr/bin/qemu-img
+Requires: seabios
 %endif
 # Ensure we at least have a suitable kernel installed, though we can't
 # force user to actually boot it.
@@ -323,22 +306,10 @@ pushd tools/qemu-xen
 %ifarch aarch64
 %patch2001 -p1
 %endif
-%patch2011 -p1
-%patch2012 -p1
-%patch2013 -p1
-%patch2014 -p1
-%patch2015 -p1
-%patch2016 -p1
 popd
 
 pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
-%patch3011 -p1
-%patch3012 -p1
-%patch3013 -p1
-%patch3014 -p1
-%patch3015 -p1
-%patch3016 -p1
 popd
 
 %if %{with_blktap}
@@ -379,7 +350,13 @@ mkdir -p dist/install/boot/efi/efi/%{xen_efi_vendor}
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
 export debug="n"
-export CFLAGS="$RPM_OPT_FLAGS"
+# From xen.git/INSTALL
+unset CFLAGS CXXFLAGS FFLAGS LDFLAGS
+export EXTRA_CFLAGS_XEN_TOOLS="$RPM_OPT_FLAGS"
+export EXTRA_CFLAGS_QEMU_TRADITIONAL="$RPM_OPT_FLAGS"
+export EXTRA_CFLAGS_QEMU_XEN="$RPM_OPT_FLAGS"
+export WGET=$(type -P false)
+export GIT=$(type -P false)
 
 %if %{with_blktap}
 %else
@@ -409,9 +386,8 @@ make %{?_smp_mflags} %{?efi_flags}   dist-xen
 make %{?_smp_mflags} %{?ocaml_flags} dist-tools
 make                                 dist-docs
 
-unset CFLAGS
-
 %if %{with_stubdom}
+unset EXTRA_CFLAGS_XEN_TOOLS
 make %{?ocaml_flags} dist-stubdom
 %endif
 
@@ -475,8 +451,8 @@ find %{buildroot} -print | xargs ls -ld | sed -e 's|.*%{buildroot}||' > f1.list
 rm -rf %{buildroot}/usr/*-xen-elf
 
 # hypervisor symlinks
-rm -rf %{buildroot}/boot/xen-4.0.gz
-rm -rf %{buildroot}/boot/xen-4.gz
+rm %{buildroot}/boot/xen-$(sed 's/\.[0-9]\+$//' <<<"%{version}").gz
+rm %{buildroot}/boot/xen-$(sed 's/^\([0-9]\+\)\..*/\1/' <<<"%{version}").gz
 
 # silly doc dir fun
 rm -fr %{buildroot}%{_datadir}/doc/xen
@@ -503,8 +479,6 @@ do
 done
 rm -f %{buildroot}/%{_mandir}/man1/qemu*
 rm -f %{buildroot}/%{_mandir}/man8/qemu*
-mkdir -p %{buildroot}/%{_sysconfdir}/qemu/
-mv %{buildroot}/%{_prefix}/%{_sysconfdir}/qemu/* %{buildroot}/%{_sysconfdir}/qemu/
 rm -rf %{buildroot}/%{_prefix}/%{_sysconfdir}
 
 # README's not intended for end users
@@ -700,9 +674,8 @@ rm -rf %{buildroot}
 %{_unitdir}/xen-watchdog.service
 %{_unitdir}/xen-init-dom0.service
 %{_unitdir}/xen-qemu-dom0-disk-backend.service
-%{_unitdir}/xenstored_ro.socket
-%{_unitdir}/xenstored.socket
 %{_unitdir}/xendomains.service
+%{_unitdir}/xendriverdomain.service
 /usr/lib/tmpfiles.d/xen.conf
 %endif
 
@@ -730,12 +703,10 @@ rm -rf %{buildroot}
 # QEMU-xen runtime files
 %dir %{_datadir}/qemu-xen
 %{_datadir}/qemu-xen/*
-%dir %{_sysconfdir}/qemu/
 %{_datadir}/locale/*/LC_MESSAGES/qemu.mo
 
 %ifarch x86_64
 # QEMU runtime files
-%{_sysconfdir}/qemu/target-%{_arch}.conf
 %dir %{_datadir}/%{name}/qemu
 %dir %{_datadir}/%{name}/qemu/keymaps
 %{_datadir}/%{name}/qemu/keymaps/*
@@ -806,9 +777,11 @@ rm -rf %{buildroot}
 %{_sbindir}/xentrace_setmask
 %{_sbindir}/xentrace_setsize
 %{_bindir}/xentrace_format
+%{_sbindir}/flask-*
 # Misc stuff
-%{_sbindir}/gtrace*
+%{_bindir}/xen-cpuid
 %{_sbindir}/xen-bugtool
+%{_sbindir}/xen-livepatch
 %{_sbindir}/xen-tmem-list-parse
 %{_sbindir}/xenconsoled
 %{_sbindir}/xenlockprof
@@ -857,8 +830,9 @@ rm -rf %{buildroot}
 %files hypervisor
 %defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/xen-kernel
+/boot/xen-%{version}-%{release}.config
 %ifarch x86_64
-/boot/xen-*.gz
+/boot/xen-%{version}-%{release}.gz
 /boot/xen.gz
 %endif
 %ifarch aarch64
@@ -924,6 +898,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Apr 28 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.1-1
+- Update to Xen 4.8.1 release
+
 * Wed Mar 15 2017 Johnny Hughes <johnny@centos.org> 4.6.3-9.el6.centos
 - Import XSA 211
 
