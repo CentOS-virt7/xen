@@ -831,7 +831,6 @@ rm -rf %{buildroot}
 %defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/xen-kernel
 /boot/xen-%{version}-%{release}.config
-/boot/xenpolicy-%{version}-%{release}
 %ifarch x86_64
 /boot/xen-%{version}-%{release}.gz
 /boot/xen.gz
@@ -899,6 +898,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Apr 28 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.1-1
+- Update to Xen 4.8.1 release
+
 * Wed Mar 15 2017 Johnny Hughes <johnny@centos.org> 4.6.3-9.el6.centos
 - Import XSA 211
 
