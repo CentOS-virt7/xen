@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 22%{?dist}
+Release: 23%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -897,6 +897,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue May 02 2017 Kevin Stange <kevin@steadfast.net> 4.4.4-23.el6.centos
+- Import XSA-213, 214, 215
+
 * Wed Apr 19 2017 Johnny Hughes <johnny@centos.org> 4.4.4-22.el6.centos
 - Import XSA-206
 
