@@ -6298,3 +6298,290 @@ index 953abe7..4275e66 100644
      ((unsigned long)(addr) < HYPERVISOR_COMPAT_VIRT_START(d))
 -- 
 
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Tue, 2 May 2017 12:05:14 +0100
+Subject: [PATCH] multicall: deal with early exit conditions
+
+In particular changes to guest privilege level require the multicall
+sequence to be aborted, as hypercalls are permitted from kernel mode
+only. While likely not very useful in a multicall, also properly handle
+the return value in the HYPERVISOR_iret case (which should be the guest
+specified value).
+
+This is XSA-213.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Acked-by: Julien Grall <julien.grall@arm.com>
+---
+ xen/arch/arm/traps.c            | 11 +++++++----
+ xen/common/multicall.c          | 17 ++++++++++++++---
+ xen/include/asm-arm/multicall.h |  6 +++++-
+ xen/include/asm-x86/multicall.h | 23 ++++++++++++++++++++---
+ 4 files changed, 46 insertions(+), 11 deletions(-)
+
+diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
+index f7198d4..854d19c 100644
+--- a/xen/arch/arm/traps.c
++++ b/xen/arch/arm/traps.c
+@@ -1472,30 +1472,33 @@ static bool_t check_multicall_32bit_clean(struct multicall_entry *multi)
+     return true;
+ }
+ 
+-void do_multicall_call(struct multicall_entry *multi)
++enum mc_disposition do_multicall_call(struct multicall_entry *multi)
+ {
+     arm_hypercall_fn_t call = NULL;
+ 
+     if ( multi->op >= ARRAY_SIZE(arm_hypercall_table) )
+     {
+         multi->result = -ENOSYS;
+-        return;
++        return mc_continue;
+     }
+ 
+     call = arm_hypercall_table[multi->op].fn;
+     if ( call == NULL )
+     {
+         multi->result = -ENOSYS;
+-        return;
++        return mc_continue;
+     }
+ 
+     if ( is_32bit_domain(current->domain) &&
+          !check_multicall_32bit_clean(multi) )
+-        return;
++        return mc_continue;
+ 
+     multi->result = call(multi->args[0], multi->args[1],
+                          multi->args[2], multi->args[3],
+                          multi->args[4]);
++
++    return likely(!psr_mode_is_user(guest_cpu_user_regs()))
++           ? mc_continue : mc_preempt;
+ }
+ 
+ /*
+diff --git a/xen/common/multicall.c b/xen/common/multicall.c
+index fa9d910..da13573 100644
+--- a/xen/common/multicall.c
++++ b/xen/common/multicall.c
+@@ -40,6 +40,7 @@ do_multicall(
+     struct mc_state *mcs = &current->mc_state;
+     uint32_t         i;
+     int              rc = 0;
++    enum mc_disposition disp = mc_continue;
+ 
+     if ( unlikely(__test_and_set_bit(_MCSF_in_multicall, &mcs->flags)) )
+     {
+@@ -50,7 +51,7 @@ do_multicall(
+     if ( unlikely(!guest_handle_okay(call_list, nr_calls)) )
+         rc = -EFAULT;
+ 
+-    for ( i = 0; !rc && i < nr_calls; i++ )
++    for ( i = 0; !rc && disp == mc_continue && i < nr_calls; i++ )
+     {
+         if ( i && hypercall_preempt_check() )
+             goto preempted;
+@@ -63,7 +64,7 @@ do_multicall(
+ 
+         trace_multicall_call(&mcs->call);
+ 
+-        do_multicall_call(&mcs->call);
++        disp = do_multicall_call(&mcs->call);
+ 
+ #ifndef NDEBUG
+         {
+@@ -77,7 +78,14 @@ do_multicall(
+         }
+ #endif
+ 
+-        if ( unlikely(__copy_field_to_guest(call_list, &mcs->call, result)) )
++        if ( unlikely(disp == mc_exit) )
++        {
++            if ( __copy_field_to_guest(call_list, &mcs->call, result) )
++                /* nothing, best effort only */;
++            rc = mcs->call.result;
++        }
++        else if ( unlikely(__copy_field_to_guest(call_list, &mcs->call,
++                                                 result)) )
+             rc = -EFAULT;
+         else if ( test_bit(_MCSF_call_preempted, &mcs->flags) )
+         {
+@@ -93,6 +101,9 @@ do_multicall(
+             guest_handle_add_offset(call_list, 1);
+     }
+ 
++    if ( unlikely(disp == mc_preempt) && i < nr_calls )
++        goto preempted;
++
+     perfc_incr(calls_to_multicall);
+     perfc_add(calls_from_multicall, i);
+     mcs->flags = 0;
+diff --git a/xen/include/asm-arm/multicall.h b/xen/include/asm-arm/multicall.h
+index b959262..ee3b345 100644
+--- a/xen/include/asm-arm/multicall.h
++++ b/xen/include/asm-arm/multicall.h
+@@ -1,7 +1,11 @@
+ #ifndef __ASM_ARM_MULTICALL_H__
+ #define __ASM_ARM_MULTICALL_H__
+ 
+-extern void do_multicall_call(struct multicall_entry *call);
++extern enum mc_disposition {
++    mc_continue,
++    mc_exit,
++    mc_preempt,
++} do_multicall_call(struct multicall_entry *call);
+ 
+ #endif /* __ASM_ARM_MULTICALL_H__ */
+ /*
+diff --git a/xen/include/asm-x86/multicall.h b/xen/include/asm-x86/multicall.h
+index fcd0ea5..3cb0b6d 100644
+--- a/xen/include/asm-x86/multicall.h
++++ b/xen/include/asm-x86/multicall.h
+@@ -7,8 +7,21 @@
+ 
+ #include <xen/errno.h>
+ 
++enum mc_disposition {
++    mc_continue,
++    mc_exit,
++    mc_preempt,
++};
++
++#define multicall_ret(call)                                  \
++    (unlikely((call)->op == __HYPERVISOR_iret)               \
++     ? mc_exit                                               \
++       : likely(guest_kernel_mode(current,                   \
++                                  guest_cpu_user_regs()))    \
++         ? mc_continue : mc_preempt)
++
+ #define do_multicall_call(_call)                             \
+-    do {                                                     \
++    ({                                                       \
+         __asm__ __volatile__ (                               \
+             "    movq  %c1(%0),%%rax; "                      \
+             "    leaq  hypercall_table(%%rip),%%rdi; "       \
+@@ -37,9 +50,11 @@
+               /* all the caller-saves registers */           \
+             : "rax", "rcx", "rdx", "rsi", "rdi",             \
+               "r8",  "r9",  "r10", "r11" );                  \
+-    } while ( 0 )
++        multicall_ret(_call);                                \
++    })
+ 
+ #define compat_multicall_call(_call)                         \
++    ({                                                       \
+         __asm__ __volatile__ (                               \
+             "    movl  %c1(%0),%%eax; "                      \
+             "    leaq  compat_hypercall_table(%%rip),%%rdi; "\
+@@ -67,6 +82,8 @@
+               "i" (-ENOSYS)                                  \
+               /* all the caller-saves registers */           \
+             : "rax", "rcx", "rdx", "rsi", "rdi",             \
+-              "r8",  "r9",  "r10", "r11" )                   \
++              "r8",  "r9",  "r10", "r11" );                  \
++        multicall_ret(_call);                                \
++    })
+ 
+ #endif /* __ASM_X86_MULTICALL_H__ */
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Tue, 2 May 2017 12:05:50 +0100
+Subject: [PATCH] x86: discard type information when stealing pages
+
+While a page having just a single general reference left necessarily
+has a zero type reference count too, its type may still be valid (and
+in validated state; at present this is only possible and relevant for
+PGT_seg_desc_page, as page tables have their type forcibly zapped when
+their type reference count drops to zero, and
+PGT_{writable,shared}_page pages don't require any validation). In
+such a case when the page is being re-used with the same type again,
+validation is being skipped. As validation criteria differ between
+32- and 64-bit guests, pages to be transferred between guests need to
+have their validation indicator zapped (and with it we zap all other
+type information at once).
+
+This is XSA-214.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/mm.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 64e2de3..24dfda4 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -4334,6 +4334,17 @@ int steal_page(
+         y = cmpxchg(&page->count_info, x, x & ~PGC_count_mask);
+     } while ( y != x );
+ 
++    /*
++     * With the sole reference dropped temporarily, no-one can update type
++     * information. Type count also needs to be zero in this case, but e.g.
++     * PGT_seg_desc_page may still have PGT_validated set, which we need to
++     * clear before transferring ownership (as validation criteria vary
++     * depending on domain type).
++     */
++    BUG_ON(page->u.inuse.type_info & (PGT_count_mask | PGT_locked |
++                                      PGT_pinned));
++    page->u.inuse.type_info = 0;
++
+     /* Swizzle the owner then reinstate the PGC_allocated reference. */
+     page_set_owner(page, NULL);
+     y = page->count_info;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Tue, 2 May 2017 12:06:15 +0100
+Subject: [PATCH] x86: correct create_bounce_frame
+
+We may push up to 96 bytes on the guest (kernel) stack, so we should
+also cover as much in the early range check. Note that this is the
+simplest possible patch, which has the theoretical potential of
+breaking a guest: We only really push 96 bytes when invoking the
+failsafe callback, ordinary exceptions only have 56 or 64 bytes pushed
+(without / with error code respectively). There is, however, no PV OS
+known to place a kernel stack there.
+
+This is XSA-215.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/x86_64/entry.S | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
+index 32a3361..0081458 100644
+--- a/xen/arch/x86/x86_64/entry.S
++++ b/xen/arch/x86/x86_64/entry.S
+@@ -347,7 +347,7 @@ int80_slow_path:
+         jmp   handle_exception_saved
+ 
+ /* CREATE A BASIC EXCEPTION FRAME ON GUEST OS STACK:                     */
+-/*   { RCX, R11, [DS-GS,] [CR2,] [ERRCODE,] RIP, CS, RFLAGS, RSP, SS }   */
++/*   { RCX, R11, [DS-GS,] [ERRCODE,] RIP, CS, RFLAGS, RSP, SS }          */
+ /* %rdx: trap_bounce, %rbx: struct vcpu                                  */
+ /* On return only %rbx and %rdx are guaranteed non-clobbered.            */
+ create_bounce_frame:
+@@ -367,7 +367,7 @@ create_bounce_frame:
+ 2:      andq  $~0xf,%rsi                # Stack frames are 16-byte aligned.
+         movq  $HYPERVISOR_VIRT_START,%rax
+         cmpq  %rax,%rsi
+-        movq  $HYPERVISOR_VIRT_END+60,%rax
++        movq  $HYPERVISOR_VIRT_END+12*8,%rax
+         sbb   %ecx,%ecx                 # In +ve address space? Then okay.
+         cmpq  %rax,%rsi
+         adc   %ecx,%ecx                 # Above Xen private area? Then okay.
+-- 
+
