@@ -1,4 +1,4 @@
-From 9c60b3dad2a0aa4e00820d9f9bea520d1bd26b79 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] Fix up xend init scripts
@@ -153,10 +153,9 @@ index 9ef0210..0876ee2 100644
  if __name__ == '__main__':
      sys.exit(main())
 -- 
-1.8.3.1
 
 
-From beb9028af3dcc91c21e60453f3ef1ea805b33379 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] Change dumpdir to /var/lib/xen
@@ -202,10 +201,9 @@ index 8d4ff5c..895fc01 100644
              this_time = time.strftime("%Y-%m%d-%H%M.%S", time.localtime())
              corefile = "%s/%s-%s.%s.core" % (coredir, this_time,
 -- 
-1.8.3.1
 
 
-From a948978c87d6655a96c05b906ad23c0ec1099aaf Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] Disable iptables on the bridge
@@ -249,10 +247,9 @@ index 3c63c55..f74de3d 100644
  }
  
 -- 
-1.8.3.1
 
 
-From 0cb79e77fb0797671528c737f167b6df19fc50ac Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] pygrubfix.patch
@@ -292,10 +289,9 @@ index c7b6aa7..8ff6964 100755
  
  class GrubLineEditor(curses.textpad.Textbox):
 -- 
-1.8.3.1
 
 
-From f9f1bb123fae6398449a38b81894116f57cd94a0 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] xend.catchbt.patch
@@ -340,10 +336,9 @@ index 832c168..161aeb5 100644
  MAX_GUEST_CMDLINE = 1024
  
 -- 
-1.8.3.1
 
 
-From c3c8401da97cbaec929b3b200400b7e2d0977cd2 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] xend-pci-loop.patch # Don't crash due to weird PCI cards (Bug
@@ -372,10 +367,9 @@ index adeca4b..94326b3 100644
          if sysfs_mnt == None:
              return False
 -- 
-1.8.3.1
 
 
-From 990abbef40bea82327421ab3be79d74e2ce18461 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:39 -0500
 Subject: [PATCH] xend.selinux.fixes.patch
@@ -410,10 +404,9 @@ index 0876ee2..05afc0e 100644
  #============================================================================
  # Copyright (C) 2004 Mike Wray <mike.wray@hp.com>
 -- 
-1.8.3.1
 
 
-From 2e2f8d17247ad538605bd85d134562c5c353fca9 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen.use.fedora.ipxe.patch
@@ -464,10 +457,9 @@ index 00ee952..b0c6f37 100644
  
  ROMS := 
 -- 
-1.8.3.1
 
 
-From 5964ba2fda90823a39a90e4392ded5e70e21b74d Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen.fedora.efi.build.patch
@@ -531,10 +523,9 @@ index 1daa7ac..f5398c4 100644
  
  extra-$(efi) += boot.init.o relocs-dummy.o runtime.o compat.o
 -- 
-1.8.3.1
 
 
-From 5dae3026d9385f94eb915479aa71f735c970ea40 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen.fedora19.buildfix.patch
@@ -566,10 +557,9 @@ index 0fc3f82..0d43727 100644
      XGTRC("XENCAPS:%s\n", xen_caps);
  
 -- 
-1.8.3.1
 
 
-From 578ed369d7876f461665e0554ad1eb5fcff6f468 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen-configure-xend.patch
@@ -617,10 +607,9 @@ index 0896a27..cea12e1 100644
  # Whether to enable auto-ballooning of dom0 to allow domUs to be created.
  # If enable-dom0-ballooning = no, dom0 will never balloon out.
 -- 
-1.8.3.1
 
 
-From a2d37765d4832e07686562c44bce3a4aea239f73 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Wen Congyang <wency@cn.fujitsu.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] tools: libxl: pass correct file to qemu if we use blktap2
@@ -675,10 +664,9 @@ index d7e199f..d6ba1a2 100644
                      continue; /* Do not emulate this disk */
              }
 -- 
-1.8.3.1
 
 
-From dd4f1adcf394f7e02817570dae0e3dbdc73be5fc Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] it: George Dunlap <george.dunlap@eu.citrix.com>
@@ -724,10 +712,9 @@ index d6ba1a2..2b4bebd 100644
                  /*
                   * Explicit sd disks are passed through as is.
 -- 
-1.8.3.1
 
 
-From 80cc745549035fdf66b076d9cc894ed97acee589 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
@@ -761,10 +748,9 @@ index 29ed547..0f9fe2d 100644
              LOG(DEBUG, "Disk vdev=%s, using backend %s",
                         disk->vdev,
 -- 
-1.8.3.1
 
 
-From de63b1038da188df2b019233392670ad7f1ced8b Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
@@ -786,10 +772,9 @@ index 125acee..ce752b0 100644
  		$(QEMU_XEN_ENABLE_DEBUG) \
  		--prefix=$(PREFIX) \
 -- 
-1.8.3.1
 
 
-From 8a3d2d92d0b5b1c04e776ea2ddce0e29ebc52031 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:40 -0500
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
@@ -980,10 +965,9 @@ index f6d469b..1bee9e7 100644
  /* libxl__device_destroy_tapdisk:
   *   Destroys any tapdisk process associated with the backend represented
 -- 
-1.8.3.1
 
 
-From 11625e2c47665651c2b3db65ac69f4aecf4fbf79 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Thu, 7 Apr 2016 09:42:41 -0500
 Subject: [PATCH] libxl: adjust PoD target by memory fudge, too
@@ -1035,10 +1019,9 @@ index 978a1eb..62a394f3 100644
      ents[0] = "memory/static-max";
      ents[1] = GCSPRINTF("%"PRId64, info->max_memkb);
 -- 
-1.8.3.1
 
 
-From e47b30870d01394702e984400634a5b1fb56e1c7 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Tim Deegan <tim@xen.org>
 Date: Wed, 16 Mar 2016 17:05:25 +0000
 Subject: [PATCH] x86: limit GFNs to 32 bits for shadowed superpages.
@@ -1300,10 +1283,9 @@ index c193c88..a48c650 100644
  
  /*
 -- 
-1.8.3.1
 
 
-From 91fcd7ac4b6d617ea36f0b02c8b73054dab80bef Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Johnny Hughes <johnny@centos.org>
 Date: Wed, 18 May 2016 13:56:52 -0500
 Subject: [PATCH] x86/mm: fully honor PS bits in guest page table walks
@@ -1357,10 +1339,9 @@ index 09511f0..ae742b6 100644
              rc |= _PAGE_INVALID_BITS;
  
 -- 
-1.8.3.1
 
 
-From d020a7a4e66f0ac1ae1671090c4b70605ac10ca8 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Mon, 16 May 2016 16:44:31 +0100
 Subject: [PATCH] From 9a5ccbd7b599c75b3a95c52bf128e362c0ae9e45 Mon Sep 17
@@ -1552,10 +1533,9 @@ index 1bee9e7..14f17e1 100644
                                        libxl__device *dev);
  _hidden int libxl__device_destroy(libxl__gc *gc, libxl__device *dev);
 -- 
-1.8.3.1
 
 
-From 36b04be538871fb98bebee33ebd243d0f5ede69e Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Wed, 27 Apr 2016 16:34:19 +0100
 Subject: [PATCH] From 35a740847bea0a2aede72de7b2b8b49eef36e4eb Mon Sep 17
@@ -1617,10 +1597,9 @@ index 14f17e1..015ae3a 100644
  /*----- "checked" xenstore access functions -----*/
  /* Each of these functions will check that it succeeded; if it
 -- 
-1.8.3.1
 
 
-From 9d1b1d999f741e81a53cb235cfd7e83d550c2d80 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Tue, 3 May 2016 18:39:36 +0100
 Subject: [PATCH] From ef216637a72ce30661d28a47ccc7464869baa398 Mon Sep 17
@@ -1697,10 +1676,9 @@ index 75bc5d5..ebfcd17 100644
      libxl__multidev_prepared(egc, multidev, rc);
  }
 -- 
-1.8.3.1
 
 
-From e60125547796486e8ce7ebc1afbedebb50f4682f Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Wed, 4 May 2016 15:30:32 +0100
 Subject: [PATCH] From 90f14dc5c68f52baeef9722090695a166c7e083d Mon Sep 17
@@ -1743,10 +1721,9 @@ index 17afae5..c03db97 100644
          nextid = 0;
      else
 -- 
-1.8.3.1
 
 
-From dd239242a1ae155e05dce5e68a27474647fef3ba Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Wed, 27 Apr 2016 16:08:49 +0100
 Subject: [PATCH] From d84e538d96525f75fc0aa7d0ebe3cd194186d0d4 Mon Sep 17
@@ -1850,10 +1827,9 @@ index 015ae3a..6a7ac2b 100644
  _hidden void
  libxl__evdisable_disk_eject(libxl__gc*, libxl_evgen_disk_eject*);
 -- 
-1.8.3.1
 
 
-From 79b54640b76aa9d3fd4620006a7f2613bb7a7ac4 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Fri, 29 Apr 2016 19:21:51 +0100
 Subject: [PATCH] From 3d1d7473c756d79e464600cee370c8759bd20f89 Mon Sep 17
@@ -1932,10 +1908,9 @@ index 553a873..c6c912d 100644
  
  int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
 -- 
-1.8.3.1
 
 
-From 66de9e908a3f59015d78f3bf02a5e77a361da9e7 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Tue, 3 May 2016 15:58:32 +0100
 Subject: [PATCH] From 44aadb912061fc75e41fceb00c67b8d222a2c7c4 Mon Sep 17
@@ -2002,10 +1977,9 @@ index c6c912d..a614ebc 100644
            tmp = libxl__xs_read(gc, XBT_NULL, GCSPRINTF("%s/uuid", be_path));
            if (tmp) {
 -- 
-1.8.3.1
 
 
-From 14b3f6fca61b7d9fe1db6a82beb57bd85075aec8 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Tue, 3 May 2016 16:00:20 +0100
 Subject: [PATCH] From 593d796c753fea1c4cdc365273de777aff798fe9 Mon Sep 17
@@ -2066,10 +2040,9 @@ index a614ebc..8be77db 100644
      val = libxl__xs_read(gc, XBT_NULL,
            GCSPRINTF("%s/state", vtpmpath));
 -- 
-1.8.3.1
 
 
-From 6b2e4fcba57c5f12a92b6e5633525e530d90187f Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Tue, 3 May 2016 15:52:53 +0100
 Subject: [PATCH] From a7fb7be6b7a14e8ca5ab0609c49b06545d6772bf Mon Sep 17
@@ -2115,10 +2088,9 @@ index 8be77db..008d6da 100644
          goto out;
  
 -- 
-1.8.3.1
 
 
-From 4f7f126f9fa4af3bfa9968c044f89ffc90a0dd52 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Tue, 3 May 2016 16:31:07 +0100
 Subject: [PATCH] From e4c0f9b55819194a501e3ecae6b12188a2db1d01 Mon Sep 17
@@ -2191,10 +2163,9 @@ index 008d6da..7ab4096 100644
  
  const char *libxl__device_nic_devname(libxl__gc *gc,
 -- 
-1.8.3.1
 
 
-From 1486ac8923e453c7c5f02f3a37262799131e1139 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
 Date: Wed, 11 May 2016 11:14:45 +0100
 Subject: [PATCH] Subject: tools/xendomains: Create lockfile on start
@@ -2261,10 +2232,9 @@ index 59f1e3d..eeddd96 100644
  	# We expect config scripts for auto starting domains to be in
  	# XENDOMAINS_AUTO - they could just be symlinks to files elsewhere
 -- 
-1.8.3.1
 
 
-From 1d21b08f33907abcd75193ee734cfaa29557ad06 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Johnny Hughes <johnny@centos.org>
 Date: Wed, 13 Jul 2016 10:11:04 -0500
 Subject: [PATCH] x86: enforce consistent cachability of MMIO mappings
@@ -2619,10 +2589,9 @@ index 91e9e92..dca0504 100644
  #define l1e_has_changed(x,y,flags) \
      ( !!(((x).l1 ^ (y).l1) & ((PADDR_MASK&PAGE_MASK)|put_pte_flags(flags))) )
 -- 
-1.8.3.1
 
 
-From 33fc89a599c0e3fb4e8aed908fd23c17ffc40e7a Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Mon, 11 Jul 2016 14:32:03 +0100
 Subject: [PATCH] From 798c1498f764bfaa7b0b955bab40b01b0610d372 Mon Sep 17
@@ -2723,10 +2692,9 @@ index dca0504..e855104 100644
  #define _PAGE_PAGED   0x2000U
  #define _PAGE_SHARED  0x4000U
 -- 
-1.8.3.1
 
 
-From 914d17df818ab6bc6cf7a9160cc17a24f35713e7 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Johnny Hughes <johnny@centos.org>
 Date: Wed, 7 Sep 2016 07:10:37 -0500
 Subject: [PATCH] evtchn-fifo: prevent use after free
@@ -2756,10 +2724,9 @@ index a443c98..93752d4 100644
  
  static void setup_ports(struct domain *d)
 -- 
-1.8.3.1
 
 
-From ea7ec85ff68be7328878a5d501c71f0e97a51753 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Mon, 8 Aug 2016 10:58:12 +0100
 Subject: [PATCH] From 30aba4992b18245c436f16df7326a16c01a51570 Mon Sep 17
@@ -2794,10 +2761,9 @@ index 83d0d6f..76e0b70 100644
  
      return rc;
 -- 
-1.8.3.1
 
 
-From f89cb8a1bb09c5aea4d1ca85eaa3acd374efab12 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Wed, 7 Sep 2016 07:11:40 -0500
 Subject: [PATCH] Subject: x86/shadow: Avoid overflowing sh_ctxt->seg_reg[]
@@ -2846,10 +2812,9 @@ index 06a04ad..30ff11e 100644
          seg, reg, offset, bytes, access_type, sh_ctxt->ctxt.addr_size, paddr);
  
 -- 
-1.8.3.1
 
 
-From c6c8486613aee3f59b83d789c0018b72cbf3ca9f Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Wed, 7 Sep 2016 07:11:45 -0500
 Subject: [PATCH] Subject: x86/segment: Bounds check accesses to emulation
@@ -3020,10 +2985,9 @@ index 00a06cc..4dc326e 100644
  
  struct hvm_emulate_ctxt {
 -- 
-1.8.3.1
 
 
-From d241842f3d275d3d35ce2e20d651c50cf7ae2518 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Johnny Hughes <johnny@centos.org>
 Date: Tue, 4 Oct 2016 08:26:13 -0500
 Subject: [PATCH] x86emul: honor guest CR0.TS and CR0.EM
@@ -3204,10 +3168,9 @@ index 85bc4bc..7307423 100644
      X86EMUL_FPU_xmm, /* SSE instruction set (%xmm0-%xmm7/15) */
      X86EMUL_FPU_ymm  /* AVX/XOP instruction set (%ymm0-%ymm7/15) */
 -- 
-1.8.3.1
 
 
-From 5bcf6a6f132643df3e77f709656cd229ffc9dffc Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Tue, 22 Nov 2016 05:49:25 -0600
 Subject: [PATCH] Subject: x86/hvm: Fix the handling of non-present segments
@@ -3362,10 +3325,9 @@ index 81e268a..2aec5c6 100644
      if ( ((sel & 0xfff8) + 7) > desctab.limit )
          goto raise_exn;
 -- 
-1.8.3.1
 
 
-From 532c04cc369a5a3b3af612d85638a4ed20df2411 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Tue, 22 Nov 2016 05:49:48 -0600
 Subject: [PATCH] Subject: x86/HVM: don't load LDTR with VM86 mode attrs during
@@ -3437,10 +3399,9 @@ index a3c3933..a22f7bc 100644
  
      rc = hvm_copy_to_guest_virt(
 -- 
-1.8.3.1
 
 
-From b2057a1c4844849dfdeb2a205596583f2ee6f355 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Tue, 22 Nov 2016 05:50:03 -0600
 Subject: [PATCH] Subject: x86/PV: writes of %fs and %gs base MSRs require
@@ -3516,10 +3477,9 @@ index 318153a..91ffbcf 100644
              if ( wrmsr_safe(MSR_SHADOW_GS_BASE, msr_content) )
                  goto fail;
 -- 
-1.8.3.1
 
 
-From efe80674ae94f3027725fa9894c2ee73bc099bf4 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Tue, 22 Nov 2016 05:50:17 -0600
 Subject: [PATCH] Subject: x86emul: fix huge bit offset handling
@@ -3571,10 +3531,9 @@ index 2aec5c6..c7a6823 100644
              }
          }
 -- 
-1.8.3.1
 
 
-From fe4922816f621a725825fe77169bcb4355ffa8f2 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Thu, 3 Nov 2016 16:37:40 +0000
 Subject: [PATCH] From 71a389ae940bc52bf897a6e5becd73fd8ede94c5 Mon Sep 17
@@ -3635,10 +3594,9 @@ index 8ff6964..0d06eee 100755
      if ramdisk:
          s += ("ramdisk %s" % ramdisk) + sep
 -- 
-1.8.3.1
 
 
-From 2252cf9194db13e87aef68777cba5945f7a31ae6 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Fri, 23 Dec 2016 12:12:28 -0600
 Subject: [PATCH] Subject: x86emul: CMPXCHG8B ignores operand size prefix
@@ -3704,10 +3662,9 @@ index c7a6823..1f7c2cf 100644
          /* Get actual old value. */
          if ( (rc = ops->read(ea.mem.seg, ea.mem.off, old, op_bytes,
 -- 
-1.8.3.1
 
 
-From 0ab4da3b225c4c85f567e436fc5bf85892d40b70 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Fri, 23 Dec 2016 12:12:40 -0600
 Subject: [PATCH] Subject: x86: force EFLAGS.IF on when exiting to PV guests
@@ -3784,10 +3741,9 @@ index 4bb48e7..76530f3 100644
  .Lft0:  iretq
  
 -- 
-1.8.3.1
 
 
-From 93cb94cd1b75cb6806ff197f3a4bdea54af25907 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Sun, 18 Dec 2016 15:42:59 +0000
 Subject: [PATCH] Subject: [PATCH] x86/emul: Correct the handling of eflags
@@ -3859,10 +3815,9 @@ index 1f7c2cf..353b1cb 100644
      }
  
 -- 
-1.8.3.1
 
 
-From 43620215f2ff795d932051df986af4339ea1e4aa Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: hughesjr <johnny@centos.org>
 Date: Wed, 15 Feb 2017 01:59:30 -0600
 Subject: [PATCH] IOMMU: always call teardown callback
@@ -3900,10 +3855,9 @@ index a4fccc5..5b96a46 100644
      list_for_each_safe ( ioport_list, tmp, &hd->g2m_ioport_list )
      {
 -- 
-1.8.3.1
 
 
-From 81aefd85655e4309594a37dc8c537f3fe9d76b3e Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Johnny Hughes <johnny@centos.org>
 Date: Tue, 18 Apr 2017 07:35:04 -0500
 Subject: [PATCH] memory: properly check guest memory ranges in XENMEM_exchange
@@ -4003,10 +3957,9 @@ index 953abe7..4275e66 100644
  #define __compat_addr_ok(d, addr) \
      ((unsigned long)(addr) < HYPERVISOR_COMPAT_VIRT_START(d))
 -- 
-1.8.3.1
 
 
-From 11f8ec2efc184cd5d11e68770c1ab527c32f19f6 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Sat, 18 Mar 2017 17:12:39 +0000
 Subject: [PATCH] From 7df6157ccf3dd8f9d6fae690be3f6216b0c2dd2b Mon Sep 17
@@ -4457,10 +4410,9 @@ index 50a32fb..4ddc8c8 100644
  			send_error(conn, errno);
  			return;
 -- 
-1.8.3.1
 
 
-From 215cb5caca5df223b6324bfd552a15d6f6fd41a0 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
 Date: Sat, 18 Mar 2017 17:13:27 +0000
 Subject: [PATCH] From 8153049d49e5669418dd1ee88b2d793ccbabede6 Mon Sep 17
@@ -4572,10 +4524,9 @@ index a008554..a9650cc 100644
  void wrl_apply_debit_trans_commit(struct connection *conn);
  
 -- 
-1.8.3.1
 
 
-From e80cdb389b88f35ec658aa69dcf444ff3de5d404 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Vincent Bernardoff <vincent.bernardoff@citrix.com>
 Date: Fri, 24 Mar 2017 16:57:02 +0000
 Subject: [PATCH] From 59bb62aa888cd4b94510e4d16003077ab1d77e9b Mon Sep 17
@@ -4630,10 +4581,9 @@ index cac0b44..3efe515 100644
  		Quota.del_entry store.quota old_owner;
  		Quota.add_entry store.quota new_owner
 -- 
-1.8.3.1
 
 
-From 5df61cf62a19143edf75086ed9211a7cddb31a5d Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jerome Maloberti <jerome.maloberti@citrix.com>
 Date: Fri, 24 Mar 2017 16:57:40 +0000
 Subject: [PATCH] From a0cdc0e823117ff32560822e16f44260983b5142 Mon Sep 17
@@ -4745,10 +4695,9 @@ index e59d681..77de4e8 100644
  				) t.write_lowpath;
  				maybe (fun p ->
 -- 
-1.8.3.1
 
 
-From cd2417ef321c89667eebb491b4ccc757813360cb Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Zheng Li <dev@zheng.li>
 Date: Fri, 24 Mar 2017 17:01:08 +0000
 Subject: [PATCH] From 63e01804c4ba80816af7f5a12786fb45ee2d194b Mon Sep 17
@@ -4791,10 +4740,9 @@ index 438ecb9..d74846c 100644
  	process_fdset_with wset Process.do_output
  
 -- 
-1.8.3.1
 
 
-From 9ea9dc232080a354a6e248c13bb9a68a826760d5 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Zheng Li <dev@zheng.li>
 Date: Fri, 24 Mar 2017 17:02:08 +0000
 Subject: [PATCH] From efa34c63e8a62dab87918c7854e51291bd8fabeb Mon Sep 17
@@ -4894,10 +4842,9 @@ index f4550f9..3e6a48b 100644
  	let domains = Hashtbl.fold (fun _ con accu -> Connection.debug con :: accu) cons.domains [] in
  	String.concat "" (domains @ anonymous)
 -- 
-1.8.3.1
 
 
-From a35c83ba4f21f9573480cabe60f74a3ca2374570 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Zheng Li <dev@zheng.li>
 Date: Fri, 24 Mar 2017 17:02:55 +0000
 Subject: [PATCH] From 3595258f4a60dd49a75b6229e623ec478eaf239b Mon Sep 17
@@ -4994,10 +4941,9 @@ index 444069d..06d5749 100644
  let is_bad_domain domain = domain.bad_client
  let mark_as_bad domain = domain.bad_client <- true
 -- 
-1.8.3.1
 
 
-From 0a33371fe7fcafdc6af999d6676a1abaa89b6cfe Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Zheng Li <dev@zheng.li>
 Date: Fri, 24 Mar 2017 17:03:31 +0000
 Subject: [PATCH] From b10466d49d925e5c9bb360847e92a8cb7f899ac9 Mon Sep 17
@@ -5107,10 +5053,9 @@ index d74846c..4a1d027 100644
  
  	while not !quit
 -- 
-1.8.3.1
 
 
-From cf549ebbfdd7eee152ba4806d6f495a72be6bbb3 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Zheng Li <dev@zheng.li>
 Date: Fri, 24 Mar 2017 17:04:23 +0000
 Subject: [PATCH] From af37817fe5c03f17855b27f7b768783797318987 Mon Sep 17
@@ -5357,10 +5302,9 @@ index 4a1d027..58a1ffc 100644
  
  	while not !quit
 -- 
-1.8.3.1
 
 
-From a00243e4cb550b72fbef31bc834f707b198c3797 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Thu, 23 Mar 2017 17:40:00 +0000
 Subject: [PATCH] From 3d3b87010ff9ede82cfb79aee445a30d2c9f88b8 Mon Sep 17
@@ -5487,10 +5431,9 @@ index 89db56c..8be2ff1 100644
  		error "process packet: %s" (Printexc.to_string exn);
  		Connection.send_error con tid rid "EIO"
 -- 
-1.8.3.1
 
 
-From e8a6346215485747cb81f0f7c7c81eff72e47c31 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Thu, 23 Mar 2017 17:40:08 +0000
 Subject: [PATCH] From 7b5f1b6957edbcf514a74a38b6d5d810b3d9dcda Mon Sep 17
@@ -5561,10 +5504,9 @@ index 8be2ff1..7026727 100644
  	| Define.Invalid_path          -> reply_error "EINVAL"
  	| Define.Already_exist         -> reply_error "EEXIST"
 -- 
-1.8.3.1
 
 
-From e81a290fbf371c942dd21f835475000f51e8417a Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Thu, 23 Mar 2017 17:40:27 +0000
 Subject: [PATCH] From 37102e74b4e974348d62082d6f68eb4313207f27 Mon Sep 17
@@ -5657,10 +5599,9 @@ index 7026727..b8bcb46 100644
  		Connection.incr_ops con;
  	)
 -- 
-1.8.3.1
 
 
-From bacf702df44ddd986b119b9b96f336f6fe5982fa Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Thu, 23 Mar 2017 17:40:35 +0000
 Subject: [PATCH] From 7f3129ec15c1c459962401d2edcd9e693c698a09 Mon Sep 17
@@ -5820,10 +5761,9 @@ index 58a1ffc..656a79b 100644
  		("persistent", Config.Set_bool Disk.enable);
  		("xenstored-log-file", Config.String Logging.set_xenstored_log_destination);
 -- 
-1.8.3.1
 
 
-From 543ac952cbdc5425c0718dc0202ad76f3b49323b Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Thu, 23 Mar 2017 17:53:03 +0000
 Subject: [PATCH] From c8a7bd3fff923dd7747a45aa5f5b3222921f9728 Mon Sep 17
@@ -6111,10 +6051,9 @@ index 34fb66c..77660bd 100644
   * Nothrow guarantee.
   *)
 -- 
-1.8.3.1
 
 
-From da80a280b407af78e3bee22212616bdc99861c8b Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Thu, 23 Mar 2017 17:54:17 +0000
 Subject: [PATCH] From ce0ca538ccc5e59b9407f983babfb0dd098e1a0b Mon Sep 17
@@ -6251,10 +6190,9 @@ index 77660bd..3ade42d 100644
  	if not success then
  		raise Transaction_again;
 -- 
-1.8.3.1
 
 
-From c9ef463d274e1d114f110f795cb4305f5dbde22b Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Thu, 23 Mar 2017 17:54:28 +0000
 Subject: [PATCH] From c89859c4735ce717d4115a4f056c9565363b05a1 Mon Sep 17
@@ -6340,10 +6278,9 @@ index 3ade42d..10b7357 100644
  		ignore (Connection.do_output con)
  	)
 -- 
-1.8.3.1
 
 
-From e9cd73a56cbc1689711ff0ec44a2d709a1a16d8b Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Thu, 23 Mar 2017 17:54:35 +0000
 Subject: [PATCH] From 88f59d22230b304ac861cea9759bd8861a6c3867 Mon Sep 17
@@ -6377,10 +6314,9 @@ index 10b7357..9cf2b46 100644
  		(* As we don't log IO, do not call an unnecessary sanitize_data 
  		   info "[%s] -> [%d] %s \"%s\""
 -- 
-1.8.3.1
 
 
-From e4116bb00ed596b8e24e7fd36cc5e49a0ff9c887 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Thomas Sanders <thomas.sanders@citrix.com>
 Date: Tue, 14 Mar 2017 12:15:52 +0000
 Subject: [PATCH] From 4782ccf2f68941fa591cfa72275b678613314fea Mon Sep 17
@@ -6445,10 +6381,9 @@ index 6b37fc2..51d5d6a 100644
  			(* get the lowest path of the query and verify that it hasn't
  			   been modified by others transactions. *)
 -- 
-1.8.3.1
 
 
-From 6ab1bbdd79f01fe209424106900a319ccb2c9c09 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Thomas Sanders <thomas.sanders@citrix.com>
 Date: Tue, 14 Mar 2017 12:15:52 +0000
 Subject: [PATCH] From 6118099bec07d77bfd73a032d8b411cab29a9f3e Mon Sep 17
@@ -6746,10 +6681,9 @@ index 656a79b..ea511de 100644
  		("quota-activate", Config.Set_bool Quota.activate);
  		("quota-maxwatch", Config.Set_int Define.maxwatch);
 -- 
-1.8.3.1
 
 
-From 7cd5419b73732bc56a5591df52222d4b021ee0cb Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Thomas Sanders <thomas.sanders@citrix.com>
 Date: Tue, 14 Mar 2017 12:15:52 +0000
 Subject: [PATCH] From c72a4976b66887b12126810d240fdd2d3f74ec0a Mon Sep 17
@@ -6968,10 +6902,9 @@ index ea511de..9480b21 100644
  		in
  
 -- 
-1.8.3.1
 
 
-From 1166bb9fdf72a041f844e64af951e8d141f05de7 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Tue, 14 Mar 2017 12:17:38 +0000
 Subject: [PATCH] From 38e49e8b7d270ce641cfaee649f24e506a2b3ff8 Mon Sep 17
@@ -7058,10 +6991,9 @@ index 6f758ff..b1791b3 100644
  	if has_commited && has_write_ops then
  		Disk.write t.store;
 -- 
-1.8.3.1
 
 
-From b07763389831198c4aacef9374888cf1e307214d Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Tue, 14 Mar 2017 13:20:07 +0000
 Subject: [PATCH] From 4d0479387d5abd326810a0e6af17cbed50641ca9 Mon Sep 17
@@ -7213,10 +7145,9 @@ index 9480b21..c009701 100644
  		end;
  
 -- 
-1.8.3.1
 
 
-From 32ae894829325ded5e7a9cfa9cea278ef24aaa6e Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Thu, 23 Mar 2017 14:20:33 +0000
 Subject: [PATCH] From b05fcb4ee2e09991ad43226370cac2a38b41de82 Mon Sep 17
@@ -7302,10 +7233,9 @@ index b48df05..502e1d6 100644
  		let response = try
  			if tid <> Transaction.none then
 -- 
-1.8.3.1
 
 
-From 03b7f1a0efd9b5ba87b7f7258812e795c6d9a721 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Thomas Sanders <thomas.sanders@citrix.com>
 Date: Thu, 23 Mar 2017 14:25:16 +0000
 Subject: [PATCH] From c9fb09ca7384fa1952de7a470c52d93c5b4d2eea Mon Sep 17
@@ -7446,10 +7376,9 @@ index b1791b3..edd1178 100644
  let get_paths t = t.paths
  
 -- 
-1.8.3.1
 
 
-From 78b4faab558925f15256615a5f95bc393eaf3b30 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Mon, 27 Mar 2017 08:58:29 +0000
 Subject: [PATCH] From dd5758b85234356ad03615160433c0b0347a4aec Mon Sep 17
@@ -7483,10 +7412,9 @@ index f95992d..706b8a0 100644
  (* Replay a stored transaction against a fresh store, check the responses are
     all equivalent: if so, commit the transaction. Otherwise send the abort to
 -- 
-1.8.3.1
 
 
-From 80e66e7706b7edebd67126286ce6fb3e680ae794 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jonathan Davies <jonathan.davies@citrix.com>
 Date: Thu, 23 Mar 2017 14:28:16 +0000
 Subject: [PATCH] From a6edf151e5eb4f401745e13a803e713accd22bee Mon Sep 17
@@ -7622,10 +7550,9 @@ index 706b8a0..698a456 100644
  				false
  			)
 -- 
-1.8.3.1
 
 
-From d5f5e41bf8748d2abe97ec83fa93e3bcc3f0cbaa Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Thomas Sanders <thomas.sanders@citrix.com>
 Date: Thu, 23 Mar 2017 19:06:54 +0000
 Subject: [PATCH] From 0c7841d03e182585fcb9444b4799f432e2a444cb Mon Sep 17
@@ -7682,10 +7609,9 @@ index 698a456..ff2ca65 100644
  				false
  			)
 -- 
-1.8.3.1
 
 
-From cf48907e2459a7daf1ceb767a2f8191a0e4b405b Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Thomas Sanders <thomas.sanders@citrix.com>
 Date: Fri, 24 Mar 2017 16:16:10 +0000
 Subject: [PATCH] From f44d628a0101d4c5318b3b14d7c19ace10a18a61 Mon Sep 17
@@ -7744,10 +7670,9 @@ index edd1178..8f95301 100644
  let add_operation ~perm t request response =
  	if !Define.maxrequests >= 0
 -- 
-1.8.3.1
 
 
-From 7a3623014cca9fbc8ee12df1f057d859bfe99524 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Thomas Sanders <thomas.sanders@citrix.com>
 Date: Fri, 24 Mar 2017 19:55:03 +0000
 Subject: [PATCH] From b0c7a48af6d0b0dedf638bef6cf166c245057229 Mon Sep 17
@@ -7888,10 +7813,9 @@ index c009701..8c82fe9 100644
  		in
  		let inset, outset = Connections.select ~only_if:is_peaceful cons in
 -- 
-1.8.3.1
 
 
-From e9298a99f99958250d96a25db18ee8bf60e8710e Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Thomas Sanders <thomas.sanders@citrix.com>
 Date: Mon, 27 Mar 2017 14:36:34 +0100
 Subject: [PATCH] From cc5c2188f39bd707fd8b29df5d488c47aab189ca Mon Sep 17
@@ -8044,10 +7968,9 @@ index 8c82fe9..979b769 100644
  	in
  
 -- 
-1.8.3.1
 
 
-From e32128ec0cd9df96e4452d519593017ac28039a3 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Thomas Sanders <thomas.sanders@citrix.com>
 Date: Tue, 28 Mar 2017 18:57:52 +0100
 Subject: [PATCH] From 26b15d4eb7ac71fcab28a7fca664afa0549c135c Mon Sep 17
@@ -8126,5 +8049,273 @@ index 979b769..180edd6 100644
  			advance_next_frequent_ops ()
  		) in
 -- 
-1.8.3.1
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Kevin Stange <kevin@steadfast.net>
+Date: Tue, 2 May 2017 11:32:26 -0500
+Subject: [PATCH] None
+
+---
+ xen/arch/arm/traps.c            | 10 +++++++---
+ xen/common/multicall.c          | 17 ++++++++++++++---
+ xen/include/asm-arm/multicall.h |  6 +++++-
+ xen/include/asm-x86/multicall.h | 23 ++++++++++++++++++++---
+ 4 files changed, 46 insertions(+), 10 deletions(-)
+
+diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
+index d527409..69c0825 100644
+--- a/xen/arch/arm/traps.c
++++ b/xen/arch/arm/traps.c
+@@ -1250,23 +1250,27 @@ void do_multicall_call(struct multicall_entry *multi)
+     if ( multi->op >= ARRAY_SIZE(arm_hypercall_table) )
+     {
+         multi->result = -ENOSYS;
+-        return;
++        return mc_continue;
+     }
+ 
+     call = arm_hypercall_table[multi->op].fn;
+     if ( call == NULL )
+     {
+         multi->result = -ENOSYS;
+-        return;
++        return mc_continue;
+     }
+ 
+     if ( is_pv32_domain(current->domain) &&
+          !check_multicall_32bit_clean(multi) )
+-        return;
++        return mc_continue;
+ 
+     multi->result = call(multi->args[0], multi->args[1],
+                          multi->args[2], multi->args[3],
+                          multi->args[4]);
++
++    return likely(!psr_mode_is_user(guest_cpu_user_regs()))
++           ? mc_continue : mc_preempt;
++
+ }
+ 
+ /*
+diff --git a/xen/common/multicall.c b/xen/common/multicall.c
+index fa9d910..da13573 100644
+--- a/xen/common/multicall.c
++++ b/xen/common/multicall.c
+@@ -40,6 +40,7 @@ do_multicall(
+     struct mc_state *mcs = &current->mc_state;
+     uint32_t         i;
+     int              rc = 0;
++    enum mc_disposition disp = mc_continue;
+ 
+     if ( unlikely(__test_and_set_bit(_MCSF_in_multicall, &mcs->flags)) )
+     {
+@@ -50,7 +51,7 @@ do_multicall(
+     if ( unlikely(!guest_handle_okay(call_list, nr_calls)) )
+         rc = -EFAULT;
+ 
+-    for ( i = 0; !rc && i < nr_calls; i++ )
++    for ( i = 0; !rc && disp == mc_continue && i < nr_calls; i++ )
+     {
+         if ( i && hypercall_preempt_check() )
+             goto preempted;
+@@ -63,7 +64,7 @@ do_multicall(
+ 
+         trace_multicall_call(&mcs->call);
+ 
+-        do_multicall_call(&mcs->call);
++        disp = do_multicall_call(&mcs->call);
+ 
+ #ifndef NDEBUG
+         {
+@@ -77,7 +78,14 @@ do_multicall(
+         }
+ #endif
+ 
+-        if ( unlikely(__copy_field_to_guest(call_list, &mcs->call, result)) )
++        if ( unlikely(disp == mc_exit) )
++        {
++            if ( __copy_field_to_guest(call_list, &mcs->call, result) )
++                /* nothing, best effort only */;
++            rc = mcs->call.result;
++        }
++        else if ( unlikely(__copy_field_to_guest(call_list, &mcs->call,
++                                                 result)) )
+             rc = -EFAULT;
+         else if ( test_bit(_MCSF_call_preempted, &mcs->flags) )
+         {
+@@ -93,6 +101,9 @@ do_multicall(
+             guest_handle_add_offset(call_list, 1);
+     }
+ 
++    if ( unlikely(disp == mc_preempt) && i < nr_calls )
++        goto preempted;
++
+     perfc_incr(calls_to_multicall);
+     perfc_add(calls_from_multicall, i);
+     mcs->flags = 0;
+diff --git a/xen/include/asm-arm/multicall.h b/xen/include/asm-arm/multicall.h
+index b959262..ee3b345 100644
+--- a/xen/include/asm-arm/multicall.h
++++ b/xen/include/asm-arm/multicall.h
+@@ -1,7 +1,11 @@
+ #ifndef __ASM_ARM_MULTICALL_H__
+ #define __ASM_ARM_MULTICALL_H__
+ 
+-extern void do_multicall_call(struct multicall_entry *call);
++extern enum mc_disposition {
++    mc_continue,
++    mc_exit,
++    mc_preempt,
++} do_multicall_call(struct multicall_entry *call);
+ 
+ #endif /* __ASM_ARM_MULTICALL_H__ */
+ /*
+diff --git a/xen/include/asm-x86/multicall.h b/xen/include/asm-x86/multicall.h
+index a09ac5a..32060ae 100644
+--- a/xen/include/asm-x86/multicall.h
++++ b/xen/include/asm-x86/multicall.h
+@@ -7,8 +7,21 @@
+ 
+ #include <xen/errno.h>
+ 
++enum mc_disposition {
++    mc_continue,
++    mc_exit,
++    mc_preempt,
++};
++
++#define multicall_ret(call)                                  \
++    (unlikely((call)->op == __HYPERVISOR_iret)               \
++     ? mc_exit                                               \
++       : likely(guest_kernel_mode(current,                   \
++                                  guest_cpu_user_regs()))    \
++         ? mc_continue : mc_preempt)
++
+ #define do_multicall_call(_call)                             \
+-    do {                                                     \
++    ({                                                       \
+         __asm__ __volatile__ (                               \
+             "    movq  %c1(%0),%%rax; "                      \
+             "    leaq  hypercall_table(%%rip),%%rdi; "       \
+@@ -36,9 +49,11 @@
+               /* all the caller-saves registers */           \
+             : "rax", "rcx", "rdx", "rsi", "rdi",             \
+               "r8",  "r9",  "r10", "r11" );                  \
+-    } while ( 0 )
++        multicall_ret(_call);                                \
++    })
+ 
+ #define compat_multicall_call(_call)                         \
++    ({                                                       \
+         __asm__ __volatile__ (                               \
+             "    movl  %c1(%0),%%eax; "                      \
+             "    leaq  compat_hypercall_table(%%rip),%%rdi; "\
+@@ -65,6 +80,8 @@
+               "i" (offsetof(__typeof__(*_call), result))     \
+               /* all the caller-saves registers */           \
+             : "rax", "rcx", "rdx", "rsi", "rdi",             \
+-              "r8",  "r9",  "r10", "r11" )                   \
++              "r8",  "r9",  "r10", "r11" );                  \
++        multicall_ret(_call);                                \
++    })
+ 
+ #endif /* __ASM_X86_MULTICALL_H__ */
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Kevin Stange <kevin@steadfast.net>
+Date: Tue, 2 May 2017 11:32:30 -0500
+Subject: [PATCH] None
+
+While a page having just a single general reference left necessarily
+has a zero type reference count too, its type may still be valid (and
+in validated state; at present this is only possible and relevant for
+PGT_seg_desc_page, as page tables have their type forcibly zapped when
+their type reference count drops to zero, and
+PGT_{writable,shared}_page pages don't require any validation). In
+such a case when the page is being re-used with the same type again,
+validation is being skipped. As validation criteria differ between
+32- and 64-bit guests, pages to be transferred between guests need to
+have their validation indicator zapped (and with it we zap all other
+type information at once).
+
+This is XSA-214.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/mm.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 76e0b70..803009e 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -4232,6 +4232,17 @@ int steal_page(
+         y = cmpxchg(&page->count_info, x, x & ~PGC_count_mask);
+     } while ( y != x );
+ 
++    /*
++     * With the sole reference dropped temporarily, no-one can update type
++     * information. Type count also needs to be zero in this case, but e.g.
++     * PGT_seg_desc_page may still have PGT_validated set, which we need to
++     * clear before transferring ownership (as validation criteria vary
++     * depending on domain type).
++     */
++    BUG_ON(page->u.inuse.type_info & (PGT_count_mask | PGT_locked |
++                                      PGT_pinned));
++    page->u.inuse.type_info = 0;
++
+     /* Swizzle the owner then reinstate the PGC_allocated reference. */
+     page_set_owner(page, NULL);
+     y = page->count_info;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Kevin Stange <kevin@steadfast.net>
+Date: Tue, 2 May 2017 11:32:33 -0500
+Subject: [PATCH] None
+
+We may push up to 96 bytes on the guest (kernel) stack, so we should
+also cover as much in the early range check. Note that this is the
+simplest possible patch, which has the theoretical potential of
+breaking a guest: We only really push 96 bytes when invoking the
+failsafe callback, ordinary exceptions only have 56 or 64 bytes pushed
+(without / with error code respectively). There is, however, no PV OS
+known to place a kernel stack there.
+
+This is XSA-215.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/x86_64/entry.S | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
+index 76530f3..49c50ae 100644
+--- a/xen/arch/x86/x86_64/entry.S
++++ b/xen/arch/x86/x86_64/entry.S
+@@ -347,7 +347,7 @@ int80_slow_path:
+         jmp   handle_exception_saved
+ 
+ /* CREATE A BASIC EXCEPTION FRAME ON GUEST OS STACK:                     */
+-/*   { RCX, R11, [DS-GS,] [CR2,] [ERRCODE,] RIP, CS, RFLAGS, RSP, SS }   */
++/*   { RCX, R11, [DS-GS,] [ERRCODE,] RIP, CS, RFLAGS, RSP, SS }          */
+ /* %rdx: trap_bounce, %rbx: struct vcpu                                  */
+ /* On return only %rbx and %rdx are guaranteed non-clobbered.            */
+ create_bounce_frame:
+@@ -367,7 +367,7 @@ create_bounce_frame:
+ 2:      andq  $~0xf,%rsi                # Stack frames are 16-byte aligned.
+         movq  $HYPERVISOR_VIRT_START,%rax
+         cmpq  %rax,%rsi
+-        movq  $HYPERVISOR_VIRT_END+60,%rax
++        movq  $HYPERVISOR_VIRT_END+12*8,%rax
+         sbb   %ecx,%ecx                 # In +ve address space? Then okay.
+         cmpq  %rax,%rsi
+         adc   %ecx,%ecx                 # Above Xen private area? Then okay.
+-- 
 
