@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.8.1
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -898,6 +898,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Jun 06 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.1-2.el7.centos
+- WORKAROUND old SELinux rules to fix xenstored
+
 * Thu Apr 27 2017 Anthony Perard <anthony.perard@citrix.com> 4.8.1-1.el6.centos
 - Update to Xen 4.8.1
 
