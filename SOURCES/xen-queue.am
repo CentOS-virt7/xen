@@ -508,3 +508,50 @@ index bd974fb13d..da54f10df3 100644
  #define PSR_MODE_EL3t 0x0c
 -- 
 
+From dd448f732978efbff0d6f4c79661c9b64d557866 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Tue, 7 Jun 2016 11:23:02 +0100
+Subject: [PATCH] libxc: Try /proc/xen/privcmd on EACCES as well
+
+/proc/xen/privcmd is deprecated in favor of /dev/xen/privcmd; but at
+the moment the SELinux rules in CentOS 7 are outdated and only know
+about /proc; access to the /dev node will result in EACCES.
+
+As a temporary work-around, try to read the /proc path if opening the /dev
+path fails with EACCES.
+
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+---
+ tools/libs/call/linux.c          | 2 +-
+ tools/libs/foreignmemory/linux.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libs/call/linux.c b/tools/libs/call/linux.c
+index e8e0311..36572e9 100644
+--- a/tools/libs/call/linux.c
++++ b/tools/libs/call/linux.c
+@@ -39,7 +39,7 @@ int osdep_xencall_open(xencall_handle *xcall)
+      */
+     fd = open("/dev/xen/privcmd", O_RDWR|O_CLOEXEC);
+ 
+-    if ( fd == -1 && ( errno == ENOENT || errno == ENXIO || errno == ENODEV ))
++    if ( fd == -1 && ( errno == ENOENT || errno == ENXIO || errno == ENODEV || errno == EACCES ))
+     {
+         /* Fallback to /proc/xen/privcmd */
+         fd = open("/proc/xen/privcmd", O_RDWR|O_CLOEXEC);
+diff --git a/tools/libs/foreignmemory/linux.c b/tools/libs/foreignmemory/linux.c
+index 423c744..72e4b07 100644
+--- a/tools/libs/foreignmemory/linux.c
++++ b/tools/libs/foreignmemory/linux.c
+@@ -41,7 +41,7 @@ int osdep_xenforeignmemory_open(xenforeignmemory_handle *fmem)
+     /* prefer this newer interface */
+     fd = open("/dev/xen/privcmd", O_RDWR|O_CLOEXEC);
+ 
+-    if ( fd == -1 && ( errno == ENOENT || errno == ENXIO || errno == ENODEV ))
++    if ( fd == -1 && ( errno == ENOENT || errno == ENXIO || errno == ENODEV || errno == EACCES ))
+     {
+         /* Fallback to /proc/xen/privcmd */
+         fd = open("/proc/xen/privcmd", O_RDWR|O_CLOEXEC);
+-- 
+1.9.1
+
