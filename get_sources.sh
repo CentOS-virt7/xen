@@ -47,6 +47,19 @@ if [[ ! -e SOURCES/$EDK2_FILE ]] ; then
     popd
 fi
 
+echo "Checking livepatch-build-tools..."
+if [[ ! -e SOURCES/$LIVEPATCH_FILE ]] ; then
+    echo "Cloning livepatch-build-tools repo..."
+    mkdir -p git-tmp
+    pushd git-tmp
+
+    git clone $LIVEPATCH_URL livepatch-build-tools.git || exit 1
+    cd livepatch-build-tools.git
+    echo "Creating $LIVEPATCH_FILE..."
+    git archive --prefix=livepatch-build-tools/ -o ../../SOURCES/$LIVEPATCH_FILE $LIVEPATCH_CSET || exit 1
+    popd
+fi
+
 if [[ -e git-tmp ]] ; then
     echo "Cleaning up cloned repositores"
     rm -rf git-tmp

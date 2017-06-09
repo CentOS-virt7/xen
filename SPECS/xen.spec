@@ -80,6 +80,10 @@ Source51: xen-kernel.aarch64
 Source52: efi-xen.cfg.aarch64
 Source53: edk2-bc54e50e0fe03c570014f363b547426913e92449.tar.gz
 
+%if %{with_livepatch}
+Source60: livepatch-tools-0c104573a1c168995ec553778d1d2d1ebe9c9042.tar.gz
+%endif
+
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
 Patch1: xen-queue.am
@@ -149,6 +153,9 @@ BuildRequires: ocaml, ocaml-findlib
 %endif
 %if %with_spice
 BuildRequires: spice-server-devel usbredir-devel
+%endif
+%if %with_livepatch
+BuildRequires: elfutils-libelf-devel
 %endif
 # efi image needs an ld that has -mi386pep option
 %if %build_efi
@@ -254,6 +261,23 @@ This package contains libraries for developing ocaml tools to
 manage Xen virtual machines.
 %endif
 
+%if %with_livepatch
+%package livepatch-build-tools
+Summary: Tools to build Xen live patches
+Group: Development/Libraries
+Requires: elfutils
+Requires: make
+Requires: perl
+Requires: sed
+Requires: coreutils
+Requires: grep
+Requires: patch
+Requires: gcc
+
+%description livepatch-build-tools
+This package contains the tools needed for generating live patches
+per https://wiki.xen.org/wiki/LivePatch .
+%endif
 
 %prep
 %setup -q
@@ -306,6 +330,7 @@ git am %{PATCH1}
 #Optionally enable live patching
 %if %{with_livepatch}
 echo "CONFIG_LIVEPATCH=y" > xen/.config
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE60}
 %endif
 
 make -C xen olddefconfig
@@ -415,6 +440,13 @@ echo "No tianocore available" && false
 %endif
 %endif
 
+%if %{with_livepatch}
+pushd `pwd`
+cd tools/livepatch-build-tools
+make
+popd
+%endif
+
 %install
 rm -rf %{buildroot}
 %if %build_ocaml
@@ -446,6 +478,13 @@ install -D -m 644 tools/edk2/Build/ArmVirtXen-AARCH64/RELEASE_GCC48/FV/XEN_EFI.f
 
 %ifarch x86_64
 install -m 644 %{SOURCE50} $RPM_BUILD_ROOT/etc/sysconfig/xen-kernel
+%endif
+
+%if %{with_livepatch}
+pushd `pwd`
+cd tools/livepatch-build-tools
+make DESTDIR=%{buildroot} PREFIX=/usr install
+popd
 %endif
 
 %ifarch aarch64
@@ -906,6 +945,16 @@ rm -rf %{buildroot}
 %{_libdir}/ocaml/xen*/*.a
 %{_libdir}/ocaml/xen*/*.cmxa
 %{_libdir}/ocaml/xen*/*.cmx
+%endif
+
+%if %with_livepatch
+%files livepatch-build-tools
+%defattr(-,root,root)
+%{_bindir}/livepatch-build
+%dir /usr/libexec/livepatch-build-tools
+/usr/libexec/livepatch-build-tools/prelink
+/usr/libexec/livepatch-build-tools/create-diff-object
+/usr/libexec/livepatch-build-tools/livepatch-gcc
 %endif
 
 %changelog
