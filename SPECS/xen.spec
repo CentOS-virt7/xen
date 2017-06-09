@@ -8,6 +8,10 @@
 # --without efi
 %define build_efi %{?_without_efi: 0} %{?!_without_efi: 1}
 
+# build with live patching enabled unless rpmbuild was run with
+# --without livepatch
+%define with_livepatch %{?_without_livepatch: 0} %{?!_without_livepatch: 1}
+
 %if 0%{?centos_ver} == 6
 %define with_sysv 1
 %define with_systemd 0
@@ -298,6 +302,13 @@ git commit -a -q -m "%{version} baseline."
 
 # Apply patches to code in the core Xen repo
 git am %{PATCH1}
+
+#Optionally enable live patching
+%if %{with_livepatch}
+echo "CONFIG_LIVEPATCH=y" > xen/.config
+%endif
+
+make -C xen olddefconfig
 
 # Now apply patches to things not in the core Xen repo
 
