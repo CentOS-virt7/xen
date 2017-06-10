@@ -555,3 +555,251 @@ index 423c744..72e4b07 100644
 -- 
 1.9.1
 
+From 804cd4977020906b278743050d12d93a29626075 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Fri, 9 Jun 2017 21:29:06 -0700
+Subject: [PATCH 1/2] multicall: deal with early exit conditions
+
+In particular changes to guest privilege level require the multicall
+sequence to be aborted, as hypercalls are permitted from kernel mode
+only. While likely not very useful in a multicall, also properly handle
+the return value in the HYPERVISOR_iret case (which should be the guest
+specified value).
+
+This is XSA-213.
+
+Reported-by: Jann Horn <jannh@google.com>
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Acked-by: Julien Grall <julien.grall@arm.com>
+---
+ xen/arch/arm/traps.c        | 11 +++++++----
+ xen/arch/x86/hypercall.c    | 26 ++++++++++++++++++--------
+ xen/common/multicall.c      | 17 ++++++++++++++---
+ xen/include/xen/multicall.h |  6 +++++-
+ 4 files changed, 44 insertions(+), 16 deletions(-)
+
+diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
+index 90aba2a..0f3ef1f 100644
+--- a/xen/arch/arm/traps.c
++++ b/xen/arch/arm/traps.c
+@@ -1531,7 +1531,7 @@ static bool_t check_multicall_32bit_clean(struct multicall_entry *multi)
+     return true;
+ }
+ 
+-void arch_do_multicall_call(struct mc_state *state)
++enum mc_disposition arch_do_multicall_call(struct mc_state *state)
+ {
+     struct multicall_entry *multi = &state->call;
+     arm_hypercall_fn_t call = NULL;
+@@ -1539,23 +1539,26 @@ void arch_do_multicall_call(struct mc_state *state)
+     if ( multi->op >= ARRAY_SIZE(arm_hypercall_table) )
+     {
+         multi->result = -ENOSYS;
+-        return;
++        return mc_continue;
+     }
+ 
+     call = arm_hypercall_table[multi->op].fn;
+     if ( call == NULL )
+     {
+         multi->result = -ENOSYS;
+-        return;
++        return mc_continue;
+     }
+ 
+     if ( is_32bit_domain(current->domain) &&
+          !check_multicall_32bit_clean(multi) )
+-        return;
++        return mc_continue;
+ 
+     multi->result = call(multi->args[0], multi->args[1],
+                          multi->args[2], multi->args[3],
+                          multi->args[4]);
++
++    return likely(!psr_mode_is_user(guest_cpu_user_regs()))
++           ? mc_continue : mc_preempt;
+ }
+ 
+ /*
+diff --git a/xen/arch/x86/hypercall.c b/xen/arch/x86/hypercall.c
+index d2b5331..3023041 100644
+--- a/xen/arch/x86/hypercall.c
++++ b/xen/arch/x86/hypercall.c
+@@ -255,15 +255,19 @@ void pv_hypercall(struct cpu_user_regs *regs)
+     perfc_incr(hypercalls);
+ }
+ 
+-void arch_do_multicall_call(struct mc_state *state)
++enum mc_disposition arch_do_multicall_call(struct mc_state *state)
+ {
+-    if ( !is_pv_32bit_vcpu(current) )
++    struct vcpu *curr = current;
++    unsigned long op;
++
++    if ( !is_pv_32bit_vcpu(curr) )
+     {
+         struct multicall_entry *call = &state->call;
+ 
+-        if ( (call->op < ARRAY_SIZE(pv_hypercall_table)) &&
+-             pv_hypercall_table[call->op].native )
+-            call->result = pv_hypercall_table[call->op].native(
++        op = call->op;
++        if ( (op < ARRAY_SIZE(pv_hypercall_table)) &&
++             pv_hypercall_table[op].native )
++            call->result = pv_hypercall_table[op].native(
+                 call->args[0], call->args[1], call->args[2],
+                 call->args[3], call->args[4], call->args[5]);
+         else
+@@ -274,15 +278,21 @@ void arch_do_multicall_call(struct mc_state *state)
+     {
+         struct compat_multicall_entry *call = &state->compat_call;
+ 
+-        if ( (call->op < ARRAY_SIZE(pv_hypercall_table)) &&
+-             pv_hypercall_table[call->op].compat )
+-            call->result = pv_hypercall_table[call->op].compat(
++        op = call->op;
++        if ( (op < ARRAY_SIZE(pv_hypercall_table)) &&
++             pv_hypercall_table[op].compat )
++            call->result = pv_hypercall_table[op].compat(
+                 call->args[0], call->args[1], call->args[2],
+                 call->args[3], call->args[4], call->args[5]);
+         else
+             call->result = -ENOSYS;
+     }
+ #endif
++
++    return unlikely(op == __HYPERVISOR_iret)
++           ? mc_exit
++           : likely(guest_kernel_mode(curr, guest_cpu_user_regs()))
++             ? mc_continue : mc_preempt;
+ }
+ 
+ /*
+diff --git a/xen/common/multicall.c b/xen/common/multicall.c
+index 524c9bf..5d25376 100644
+--- a/xen/common/multicall.c
++++ b/xen/common/multicall.c
+@@ -40,6 +40,7 @@ do_multicall(
+     struct mc_state *mcs = &current->mc_state;
+     uint32_t         i;
+     int              rc = 0;
++    enum mc_disposition disp = mc_continue;
+ 
+     if ( unlikely(__test_and_set_bit(_MCSF_in_multicall, &mcs->flags)) )
+     {
+@@ -50,7 +51,7 @@ do_multicall(
+     if ( unlikely(!guest_handle_okay(call_list, nr_calls)) )
+         rc = -EFAULT;
+ 
+-    for ( i = 0; !rc && i < nr_calls; i++ )
++    for ( i = 0; !rc && disp == mc_continue && i < nr_calls; i++ )
+     {
+         if ( i && hypercall_preempt_check() )
+             goto preempted;
+@@ -63,7 +64,7 @@ do_multicall(
+ 
+         trace_multicall_call(&mcs->call);
+ 
+-        arch_do_multicall_call(mcs);
++        disp = arch_do_multicall_call(mcs);
+ 
+ #ifndef NDEBUG
+         {
+@@ -77,7 +78,14 @@ do_multicall(
+         }
+ #endif
+ 
+-        if ( unlikely(__copy_field_to_guest(call_list, &mcs->call, result)) )
++        if ( unlikely(disp == mc_exit) )
++        {
++            if ( __copy_field_to_guest(call_list, &mcs->call, result) )
++                /* nothing, best effort only */;
++            rc = mcs->call.result;
++        }
++        else if ( unlikely(__copy_field_to_guest(call_list, &mcs->call,
++                                                 result)) )
+             rc = -EFAULT;
+         else if ( mcs->flags & MCSF_call_preempted )
+         {
+@@ -93,6 +101,9 @@ do_multicall(
+             guest_handle_add_offset(call_list, 1);
+     }
+ 
++    if ( unlikely(disp == mc_preempt) && i < nr_calls )
++        goto preempted;
++
+     perfc_incr(calls_to_multicall);
+     perfc_add(calls_from_multicall, i);
+     mcs->flags = 0;
+diff --git a/xen/include/xen/multicall.h b/xen/include/xen/multicall.h
+index fff15eb..75e2cc5 100644
+--- a/xen/include/xen/multicall.h
++++ b/xen/include/xen/multicall.h
+@@ -24,6 +24,10 @@ struct mc_state {
+     };
+ };
+ 
+-void arch_do_multicall_call(struct mc_state *mc);
++enum mc_disposition {
++    mc_continue,
++    mc_exit,
++    mc_preempt,
++} arch_do_multicall_call(struct mc_state *mc);
+ 
+ #endif /* __XEN_MULTICALL_H__ */
+-- 
+1.9.1
+
+
+From d5ce6b4410779ea6a99cc2520dff890896bd7012 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Fri, 9 Jun 2017 21:29:10 -0700
+Subject: [PATCH 2/2] x86: discard type information when stealing pages
+
+While a page having just a single general reference left necessarily
+has a zero type reference count too, its type may still be valid (and
+in validated state; at present this is only possible and relevant for
+PGT_seg_desc_page, as page tables have their type forcibly zapped when
+their type reference count drops to zero, and
+PGT_{writable,shared}_page pages don't require any validation). In
+such a case when the page is being re-used with the same type again,
+validation is being skipped. As validation criteria differ between
+32- and 64-bit guests, pages to be transferred between guests need to
+have their validation indicator zapped (and with it we zap all other
+type information at once).
+
+This is XSA-214.
+
+Reported-by: Jann Horn <jannh@google.com>
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/mm.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 03dcd71..20e94f7 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -4422,6 +4422,17 @@ int steal_page(
+         y = cmpxchg(&page->count_info, x, x & ~PGC_count_mask);
+     } while ( y != x );
+ 
++    /*
++     * With the sole reference dropped temporarily, no-one can update type
++     * information. Type count also needs to be zero in this case, but e.g.
++     * PGT_seg_desc_page may still have PGT_validated set, which we need to
++     * clear before transferring ownership (as validation criteria vary
++     * depending on domain type).
++     */
++    BUG_ON(page->u.inuse.type_info & (PGT_count_mask | PGT_locked |
++                                      PGT_pinned));
++    page->u.inuse.type_info = 0;
++
+     /* Swizzle the owner then reinstate the PGC_allocated reference. */
+     page_set_owner(page, NULL);
+     y = page->count_info;
+-- 
+1.9.1
+
