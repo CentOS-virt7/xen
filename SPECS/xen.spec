@@ -56,7 +56,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.8.1
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -958,6 +958,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Jun 09 2017 Sarah Newman <srn@prgmr.com> 4.8.1-2.el6.centos
+- Import XSAs 213-214 (XSA 215 does not apply)
+- Enable live patching by default
+
 * Thu Apr 27 2017 Anthony Perard <anthony.perard@citrix.com> 4.8.1-1.el6.centos
 - Update to Xen 4.8.1
 
