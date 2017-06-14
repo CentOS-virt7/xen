@@ -379,7 +379,7 @@ export GIT=$(type -P false)
 
 %define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_spice}
 
-WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-xenstored=xenstored %{?extra_config}
+WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-xenstored=xenstored --disable-xsmpolicy %{?extra_config}
 
 export EFI_VENDOR="%{xen_efi_vendor}"
 make %{?_smp_mflags} %{?efi_flags}   dist-xen
