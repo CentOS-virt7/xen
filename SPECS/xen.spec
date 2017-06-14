@@ -8,6 +8,10 @@
 # --without efi
 %define build_efi %{?_without_efi: 0} %{?!_without_efi: 1}
 
+# build with live patching enabled unless rpmbuild was run with
+# --without livepatch
+%define with_livepatch %{?_without_livepatch: 0} %{?!_without_livepatch: 1}
+
 %if 0%{?centos_ver} == 6
 %define with_sysv 1
 %define with_systemd 0
@@ -52,7 +56,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.8.1
-Release: 1%{?dist}
+Release: 4%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -75,6 +79,10 @@ Source50: xen-kernel.x86_64
 Source51: xen-kernel.aarch64
 Source52: efi-xen.cfg.aarch64
 Source53: edk2-bc54e50e0fe03c570014f363b547426913e92449.tar.gz
+
+%if %{with_livepatch}
+Source60: livepatch-tools-2af6f1aa62334f8c3d66cf2c5043686833de6cc6.tar.gz
+%endif
 
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
@@ -145,6 +153,9 @@ BuildRequires: ocaml, ocaml-findlib
 %endif
 %if %with_spice
 BuildRequires: spice-server-devel usbredir-devel
+%endif
+%if %with_livepatch
+BuildRequires: elfutils-libelf-devel
 %endif
 # efi image needs an ld that has -mi386pep option
 %if %build_efi
@@ -250,6 +261,23 @@ This package contains libraries for developing ocaml tools to
 manage Xen virtual machines.
 %endif
 
+%if %with_livepatch
+%package livepatch-build-tools
+Summary: Tools to build Xen live patches
+Group: Development/Libraries
+Requires: elfutils
+Requires: make
+Requires: perl
+Requires: sed
+Requires: coreutils
+Requires: grep
+Requires: patch
+Requires: gcc
+
+%description livepatch-build-tools
+This package contains the tools needed for generating live patches
+per https://wiki.xen.org/wiki/LivePatch .
+%endif
 
 %prep
 %setup -q
@@ -298,6 +326,14 @@ git commit -a -q -m "%{version} baseline."
 
 # Apply patches to code in the core Xen repo
 git am %{PATCH1}
+
+#Optionally enable live patching
+%if %{with_livepatch}
+echo "CONFIG_LIVEPATCH=y" > xen/.config
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE60}
+%endif
+
+make -C xen olddefconfig
 
 # Now apply patches to things not in the core Xen repo
 
@@ -379,7 +415,7 @@ export GIT=$(type -P false)
 
 %define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_spice}
 
-WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-xenstored=xenstored %{?extra_config}
+WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-xenstored=xenstored --disable-xsmpolicy %{?extra_config}
 
 export EFI_VENDOR="%{xen_efi_vendor}"
 make %{?_smp_mflags} %{?efi_flags}   dist-xen
@@ -402,6 +438,13 @@ popd
 %else
 echo "No tianocore available" && false
 %endif
+%endif
+
+%if %{with_livepatch}
+pushd `pwd`
+cd tools/livepatch-build-tools
+make
+popd
 %endif
 
 %install
@@ -435,6 +478,13 @@ install -D -m 644 tools/edk2/Build/ArmVirtXen-AARCH64/RELEASE_GCC48/FV/XEN_EFI.f
 
 %ifarch x86_64
 install -m 644 %{SOURCE50} $RPM_BUILD_ROOT/etc/sysconfig/xen-kernel
+%endif
+
+%if %{with_livepatch}
+pushd `pwd`
+cd tools/livepatch-build-tools
+make DESTDIR=%{buildroot} PREFIX=/usr install
+popd
 %endif
 
 %ifarch aarch64
@@ -897,7 +947,27 @@ rm -rf %{buildroot}
 %{_libdir}/ocaml/xen*/*.cmx
 %endif
 
+%if %with_livepatch
+%files livepatch-build-tools
+%defattr(-,root,root)
+%{_bindir}/livepatch-build
+%dir /usr/libexec/livepatch-build-tools
+/usr/libexec/livepatch-build-tools/prelink
+/usr/libexec/livepatch-build-tools/create-diff-object
+/usr/libexec/livepatch-build-tools/livepatch-gcc
+%endif
+
 %changelog
+* Tue Jun 13 2017 Sarah Newman <srn@prgmr.com> 4.8.1-4.el6.centos
+- Bump version due to disabling xsmflash
+
+* Tue Jun 13 2017 Sarah Newman <srn@prgmr.com> 4.8.1-3.el6.centos
+- unused build number
+
+* Fri Jun 09 2017 Sarah Newman <srn@prgmr.com> 4.8.1-2.el6.centos
+- Import XSAs 213-214 (XSA 215 does not apply)
+- Enable live patching by default
+
 * Thu Apr 27 2017 Anthony Perard <anthony.perard@citrix.com> 4.8.1-1.el6.centos
 - Update to Xen 4.8.1
 
