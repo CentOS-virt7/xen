@@ -52,7 +52,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.6.3
-Release: 14%{?dist}
+Release: 15%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -96,8 +96,9 @@ Patch2011: xsa184-qemuu-4.6.patch
 Patch2012: xsa197-4.6-qemuu.patch
 Patch2013: xsa208-qemuu-4.7.patch
 Patch2014: xsa209-qemuu-0001-display-cirrus-ignore-source-pitch-value-as-needed-i.patch
-Patch2015: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cput.patch 
+Patch2015: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cput.patch
 Patch2016: xsa211-qemuu-4.6.patch
+Patch2017: xsa216-qemuu-4.7.patch
 
 Patch3001: xsa179-qemut-unstable-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
 Patch3002: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
@@ -111,6 +112,7 @@ Patch3013: xsa199-trad.patch
 Patch3014: xsa208-qemut.patch
 Patch3015: xsa209-qemut.patch
 Patch3016: xsa211-qemut.patch
+#Patch3017: Not applicable
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -329,6 +331,7 @@ pushd tools/qemu-xen
 %patch2014 -p1
 %patch2015 -p1
 %patch2016 -p1
+%patch2017 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -924,6 +927,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jun 19 2017 George Dunlap <george.dunlap@citrix.com> 4.6.3-15.el6.centos
+- Import XSAs 216, 217, 218, 219, 221, 222, 223, 224, and 225.
+  (NB XSA 220 has been left out until we update to 4.6.5.)
+
 * Tue May  2 2017 George Dunlap <george.dunlap@citrix.com> 4.6.3-14.el6.centos
 - Import XSAs 213, 214, and 215
 
