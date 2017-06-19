@@ -74,7 +74,7 @@ Source49: tmpfiles.d.xen.conf
 Source50: xen-kernel.x86_64
 Source51: xen-kernel.aarch64
 Source52: efi-xen.cfg.aarch64
-Source53: edk2-0cebfe81f94be36116af66d0a3134ce18d89eec1.tar.gz
+Source53: edk2-bc54e50e0fe03c570014f363b547426913e92449.tar.gz
 
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
