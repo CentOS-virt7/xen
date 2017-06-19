@@ -1,6 +1,6 @@
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 28 Jul 2016 12:10:38 +0100
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] tools/hotplug: Before running xenstored, run restorecon if
  available to reset selinux labels
 
@@ -48,7 +48,7 @@ index a5f836b..9d61024 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 28 Jul 2016 12:10:38 +0100
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] tools/hotplug: Call xenstored directly rather than via sh
 
 Using sh to exec xenstored breaks on selinux systems (at least, on
@@ -115,7 +115,7 @@ index 9d61024..15defbe 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 28 Jul 2016 12:10:38 +0100
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] tools/Linux: Fix blktap module name in default module list
 
 The name of the blktap2 kernel module is... blktap.
@@ -127,7 +127,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/configure b/tools/configure
-index aa66876..40efc29 100755
+index ed69129..87415dc 100755
 --- a/tools/configure
 +++ b/tools/configure
 @@ -4133,7 +4133,7 @@ xen-scsibk
@@ -157,7 +157,7 @@ index 6c70040..6d1e9dd 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:17 +0000
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] xen: Allow user to specify an alternate linker for EFI
  binaries
 
@@ -171,7 +171,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  3 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/xen/Makefile b/xen/Makefile
-index 2511c9a..232c8d4 100644
+index 0d7e5b7..4ce5fd5 100644
 --- a/xen/Makefile
 +++ b/xen/Makefile
 @@ -16,6 +16,7 @@ export BASEDIR := $(CURDIR)
@@ -226,7 +226,7 @@ index 1daa7ac..f5398c4 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:17 +0000
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] Disable iptables on the bridge
 
 ---
@@ -270,7 +270,7 @@ index 92ffa60..0b1fde9 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:17 +0000
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] xen.use.fedora.ipxe.patch
 
 ---
@@ -280,7 +280,7 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index c04a6c2..91382fa 100644
+index c099f3d..d77c039 100644
 --- a/Config.mk
 +++ b/Config.mk
 @@ -265,7 +265,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.8.2
@@ -291,7 +291,7 @@ index c04a6c2..91382fa 100644
 +ETHERBOOT_NICS ?= 10ec8139 8086100e
  
  
- QEMU_TRADITIONAL_REVISION ?= xen-4.6.3
+ QEMU_TRADITIONAL_REVISION ?= xen-4.6.4
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
 index 6cc86ce..1b54335 100644
 --- a/tools/firmware/Makefile
@@ -323,7 +323,7 @@ index 0560a7b..6610722 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:17 +0000
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
  backend"
 
@@ -359,7 +359,7 @@ index a81baee..1288d3e 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:18 +0000
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
 
 ---
@@ -383,7 +383,7 @@ index 2618559..4157edf 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:18 +0000
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
@@ -495,7 +495,7 @@ index 2053403..9a0641b 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Julien Grall <julien.grall@linaro.org>
-Date: Thu, 11 Feb 2016 11:29:18 +0000
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
 
 ---
@@ -527,7 +527,7 @@ index 3c365f3..ef033c2 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:18 +0000
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] xen/arm: support compressed kernels
 
 Signed-off-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
@@ -728,7 +728,7 @@ index f641b12..35692e1 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: David Vrabel <david.vrabel@citrix.com>
-Date: Fri, 20 Nov 2015 11:59:05 -0500
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] xen: Add RING_COPY_REQUEST()
 
 Using RING_GET_REQUEST() on a shared ring is easy to use incorrectly
@@ -782,7 +782,7 @@ index ba9401b..801c0da 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
-Date: Thu, 19 May 2016 18:08:38 +0100
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] hotplug: Fix xendomains lock path for RHEL-based systems
 
 Commit c996572 changed the LOCKFILE path from a check between two
@@ -837,7 +837,7 @@ index 0603842..e749b78 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
-Date: Thu, 19 May 2016 18:08:54 +0100
+Date: Mon, 19 Jun 2017 16:43:28 +0100
 Subject: [PATCH] tools/xendomains: Create lockfile on start unconditionally
 
 At the moment, the xendomains init script will only create a lockfile
@@ -908,645 +908,6 @@ index e749b78..1dce21d 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Mon, 11 Jul 2016 14:32:03 +0100
-Subject: [PATCH] x86/pv: Remove unsafe bits from the mod_l?_entry() fastpath
-
-All changes in writeability and cacheability must go through full
-re-validation.
-
-Rework the logic as a whitelist, to make it clearer to follow.
-
-This is XSA-182
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Tim Deegan <tim@xen.org>
----
- xen/arch/x86/mm.c          | 28 ++++++++++++++++------------
- xen/include/asm-x86/page.h |  1 +
- 2 files changed, 17 insertions(+), 12 deletions(-)
-
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index daf02ab..8dd22b8 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -1780,6 +1780,14 @@ static inline int update_intpte(intpte_t *p,
-                   _t ## e_get_intpte(_o), _t ## e_get_intpte(_n),   \
-                   (_m), (_v), (_ad))
- 
-+/*
-+ * PTE flags that a guest may change without re-validating the PTE.
-+ * All other bits affect translation, caching, or Xen's safety.
-+ */
-+#define FASTPATH_FLAG_WHITELIST                                     \
-+    (_PAGE_NX_BIT | _PAGE_AVAIL_HIGH | _PAGE_AVAIL | _PAGE_GLOBAL | \
-+     _PAGE_DIRTY | _PAGE_ACCESSED | _PAGE_USER)
-+
- /* Update the L1 entry at pl1e to new value nl1e. */
- static int mod_l1_entry(l1_pgentry_t *pl1e, l1_pgentry_t nl1e,
-                         unsigned long gl1mfn, int preserve_ad,
-@@ -1820,9 +1828,8 @@ static int mod_l1_entry(l1_pgentry_t *pl1e, l1_pgentry_t nl1e,
-             return -EINVAL;
-         }
- 
--        /* Fast path for identical mapping, r/w, presence, and cachability. */
--        if ( !l1e_has_changed(ol1e, nl1e,
--                              PAGE_CACHE_ATTRS | _PAGE_RW | _PAGE_PRESENT) )
-+        /* Fast path for sufficiently-similar mappings. */
-+        if ( !l1e_has_changed(ol1e, nl1e, ~FASTPATH_FLAG_WHITELIST) )
-         {
-             adjust_guest_l1e(nl1e, pt_dom);
-             if ( UPDATE_ENTRY(l1, pl1e, ol1e, nl1e, gl1mfn, pt_vcpu,
-@@ -1904,11 +1911,8 @@ static int mod_l2_entry(l2_pgentry_t *pl2e,
-             return -EINVAL;
-         }
- 
--        /* Fast path for identical mapping and presence. */
--        if ( !l2e_has_changed(ol2e, nl2e,
--                              unlikely(opt_allow_superpage)
--                              ? _PAGE_PSE | _PAGE_RW | _PAGE_PRESENT
--                              : _PAGE_PRESENT) )
-+        /* Fast path for sufficiently-similar mappings. */
-+        if ( !l2e_has_changed(ol2e, nl2e, ~FASTPATH_FLAG_WHITELIST) )
-         {
-             adjust_guest_l2e(nl2e, d);
-             if ( UPDATE_ENTRY(l2, pl2e, ol2e, nl2e, pfn, vcpu, preserve_ad) )
-@@ -1973,8 +1977,8 @@ static int mod_l3_entry(l3_pgentry_t *pl3e,
-             return -EINVAL;
-         }
- 
--        /* Fast path for identical mapping and presence. */
--        if ( !l3e_has_changed(ol3e, nl3e, _PAGE_PRESENT) )
-+        /* Fast path for sufficiently-similar mappings. */
-+        if ( !l3e_has_changed(ol3e, nl3e, ~FASTPATH_FLAG_WHITELIST) )
-         {
-             adjust_guest_l3e(nl3e, d);
-             rc = UPDATE_ENTRY(l3, pl3e, ol3e, nl3e, pfn, vcpu, preserve_ad);
-@@ -2037,8 +2041,8 @@ static int mod_l4_entry(l4_pgentry_t *pl4e,
-             return -EINVAL;
-         }
- 
--        /* Fast path for identical mapping and presence. */
--        if ( !l4e_has_changed(ol4e, nl4e, _PAGE_PRESENT) )
-+        /* Fast path for sufficiently-similar mappings. */
-+        if ( !l4e_has_changed(ol4e, nl4e, ~FASTPATH_FLAG_WHITELIST) )
-         {
-             adjust_guest_l4e(nl4e, d);
-             rc = UPDATE_ENTRY(l4, pl4e, ol4e, nl4e, pfn, vcpu, preserve_ad);
-diff --git a/xen/include/asm-x86/page.h b/xen/include/asm-x86/page.h
-index 66b611c..1a59ed8 100644
---- a/xen/include/asm-x86/page.h
-+++ b/xen/include/asm-x86/page.h
-@@ -311,6 +311,7 @@ void efi_update_l4_pgtable(unsigned int l4idx, l4_pgentry_t);
- #define _PAGE_AVAIL2   _AC(0x800,U)
- #define _PAGE_AVAIL    _AC(0xE00,U)
- #define _PAGE_PSE_PAT  _AC(0x1000,U)
-+#define _PAGE_AVAIL_HIGH (_AC(0x7ff, U) << 12)
- #define _PAGE_NX       (cpu_has_nx ? _PAGE_NX_BIT : 0)
- /* non-architectural flags */
- #define _PAGE_PAGED   0x2000U
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Wed, 15 Jun 2016 18:32:14 +0100
-Subject: [PATCH] x86/entry: Avoid SMAP violation in 
- compat_create_bounce_frame()
-
-A 32bit guest kernel might be running on user mappings.
-compat_create_bounce_frame() must whitelist its guest accesses to avoid
-risking a SMAP violation.
-
-For both variants of create_bounce_frame(), re-blacklist user accesses if
-execution exits via an exception table redirection.
-
-This is XSA-183
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: George Dunlap <george.dunlap@citrix.com>
----
- xen/arch/x86/x86_64/compat/entry.S | 3 +++
- xen/arch/x86/x86_64/entry.S        | 1 +
- 2 files changed, 4 insertions(+)
-
-diff --git a/xen/arch/x86/x86_64/compat/entry.S b/xen/arch/x86/x86_64/compat/entry.S
-index 0e3db7c..89c1e19 100644
---- a/xen/arch/x86/x86_64/compat/entry.S
-+++ b/xen/arch/x86/x86_64/compat/entry.S
-@@ -351,6 +351,7 @@ compat_create_bounce_frame:
-         ASSERT_INTERRUPTS_ENABLED
-         mov   %fs,%edi
-         testb $2,UREGS_cs+8(%rsp)
-+        ASM_STAC
-         jz    1f
-         /* Push new frame at registered guest-OS stack base. */
-         movl  VCPU_kernel_sp(%rbx),%esi
-@@ -403,6 +404,7 @@ UNLIKELY_START(nz, compat_bounce_failsafe)
-         movl  %ds,%eax
- .Lft12: movl  %eax,%fs:0*4(%rsi)        # DS
- UNLIKELY_END(compat_bounce_failsafe)
-+        ASM_CLAC
-         /* Rewrite our stack frame and return to guest-OS mode. */
-         /* IA32 Ref. Vol. 3: TF, VM, RF and NT flags are cleared on trap. */
-         andl  $~(X86_EFLAGS_VM|X86_EFLAGS_RF|\
-@@ -448,6 +450,7 @@ compat_crash_page_fault_4:
-         addl  $4,%esi
- compat_crash_page_fault:
- .Lft14: mov   %edi,%fs
-+        ASM_CLAC
-         movl  %esi,%edi
-         call  show_page_walk
-         jmp   dom_crash_sync_extable
-diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
-index 6e27508..bdd1284 100644
---- a/xen/arch/x86/x86_64/entry.S
-+++ b/xen/arch/x86/x86_64/entry.S
-@@ -462,6 +462,7 @@ domain_crash_page_fault_16:
- domain_crash_page_fault_8:
-         addq  $8,%rsi
- domain_crash_page_fault:
-+        ASM_CLAC
-         movq  %rsi,%rdi
-         call  show_page_walk
- ENTRY(dom_crash_sync_extable)
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Mon, 8 Aug 2016 10:58:12 +0100
-Subject: [PATCH] From 30aba4992b18245c436f16df7326a16c01a51570 Mon Sep 17
- 00:00:00 2001 Subject: x86/32on64: don't allow recursive page tables from L3
-
-L3 entries are special in PAE mode, and hence can't reasonably be used
-for setting up recursive (and hence linear) page table mappings. Since
-abuse is possible when the guest in fact gets run on 4-level page
-tables, this needs to be excluded explicitly.
-
-This is XSA-185.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/arch/x86/mm.c | 4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
-
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index 8dd22b8..64e2de3 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -1051,7 +1051,9 @@ get_page_from_l3e(
- 
-     rc = get_page_and_type_from_pagenr(
-         l3e_get_pfn(l3e), PGT_l2_page_table, d, partial, 1);
--    if ( unlikely(rc == -EINVAL) && get_l3_linear_pagetable(l3e, pfn, d) )
-+    if ( unlikely(rc == -EINVAL) &&
-+         !is_pv_32bit_domain(d) &&
-+         get_l3_linear_pagetable(l3e, pfn, d) )
-         rc = 0;
- 
-     return rc;
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Fri, 22 Jul 2016 16:02:54 +0000
-Subject: [PATCH] From e938be013ba73ff08fa4f1d8670501aacefde7fb Mon Sep 17
- 00:00:00 2001 Subject: [PATCH 1/2] x86/emulate: Correct boundary interactions
- of emulated  instructions
-
-This reverts most of c/s 0640ffb6 "x86emul: fix rIP handling".
-
-Experimentally, in long mode processors will execute an instruction stream
-which crosses the 64bit -1 -> 0 virtual boundary, whether the instruction
-boundary is aligned on the virtual boundary, or is misaligned.
-
-In compatibility mode, Intel processors will execute an instruction stream
-which crosses the 32bit -1 -> 0 virtual boundary, while AMD processors raise a
-segmentation fault.  Xen's segmentation behaviour matches AMD.
-
-For 16bit code, hardware does not ever truncated %ip.  %eip is always used and
-behaves normally as a 32bit register, including in 16bit protected mode
-segments, as well as in Real and Unreal mode.
-
-This is XSA-186
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/x86_emulate/x86_emulate.c | 22 ++++------------------
- 1 file changed, 4 insertions(+), 18 deletions(-)
-
-diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index 8f3ffc2..af90884 100644
---- a/xen/arch/x86/x86_emulate/x86_emulate.c
-+++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -1515,10 +1515,6 @@ x86_emulate(
- #endif
-     }
- 
--    /* Truncate rIP to def_ad_bytes (2 or 4) if necessary. */
--    if ( def_ad_bytes < sizeof(_regs.eip) )
--        _regs.eip &= (1UL << (def_ad_bytes * 8)) - 1;
--
-     /* Prefix bytes. */
-     for ( ; ; )
-     {
-@@ -3845,21 +3841,11 @@ x86_emulate(
- 
-     /* Commit shadow register state. */
-     _regs.eflags &= ~EFLG_RF;
--    switch ( __builtin_expect(def_ad_bytes, sizeof(_regs.eip)) )
--    {
--        uint16_t ip;
- 
--    case 2:
--        ip = _regs.eip;
--        _regs.eip = ctxt->regs->eip;
--        *(uint16_t *)&_regs.eip = ip;
--        break;
--#ifdef __x86_64__
--    case 4:
--        _regs.rip = _regs._eip;
--        break;
--#endif
--    }
-+    /* Zero the upper 32 bits of %rip if not in long mode. */
-+    if ( def_ad_bytes < sizeof(_regs.eip) )
-+        _regs.eip = (uint32_t)_regs.eip;
-+
-     *ctxt->regs = _regs;
- 
-  done:
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Wed, 7 Sep 2016 18:36:37 +0100
-Subject: [PATCH] Subject: x86/shadow: Avoid overflowing sh_ctxt->seg_reg[]
-
-hvm_get_seg_reg() does not perform a range check on its input segment, calls
-hvm_get_segment_register() and writes straight into sh_ctxt->seg_reg[].
-
-x86_seg_none is outside the bounds of sh_ctxt->seg_reg[], and will hit a BUG()
-in {vmx,svm}_get_segment_register().
-
-HVM guests running with shadow paging can end up performing a virtual to
-linear translation with x86_seg_none.  This is used for addresses which are
-already linear.  However, none of this is a legitimate pagetable update, so
-fail the emulation in such a case.
-
-This is XSA-187
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Tim Deegan <tim@xen.org>
----
- xen/arch/x86/mm/shadow/common.c | 11 ++++++++++-
- 1 file changed, 10 insertions(+), 1 deletion(-)
-
-diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
-index 0eeffb4..83f6938 100644
---- a/xen/arch/x86/mm/shadow/common.c
-+++ b/xen/arch/x86/mm/shadow/common.c
-@@ -142,9 +142,18 @@ static int hvm_translate_linear_addr(
-     struct sh_emulate_ctxt *sh_ctxt,
-     unsigned long *paddr)
- {
--    struct segment_register *reg = hvm_get_seg_reg(seg, sh_ctxt);
-+    struct segment_register *reg;
-     int okay;
- 
-+    /*
-+     * Can arrive here with non-user segments.  However, no such cirucmstance
-+     * is part of a legitimate pagetable update, so fail the emulation.
-+     */
-+    if ( !is_x86_user_segment(seg) )
-+        return X86EMUL_UNHANDLEABLE;
-+
-+    reg = hvm_get_seg_reg(seg, sh_ctxt);
-+
-     okay = hvm_virtual_to_linear_addr(
-         seg, reg, offset, bytes, access_type, sh_ctxt->ctxt.addr_size, paddr);
- 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Wed, 7 Sep 2016 18:37:15 +0100
-Subject: [PATCH] Subject: x86/segment: Bounds check accesses to emulation
- ctxt->seg_reg[]
-
-HVM HAP codepaths have space for all segment registers in the seg_reg[]
-cache (with x86_seg_none still risking an array overrun), while the shadow
-codepaths only have space for the user segments.
-
-Range check the input segment of *_get_seg_reg() against the size of the array
-used to cache the results, to avoid overruns in the case that the callers
-don't filter their input suitably.
-
-Subsume the is_x86_user_segment(seg) checks from the shadow code, which were
-an incomplete attempt at range checking, and are now superceeded.  Make
-hvm_get_seg_reg() static, as it is not used outside of shadow/common.c
-
-No functional change, but far easier to reason that no overflow is possible.
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Acked-by: Tim Deegan <tim@xen.org>
-Acked-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/hvm/emulate.c        | 16 ++++++++++++++++
- xen/arch/x86/mm/shadow/common.c   | 28 +++++++++++++---------------
- xen/arch/x86/mm/shadow/private.h  |  2 --
- xen/include/asm-x86/hvm/emulate.h |  1 +
- 4 files changed, 30 insertions(+), 17 deletions(-)
-
-diff --git a/xen/arch/x86/hvm/emulate.c b/xen/arch/x86/hvm/emulate.c
-index 848f46e..602dca1 100644
---- a/xen/arch/x86/hvm/emulate.c
-+++ b/xen/arch/x86/hvm/emulate.c
-@@ -526,6 +526,8 @@ static int hvmemul_virtual_to_linear(
-                            ? 1 : 4096);
- 
-     reg = hvmemul_get_seg_reg(seg, hvmemul_ctxt);
-+    if ( IS_ERR(reg) )
-+        return -PTR_ERR(reg);
- 
-     if ( (hvmemul_ctxt->ctxt.regs->eflags & X86_EFLAGS_DF) && (*reps > 1) )
-     {
-@@ -1360,6 +1362,10 @@ static int hvmemul_read_segment(
-     struct hvm_emulate_ctxt *hvmemul_ctxt =
-         container_of(ctxt, struct hvm_emulate_ctxt, ctxt);
-     struct segment_register *sreg = hvmemul_get_seg_reg(seg, hvmemul_ctxt);
-+
-+    if ( IS_ERR(sreg) )
-+         return -PTR_ERR(sreg);
-+
-     memcpy(reg, sreg, sizeof(struct segment_register));
-     return X86EMUL_OKAY;
- }
-@@ -1373,6 +1379,9 @@ static int hvmemul_write_segment(
-         container_of(ctxt, struct hvm_emulate_ctxt, ctxt);
-     struct segment_register *sreg = hvmemul_get_seg_reg(seg, hvmemul_ctxt);
- 
-+    if ( IS_ERR(sreg) )
-+         return -PTR_ERR(sreg);
-+
-     memcpy(sreg, reg, sizeof(struct segment_register));
-     __set_bit(seg, &hvmemul_ctxt->seg_reg_dirty);
- 
-@@ -1911,10 +1920,17 @@ void hvm_emulate_writeback(
-     }
- }
- 
-+/*
-+ * Callers which pass a known in-range x86_segment can rely on the return
-+ * pointer being valid.  Other callers must explicitly check for errors.
-+ */
- struct segment_register *hvmemul_get_seg_reg(
-     enum x86_segment seg,
-     struct hvm_emulate_ctxt *hvmemul_ctxt)
- {
-+    if ( seg < 0 || seg >= ARRAY_SIZE(hvmemul_ctxt->seg_reg) )
-+        return ERR_PTR(-X86EMUL_UNHANDLEABLE);
-+
-     if ( !__test_and_set_bit(seg, &hvmemul_ctxt->seg_reg_accessed) )
-         hvm_get_segment_register(current, seg, &hvmemul_ctxt->seg_reg[seg]);
-     return &hvmemul_ctxt->seg_reg[seg];
-diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
-index 83f6938..73f1230 100644
---- a/xen/arch/x86/mm/shadow/common.c
-+++ b/xen/arch/x86/mm/shadow/common.c
-@@ -125,10 +125,19 @@ __initcall(shadow_audit_key_init);
- /* x86 emulator support for the shadow code
-  */
- 
--struct segment_register *hvm_get_seg_reg(
-+/*
-+ * Callers which pass a known in-range x86_segment can rely on the return
-+ * pointer being valid.  Other callers must explicitly check for errors.
-+ */
-+static struct segment_register *hvm_get_seg_reg(
-     enum x86_segment seg, struct sh_emulate_ctxt *sh_ctxt)
- {
--    struct segment_register *seg_reg = &sh_ctxt->seg_reg[seg];
-+    struct segment_register *seg_reg;
-+
-+    if ( seg < 0 || seg >= ARRAY_SIZE(sh_ctxt->seg_reg) )
-+        return ERR_PTR(-X86EMUL_UNHANDLEABLE);
-+
-+    seg_reg = &sh_ctxt->seg_reg[seg];
-     if ( !__test_and_set_bit(seg, &sh_ctxt->valid_seg_regs) )
-         hvm_get_segment_register(current, seg, seg_reg);
-     return seg_reg;
-@@ -145,14 +154,9 @@ static int hvm_translate_linear_addr(
-     struct segment_register *reg;
-     int okay;
- 
--    /*
--     * Can arrive here with non-user segments.  However, no such cirucmstance
--     * is part of a legitimate pagetable update, so fail the emulation.
--     */
--    if ( !is_x86_user_segment(seg) )
--        return X86EMUL_UNHANDLEABLE;
--
-     reg = hvm_get_seg_reg(seg, sh_ctxt);
-+    if ( IS_ERR(reg) )
-+        return -PTR_ERR(reg);
- 
-     okay = hvm_virtual_to_linear_addr(
-         seg, reg, offset, bytes, access_type, sh_ctxt->ctxt.addr_size, paddr);
-@@ -254,9 +258,6 @@ hvm_emulate_write(enum x86_segment seg,
-     unsigned long addr;
-     int rc;
- 
--    if ( !is_x86_user_segment(seg) )
--        return X86EMUL_UNHANDLEABLE;
--
-     /* How many emulations could we save if we unshadowed on stack writes? */
-     if ( seg == x86_seg_ss )
-         perfc_incr(shadow_fault_emulate_stack);
-@@ -284,9 +285,6 @@ hvm_emulate_cmpxchg(enum x86_segment seg,
-     unsigned long addr, old[2], new[2];
-     int rc;
- 
--    if ( !is_x86_user_segment(seg) )
--        return X86EMUL_UNHANDLEABLE;
--
-     rc = hvm_translate_linear_addr(
-         seg, offset, bytes, hvm_access_write, sh_ctxt, &addr);
-     if ( rc )
-diff --git a/xen/arch/x86/mm/shadow/private.h b/xen/arch/x86/mm/shadow/private.h
-index 2d146cf..61cc18d 100644
---- a/xen/arch/x86/mm/shadow/private.h
-+++ b/xen/arch/x86/mm/shadow/private.h
-@@ -731,8 +731,6 @@ const struct x86_emulate_ops *shadow_init_emulation(
-     struct sh_emulate_ctxt *sh_ctxt, struct cpu_user_regs *regs);
- void shadow_continue_emulation(
-     struct sh_emulate_ctxt *sh_ctxt, struct cpu_user_regs *regs);
--struct segment_register *hvm_get_seg_reg(
--    enum x86_segment seg, struct sh_emulate_ctxt *sh_ctxt);
- 
- #if (SHADOW_OPTIMIZATIONS & SHOPT_VIRTUAL_TLB)
- /**************************************************************************/
-diff --git a/xen/include/asm-x86/hvm/emulate.h b/xen/include/asm-x86/hvm/emulate.h
-index 142d1b6..3aabcbe 100644
---- a/xen/include/asm-x86/hvm/emulate.h
-+++ b/xen/include/asm-x86/hvm/emulate.h
-@@ -13,6 +13,7 @@
- #define __ASM_X86_HVM_EMULATE_H__
- 
- #include <xen/config.h>
-+#include <xen/err.h>
- #include <asm/hvm/hvm.h>
- #include <asm/x86_emulate.h>
- 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@citrix.com>
-Date: Mon, 3 Oct 2016 18:23:33 +0100
-Subject: [PATCH] x86emul: honor guest CR0.TS and CR0.EM
-
-We must not emulate any instructions accessing respective registers
-when either of these flags is set in the guest view of the register, or
-else we may do so on data not belonging to the guest's current task.
-
-Being architecturally required behavior, the logic gets place in the
-instruction emulator instead of hvmemul_get_fpu(). It should be noted,
-though, that hvmemul_get_fpu() being the only current handler for the
-get_fpu() callback, we don't have an active problem with CR4: Both
-CR4.OSFXSR and CR4.OSXSAVE get handled as necessary by that function.
-
-This is XSA-190.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- tools/tests/x86_emulator/test_x86_emulator.c | 17 +++++++++++++
- xen/arch/x86/hvm/emulate.c                   |  1 -
- xen/arch/x86/x86_emulate/x86_emulate.c       | 38 +++++++++++++++++++++++++---
- 3 files changed, 52 insertions(+), 4 deletions(-)
-
-diff --git a/tools/tests/x86_emulator/test_x86_emulator.c b/tools/tests/x86_emulator/test_x86_emulator.c
-index 1b78bf7..65c4c97 100644
---- a/tools/tests/x86_emulator/test_x86_emulator.c
-+++ b/tools/tests/x86_emulator/test_x86_emulator.c
-@@ -129,6 +129,22 @@ static inline uint64_t xgetbv(uint32_t xcr)
-     (ebx & (1U << 5)) != 0; \
- })
- 
-+static int read_cr(
-+    unsigned int reg,
-+    unsigned long *val,
-+    struct x86_emulate_ctxt *ctxt)
-+{
-+    /* Fake just enough state for the emulator's _get_fpu() to be happy. */
-+    switch ( reg )
-+    {
-+    case 0:
-+        *val = 0x00000001; /* PE */
-+        return X86EMUL_OKAY;
-+    }
-+
-+    return X86EMUL_UNHANDLEABLE;
-+}
-+
- int get_fpu(
-     void (*exception_callback)(void *, struct cpu_user_regs *),
-     void *exception_callback_arg,
-@@ -160,6 +176,7 @@ static struct x86_emulate_ops emulops = {
-     .write      = write,
-     .cmpxchg    = cmpxchg,
-     .cpuid      = cpuid,
-+    .read_cr    = read_cr,
-     .get_fpu    = get_fpu,
- };
- 
-diff --git a/xen/arch/x86/hvm/emulate.c b/xen/arch/x86/hvm/emulate.c
-index 602dca1..806fa0f 100644
---- a/xen/arch/x86/hvm/emulate.c
-+++ b/xen/arch/x86/hvm/emulate.c
-@@ -1564,7 +1564,6 @@ static int hvmemul_get_fpu(
-         break;
-     case X86EMUL_FPU_xmm:
-         if ( !cpu_has_xmm ||
--             (curr->arch.hvm_vcpu.guest_cr[0] & X86_CR0_EM) ||
-              !(curr->arch.hvm_vcpu.guest_cr[4] & X86_CR4_OSFXSR) )
-             return X86EMUL_UNHANDLEABLE;
-         break;
-diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index af90884..3caf114 100644
---- a/xen/arch/x86/x86_emulate/x86_emulate.c
-+++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -366,6 +366,8 @@ typedef union {
- 
- /* Control register flags. */
- #define CR0_PE    (1<<0)
-+#define CR0_EM    (1<<2)
-+#define CR0_TS    (1<<3)
- #define CR4_TSD   (1<<2)
- 
- /* EFLAGS bit definitions. */
-@@ -393,6 +395,7 @@ typedef union {
- #define EXC_OF  4
- #define EXC_BR  5
- #define EXC_UD  6
-+#define EXC_NM  7
- #define EXC_TS 10
- #define EXC_NP 11
- #define EXC_SS 12
-@@ -674,10 +677,39 @@ static void fpu_handle_exception(void *_fic, struct cpu_user_regs *regs)
-     regs->eip += fic->insn_bytes;
- }
- 
-+static int _get_fpu(
-+    enum x86_emulate_fpu_type type,
-+    struct fpu_insn_ctxt *fic,
-+    struct x86_emulate_ctxt *ctxt,
-+    const struct x86_emulate_ops *ops)
-+{
-+    int rc;
-+
-+    fic->exn_raised = 0;
-+
-+    fail_if(!ops->get_fpu);
-+    rc = ops->get_fpu(fpu_handle_exception, fic, type, ctxt);
-+
-+    if ( rc == X86EMUL_OKAY )
-+    {
-+        unsigned long cr0;
-+
-+        fail_if(!ops->read_cr);
-+        rc = ops->read_cr(0, &cr0, ctxt);
-+        if ( rc != X86EMUL_OKAY )
-+            return rc;
-+        generate_exception_if((cr0 & CR0_TS) ||
-+                              ((type <= X86EMUL_FPU_xmm) && (cr0 & CR0_EM)),
-+                              EXC_NM, -1);
-+    }
-+
-+ done:
-+    return rc;
-+}
-+
- #define get_fpu(_type, _fic)                                    \
--do{ (_fic)->exn_raised = 0;                                     \
--    fail_if(ops->get_fpu == NULL);                              \
--    rc = ops->get_fpu(fpu_handle_exception, _fic, _type, ctxt); \
-+do {                                                            \
-+    rc = _get_fpu(_type, _fic, ctxt, ops);                      \
-     if ( rc ) goto done;                                        \
- } while (0)
- #define _put_fpu()                                              \
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Tue, 22 Nov 2016 11:29:12 +0000
 Subject: [PATCH] x86/hvm: Fix the handling of non-present segments
 
@@ -1592,10 +953,10 @@ Reviewed-by: Jan Beulich <jbeulich@suse.com>
  4 files changed, 27 insertions(+), 9 deletions(-)
 
 diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
-index a24f30f..5339d91 100644
+index 3c5faca..7e67670 100644
 --- a/xen/arch/x86/hvm/hvm.c
 +++ b/xen/arch/x86/hvm/hvm.c
-@@ -3642,6 +3642,10 @@ int hvm_virtual_to_linear_addr(
+@@ -3666,6 +3666,10 @@ int hvm_virtual_to_linear_addr(
           * COMPATIBILITY MODE: Apply segment checks and add base.
           */
  
@@ -1606,7 +967,7 @@ index a24f30f..5339d91 100644
          switch ( access_type )
          {
          case hvm_access_read:
-@@ -3847,6 +3851,10 @@ static int hvm_load_segment_selector(
+@@ -3871,6 +3875,10 @@ static int hvm_load_segment_selector(
      hvm_get_segment_register(
          v, (sel & 4) ? x86_seg_ldtr : x86_seg_gdtr, &desctab);
  
@@ -1618,7 +979,7 @@ index a24f30f..5339d91 100644
      if ( ((sel & 0xfff8) + 7) > desctab.limit )
          goto fail;
 diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
-index 74fb733..b34ccc2 100644
+index 07ccae3..fc667ce 100644
 --- a/xen/arch/x86/hvm/svm/svm.c
 +++ b/xen/arch/x86/hvm/svm/svm.c
 @@ -620,6 +620,7 @@ static void svm_get_segment_register(struct vcpu *v, enum x86_segment seg,
@@ -1647,10 +1008,10 @@ index 74fb733..b34ccc2 100644
      case x86_seg_ldtr:
          svm_sync_vmcb(v);
 diff --git a/xen/arch/x86/hvm/vmx/vmx.c b/xen/arch/x86/hvm/vmx/vmx.c
-index df8198f..1884fae 100644
+index d241094..cebb171 100644
 --- a/xen/arch/x86/hvm/vmx/vmx.c
 +++ b/xen/arch/x86/hvm/vmx/vmx.c
-@@ -865,10 +865,12 @@ void vmx_get_segment_register(struct vcpu *v, enum x86_segment seg,
+@@ -867,10 +867,12 @@ void vmx_get_segment_register(struct vcpu *v, enum x86_segment seg,
      reg->sel = sel;
      reg->limit = limit;
  
@@ -1667,7 +1028,7 @@ index df8198f..1884fae 100644
  
      /* Adjust for virtual 8086 mode */
      if ( v->arch.hvm_vmx.vmx_realmode && seg <= x86_seg_tr 
-@@ -948,11 +950,11 @@ static void vmx_set_segment_register(struct vcpu *v, enum x86_segment seg,
+@@ -950,11 +952,11 @@ static void vmx_set_segment_register(struct vcpu *v, enum x86_segment seg,
          }
      }
  
@@ -1685,10 +1046,10 @@ index df8198f..1884fae 100644
      /* VMX has strict consistency requirement for flag G. */
      attr |= !!(limit >> 20) << 15;
 diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index 3caf114..55ed401 100644
+index a1db36f..bb3e8fd 100644
 --- a/xen/arch/x86/x86_emulate/x86_emulate.c
 +++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -1189,6 +1189,10 @@ protmode_load_seg(
+@@ -1209,6 +1209,10 @@ protmode_load_seg(
                                   &desctab, ctxt)) )
          return rc;
  
@@ -1722,10 +1083,10 @@ Tested-by: Andrew Cooper <andrew.cooper3@citrix.com>
  1 file changed, 10 insertions(+), 10 deletions(-)
 
 diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
-index 5339d91..54f9848 100644
+index 7e67670..d70b354 100644
 --- a/xen/arch/x86/hvm/hvm.c
 +++ b/xen/arch/x86/hvm/hvm.c
-@@ -3813,17 +3813,16 @@ static void hvm_unmap_entry(void *p)
+@@ -3837,17 +3837,16 @@ static void hvm_unmap_entry(void *p)
  }
  
  static int hvm_load_segment_selector(
@@ -1745,7 +1106,7 @@ index 5339d91..54f9848 100644
      {
          segr.sel = sel;
          segr.base = (uint32_t)sel << 4;
-@@ -4073,6 +4072,8 @@ void hvm_task_switch(
+@@ -4098,6 +4097,8 @@ void hvm_task_switch(
      if ( rc != HVMCOPY_okay )
          goto out;
  
@@ -1754,7 +1115,7 @@ index 5339d91..54f9848 100644
  
      if ( hvm_set_cr3(tss.cr3, 1) )
          goto out;
-@@ -4095,13 +4096,12 @@ void hvm_task_switch(
+@@ -4120,13 +4121,12 @@ void hvm_task_switch(
      }
  
      exn_raised = 0;
@@ -1826,7 +1187,7 @@ index e166c1b..fa2aead 100644
                   !is_canonical_address(c.nat->syscall_callback_eip) ||
                   !is_canonical_address(c.nat->failsafe_callback_eip) )
 diff --git a/xen/arch/x86/traps.c b/xen/arch/x86/traps.c
-index c6231b5..b634236 100644
+index 9383501..27af87f 100644
 --- a/xen/arch/x86/traps.c
 +++ b/xen/arch/x86/traps.c
 @@ -2515,19 +2515,22 @@ static int emulate_privileged_op(struct cpu_user_regs *regs)
@@ -1874,10 +1235,10 @@ Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
  1 file changed, 10 insertions(+), 3 deletions(-)
 
 diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index 55ed401..e581fa6 100644
+index bb3e8fd..600a9c1 100644
 --- a/xen/arch/x86/x86_emulate/x86_emulate.c
 +++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -1973,6 +1973,12 @@ x86_emulate(
+@@ -1998,6 +1998,12 @@ x86_emulate(
          else
          {
              /*
@@ -1890,7 +1251,7 @@ index 55ed401..e581fa6 100644
               * EA       += BitOffset DIV op_bytes*8
               * BitOffset = BitOffset MOD op_bytes*8
               * DIV truncates towards negative infinity.
-@@ -1984,14 +1990,15 @@ x86_emulate(
+@@ -2009,14 +2015,15 @@ x86_emulate(
                  src.val = (int32_t)src.val;
              if ( (long)src.val < 0 )
              {
@@ -1941,10 +1302,10 @@ Reviewed-by: Jan Beulich <jbeulich@suse.com>
  1 file changed, 11 insertions(+), 4 deletions(-)
 
 diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index e581fa6..0167a55 100644
+index 600a9c1..4283716 100644
 --- a/xen/arch/x86/x86_emulate/x86_emulate.c
 +++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -1438,10 +1438,16 @@ static int inject_swint(enum x86_swint_type type,
+@@ -1463,10 +1463,16 @@ static int inject_swint(enum x86_swint_type type,
      {
          if ( !in_realmode(ctxt, ops) )
          {
@@ -1963,7 +1324,7 @@ index e581fa6..0167a55 100644
  
              /* icebp sets the External Event bit despite being an instruction. */
              error_code = (vector << 3) | ECODE_IDT |
-@@ -1469,8 +1475,9 @@ static int inject_swint(enum x86_swint_type type,
+@@ -1494,8 +1500,9 @@ static int inject_swint(enum x86_swint_type type,
               * Should strictly speaking read all 8/16 bytes of an entry,
               * but we currently only care about the dpl and present bits.
               */
@@ -2015,7 +1376,7 @@ Reviewed-by: Jan Beulich <jbeulich@suse.com>
  2 files changed, 9 insertions(+), 8 deletions(-)
 
 diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
-index b34ccc2..6d1d644 100644
+index fc667ce..2e4fa6c 100644
 --- a/xen/arch/x86/hvm/svm/svm.c
 +++ b/xen/arch/x86/hvm/svm/svm.c
 @@ -1229,17 +1229,14 @@ static void svm_inject_trap(struct hvm_trap *trap)
@@ -2169,10 +1530,10 @@ index 65c4c97..c63ac42 100644
      instr[0] = 0x0f; instr[1] = 0xbe; instr[2] = 0x08;
      regs.eflags = 0x200;
 diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index 0167a55..65798db 100644
+index 4283716..6abbc21 100644
 --- a/xen/arch/x86/x86_emulate/x86_emulate.c
 +++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -4711,8 +4711,12 @@ x86_emulate(
+@@ -4739,8 +4739,12 @@ x86_emulate(
          generate_exception_if((modrm_reg & 7) != 1, EXC_UD, -1);
          generate_exception_if(ea.type != OP_MEM, EXC_UD, -1);
          if ( op_bytes == 8 )
@@ -2261,7 +1622,7 @@ index 9cda8f1..0ed0073 100644
  /*
   * struct vcpu *__context_switch(struct vcpu *prev, struct vcpu *next)
 diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
-index c8b27ba..083193f 100644
+index 6c1b9dc..44cda80 100644
 --- a/xen/arch/arm/traps.c
 +++ b/xen/arch/arm/traps.c
 @@ -2595,6 +2595,21 @@ asmlinkage void do_trap_hypervisor(struct cpu_user_regs *regs)
@@ -2517,7 +1878,7 @@ Reviewed-by: Julien Grall <Julien.Grall@arm.com>
  1 file changed, 18 insertions(+)
 
 diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
-index 083193f..f7198d4 100644
+index 44cda80..1c13b05 100644
 --- a/xen/arch/arm/traps.c
 +++ b/xen/arch/arm/traps.c
 @@ -2333,6 +2333,15 @@ static void do_trap_instr_abort_guest(struct cpu_user_regs *regs,
@@ -2725,7 +2086,7 @@ Signed-off-by: Jan Beulich <jbeulich@suse.com>
  2 files changed, 12 insertions(+), 7 deletions(-)
 
 diff --git a/xen/arch/x86/x86_64/compat/entry.S b/xen/arch/x86/x86_64/compat/entry.S
-index 89c1e19..41e9537 100644
+index 1eaf4bb..9f8053e 100644
 --- a/xen/arch/x86/x86_64/compat/entry.S
 +++ b/xen/arch/x86/x86_64/compat/entry.S
 @@ -174,6 +174,8 @@ compat_bad_hypercall:
@@ -2747,7 +2108,7 @@ index 89c1e19..41e9537 100644
  .Lft0:  iretq
  
 diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
-index bdd1284..32a3361 100644
+index 0c2e63a..ba5925b 100644
 --- a/xen/arch/x86/x86_64/entry.S
 +++ b/xen/arch/x86/x86_64/entry.S
 @@ -40,28 +40,29 @@ restore_all_guest:
@@ -2804,10 +2165,10 @@ Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/xen/arch/x86/hvm/emulate.c b/xen/arch/x86/hvm/emulate.c
-index 806fa0f..071f56e 100644
+index e36eefc..ec2da3b 100644
 --- a/xen/arch/x86/hvm/emulate.c
 +++ b/xen/arch/x86/hvm/emulate.c
-@@ -1619,6 +1619,8 @@ static int hvmemul_vmfunc(
+@@ -1620,6 +1620,8 @@ static int hvmemul_vmfunc(
  {
      int rc;
  
@@ -2842,10 +2203,10 @@ Reviewed-by: Jan Beulich <jbeulich@suse.com>
  1 file changed, 20 insertions(+), 3 deletions(-)
 
 diff --git a/xen/arch/x86/x86_emulate/x86_emulate.c b/xen/arch/x86/x86_emulate/x86_emulate.c
-index 65798db..df2f68f 100644
+index 6abbc21..3432976 100644
 --- a/xen/arch/x86/x86_emulate/x86_emulate.c
 +++ b/xen/arch/x86/x86_emulate/x86_emulate.c
-@@ -1534,6 +1534,7 @@ x86_emulate(
+@@ -1559,6 +1559,7 @@ x86_emulate(
      union vex vex = {};
      unsigned int op_bytes, def_op_bytes, ad_bytes, def_ad_bytes;
      bool_t lock_prefix = 0;
@@ -2853,7 +2214,7 @@ index 65798db..df2f68f 100644
      int override_seg = -1, rc = X86EMUL_OKAY;
      struct operand src = { .reg = REG_POISON };
      struct operand dst = { .reg = REG_POISON };
-@@ -3884,9 +3885,8 @@ x86_emulate(
+@@ -3912,9 +3913,8 @@ x86_emulate(
      }
  
   no_writeback:
@@ -2865,7 +2226,7 @@ index 65798db..df2f68f 100644
          rc = ops->inject_hw_exception(EXC_DB, -1, ctxt) ? : X86EMUL_EXCEPTION;
  
      /* Commit shadow register state. */
-@@ -4079,6 +4079,23 @@ x86_emulate(
+@@ -4107,6 +4107,23 @@ x86_emulate(
               (rc = ops->write_segment(x86_seg_ss, &ss, ctxt)) )
              goto done;
  
@@ -6228,10 +5589,10 @@ Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
  2 files changed, 23 insertions(+), 5 deletions(-)
 
 diff --git a/xen/common/memory.c b/xen/common/memory.c
-index 8baed72..fdb7fb1 100644
+index b2a1874..ee345de 100644
 --- a/xen/common/memory.c
 +++ b/xen/common/memory.c
-@@ -405,8 +405,8 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+@@ -409,8 +409,8 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
          goto fail_early;
      }
  
@@ -6242,7 +5603,7 @@ index 8baed72..fdb7fb1 100644
      {
          rc = -EFAULT;
          goto fail_early;
-@@ -416,11 +416,27 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+@@ -420,11 +420,27 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
      {
          in_chunk_order  = exch.out.extent_order - exch.in.extent_order;
          out_chunk_order = 0;
@@ -6323,7 +5684,7 @@ Acked-by: Julien Grall <julien.grall@arm.com>
  4 files changed, 46 insertions(+), 11 deletions(-)
 
 diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
-index f7198d4..854d19c 100644
+index 1c13b05..cb3ec0b 100644
 --- a/xen/arch/arm/traps.c
 +++ b/xen/arch/arm/traps.c
 @@ -1472,30 +1472,33 @@ static bool_t check_multicall_32bit_clean(struct multicall_entry *multi)
@@ -6562,7 +5923,7 @@ Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
-index 32a3361..0081458 100644
+index ba5925b..1c52169 100644
 --- a/xen/arch/x86/x86_64/entry.S
 +++ b/xen/arch/x86/x86_64/entry.S
 @@ -347,7 +347,7 @@ int80_slow_path:
@@ -6588,7 +5949,7 @@ index 32a3361..0081458 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
-Date: Mon, 19 Jun 2017 14:17:09 +0100
+Date: Mon, 19 Jun 2017 16:43:26 +0100
 Subject: [PATCH] x86/mm: disallow page stealing from HVM domains
 
 The operation's success can't be controlled by the guest, as the device
@@ -7283,7 +6644,7 @@ index 71477fe..c34ebe0 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
-Date: Mon, 19 Jun 2017 14:33:34 +0100
+Date: Mon, 19 Jun 2017 16:43:26 +0100
 Subject: [PATCH] evtchn: avoid NULL derefs
 
 Commit fbbd5009e6 ("evtchn: refactor low-level event channel port ops")
@@ -7449,10 +6810,10 @@ index 79c36ff..0be7fb3 100644
  
      /*
 diff --git a/xen/common/schedule.c b/xen/common/schedule.c
-index 2beebe8..e2d092c 100644
+index fddcd52..2a515b2 100644
 --- a/xen/common/schedule.c
 +++ b/xen/common/schedule.c
-@@ -868,7 +868,7 @@ static long do_poll(struct sched_poll *sched_poll)
+@@ -870,7 +870,7 @@ static long do_poll(struct sched_poll *sched_poll)
              goto out;
  
          rc = 0;
@@ -7501,7 +6862,7 @@ index ef22f44..ed3a170 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Mon, 19 Jun 2017 14:35:06 +0100
+Date: Mon, 19 Jun 2017 16:43:26 +0100
 Subject: [PATCH] xen/memory: Fix return value handing of guest_remove_page()
 
 Despite the description in mm.h, guest_remove_page() previously returned 0 for
@@ -7522,10 +6883,10 @@ Reviewed-by: Jan Beulich <jbeulich@suse.com>
  2 files changed, 22 insertions(+), 15 deletions(-)
 
 diff --git a/xen/common/memory.c b/xen/common/memory.c
-index fdb7fb1..4dde9db 100644
+index ee345de..1eabe5b 100644
 --- a/xen/common/memory.c
 +++ b/xen/common/memory.c
-@@ -234,6 +234,7 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
+@@ -238,6 +238,7 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
      p2m_type_t p2mt;
  #endif
      unsigned long mfn;
@@ -7533,7 +6894,7 @@ index fdb7fb1..4dde9db 100644
  
  #ifdef CONFIG_X86
      mfn = mfn_x(get_gfn_query(d, gmfn, &p2mt)); 
-@@ -251,13 +252,15 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
+@@ -255,13 +256,15 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
                  put_page(page);
          }
          p2m_mem_paging_drop_page(d, gmfn, p2mt);
@@ -7552,7 +6913,7 @@ index fdb7fb1..4dde9db 100644
      }
  #else
      mfn = gmfn_to_mfn(d, gmfn);
-@@ -267,21 +270,25 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
+@@ -271,21 +274,25 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
          put_gfn(d, gmfn);
          gdprintk(XENLOG_INFO, "Domain %u page number %lx invalid\n",
                  d->domain_id, gmfn);
@@ -7585,7 +6946,7 @@ index fdb7fb1..4dde9db 100644
          }
          /* Maybe the mfn changed */
          mfn = mfn_x(get_gfn_query_unlocked(d, gmfn, &p2mt));
-@@ -294,7 +301,8 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
+@@ -298,7 +305,8 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
      {
          put_gfn(d, gmfn);
          gdprintk(XENLOG_INFO, "Bad page free for domain %u\n", d->domain_id);
@@ -7595,7 +6956,7 @@ index fdb7fb1..4dde9db 100644
      }
  
      if ( test_and_clear_bit(_PGT_pinned, &page->u.inuse.type_info) )
-@@ -308,7 +316,7 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
+@@ -312,7 +320,7 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
      put_page(page);
      put_gfn(d, gmfn);
  
@@ -7604,7 +6965,7 @@ index fdb7fb1..4dde9db 100644
  }
  
  static void decrease_reservation(struct memop_args *a)
-@@ -359,7 +367,7 @@ static void decrease_reservation(struct memop_args *a)
+@@ -363,7 +371,7 @@ static void decrease_reservation(struct memop_args *a)
              continue;
  
          for ( j = 0; j < (1 << a->extent_order); j++ )
@@ -7632,7 +6993,7 @@ index a795dd6..ea9052c 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
-Date: Mon, 19 Jun 2017 14:35:07 +0100
+Date: Mon, 19 Jun 2017 16:43:26 +0100
 Subject: [PATCH] guest_physmap_remove_page() needs its return value checked
 
 Callers, namely such subsequently freeing the page, must not blindly
@@ -7689,7 +7050,7 @@ index 27b9fc4..c79b3f3 100644
  
  int is_iomem_page(unsigned long mfn)
 diff --git a/xen/arch/arm/p2m.c b/xen/arch/arm/p2m.c
-index 063505c..15c89af 100644
+index f9fa57d..e3124e5 100644
 --- a/xen/arch/arm/p2m.c
 +++ b/xen/arch/arm/p2m.c
 @@ -1176,15 +1176,14 @@ int guest_physmap_add_entry(struct domain *d,
@@ -7731,7 +7092,7 @@ index bca6fe7..a4b4204 100644
          }
  
 diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
-index 54f9848..e1a5d86 100644
+index d70b354..df75bff 100644
 --- a/xen/arch/x86/hvm/hvm.c
 +++ b/xen/arch/x86/hvm/hvm.c
 @@ -664,8 +664,9 @@ bool_t is_ioreq_server_page(struct domain *d, const struct page_info *page)
@@ -7916,10 +7277,10 @@ index a642763..fde4bd7 100644
  
          page_list_add_tail(page, &e->page_list);
 diff --git a/xen/common/memory.c b/xen/common/memory.c
-index 4dde9db..1b446a7 100644
+index 1eabe5b..88d7c57 100644
 --- a/xen/common/memory.c
 +++ b/xen/common/memory.c
-@@ -240,8 +240,12 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
+@@ -244,8 +244,12 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
      mfn = mfn_x(get_gfn_query(d, gmfn, &p2mt)); 
      if ( unlikely(p2m_is_paging(p2mt)) )
      {
@@ -7933,7 +7294,7 @@ index 4dde9db..1b446a7 100644
          /* If the page hasn't yet been paged out, there is an
           * actual page that needs to be released. */
          if ( p2mt == p2m_ram_paging_out )
-@@ -305,18 +309,18 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
+@@ -309,18 +313,18 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
          return -ENXIO;
      }
  
@@ -7957,7 +7318,7 @@ index 4dde9db..1b446a7 100644
  }
  
  static void decrease_reservation(struct memop_args *a)
-@@ -558,7 +562,8 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+@@ -562,7 +566,8 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
              gfn = mfn_to_gmfn(d, mfn);
              /* Pages were unshared above */
              BUG_ON(SHARED_M2P(gfn));
@@ -7967,7 +7328,7 @@ index 4dde9db..1b446a7 100644
              put_page(page);
          }
  
-@@ -1088,7 +1093,7 @@ long do_memory_op(unsigned long cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
+@@ -1092,7 +1097,7 @@ long do_memory_op(unsigned long cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
          page = get_page_from_gfn(d, xrfp.gpfn, NULL, P2M_ALLOC);
          if ( page )
          {
@@ -8064,7 +7425,7 @@ index 81d6509..9cddca7 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Julien Grall <julien.grall@arm.com>
-Date: Mon, 19 Jun 2017 14:37:31 +0100
+Date: Mon, 19 Jun 2017 16:43:26 +0100
 Subject: [PATCH] arm: vgic: Don't update the LR when the IRQ is not enabled
 
 gic_raise_inflight_irq will be called if the IRQ is already inflight

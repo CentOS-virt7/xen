@@ -51,8 +51,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.6.3
-Release: 15%{?dist}
+Version: 4.6.4
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -92,7 +92,6 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 # aarch64-only
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
-Patch2011: xsa184-qemuu-4.6.patch
 Patch2012: xsa197-4.6-qemuu.patch
 Patch2013: xsa208-qemuu-4.7.patch
 Patch2014: xsa209-qemuu-0001-display-cirrus-ignore-source-pitch-value-as-needed-i.patch
@@ -100,13 +99,6 @@ Patch2015: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cpu
 Patch2016: xsa211-qemuu-4.6.patch
 Patch2017: xsa216-qemuu-4.7.patch
 
-Patch3001: xsa179-qemut-unstable-0001-vga-fix-banked-access-bounds-checking-CVE-2016-3710.patch
-Patch3002: xsa179-qemut-unstable-0002-vga-add-vbe_enabled-helper.patch
-Patch3003: xsa179-qemut-unstable-0003-vga-factor-out-vga-register-setup.patch
-Patch3004: xsa179-qemut-unstable-0004-vga-update-vga-register-setup-on-vbe-changes.patch
-Patch3005: xsa179-qemut-unstable-0005-vga-make-sure-vga-register-setup-for-vbe-stays-intac.patch
-Patch3010: xsa180-qemut.patch
-Patch3011: xsa184-qemut-master.patch
 Patch3012: xsa197-qemut.patch
 Patch3013: xsa199-trad.patch
 Patch3014: xsa208-qemut.patch
@@ -325,7 +317,6 @@ pushd tools/qemu-xen
 %ifarch aarch64
 %patch2001 -p1
 %endif
-%patch2011 -p1
 %patch2012 -p1
 %patch2013 -p1
 %patch2014 -p1
@@ -336,7 +327,6 @@ popd
 
 pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
-%patch3011 -p1
 %patch3012 -p1
 %patch3013 -p1
 %patch3014 -p1
@@ -927,6 +917,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jun 19 2017 George Dunlap <george.dunlap@citrix.com> 4.6.4-1.el6.centos
+- Update to Xen 4.6.4
+
 * Mon Jun 19 2017 George Dunlap <george.dunlap@citrix.com> 4.6.3-15.el6.centos
 - Import XSAs 216, 217, 218, 219, 221, 222, 223, 224, and 225.
   (NB XSA 220 has been left out until we update to 4.6.5.)
