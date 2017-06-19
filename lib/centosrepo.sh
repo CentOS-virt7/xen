@@ -33,6 +33,10 @@ function version-type()
 
     $arg_parse
 
+    if [[ -z "$version" ]] ; then
+	local version="$XEN_VERSION"
+    fi
+    
     $requireargs version
 
     if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
@@ -219,11 +223,77 @@ function sync-patches()
     sync-patches-internal
 }
 
+function get-sources()
+{
+    . $TOPDIR/sources.cfg
+
+    $arg_parse
+
+    $requireargs XEN_VERSION
+
+    local vtype
+    version-type var=vtype
+
+    echo "Checking Xen $XEN_VERSION release tarball"
+    if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE ]] ; then
+	if [[ "$vtype" != "release" ]] ; then
+	    fail "Don't know how to get xen tarball for version $XEN_VERSION (type $vtype)"
+	fi
+	wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE || exit 1
+    fi
+
+    if [[ -n "$XEN_EXTLIB_FILES" ]] ; then
+	$requireargs XEN_EXTLIB_URL
+	echo "Checking external sources: "
+	for i in $XEN_EXTLIB_FILES ; do
+	    echo " checking $i"
+	    if [[ ! -e $TOPDIR/SOURCES/$i ]] ; then
+		wget -P $TOPDIR/SOURCES/ $XEN_EXTLIB_URL/$i || exit 1
+	    fi
+	done
+    fi
+
+    echo "Checking blktap..."
+    if [[ ! -e $TOPDIR/SOURCES/$BLKTAP_FILE ]] ; then
+	mkdir -p $TOPDIR/git-tmp
+	pushd $TOPDIR/git-tmp
+	
+	echo " Cloning blktap repo..."
+	git clone $BLKTAP_URL blktap.git || exit 1
+	cd blktap.git
+	echo " Creating $BLKTAP_FILE..."
+	git archive --prefix=blktap2/ -o $TOPDIR/SOURCES/$BLKTAP_FILE $BLKTAP_CSET || exit 1
+	popd
+    fi
+
+    echo "Checking edk2 (tianocore)..."
+    if [[ ! -e $TOPDIR/SOURCES/$EDK2_FILE ]] ; then
+	echo "Cloning tianocore repo..."
+	mkdir -p $TOPDIR/git-tmp
+	pushd $TOPDIR/git-tmp
+	
+	git clone $EDK2_URL edk2.git || exit 1
+	cd edk2.git
+	echo "Creating $EDK2_FILE..."
+	git archive --prefix=edk2/ -o $TOPDIR/SOURCES/$EDK2_FILE $EDK2_CSET || exit 1
+	popd
+    fi
+
+    if [[ -e $TOPDIR/git-tmp ]] ; then
+	echo "Cleaning up cloned repositores"
+	rm -rf $TOPDIR/git-tmp
+    fi
+
+    echo "All sources present."
+}
+
 function rebase()
 {
     . $TOPDIR/sources.cfg
 
     $arg_parse
+
+    default continue "false"; $default_post
 
     $requireargs XEN_VERSION new
 
@@ -236,44 +306,49 @@ function rebase()
     echo $PWD
 
     local newpq=centos/pq/$new
-    if ! git-branch-exists branch=$newpq ; then
-	checkout-basebranch version="$new" 
-    
-	local oldpq=centos/pq/$XEN_VERSION
-	info "Checking out $oldpq"
-	git checkout $oldpq || fail "Checking out patchqueue"
-	info "Creating new patchqueue based on old branch"
-	stg branch --clone $newpq || fail "Cloning patchqueue"
-	info "Rebasing onto new base branch"
-	stg rebase base/$new || fail "Rebasing -- please clean up"
-    else
-	git checkout $newpq || fail "Checking out new patchqueue"
+
+    checkout-basebranch version="$new"
+
+    if git-branch-exists branch=$newpq ; then
+	stg branch --delete --force $newpq
     fi
+    
+    local oldpq=centos/pq/$XEN_VERSION
+    info "Checking out $oldpq"
+    git checkout $oldpq || fail "Checking out patchqueue"
+    info "Creating new patchqueue based on old branch"
+    stg branch --clone $newpq || fail "Cloning patchqueue"
+    info "Rebasing onto new base branch"
+    stg rebase base/$new || fail "Rebasing -- please clean up and run rebase-post"
+
+    rebase-post
+}
+
+function rebase-post()
+{
+    . $TOPDIR/sources.cfg
+
+    $arg_parse
+
+    cd $TOPDIR/UPSTREAM/xen.git
+
+    if [[ -z "$new" ]] ; then
+	local new
+	local lbranch
+	
+	git-get-branch var=lbranch
+	
+	new=$(basename $lbranch)
+    fi
+
+    $requireargs XEN_VERSION
 
     sync-patches-internal basever=$new
 
     info "Updating XEN_VERSION in sources.cfg"
-    sed -i --follow-symlinks "s/XEN_VERSION=.*$/XEN_VERSION=$new/" sources.cfg
+    sed -i --follow-symlinks "s/XEN_VERSION=.*$/XEN_VERSION=$new/" $TOPDIR/sources.cfg || fail "Updating XEN_VERSION"
+
+    get-sources # NB at this point XEN_VERSION will change
 
     info "Rebase done.  Please update Xen version in SPECS/xen.spec and the changelog."
-    # Need to create tarball
-}
-
-function get-sources()
-{
-    . sources.cfg
-
-    
-
-    if [[ -n "$XEN_EXTLIB_FILES" ]] ; then
-	$requireargs XEN_EXTLIB_URL
-	echo "Checking external sources: "
-	for i in $XEN_EXTLIB_FILES ; do
-	    echo " checking $i"
-	    if [[ ! -e SOURCES/$i ]] ; then
-		wget -P SOURCES/ $XEN_EXTLIB_URL/$i || exit 1
-	    fi
-	done
-    fi
-
 }
