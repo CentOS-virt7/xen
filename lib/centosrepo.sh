@@ -1,3 +1,8 @@
+function sources-from-spec()
+{
+    perl -ne 'if(/^Version.* ([0-9.]+)$/) { $version=$1; } if(/^Patch[0-9]+: (.*)$/ || /^Source[0-9]+: (.*)$/) { $f=$1; if($f=~/http:.*\/([^\/]+)$/) {$f=$1;} $f=~s/%{version}/$version/; print "$f\n"; }' $TOPDIR/SPECS/xen.spec
+}
+
 function clean-sources-find()
 {
     # Idea:
@@ -14,13 +19,12 @@ function clean-sources-find()
     # NB that this will also produce files present in the spec file
     # but *not* present in SOURCES.
     
-    (perl -ne 'if(/^Version.* ([0-9.]+)$/) { $version=$1; } if(/^Patch[0-9]+: (.*)$/ || /^Source[0-9]+: (.*)$/) { $f=$1; if($f=~/http:.*\/([^\/]+)$/) {$f=$1;} $f=~s/%{version}/$version/; print "$f\n"; }' SPECS/xen.spec \
-	    && ls SOURCES) | sort | uniq -u
+    (sources-from-spec && cd $TOPDIR && ls $TOPDIR/SOURCES) | sort | uniq -u
 }
 
 function clean-sources()
 {
-    clean-sources-find | (cd SOURCES; xargs rm)
+    clean-sources-find | (cd $TOPDIR/SOURCES; xargs rm)
 }
 
 function version-type()
@@ -29,6 +33,10 @@ function version-type()
 
     $arg_parse
 
+    if [[ -z "$version" ]] ; then
+	local version="$XEN_VERSION"
+    fi
+    
     $requireargs version
 
     if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
@@ -101,9 +109,10 @@ function checkout-basebranch()
     
 }
 
+help-add "make-tree: Make UPSTREAM/xen.git and create branches based on SOURCES/xen-queue.am"
 function make-tree()
 {
-    . sources.cfg
+    . $TOPDIR/sources.cfg
 
     $arg_parse
     
@@ -134,7 +143,9 @@ function make-tree()
     # Now 
     # centos/pq/$version
     local pqbranch=centos/pq/$XEN_VERSION
-    if ! git-branch-exists branch=$pqbranch ; then
+    if git-branch-exists branch=$pqbranch ; then
+	git checkout $pqbranch
+    else
 	info "Creating patchqueue branch"
 	info "  ...Checking out $tagbranch"
 	git checkout $tagbranch || fail "Checking out branch $tagbranch"
@@ -142,15 +153,197 @@ function make-tree()
 	stg branch --create $pqbranch || fail "Creating stgit branch"
 	info "  Importing patchqueue"
 	stg import -M ../../SOURCES/xen-queue.am || fail "Importing patchqueue"
+	
     fi
 	
 }
 
-function rebase()
+help-add "import-patches [patches]: Add patches to the patchqueue for the current version"
+function import-patches()
 {
-    . sources.cfg
+    . $TOPDIR/sources.cfg
 
     $arg_parse
+
+    $requireargs XEN_VERSION
+
+    if [[ -z "${args[@]}" ]] ; then
+	fail "No patches to import"
+    fi
+
+    local pqbranch=centos/pq/$XEN_VERSION
+
+    cd $TOPDIR/UPSTREAM/xen.git || fail "Directory doesn't exist!"
+
+    stg-check
+
+    local p
+    for p in "${args[@]}" ; do
+	info "Importing patch  $p..."
+	stg import -m $p || fail "Importing patch $p"
+    done
+
+    info "Patches imported to patchqueue.  Don't forget to sync-patches and bump the release number."
+}
+
+function sync-patches-internal()
+{
+    $arg_parse
+
+    # If basever is not specified, get it from the current branch name
+    if [[ -z "$basever" ]] ; then
+	local lbranch
+	local basever
+	
+	git-get-branch var=lbranch
+	basever=$(basename $lbranch)
+    fi
+    
+    info "Exporting patchqueue"
+    git format-patch --stdout -N  base/$basever > ../../SOURCES/xen-queue.am || fail "Updating patchqueue"
+
+    (cd $TOPDIR;
+     ./pqnorm.pl)
+}
+
+help-add "sync-queue: Update SOURCES/xen-queue.am based on UPSTREAM/xen.git branch"
+function sync-queue()
+{
+    . $TOPDIR/sources.cfg
+
+    $arg_parse
+
+    $requireargs XEN_VERSION
+
+    local pqbranch=centos/pq/$XEN_VERSION
+
+    cd $TOPDIR/UPSTREAM/xen.git || fail "Directory doesn't exist!"
+
+    git checkout $pqbranch || fail "Can't check out patchqueue branch!"
+
+    stg-check
+
+    sync-patches-internal
+}
+
+help-add "sync-tree: Update UPSTREAM/xen.git based on SOURCES/xen-queue.am"
+function sync-tree()
+{
+    . $TOPDIR/sources.cfg
+
+    $arg_parse
+    
+    $requireargs XEN_VERSION
+
+    cd $TOPDIR/UPSTREAM/xen.git || fail "Cannot cd to UPSTREAM/xen.git"
+
+    local pqbranch=centos/pq/$XEN_VERSION
+    stg branch --delete --force $pqbranch
+
+    info "  ...Checking out $tagbranch"
+    git checkout $tagbranch || fail "Checking out branch $tagbranch"
+    info "  ...Creating branch"
+    stg branch --create $pqbranch || fail "Creating stgit branch"
+    info "  Importing patchqueue"
+    stg import -M ../../SOURCES/xen-queue.am || fail "Importing patchqueue"
+}
+
+help-add "get-sources: Download and/or create tarballs for SOURCES based on sources.cfg"
+function get-sources()
+{
+    . $TOPDIR/sources.cfg
+
+    $arg_parse
+
+    $requireargs XEN_VERSION
+
+    local vtype
+    version-type var=vtype
+
+    echo "Checking Xen $XEN_VERSION release tarball"
+    if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE ]] ; then
+	if [[ "$vtype" != "release" ]] ; then
+	    fail "Don't know how to get xen tarball for version $XEN_VERSION (type $vtype)"
+	fi
+	wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE || exit 1
+    fi
+
+    if gpg --list-keys 0x${XEN_KEY}; then
+	if [[ ! -e SOURCES/$XEN_RELEASE_FILE.sig ]]; then
+            wget -P SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE.sig || exit 1
+	fi
+	gpg --status-fd 1 --verify SOURCES/$XEN_RELEASE_FILE.sig SOURCES/$XEN_RELEASE_FILE \
+	    | grep -q "GOODSIG ${XEN_KEY}" || exit 1
+    else
+	echo "Not checking gpg signature due to missing key; add with gpg --recv-keys ${XEN_KEY}"
+    fi
+    
+    if [[ -n "$XEN_EXTLIB_FILES" ]] ; then
+	$requireargs XEN_EXTLIB_URL
+	echo "Checking external sources: "
+	for i in $XEN_EXTLIB_FILES ; do
+	    echo " checking $i"
+	    if [[ ! -e $TOPDIR/SOURCES/$i ]] ; then
+		wget -P $TOPDIR/SOURCES/ $XEN_EXTLIB_URL/$i || exit 1
+	    fi
+	done
+    fi
+
+    echo "Checking blktap..."
+    if [[ ! -e $TOPDIR/SOURCES/$BLKTAP_FILE ]] ; then
+	mkdir -p $TOPDIR/git-tmp
+	pushd $TOPDIR/git-tmp
+	
+	echo " Cloning blktap repo..."
+	git clone $BLKTAP_URL blktap.git || exit 1
+	cd blktap.git
+	echo " Creating $BLKTAP_FILE..."
+	git archive --prefix=blktap2/ -o $TOPDIR/SOURCES/$BLKTAP_FILE $BLKTAP_CSET || exit 1
+	popd
+    fi
+
+    echo "Checking edk2 (tianocore)..."
+    if [[ ! -e $TOPDIR/SOURCES/$EDK2_FILE ]] ; then
+	echo "Cloning tianocore repo..."
+	mkdir -p $TOPDIR/git-tmp
+	pushd $TOPDIR/git-tmp
+	
+	git clone $EDK2_URL edk2.git || exit 1
+	cd edk2.git
+	echo "Creating $EDK2_FILE..."
+	git archive --prefix=edk2/ -o $TOPDIR/SOURCES/$EDK2_FILE $EDK2_CSET || exit 1
+	popd
+    fi
+
+    echo "Checking livepatch-build-tools..."
+    if [[ -n "$LIVEPATCH_FILE" && ! -e SOURCES/$LIVEPATCH_FILE ]] ; then
+	echo "Cloning livepatch-build-tools repo..."
+	mkdir -p git-tmp
+	pushd git-tmp
+	
+	git clone $LIVEPATCH_URL livepatch-build-tools.git || exit 1
+	cd livepatch-build-tools.git
+	echo "Creating $LIVEPATCH_FILE..."
+	git archive --prefix=livepatch-build-tools/ -o ../../SOURCES/$LIVEPATCH_FILE $LIVEPATCH_CSET || exit 1
+	popd
+    fi
+
+if [[ -e $TOPDIR/git-tmp ]] ; then
+	echo "Cleaning up cloned repositores"
+	rm -rf $TOPDIR/git-tmp
+    fi
+
+    echo "All sources present."
+}
+
+help-add "rebase new=[new version]: Rebase the patchqueue for the current release onto new-release"
+function rebase()
+{
+    . $TOPDIR/sources.cfg
+
+    $arg_parse
+
+    default continue "false"; $default_post
 
     $requireargs XEN_VERSION new
 
@@ -163,48 +356,52 @@ function rebase()
     echo $PWD
 
     local newpq=centos/pq/$new
-    if ! git-branch-exists branch=$newpq ; then
-	checkout-basebranch version="$new" 
-    
-	local oldpq=centos/pq/$XEN_VERSION
-	info "Checking out $oldpq"
-	git checkout $oldpq || fail "Checking out patchqueue"
-	info "Creating new patchqueue based on old branch"
-	stg branch --clone $newpq || fail "Cloning patchqueue"
-	info "Rebasing onto new base branch"
-	stg rebase base/$new || fail "Rebasing -- please clean up"
-    else
-	git checkout $newpq || fail "Checking out new patchqueue"
+
+    checkout-basebranch version="$new"
+
+    if git-branch-exists branch=$newpq ; then
+	stg branch --delete --force $newpq
     fi
+    
+    local oldpq=centos/pq/$XEN_VERSION
+    info "Checking out $oldpq"
+    git checkout $oldpq || fail "Checking out patchqueue"
+    info "Creating new patchqueue based on old branch"
+    stg branch --clone $newpq || fail "Cloning patchqueue"
+    info "Rebasing onto new base branch"
+    stg rebase base/$new || fail "Rebasing -- please clean up and run rebase-post"
 
-    info "Exporting patchqueue"
-    git format-patch --stdout -N  base/$new > ../../SOURCES/xen-queue.am || fail "Updating patchqueue"
-
-    cd ../..
-    ./pqnorm.pl
-
-    info "Updating XEN_VERSION in sources.cfg"
-    sed -i --follow-symlinks "s/XEN_VERSION=.*$/XEN_VERSION=$new/" sources.cfg
-
-    info "Rebase done.  Please update Xen version in SPECS/xen.spec and the changelog."
-    # Need to create tarball
+    rebase-post
 }
 
-function get-sources()
+help-add "rebase-post: Finish off a partially-completed rebase"
+function rebase-post()
 {
-    . sources.cfg
+    . $TOPDIR/sources.cfg
 
-    
+    $arg_parse
 
-    if [[ -n "$XEN_EXTLIB_FILES" ]] ; then
-	$requireargs XEN_EXTLIB_URL
-	echo "Checking external sources: "
-	for i in $XEN_EXTLIB_FILES ; do
-	    echo " checking $i"
-	    if [[ ! -e SOURCES/$i ]] ; then
-		wget -P SOURCES/ $XEN_EXTLIB_URL/$i || exit 1
-	    fi
-	done
+    cd $TOPDIR/UPSTREAM/xen.git
+
+    if [[ -z "$new" ]] ; then
+	local new
+	local lbranch
+	
+	git-get-branch var=lbranch
+	
+	new=$(basename $lbranch)
     fi
 
+    $requireargs XEN_VERSION
+
+    stg clean || fail "Cleaning patchqueue"
+
+    sync-patches-internal basever=$new
+
+    info "Updating XEN_VERSION in sources.cfg"
+    sed -i --follow-symlinks "s/XEN_VERSION=.*$/XEN_VERSION=$new/" $TOPDIR/sources.cfg || fail "Updating XEN_VERSION"
+
+    get-sources # NB at this point XEN_VERSION will change
+
+    info "Rebase done.  Please update Xen version in SPECS/xen.spec and the changelog."
 }

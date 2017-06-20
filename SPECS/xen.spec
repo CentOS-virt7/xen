@@ -56,7 +56,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.8.1
-Release: 4%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -81,7 +81,7 @@ Source52: efi-xen.cfg.aarch64
 Source53: edk2-bc54e50e0fe03c570014f363b547426913e92449.tar.gz
 
 %if %{with_livepatch}
-Source60: livepatch-tools-2af6f1aa62334f8c3d66cf2c5043686833de6cc6.tar.gz
+Source60: livepatch-tools-0c104573a1c168995ec553778d1d2d1ebe9c9042.tar.gz
 %endif
 
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
@@ -958,12 +958,6 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
-* Tue Jun 13 2017 Sarah Newman <srn@prgmr.com> 4.8.1-4.el6.centos
-- Bump version due to disabling xsmflash
-
-* Tue Jun 13 2017 Sarah Newman <srn@prgmr.com> 4.8.1-3.el6.centos
-- unused build number
-
 * Fri Jun 09 2017 Sarah Newman <srn@prgmr.com> 4.8.1-2.el6.centos
 - Import XSAs 213-214 (XSA 215 does not apply)
 - Enable live patching by default

@@ -23,6 +23,11 @@ function stg-apply-mbox()
     done
 }
 
+function stg-check()
+{
+    stg series >& /dev/null || fail "Not on an stg branch"
+}
+
 function git-branch-exists
 {
     $arg_parse
@@ -30,4 +35,13 @@ function git-branch-exists
     $requireargs branch
     
     git rev-parse --verify $branch >& /dev/null
+}
+
+function git-get-branch
+{
+    $arg_parse
+    
+    local _branch=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
+
+    report-result "$_branch"
 }

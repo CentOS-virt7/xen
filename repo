@@ -1,7 +1,9 @@
 #!/bin/bash
 #set -x
 
-TESTLIB_PATH="$PWD/lib"
+TOPDIR=$(cd $(dirname ${BASH_SOURCE[0]}); pwd)
+
+TESTLIB_PATH="$TOPDIR/lib"
 
 # Then as many as the sub-libraries as you need
 . ${TESTLIB_PATH}/core.sh
