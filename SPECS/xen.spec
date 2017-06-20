@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 20%{?dist}
+Release: 24%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -88,7 +88,8 @@ Patch2023: xsa197-4.4-qemuu.patch
 Patch2024: xsa208-qemuu-4.7.patch
 Patch2025: xsa209-qemuu-0001-display-cirrus-ignore-source-pitch-value-as-needed-i.patch
 Patch2026: xsa209-qemuu-0002-cirrus-add-blit_is_unsafe-call-to-cirrus_bitblt_cput.patch 
-Patch2027:  xsa211-qemuu-4.4.patch
+Patch2027: xsa211-qemuu-4.4.patch
+Patch2028: xsa216-qemuu-4.5.patch 
 
 Patch3004: xsa164.patch
 Patch3005: usb-linux.c-fix-buffer-overflow.qemut.patch
@@ -339,6 +340,7 @@ pushd tools/qemu-xen
 %patch2025 -p1
 %patch2026 -p1
 %patch2027 -p1
+%patch2028 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -897,6 +899,19 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Jun 20 2017 Kevin Stange <kevin@steadfast.net> 4.4.4-24.el6.centos
+- Import XSA-216, 217, 218, 219, 221, 222, 224
+- Note: XSA-220 does not affect xen-4.4; XSA-223, 225 do not affect x86
+
+* Tue May 02 2017 Kevin Stange <kevin@steadfast.net> 4.4.4-23.el6.centos
+- Import XSA-213, 214, 215
+
+* Wed Apr 19 2017 Johnny Hughes <johnny@centos.org> 4.4.4-22.el6.centos
+- Import XSA-206
+
+* Tue Apr 18 2017 Johnny Hughes <johnny@centos.org> 4.4.4-21.el6.centos
+- Import XSA-212
+
 * Wed Mar 15 2017 Johnny Hughes <johnny@centos.org> 4.4.4-20.el6.centos
 - Import XSA-211
 
