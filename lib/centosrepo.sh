@@ -109,6 +109,7 @@ function checkout-basebranch()
     
 }
 
+help-add "make-tree: Make UPSTREAM/xen.git and create branches based on SOURCES/xen-queue.am"
 function make-tree()
 {
     . $TOPDIR/sources.cfg
@@ -157,6 +158,7 @@ function make-tree()
 	
 }
 
+help-add "import-patches [patches]: Add patches to the patchqueue for the current version"
 function import-patches()
 {
     . $TOPDIR/sources.cfg
@@ -204,7 +206,8 @@ function sync-patches-internal()
      ./pqnorm.pl)
 }
 
-function sync-patches()
+help-add "sync-queue: Update SOURCES/xen-queue.am based on UPSTREAM/xen.git branch"
+function sync-queue()
 {
     . $TOPDIR/sources.cfg
 
@@ -223,6 +226,29 @@ function sync-patches()
     sync-patches-internal
 }
 
+help-add "sync-tree: Update UPSTREAM/xen.git based on SOURCES/xen-queue.am"
+function sync-tree()
+{
+    . $TOPDIR/sources.cfg
+
+    $arg_parse
+    
+    $requireargs XEN_VERSION
+
+    cd $TOPDIR/UPSTREAM/xen.git || fail "Cannot cd to UPSTREAM/xen.git"
+
+    local pqbranch=centos/pq/$XEN_VERSION
+    stg branch --delete --force $pqbranch
+
+    info "  ...Checking out $tagbranch"
+    git checkout $tagbranch || fail "Checking out branch $tagbranch"
+    info "  ...Creating branch"
+    stg branch --create $pqbranch || fail "Creating stgit branch"
+    info "  Importing patchqueue"
+    stg import -M ../../SOURCES/xen-queue.am || fail "Importing patchqueue"
+}
+
+help-add "get-sources: Download and/or create tarballs for SOURCES based on sources.cfg"
 function get-sources()
 {
     . $TOPDIR/sources.cfg
@@ -242,6 +268,16 @@ function get-sources()
 	wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE || exit 1
     fi
 
+    if gpg --list-keys 0x${XEN_KEY}; then
+	if [[ ! -e SOURCES/$XEN_RELEASE_FILE.sig ]]; then
+            wget -P SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE.sig || exit 1
+	fi
+	gpg --status-fd 1 --verify SOURCES/$XEN_RELEASE_FILE.sig SOURCES/$XEN_RELEASE_FILE \
+	    | grep -q "GOODSIG ${XEN_KEY}" || exit 1
+    else
+	echo "Not checking gpg signature due to missing key; add with gpg --recv-keys ${XEN_KEY}"
+    fi
+    
     if [[ -n "$XEN_EXTLIB_FILES" ]] ; then
 	$requireargs XEN_EXTLIB_URL
 	echo "Checking external sources: "
@@ -279,7 +315,20 @@ function get-sources()
 	popd
     fi
 
-    if [[ -e $TOPDIR/git-tmp ]] ; then
+    echo "Checking livepatch-build-tools..."
+    if [[ -n "$LIVEPATCH_FILE" && ! -e SOURCES/$LIVEPATCH_FILE ]] ; then
+	echo "Cloning livepatch-build-tools repo..."
+	mkdir -p git-tmp
+	pushd git-tmp
+	
+	git clone $LIVEPATCH_URL livepatch-build-tools.git || exit 1
+	cd livepatch-build-tools.git
+	echo "Creating $LIVEPATCH_FILE..."
+	git archive --prefix=livepatch-build-tools/ -o ../../SOURCES/$LIVEPATCH_FILE $LIVEPATCH_CSET || exit 1
+	popd
+    fi
+
+if [[ -e $TOPDIR/git-tmp ]] ; then
 	echo "Cleaning up cloned repositores"
 	rm -rf $TOPDIR/git-tmp
     fi
@@ -287,6 +336,7 @@ function get-sources()
     echo "All sources present."
 }
 
+help-add "rebase new=[new version]: Rebase the patchqueue for the current release onto new-release"
 function rebase()
 {
     . $TOPDIR/sources.cfg
@@ -324,6 +374,7 @@ function rebase()
     rebase-post
 }
 
+help-add "rebase-post: Finish off a partially-completed rebase"
 function rebase-post()
 {
     . $TOPDIR/sources.cfg
@@ -342,6 +393,8 @@ function rebase-post()
     fi
 
     $requireargs XEN_VERSION
+
+    stg clean || fail "Cleaning patchqueue"
 
     sync-patches-internal basever=$new
 

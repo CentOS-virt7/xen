@@ -358,6 +358,11 @@ function retry()
     return $ret
 }
 
+function help-add()
+{
+    TESTLIB_HELP+=("$@")
+}
+
 function help()
 {
     for i in "${TESTLIB_HELP[@]}" ; do

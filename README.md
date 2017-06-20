@@ -1,6 +1,18 @@
 # Branches
 
-`xen-44` is the branch for Xen 4.4.  `xen-46` is the branch for Xen 4.6.
+ - `xen-44` is the branch for Xen 4.4
+ - `xen-46` is the branch for Xen 4.6 (currently supported)
+ - `xen-48` is the branch for Xen 4.8
+
+# repo script
+
+The main directory has a script called `repo` with a number of
+'utility' functions.  A quick summary can be found by running `./repo
+help`.
+
+None of these functions call `sudo`; the content
+can be found in `lib/*.sh`, and configuration for current version, &c can
+be found in `sources.cfg`.
 
 # Building
 
@@ -8,7 +20,7 @@ The first thing to do, after checking out the appropriate branch, is
 to get the required source files.  Do this by running the included
 script:
 
-    ./get_sources.sh
+    ./repo get-sources
 
 Then do an `rpmbuild` (obviously replacing `el7` with `el6` for CentOS 6):
 
@@ -18,7 +30,7 @@ Or, make an srpm and submit it to koji:
 
     rpmbuild --define "_topdir $PWD" --define "dist .el7" -bs SPECS/*.spec
 
-    koji build virt7-xen-46-el7 SRPMS/*.el7.src.rpm
+    cbs build virt7-xen-46-el7 SRPMS/*.el7.src.rpm
 
 # Adding qemu patches
 
@@ -56,16 +68,34 @@ And the following line after `pushd tools/qemu-xen-traditional`:
 
 # Working with the Xen patchqueue
 
-The core Xen patchqueue is stored as a git "am" file.  This makes it a
+The core Xen patchqueue is stored as a `git` "am" file.  This makes it a
 tiny bit more difficult to add a single patch, but makes it *much*
 easier to work with when it comes to rebasing to a new version of Xen.
 
-I strongly encourage you to use "stackgit" for working with this
-queue, as it makes things much easier.  (If you've used quilt, the
-concepts are somewhat similar.)
+Most of these operations are implemented in the `repo` script; a
+breakdown of what's going on inside is included to help understanding.
+To work with the script requires that you have both `git` and stackgit
+(`stg`) installed.
 
-Start by cloning the upstream git repository somewhere:
+## Making a git tree with the patchqueue
 
+Start by cloning the upstream git repository:
+
+    ./repo make-tree
+
+This will create a tree in `UPSTREAM/xen.git` based on the
+`XEN_VERSION` set in `sources.cfg`.  Suppose that `XEN_VERSION` is set
+to `4.6.0`. `make-tree` will make the following branches:
+
+ - `base/4.6.0`: A branch based on `RELEASE-4.6.0`
+
+ - `centos/pq/4.6.0`: A branch based on the above, but with the
+   CentOS "patchqueue" (`SOURCES/xen-queue.am`) applied.
+
+To do this manually:
+
+    mkdir UPSTREAM
+    cd UPSTREAM
     git clone git://xenbits.xenproject.org/xen.git xen.git
     cd xen.git
 
@@ -81,8 +111,18 @@ And import the patchqueue:
 
     stg import -M ${path_to_package_repo}/SOURCES/xen-queue.am
 
-Now you can manipulate the patchqueue using normal stackgit commands.
-For example, if you wanted to import the patch from XSA-150:
+## Importing patches to the patchqueue
+
+Once you have the tree, you can import new patches to the queue like this:
+
+    ./repo import-patches /path/to/xsas/xsa150.patch
+
+Once you've imported all the patches and everything works, update
+`SOURCES/xen-queue.am` like this:
+
+    ./repo sync-queue
+
+Or to do the above manually, from the `UPSTREAM/xen.git` repo:
 
     stg import -m /path/to/xsas/xsa150.patch
 
@@ -96,18 +136,31 @@ running) and reduce the diff size:
 
     ./pqnorm.pl
 
-I also strongly recommend keeping this tree around, so you can simply
-manipulate it and then do the export again, rather than repeating the
-whole process each time.
 
-# Rebasing to a new version of Xen
+## Rebasing to a new version of Xen
 
 Suppose you 4.6.1 comes out, and you want to rebase the patchqueue.
 Assuming you took my advice above, you already have the patchqueue in
 stg format from above.
 
-First clone the entire patchqueue (so you have a backup in case things
-go wrong):
+You can start the process as follows:
+
+    ./repo rebase new=4.6.1
+
+This will create `base/4.6.1` and `centos/pq/4.6.1`, and begin
+rebasing the existing patchqueue.  This rarely succeeds completely the
+first time; you'll have to manually fix up the process (often by
+removing old XSAs).  After fixing things up, finish the process by
+running
+
+    ./repo rebase-post
+
+This will sync the patchqueue, as well as updating `XEN_VERSION` in
+`sources.cfg`.  You'll have to update `xen.spec` (see below) and call
+`get-sources` to fetch the new tarball.
+
+To do it manually, first clone the entire patchqueue (so you have a
+backup in case things go wrong):
 
     git checkout centos/pq/4.6.0
     stg branch --clone centos/pq/4.6.1
@@ -140,9 +193,24 @@ Update `get_sources.sh` with the new version:
 
 And run it again to fetch the new version (and make sure it still works properly):
 
-    ./get_sources.sh
+    ./repo get-sources
 
 Update `SPECS/xen.spec` with the new version and changelog, and build.
 
 You may need to remove qemu-related patches from `xen.spec` as well
 (See "Adding qemu patches" for more information.)
+
+## Updating your xen.git tree based on updates to this repo
+
+Suppose someone else pushes some changes to CentOS-virt7/xen that
+modifies the patchqueue.  To update your tree:
+
+    ./repo sync-tree
+
+Or do it manually:
+
+    git checkout base/4.6.1
+    stg branch --delete --force centos/pq/4.6.1
+    stg branch --create centos/pq/4.6.1
+    stg import -M ../../SOURCES/xen-queue.am
+
