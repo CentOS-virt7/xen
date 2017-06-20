@@ -1,3 +1,8 @@
+function sources-from-spec()
+{
+    perl -ne 'if(/^Version.* ([0-9.]+)$/) { $version=$1; } if(/^Patch[0-9]+: (.*)$/ || /^Source[0-9]+: (.*)$/) { $f=$1; if($f=~/http:.*\/([^\/]+)$/) {$f=$1;} $f=~s/%{version}/$version/; print "$f\n"; }' $TOPDIR/SPECS/xen.spec
+}
+
 function clean-sources-find()
 {
     # Idea:
@@ -14,13 +19,12 @@ function clean-sources-find()
     # NB that this will also produce files present in the spec file
     # but *not* present in SOURCES.
     
-    (perl -ne 'if(/^Version.* ([0-9.]+)$/) { $version=$1; } if(/^Patch[0-9]+: (.*)$/ || /^Source[0-9]+: (.*)$/) { $f=$1; if($f=~/http:.*\/([^\/]+)$/) {$f=$1;} $f=~s/%{version}/$version/; print "$f\n"; }' SPECS/xen.spec \
-	    && ls SOURCES) | sort | uniq -u
+    (sources-from-spec && cd $TOPDIR && ls $TOPDIR/SOURCES) | sort | uniq -u
 }
 
 function clean-sources()
 {
-    clean-sources-find | (cd SOURCES; xargs rm)
+    clean-sources-find | (cd $TOPDIR/SOURCES; xargs rm)
 }
 
 function version-type()
@@ -103,7 +107,7 @@ function checkout-basebranch()
 
 function make-tree()
 {
-    . sources.cfg
+    . $TOPDIR/sources.cfg
 
     $arg_parse
     
@@ -134,7 +138,9 @@ function make-tree()
     # Now 
     # centos/pq/$version
     local pqbranch=centos/pq/$XEN_VERSION
-    if ! git-branch-exists branch=$pqbranch ; then
+    if git-branch-exists branch=$pqbranch ; then
+	git checkout $pqbranch
+    else
 	info "Creating patchqueue branch"
 	info "  ...Checking out $tagbranch"
 	git checkout $tagbranch || fail "Checking out branch $tagbranch"
@@ -142,13 +148,80 @@ function make-tree()
 	stg branch --create $pqbranch || fail "Creating stgit branch"
 	info "  Importing patchqueue"
 	stg import -M ../../SOURCES/xen-queue.am || fail "Importing patchqueue"
+	
     fi
 	
 }
 
+function import-patches()
+{
+    . $TOPDIR/sources.cfg
+
+    $arg_parse
+
+    $requireargs XEN_VERSION
+
+    if [[ -z "${args[@]}" ]] ; then
+	fail "No patches to import"
+    fi
+
+    local pqbranch=centos/pq/$XEN_VERSION
+
+    cd $TOPDIR/UPSTREAM/xen.git || fail "Directory doesn't exist!"
+
+    stg-check
+
+    local p
+    for p in "${args[@]}" ; do
+	info "Importing patch  $p..."
+	stg import -m $p || fail "Importing patch $p"
+    done
+
+    info "Patches imported to patchqueue.  Don't forget to sync-patches and bump the release number."
+}
+
+function sync-patches-internal()
+{
+    $arg_parse
+
+    # If basever is not specified, get it from the current branch name
+    if [[ -z "$basever" ]] ; then
+	local lbranch
+	local basever
+	
+	git-get-branch var=lbranch
+	basever=$(basename $lbranch)
+    fi
+    
+    info "Exporting patchqueue"
+    git format-patch --stdout -N  base/$basever > ../../SOURCES/xen-queue.am || fail "Updating patchqueue"
+
+    (cd $TOPDIR;
+     ./pqnorm.pl)
+}
+
+function sync-patches()
+{
+    . $TOPDIR/sources.cfg
+
+    $arg_parse
+
+    $requireargs XEN_VERSION
+
+    local pqbranch=centos/pq/$XEN_VERSION
+
+    cd $TOPDIR/UPSTREAM/xen.git || fail "Directory doesn't exist!"
+
+    git checkout $pqbranch || fail "Can't check out patchqueue branch!"
+
+    stg-check
+
+    sync-patches-internal
+}
+
 function rebase()
 {
-    . sources.cfg
+    . $TOPDIR/sources.cfg
 
     $arg_parse
 
@@ -177,11 +250,7 @@ function rebase()
 	git checkout $newpq || fail "Checking out new patchqueue"
     fi
 
-    info "Exporting patchqueue"
-    git format-patch --stdout -N  base/$new > ../../SOURCES/xen-queue.am || fail "Updating patchqueue"
-
-    cd ../..
-    ./pqnorm.pl
+    sync-patches-internal basever=$new
 
     info "Updating XEN_VERSION in sources.cfg"
     sed -i --follow-symlinks "s/XEN_VERSION=.*$/XEN_VERSION=$new/" sources.cfg
