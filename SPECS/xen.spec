@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.4.4
-Release: 24%{?dist}
+Release: 25%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -899,6 +899,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Aug 15 2017 Kevin Stange <kevin@steadfast.net> 4.4.4-25.el6.centos
+- Import XSA-226, 227, 230
+- Note: XSA-228 does not affect xen-4.4; XSA-229 is a Linux-only patch
+
 * Tue Jun 20 2017 Kevin Stange <kevin@steadfast.net> 4.4.4-24.el6.centos
 - Import XSA-216, 217, 218, 219, 221, 222, 224
 - Note: XSA-220 does not affect xen-4.4; XSA-223, 225 do not affect x86

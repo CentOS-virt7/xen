@@ -10317,3 +10317,258 @@ index 3013869..df4cdd0 100644
  #define gnttab_release_host_mappings(domain) ( paging_mode_external(domain) )
 -- 
 
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Tue, 15 Aug 2017 01:30:45 -0500
+Subject: [PATCH] grant_table: Default to v1, and disallow transitive grants
+
+The reference counting and locking discipline for transitive grants is broken.
+Their use is therefore declared out of security support.
+
+This is XSA-226.
+
+Transitive grants are expected to be unconditionally available with grant
+table v2.  Hiding transitive grants alone is an ABI breakage for the guest.
+Modern versions of Linux and the Windows PV drivers use grant table v1, but
+older versions did use v2.
+
+In principle, disabling gnttab v2 entirely is the safer way to cause guests to
+avoid using transitive grants. However, some older guests which defaulted to
+using gnttab v2 don't tolerate falling back from v2 to v1 over migrate.
+
+This patch introduces a new command line option to control grant table
+behaviour.  One suboption allows a choice of the maximum grant table version
+Xen will allow the guest to use, and defaults to v2.  A different suboption
+independently controls whether transitive grants can be used.
+
+The default case is:
+
+    gnttab=max_ver:2
+
+To disable gnttab v2 entirely, use:
+
+    gnttab=max_ver:1
+
+To allow gnttab v2 and transitive grants, use:
+
+    gnttab=max_ver:2,transitive
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ docs/misc/xen-command-line.markdown | 16 +++++++++++++
+ xen/common/grant_table.c            | 45 ++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 60 insertions(+), 1 deletion(-)
+
+diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
+index fdcfd7c..7515ad9 100644
+--- a/docs/misc/xen-command-line.markdown
++++ b/docs/misc/xen-command-line.markdown
+@@ -538,6 +538,22 @@ Specify the font size when using the VESA console driver.
+ 
+ Specify the serial parameters for the GDB stub.
+ 
++### gnttab
++> `= List of [ max_ver:<integer>, transitive ]`
++
++> Default: `gnttab=max_ver:2,no-transitive`
++
++Control various aspects of the grant table behaviour available to guests.
++
++* `max_ver` Select the maximum grant table version to offer to guests.  Valid
++version are 1 and 2.
++* `transitive` Permit or disallow the use of transitive grants.  Note that the
++use of grant table v2 without transitive grants is an ABI breakage from the
++guests point of view.
++
++*Warning:*
++Due to XSA-226, the use of transitive grants is outside of security support.
++
+ ### gnttab\_max\_nr\_frames
+ > `= <integer>`
+ 
+diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
+index 3bd68d4..271895a 100644
+--- a/xen/common/grant_table.c
++++ b/xen/common/grant_table.c
+@@ -45,6 +45,42 @@ unsigned int max_nr_grant_frames = DEFAULT_MAX_NR_GRANT_FRAMES;
+ integer_param("gnttab_max_nr_frames", max_nr_grant_frames);
+ #endif
+ 
++static unsigned int __read_mostly opt_gnttab_max_version = 2;
++static bool_t __read_mostly opt_transitive_grants;
++
++static void __init parse_gnttab(char *s)
++{
++    char *ss;
++
++    do {
++        ss = strchr(s, ',');
++        if ( ss )
++            *ss = '\0';
++
++        if ( !strncmp(s, "max_ver:", 8) )
++        {
++            long ver = simple_strtol(s + 8, NULL, 10);
++
++            if ( ver >= 1 && ver <= 2 )
++                opt_gnttab_max_version = ver;
++        }
++        else
++        {
++            bool_t val = !!strncmp(s, "no-", 3);
++
++            if ( !val )
++                s += 3;
++
++            if ( !strcmp(s, "transitive") )
++                opt_transitive_grants = val;
++        }
++
++        s = ss + 1;
++    } while ( ss );
++}
++
++custom_param("gnttab", parse_gnttab);
++
+ /* The maximum number of grant mappings is defined as a multiplier of the
+  * maximum number of grant table entries. This defines the multiplier used.
+  * Pretty arbitrary. [POLICY]
+@@ -1902,6 +1938,10 @@ __acquire_grant_for_copy(
+         trans_gref = gref;
+         if ( sha2 && (shah->flags & GTF_type_mask) == GTF_transitive )
+         {
++            if ( !opt_transitive_grants )
++                PIN_FAIL(unlock_out_clear, GNTST_general_error,
++                         "transitive grant disallowed by policy\n");
++
+             if ( !allow_transitive )
+                 PIN_FAIL(unlock_out_clear, GNTST_general_error,
+                          "transitive grant when transitivity not allowed\n");
+@@ -2575,7 +2615,10 @@ do_grant_table_op(
+     }
+     case GNTTABOP_set_version:
+     {
+-        rc = gnttab_set_version(guest_handle_cast(uop, gnttab_set_version_t));
++        if ( opt_gnttab_max_version == 1 )
++            rc = -ENOSYS; /* Behave as before set_version was introduced. */
++        else
++            rc = gnttab_set_version(guest_handle_cast(uop, gnttab_set_version_t));
+         break;
+     }
+     case GNTTABOP_get_status_frames:
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Tue, 20 Jun 2017 19:18:54 +0100
+Subject: [PATCH] x86/grant: Disallow misaligned PTEs
+
+Pagetable entries must be aligned to function correctly.  Disallow attempts
+from the guest to have a grant PTE created at a misaligned address, which
+would result in corruption of the L1 table with largely-guest-controlled
+values.
+
+This is XSA-227
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/mm.c        | 13 +++++++++++++
+ xen/include/xen/config.h |  2 ++
+ 2 files changed, 15 insertions(+)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index c014645..d316946 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -3779,6 +3779,9 @@ static int create_grant_pte_mapping(
+     l1_pgentry_t ol1e;
+     struct domain *d = v->domain;
+ 
++    if ( !IS_ALIGNED(pte_addr, sizeof(nl1e)) )
++        return GNTST_general_error;
++
+     adjust_guest_l1e(nl1e, d);
+ 
+     gmfn = pte_addr >> PAGE_SHIFT;
+@@ -3836,6 +3839,16 @@ static int destroy_grant_pte_mapping(
+     struct page_info *page;
+     l1_pgentry_t ol1e;
+ 
++    /*
++     * addr comes from Xen's active_entry tracking so isn't guest controlled,
++     * but it had still better be PTE-aligned.
++     */
++    if ( !IS_ALIGNED(addr, sizeof(ol1e)) )
++    {
++        ASSERT_UNREACHABLE();
++        return GNTST_general_error;
++    }
++
+     gmfn = addr >> PAGE_SHIFT;
+     page = get_page_from_gfn(d, gmfn, NULL, P2M_ALLOC);
+ 
+diff --git a/xen/include/xen/config.h b/xen/include/xen/config.h
+index 657c6e5..aca6219 100644
+--- a/xen/include/xen/config.h
++++ b/xen/include/xen/config.h
+@@ -83,6 +83,8 @@ int current_domain_id(void);
+ 
+ #endif /* !__ASSEMBLY__ */
+ 
++#define IS_ALIGNED(val, align) (((val) & ((align) - 1)) == 0)
++
+ #define __STR(...) #__VA_ARGS__
+ #define STR(...) __STR(__VA_ARGS__)
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 15 Aug 2017 01:30:55 -0500
+Subject: [PATCH] gnttab: correct pin status fixup for copy
+
+Regardless of copy operations only setting GNTPIN_hst*, GNTPIN_dev*
+also need to be taken into account when deciding whether to clear
+_GTF_{read,writ}ing. At least for consistency with code elsewhere the
+read part better doesn't use any mask at all.
+
+This is XSA-230.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/common/grant_table.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
+index 271895a..b92350e 100644
+--- a/xen/common/grant_table.c
++++ b/xen/common/grant_table.c
+@@ -1859,10 +1859,10 @@ __release_grant_for_copy(
+ static void __fixup_status_for_copy_pin(const struct active_grant_entry *act,
+                                    uint16_t *status)
+ {
+-    if ( !(act->pin & GNTPIN_hstw_mask) )
++    if ( !(act->pin & (GNTPIN_hstw_mask | GNTPIN_devw_mask)) )
+         gnttab_clear_flag(_GTF_writing, status);
+ 
+-    if ( !(act->pin & GNTPIN_hstr_mask) )
++    if ( !act->pin )
+         gnttab_clear_flag(_GTF_reading, status);
+ }
+ 
+@@ -2062,7 +2062,7 @@ __acquire_grant_for_copy(
+  
+  unlock_out_clear:
+     if ( !(readonly) &&
+-         !(act->pin & GNTPIN_hstw_mask) )
++         !(act->pin & (GNTPIN_hstw_mask | GNTPIN_devw_mask)) )
+         gnttab_clear_flag(_GTF_writing, status);
+ 
+     if ( !act->pin )
+-- 
+
