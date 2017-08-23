@@ -68,7 +68,7 @@ function version-to-tag()
 	    ;;
 	"rc")
 	    if [[ "$version" =~ (^[0-9]+\.[0-9]+\.[0-9]+)(rc[0-9]+)$ ]] ; then
-		_tag="${REMATCH[0]}-${REMATCH[1]}"
+		_tag="${BASH_REMATCH[0]}-${BASH_REMATCH[1]}"
 	    else
 		fail "Couldn't parse version"
 	    fi
@@ -404,4 +404,59 @@ function rebase-post()
     get-sources # NB at this point XEN_VERSION will change
 
     info "Rebase done.  Please update Xen version in SPECS/xen.spec and the changelog."
+}
+
+# Check one patch to see if it's been checked in upstream (to be used during a rebase)
+function stg-check-patch-one()
+{
+    $arg_parse
+
+    $requireargs lastversion
+    
+    local patchname=$(stg series --noprefix --unapplied | head -1)
+
+    if [[ -z "$patchname" ]] ; then
+	info "No more patches"
+	return 0
+    fi
+
+    info "Next patch: $patchname"
+
+    rm -rf /tmp/series-next.patch
+    
+    stg export --stdout $patchname > /tmp/series-next.patch
+
+    oneline=$(head -1 /tmp/series-next.patch)
+
+    info "Description: $oneline"
+
+    gitlog=$(git log --oneline --decorate= --grep="$oneline" RELEASE-$lastversion..)
+
+    if [[ -z "$gitlog" ]] ; then
+	info "Can't find patch in log, applying"
+	stg push
+	return
+    fi
+
+    local cs
+    if [[ $gitlog =~ ^([0-9a-f]+)\  ]] ; then
+	cs=${BASH_REMATCH[0]}
+	info "Candidate changeset: $cs"
+    else
+	fail "Couldn't parse gitlog ($gitlog)!"
+    fi
+
+    # Check the patch ID
+    git format-patch -1 --stdout $cs > /tmp/candidate.patch
+
+    seriesid=$(git patch-id < /tmp/series-next.patch)
+    candidateid=$(git patch-id < /tmp/candidate.patch)
+
+    if [[ $seriesid != $candidateid ]] ; then
+	echo "WARNING: seriesid $seriesid != candidateid $candidateid, Check to make sure commit $oneline actually exists"
+    fi
+
+    info "Deleting patch $patchname"
+
+    stg delete $patchname
 }
