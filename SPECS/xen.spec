@@ -51,8 +51,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.6.5
-Release: 2%{?dist}
+Version: 4.6.6
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -92,11 +92,6 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 # aarch64-only
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
-Patch2016: xsa211-qemuu-4.6.patch
-Patch2017: xsa216-qemuu-4.7.patch
-
-Patch3016: xsa211-qemut.patch
-#Patch3017: Not applicable
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -309,13 +304,10 @@ pushd tools/qemu-xen
 %ifarch aarch64
 %patch2001 -p1
 %endif
-%patch2016 -p1
-%patch2017 -p1
 popd
 
 pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
-%patch3016 -p1
 popd
 
 %if %{with_blktap}
@@ -901,6 +893,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Aug 23 2017 George Dunlap <george.dunlap@citrix.com> 4.6.6-1.el6.centos
+- Update to Xen 4.6.6
+
 * Mon Jun 19 2017 George Dunlap <george.dunlap@citrix.com> 4.6.5-2.el6.centos
 - Import XSA-220
 
