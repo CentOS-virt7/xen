@@ -10320,7 +10320,7 @@ index 3013869..df4cdd0 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
-Date: Fri, 18 Aug 2017 13:11:03 -0500
+Date: Tue, 29 Aug 2017 12:01:53 -0500
 Subject: [PATCH] gnttab: don't use possibly unbounded tail calls
 
 There is no guarantee that the compiler would actually translate them
@@ -10338,9 +10338,27 @@ This is part of CVE-2017-12135 / XSA-226.
 
 Signed-off-by: Jan Beulich <jbeulich@suse.com>
 ---
- xen/common/grant_table.c | 39 +++++++++++++++++++++++++++------------
- 1 file changed, 27 insertions(+), 12 deletions(-)
+ xen/common/compat/grant_table.c |  6 +++---
+ xen/common/grant_table.c        | 39 +++++++++++++++++++++++++++------------
+ 2 files changed, 30 insertions(+), 15 deletions(-)
 
+diff --git a/xen/common/compat/grant_table.c b/xen/common/compat/grant_table.c
+index 7ebbbc1..fdf2b98 100644
+--- a/xen/common/compat/grant_table.c
++++ b/xen/common/compat/grant_table.c
+@@ -247,9 +247,9 @@ int compat_grant_table_op(unsigned int cmd,
+                 rc = gnttab_copy(guest_handle_cast(nat.uop, gnttab_copy_t), n);
+             if ( rc > 0 )
+             {
+-                ASSERT(rc < n);
+-                i -= n - rc;
+-                n = rc;
++                ASSERT(rc <= n);
++                i -= rc;
++                n -= rc;
+             }
+             if ( rc >= 0 )
+             {
 diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
 index 3bd68d4..ac1432b 100644
 --- a/xen/common/grant_table.c
@@ -10442,7 +10460,7 @@ index 3bd68d4..ac1432b 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
-Date: Fri, 18 Aug 2017 13:11:09 -0500
+Date: Tue, 29 Aug 2017 12:01:57 -0500
 Subject: [PATCH] gnttab: fix transitive grant handling
 
 Processing of transitive grants must not use the fast path, or else
@@ -10811,7 +10829,7 @@ index 657c6e5..aca6219 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
-Date: Fri, 18 Aug 2017 13:11:20 -0500
+Date: Tue, 29 Aug 2017 12:02:09 -0500
 Subject: [PATCH] gnttab: correct pin status fixup for copy
 
 Regardless of copy operations only setting GNTPIN_hst*, GNTPIN_dev*
