@@ -449,8 +449,8 @@ function stg-check-patch-one()
     # Check the patch ID
     git format-patch -1 --stdout $cs > /tmp/candidate.patch
 
-    seriesid=$(git patch-id < /tmp/series-next.patch)
-    candidateid=$(git patch-id < /tmp/candidate.patch)
+    seriesid=$(git patch-id < /tmp/series-next.patch | awk '{print $1;}')
+    candidateid=$(git patch-id < /tmp/candidate.patch | awk '{print $1;}')
 
     if [[ $seriesid != $candidateid ]] ; then
 	echo "WARNING: seriesid $seriesid != candidateid $candidateid, Check to make sure commit $oneline actually exists"
