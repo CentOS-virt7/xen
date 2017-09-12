@@ -1359,3 +1359,409 @@ index eb6b770190..922c6dc2b6 100644
      if ( !act->pin )
 -- 
 
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Tue, 12 Sep 2017 12:14:31 +0100
+Subject: [PATCH] xen/mm: make sure node is less than MAX_NUMNODES
+
+The output of MEMF_get_node(memflags) can be as large as nodeid_t can
+hold (currently 255).  This is then used as an index to arrays of size
+MAX_NUMNODE, which is 64 on x86 and 1 on ARM, can be passed in by an
+untrusted guest (via memory_exchange and increase_reservation) and is
+not currently bounds-checked.
+
+Check the value in page_alloc.c before using it, and also check the
+value in the hypercall call sites and return -EINVAL if appropriate.
+Don't permit domains other than the hardware or control domain to
+allocate node-constrained memory.
+
+This is XSA-231.
+
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/common/memory.c     | 40 +++++++++++++++++++++++++++++++++-------
+ xen/common/page_alloc.c |  6 +++++-
+ 2 files changed, 38 insertions(+), 8 deletions(-)
+
+diff --git a/xen/common/memory.c b/xen/common/memory.c
+index 8c7ee0975d..586a1da8e1 100644
+--- a/xen/common/memory.c
++++ b/xen/common/memory.c
+@@ -384,6 +384,31 @@ static void decrease_reservation(struct memop_args *a)
+     a->nr_done = i;
+ }
+ 
++static bool_t propagate_node(unsigned int xmf, unsigned int *memflags)
++{
++    const struct domain *currd = current->domain;
++
++    BUILD_BUG_ON(XENMEMF_get_node(0) != NUMA_NO_NODE);
++    BUILD_BUG_ON(MEMF_get_node(0) != NUMA_NO_NODE);
++
++    if ( XENMEMF_get_node(xmf) == NUMA_NO_NODE )
++        return 1;
++
++    if ( is_hardware_domain(currd) || is_control_domain(currd) )
++    {
++        if ( XENMEMF_get_node(xmf) >= MAX_NUMNODES )
++            return 0;
++
++        *memflags |= MEMF_node(XENMEMF_get_node(xmf));
++        if ( xmf & XENMEMF_exact_node_request )
++            *memflags |= MEMF_exact_node;
++    }
++    else if ( xmf & XENMEMF_exact_node_request )
++        return 0;
++
++    return 1;
++}
++
+ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+ {
+     struct xen_memory_exchange exch;
+@@ -456,6 +481,12 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+         }
+     }
+ 
++    if ( unlikely(!propagate_node(exch.out.mem_flags, &memflags)) )
++    {
++        rc = -EINVAL;
++        goto fail_early;
++    }
++
+     d = rcu_lock_domain_by_any_id(exch.in.domid);
+     if ( d == NULL )
+     {
+@@ -474,7 +505,6 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+         d,
+         XENMEMF_get_address_bits(exch.out.mem_flags) ? :
+         (BITS_PER_LONG+PAGE_SHIFT)));
+-    memflags |= MEMF_node(XENMEMF_get_node(exch.out.mem_flags));
+ 
+     for ( i = (exch.nr_exchanged >> in_chunk_order);
+           i < (exch.in.nr_extents >> in_chunk_order);
+@@ -822,12 +852,8 @@ static int construct_memop_from_reservation(
+         }
+         read_unlock(&d->vnuma_rwlock);
+     }
+-    else
+-    {
+-        a->memflags |= MEMF_node(XENMEMF_get_node(r->mem_flags));
+-        if ( r->mem_flags & XENMEMF_exact_node_request )
+-            a->memflags |= MEMF_exact_node;
+-    }
++    else if ( unlikely(!propagate_node(r->mem_flags, &a->memflags)) )
++        return -EINVAL;
+ 
+     return 0;
+ }
+diff --git a/xen/common/page_alloc.c b/xen/common/page_alloc.c
+index 8a1f86c874..eb342a5639 100644
+--- a/xen/common/page_alloc.c
++++ b/xen/common/page_alloc.c
+@@ -611,9 +611,13 @@ static struct page_info *alloc_heap_pages(
+         if ( node >= MAX_NUMNODES )
+             node = cpu_to_node(smp_processor_id());
+     }
++    else if ( unlikely(node >= MAX_NUMNODES) )
++    {
++        ASSERT_UNREACHABLE();
++        return NULL;
++    }
+     first_node = node;
+ 
+-    ASSERT(node < MAX_NUMNODES);
+     ASSERT(zone_lo <= zone_hi);
+     ASSERT(zone_hi < NR_ZONES);
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Tue, 12 Sep 2017 12:14:32 +0100
+Subject: [PATCH] grant_table: fix GNTTABOP_cache_flush handling
+
+Don't fall over a NULL grant_table pointer when the owner of the domain
+is a system domain (DOMID_{XEN,IO} etc).
+
+This is XSA-232.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/common/grant_table.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
+index 922c6dc2b6..48c1420f1b 100644
+--- a/xen/common/grant_table.c
++++ b/xen/common/grant_table.c
+@@ -3024,7 +3024,7 @@ static int __gnttab_cache_flush(gnttab_cache_flush_t *cflush,
+ 
+     page = mfn_to_page(mfn);
+     owner = page_get_owner_and_reference(page);
+-    if ( !owner )
++    if ( !owner || !owner->grant_table )
+     {
+         rcu_unlock_domain(d);
+         return -EPERM;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Juergen Gross <jgross@suse.com>
+Date: Tue, 12 Sep 2017 12:14:32 +0100
+Subject: [PATCH] tools/xenstore: dont unlink connection object twice
+
+A connection object of a domain with associated stubdom has two
+parents: the domain and the stubdom. When cleaning up the list of
+active domains in domain_cleanup() make sure not to unlink the
+connection twice from the same domain. This could happen when the
+domain and its stubdom are being destroyed at the same time leading
+to the domain loop being entered twice.
+
+Additionally don't use talloc_free() in this case as it will remove
+a random parent link, leading eventually to a memory leak. Use
+talloc_unlink() instead specifying the context from which the
+connection object should be removed.
+
+This is XSA-233.
+
+Signed-off-by: Juergen Gross <jgross@suse.com>
+Reviewed-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/xenstore/xenstored_domain.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/tools/xenstore/xenstored_domain.c b/tools/xenstore/xenstored_domain.c
+index e7a73f147c..16aa0b7fc2 100644
+--- a/tools/xenstore/xenstored_domain.c
++++ b/tools/xenstore/xenstored_domain.c
+@@ -220,10 +220,11 @@ static int destroy_domain(void *_domain)
+ static void domain_cleanup(void)
+ {
+ 	xc_dominfo_t dominfo;
+-	struct domain *domain, *tmp;
++	struct domain *domain;
+ 	int notify = 0;
+ 
+-	list_for_each_entry_safe(domain, tmp, &domains, list) {
++ again:
++	list_for_each_entry(domain, &domains, list) {
+ 		if (xc_domain_getinfo(*xc_handle, domain->domid, 1,
+ 				      &dominfo) == 1 &&
+ 		    dominfo.domid == domain->domid) {
+@@ -235,8 +236,12 @@ static void domain_cleanup(void)
+ 			if (!dominfo.dying)
+ 				continue;
+ 		}
+-		talloc_free(domain->conn);
+-		notify = 0; /* destroy_domain() fires the watch */
++		if (domain->conn) {
++			talloc_unlink(talloc_autofree_context(), domain->conn);
++			domain->conn = NULL;
++			notify = 0; /* destroy_domain() fires the watch */
++			goto again;
++		}
+ 	}
+ 
+ 	if (notify)
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 12 Sep 2017 12:14:32 +0100
+Subject: [PATCH] gnttab: also validate PTE permissions upon destroy/replace
+
+In order for PTE handling to match up with the reference counting done
+by common code, presence and writability of grant mapping PTEs must
+also be taken into account; validating just the frame number is not
+enough. This is in particular relevant if a guest fiddles with grant
+PTEs via non-grant hypercalls.
+
+Note that the flags being passed to replace_grant_host_mapping()
+already happen to be those of the existing mapping, so no new function
+parameter is needed.
+
+This is XSA-234.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/mm.c | 79 +++++++++++++++++++++++++++++++++++++++++++------------
+ 1 file changed, 62 insertions(+), 17 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 3bf728bfe5..20d963cb22 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -3930,7 +3930,8 @@ static int create_grant_pte_mapping(
+ }
+ 
+ static int destroy_grant_pte_mapping(
+-    uint64_t addr, unsigned long frame, struct domain *d)
++    uint64_t addr, unsigned long frame, unsigned int grant_pte_flags,
++    struct domain *d)
+ {
+     int rc = GNTST_okay;
+     void *va;
+@@ -3976,16 +3977,27 @@ static int destroy_grant_pte_mapping(
+ 
+     ol1e = *(l1_pgentry_t *)va;
+     
+-    /* Check that the virtual address supplied is actually mapped to frame. */
+-    if ( unlikely(l1e_get_pfn(ol1e) != frame) )
++    /*
++     * Check that the PTE supplied actually maps frame (with appropriate
++     * permissions).
++     */
++    if ( unlikely(l1e_get_pfn(ol1e) != frame) ||
++         unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
++                  (_PAGE_PRESENT | _PAGE_RW)) )
+     {
+         page_unlock(page);
+-        MEM_LOG("PTE entry %lx for address %"PRIx64" doesn't match frame %lx",
+-                (unsigned long)l1e_get_intpte(ol1e), addr, frame);
++        MEM_LOG("PTE %"PRIpte" at %"PRIx64" doesn't match grant (%"PRIpte")",
++                l1e_get_intpte(ol1e), addr,
++                l1e_get_intpte(l1e_from_pfn(frame, grant_pte_flags)));
+         rc = GNTST_general_error;
+         goto failed;
+     }
+ 
++    if ( unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
++                  ~(_PAGE_AVAIL | PAGE_CACHE_ATTRS)) )
++        MEM_LOG("PTE flags %x at %"PRIx64" don't match grant (%x)\n",
++                l1e_get_flags(ol1e), addr, grant_pte_flags);
++
+     /* Delete pagetable entry. */
+     if ( unlikely(!UPDATE_ENTRY
+                   (l1, 
+@@ -3994,7 +4006,7 @@ static int destroy_grant_pte_mapping(
+                    0)) )
+     {
+         page_unlock(page);
+-        MEM_LOG("Cannot delete PTE entry at %p", va);
++        MEM_LOG("Cannot delete PTE entry at %"PRIx64, addr);
+         rc = GNTST_general_error;
+         goto failed;
+     }
+@@ -4062,7 +4074,8 @@ static int create_grant_va_mapping(
+ }
+ 
+ static int replace_grant_va_mapping(
+-    unsigned long addr, unsigned long frame, l1_pgentry_t nl1e, struct vcpu *v)
++    unsigned long addr, unsigned long frame, unsigned int grant_pte_flags,
++    l1_pgentry_t nl1e, struct vcpu *v)
+ {
+     l1_pgentry_t *pl1e, ol1e;
+     unsigned long gl1mfn;
+@@ -4098,19 +4111,30 @@ static int replace_grant_va_mapping(
+ 
+     ol1e = *pl1e;
+ 
+-    /* Check that the virtual address supplied is actually mapped to frame. */
+-    if ( unlikely(l1e_get_pfn(ol1e) != frame) )
++    /*
++     * Check that the virtual address supplied is actually mapped to frame
++     * (with appropriate permissions).
++     */
++    if ( unlikely(l1e_get_pfn(ol1e) != frame) ||
++         unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
++                  (_PAGE_PRESENT | _PAGE_RW)) )
+     {
+-        MEM_LOG("PTE entry %lx for address %lx doesn't match frame %lx",
+-                l1e_get_pfn(ol1e), addr, frame);
++        MEM_LOG("PTE %"PRIpte" for %lx doesn't match grant (%"PRIpte")",
++                l1e_get_intpte(ol1e), addr,
++                l1e_get_intpte(l1e_from_pfn(frame, grant_pte_flags)));
+         rc = GNTST_general_error;
+         goto unlock_and_out;
+     }
+ 
++    if ( unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
++                  ~(_PAGE_AVAIL | PAGE_CACHE_ATTRS)) )
++        MEM_LOG("PTE flags %x for %"PRIx64" don't match grant (%x)",
++                l1e_get_flags(ol1e), addr, grant_pte_flags);
++
+     /* Delete pagetable entry. */
+     if ( unlikely(!UPDATE_ENTRY(l1, pl1e, ol1e, nl1e, gl1mfn, v, 0)) )
+     {
+-        MEM_LOG("Cannot delete PTE entry at %p", (unsigned long *)pl1e);
++        MEM_LOG("Cannot delete PTE entry for %"PRIx64, addr);
+         rc = GNTST_general_error;
+         goto unlock_and_out;
+     }
+@@ -4124,9 +4148,11 @@ static int replace_grant_va_mapping(
+ }
+ 
+ static int destroy_grant_va_mapping(
+-    unsigned long addr, unsigned long frame, struct vcpu *v)
++    unsigned long addr, unsigned long frame, unsigned int grant_pte_flags,
++    struct vcpu *v)
+ {
+-    return replace_grant_va_mapping(addr, frame, l1e_empty(), v);
++    return replace_grant_va_mapping(addr, frame, grant_pte_flags,
++                                    l1e_empty(), v);
+ }
+ 
+ static int create_grant_p2m_mapping(uint64_t addr, unsigned long frame,
+@@ -4219,21 +4245,40 @@ int replace_grant_host_mapping(
+     unsigned long gl1mfn;
+     struct page_info *l1pg;
+     int rc;
++    unsigned int grant_pte_flags;
+     
+     if ( paging_mode_external(current->domain) )
+         return replace_grant_p2m_mapping(addr, frame, new_addr, flags);
+ 
++    grant_pte_flags =
++        _PAGE_PRESENT | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_GNTTAB | _PAGE_NX;
++
++    if ( flags & GNTMAP_application_map )
++        grant_pte_flags |= _PAGE_USER;
++    if ( !(flags & GNTMAP_readonly) )
++        grant_pte_flags |= _PAGE_RW;
++    /*
++     * On top of the explicit settings done by create_grant_host_mapping()
++     * also open-code relevant parts of adjust_guest_l1e(). Don't mirror
++     * available and cachability flags, though.
++     */
++    if ( !is_pv_32bit_domain(curr->domain) )
++        grant_pte_flags |= (grant_pte_flags & _PAGE_USER)
++                           ? _PAGE_GLOBAL
++                           : _PAGE_GUEST_KERNEL | _PAGE_USER;
++
+     if ( flags & GNTMAP_contains_pte )
+     {
+         if ( !new_addr )
+-            return destroy_grant_pte_mapping(addr, frame, curr->domain);
++            return destroy_grant_pte_mapping(addr, frame, grant_pte_flags,
++                                             curr->domain);
+         
+         MEM_LOG("Unsupported grant table operation");
+         return GNTST_general_error;
+     }
+ 
+     if ( !new_addr )
+-        return destroy_grant_va_mapping(addr, frame, curr);
++        return destroy_grant_va_mapping(addr, frame, grant_pte_flags, curr);
+ 
+     pl1e = guest_map_l1e(curr, new_addr, &gl1mfn);
+     if ( !pl1e )
+@@ -4281,7 +4326,7 @@ int replace_grant_host_mapping(
+     put_page(l1pg);
+     guest_unmap_l1e(curr, pl1e);
+ 
+-    rc = replace_grant_va_mapping(addr, frame, ol1e, curr);
++    rc = replace_grant_va_mapping(addr, frame, grant_pte_flags, ol1e, curr);
+     if ( rc && !paging_mode_refcounts(curr->domain) )
+         put_page_from_l1e(ol1e, curr->domain);
+ 
+-- 
+
