@@ -146,10 +146,7 @@ function make-tree()
     if git-branch-exists branch=$pqbranch ; then
 	git checkout $pqbranch
     else
-	info "Creating patchqueue branch"
-	info "  ...Checking out $tagbranch"
-	git checkout $tagbranch || fail "Checking out branch $tagbranch"
-	info "  ...Creating branch"
+	info "Creating patchqueue branch $pqbranch"
 	stg branch --create $pqbranch || fail "Creating stgit branch"
 	info "  Importing patchqueue"
 	stg import -M ../../SOURCES/xen-queue.am || fail "Importing patchqueue"
@@ -183,7 +180,7 @@ function import-patches()
 	stg import -m $p || fail "Importing patch $p"
     done
 
-    info "Patches imported to patchqueue.  Don't forget to sync-patches and bump the release number."
+    info "Patches imported to patchqueue.  Don't forget to sync-queue and bump the release number."
 }
 
 function sync-patches-internal()
@@ -237,11 +234,16 @@ function sync-tree()
 
     cd $TOPDIR/UPSTREAM/xen.git || fail "Cannot cd to UPSTREAM/xen.git"
 
+    info "Fetching updates to xen.git..."
+    git fetch
+
+    info "Checking out base branch for $XEN_VERSION"
+    checkout-basebranch version=$XEN_VERSION
+
+    info "  ...Deleting old pq tree (if any)"
     local pqbranch=centos/pq/$XEN_VERSION
     stg branch --delete --force $pqbranch
 
-    info "  ...Checking out $tagbranch"
-    git checkout $tagbranch || fail "Checking out branch $tagbranch"
     info "  ...Creating branch"
     stg branch --create $pqbranch || fail "Creating stgit branch"
     info "  Importing patchqueue"
