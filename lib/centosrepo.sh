@@ -383,7 +383,7 @@ function rebase-post()
 
     $arg_parse
 
-    cd $TOPDIR/UPSTREAM/xen.git
+    pushd $TOPDIR/UPSTREAM/xen.git
 
     if [[ -z "$new" ]] ; then
 	local new
@@ -399,6 +399,8 @@ function rebase-post()
     stg clean || fail "Cleaning patchqueue"
 
     sync-patches-internal basever=$new
+
+    popd
 
     info "Updating XEN_VERSION in sources.cfg"
     sed -i --follow-symlinks "s/XEN_VERSION=.*$/XEN_VERSION=$new/" $TOPDIR/sources.cfg || fail "Updating XEN_VERSION"
