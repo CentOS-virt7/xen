@@ -100,7 +100,6 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 # aarch64-only
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
-Patch2010: xsa216-qemuu.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -342,7 +341,6 @@ pushd tools/qemu-xen
 %ifarch aarch64
 %patch2001 -p1
 %endif
-%patch2010 -p1
 popd
 
 pushd tools/qemu-xen-traditional
