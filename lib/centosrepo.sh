@@ -426,8 +426,6 @@ function stg-check-patch-one()
 
     info "Next patch: $patchname"
 
-    rm -rf /tmp/series-next.patch
-    
     stg export --stdout $patchname > /tmp/series-next.patch
 
     oneline=$(head -1 /tmp/series-next.patch)
