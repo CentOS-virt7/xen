@@ -41,6 +41,25 @@ check_file(){
   sha256sum -c <<<"$sum"
 }
 
+get_list_of_patches(){
+  # Using jq
+  local meta="$1"
+  local version='4.8'
+  local tree
+  local trees
+  local has_patch=$(jq --arg v "$version" -r '.SupportedVersions | contains([$v]) | @sh' $meta)
+  if $has_patch; then
+    eval trees=($(jq -r '.Trees | @sh' $meta))
+    for tree in "${trees[@]}"; do
+      eval patches=($(jq --arg v "$version" --arg tree "$tree" -r '.Recipes[$v].Recipes[$tree].Patches | @sh' $meta))
+      for patch in "${patches[@]}"; do
+        echo "$patch"
+      done
+    done
+  fi
+}
+
+
 mkdir -p advisory-tmp
 pushd advisory-tmp >/dev/null
 
@@ -50,7 +69,7 @@ wget_file $advisory
 check_sig $advisory
 if wget_file $metadata; then
   check_file $advisory $metadata
-  for patch in $($TOPDIR/lib/advisory_meta.py $metadata 4.8); do
+  for p in $(get_list_of_patches $metadata); do
     wget_file $patch
     check_file $advisory $patch
   done
