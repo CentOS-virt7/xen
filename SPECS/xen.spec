@@ -961,6 +961,7 @@ rm -rf %{buildroot}
 %changelog
 * Wed Sep 13 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.2-1.el7.centos
 - Update to Xen 4.8.2
+- Import XSAs 231-234
 
 * Thu Jun 15 2017 Sarah Newman <srn@prgmr.com> 4.8.1-3.el6.centos
 - Import XSAs 216-225
