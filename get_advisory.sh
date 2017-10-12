@@ -58,10 +58,7 @@ get_list_of_patches(){
   if $has_patch; then
     eval trees=($(jq -r '.Trees | @sh' $meta))
     for tree in "${trees[@]}"; do
-      eval patches=($(jq --arg v "$version" --arg tree "$tree" -r '.Recipes[$v].Recipes[$tree].Patches | @sh' $meta))
-      for patch in "${patches[@]}"; do
-        echo "$patch"
-      done
+      jq --arg v "$version" --arg tree "$tree" -r '.Recipes[$v].Recipes[$tree].Patches | @sh' $meta
     done
   fi
 }
@@ -90,7 +87,8 @@ wget_file $advisory
 check_sig $advisory
 if wget_file $metadata; then
   check_file $advisory $metadata
-  for patches in $(get_list_of_patches $metadata); do
+  eval patches=($(get_list_of_patches $metadata))
+  for patch in "${patches[@]}"; do
     # Check if "Patches" in the metadata are in a globing format
     # if not, the function just return $patches unchanged
     for patch in $(get_patches_list_from_advisory $advisory "$patches"); do
