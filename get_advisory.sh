@@ -2,7 +2,14 @@
 
 set -e
 
-[ $# -eq 1 ]
+usage() {
+  echo "usage: $0 [XSA number]"
+}
+
+if [ $# -ne 1 ] || ! [[ "$1" =~ ^[0-9]+$ ]]; then
+  usage
+  exit 1
+fi
 
 TOPDIR=$(pwd)
 
