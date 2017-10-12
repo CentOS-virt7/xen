@@ -1,6 +1,6 @@
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 23 Aug 2017 10:23:08 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] tools/hotplug: Before running xenstored, run restorecon if
  available to reset selinux labels
 
@@ -48,7 +48,7 @@ index a5f836b5eb..9d61024412 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 23 Aug 2017 10:23:08 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] tools/hotplug: Call xenstored directly rather than via sh
 
 Using sh to exec xenstored breaks on selinux systems (at least, on
@@ -115,7 +115,7 @@ index 9d61024412..15defbe66b 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] tools/Linux: Fix blktap module name in default module list
 
 The name of the blktap2 kernel module is... blktap.
@@ -157,7 +157,7 @@ index 6c70040164..6d1e9ddfc8 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] xen: Allow user to specify an alternate linker for EFI
  binaries
 
@@ -226,7 +226,7 @@ index 1daa7ac777..f5398c4cb4 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] Disable iptables on the bridge
 
 ---
@@ -270,7 +270,7 @@ index 92ffa603f7..0b1fde9dac 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] xen.use.fedora.ipxe.patch
 
 ---
@@ -323,7 +323,7 @@ index 0560a7b59a..66107222e1 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
  backend"
 
@@ -359,7 +359,7 @@ index a81baee585..1288d3e6e2 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
 
 ---
@@ -383,7 +383,7 @@ index 26185594cf..4157edf0e2 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
@@ -495,7 +495,7 @@ index 2053403a5b..9a0641b6ab 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Julien Grall <julien.grall@linaro.org>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
 
 ---
@@ -527,7 +527,7 @@ index 3c365f3a0d..ef033c28d8 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] xen/arm: support compressed kernels
 
 Signed-off-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
@@ -728,7 +728,7 @@ index f641b12eb7..35692e1588 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: David Vrabel <david.vrabel@citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] xen: Add RING_COPY_REQUEST()
 
 Using RING_GET_REQUEST() on a shared ring is easy to use incorrectly
@@ -782,7 +782,7 @@ index ba9401b779..801c0da1dc 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] hotplug: Fix xendomains lock path for RHEL-based systems
 
 Commit c996572 changed the LOCKFILE path from a check between two
@@ -837,7 +837,7 @@ index 0603842a87..e749b7855b 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
-Date: Wed, 23 Aug 2017 10:23:09 +0100
+Date: Wed, 23 Aug 2017 17:05:17 +0100
 Subject: [PATCH] tools/xendomains: Create lockfile on start unconditionally
 
 At the moment, the xendomains init script will only create a lockfile
@@ -907,861 +907,1442 @@ index e749b7855b..1dce21dfda 100644
 
 
 From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Wed, 23 Aug 2017 16:00:41 +0100
-Subject: [PATCH] grant_table: Default to v1, and disallow transitive grants
-
-The reference counting and locking discipline for transitive grants is broken.
-Their use is therefore declared out of security support.
-
-This is XSA-226.
-
-Transitive grants are expected to be unconditionally available with grant
-table v2.  Hiding transitive grants alone is an ABI breakage for the guest.
-Modern versions of Linux and the Windows PV drivers use grant table v1, but
-older versions did use v2.
-
-In principle, disabling gnttab v2 entirely is the safer way to cause guests to
-avoid using transitive grants. However, some older guests which defaulted to
-using gnttab v2 don't tolerate falling back from v2 to v1 over migrate.
-
-This patch introduces a new command line option to control grant table
-behaviour.  One suboption allows a choice of the maximum grant table version
-Xen will allow the guest to use, and defaults to v2.  A different suboption
-independently controls whether transitive grants can be used.
-
-The default case is:
-
-    gnttab=max_ver:2
-
-To disable gnttab v2 entirely, use:
-
-    gnttab=max_ver:1
-
-To allow gnttab v2 and transitive grants, use:
-
-    gnttab=max_ver:2,transitive
-
-Reported-by: Jan Beulich <jbeulich@suse.com>
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- docs/misc/xen-command-line.markdown | 16 +++++++++++++
- xen/common/grant_table.c            | 45 ++++++++++++++++++++++++++++++++++++-
- 2 files changed, 60 insertions(+), 1 deletion(-)
-
-diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
-index d99a20a44b..b0b55694f9 100644
---- a/docs/misc/xen-command-line.markdown
-+++ b/docs/misc/xen-command-line.markdown
-@@ -733,6 +733,22 @@ Controls EPT related features.
- 
- Specify the serial parameters for the GDB stub.
- 
-+### gnttab
-+> `= List of [ max_ver:<integer>, transitive ]`
-+
-+> Default: `gnttab=max_ver:2,no-transitive`
-+
-+Control various aspects of the grant table behaviour available to guests.
-+
-+* `max_ver` Select the maximum grant table version to offer to guests.  Valid
-+version are 1 and 2.
-+* `transitive` Permit or disallow the use of transitive grants.  Note that the
-+use of grant table v2 without transitive grants is an ABI breakage from the
-+guests point of view.
-+
-+*Warning:*
-+Due to XSA-226, the use of transitive grants is outside of security support.
-+
- ### gnttab\_max\_frames
- > `= <integer>`
- 
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 20230fbdbb..ff0b4475a6 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -50,6 +50,42 @@ integer_param("gnttab_max_nr_frames", max_nr_grant_frames);
- unsigned int __read_mostly max_grant_frames;
- integer_param("gnttab_max_frames", max_grant_frames);
- 
-+static unsigned int __read_mostly opt_gnttab_max_version = 2;
-+static bool_t __read_mostly opt_transitive_grants;
-+
-+static void __init parse_gnttab(char *s)
-+{
-+    char *ss;
-+
-+    do {
-+        ss = strchr(s, ',');
-+        if ( ss )
-+            *ss = '\0';
-+
-+        if ( !strncmp(s, "max_ver:", 8) )
-+        {
-+            long ver = simple_strtol(s + 8, NULL, 10);
-+
-+            if ( ver >= 1 && ver <= 2 )
-+                opt_gnttab_max_version = ver;
-+        }
-+        else
-+        {
-+            bool_t val = !!strncmp(s, "no-", 3);
-+
-+            if ( !val )
-+                s += 3;
-+
-+            if ( !strcmp(s, "transitive") )
-+                opt_transitive_grants = val;
-+        }
-+
-+        s = ss + 1;
-+    } while ( ss );
-+}
-+
-+custom_param("gnttab", parse_gnttab);
-+
- /* The maximum number of grant mappings is defined as a multiplier of the
-  * maximum number of grant table entries. This defines the multiplier used.
-  * Pretty arbitrary. [POLICY]
-@@ -2175,6 +2211,10 @@ __acquire_grant_for_copy(
-         }
-         else if ( (shah->flags & GTF_type_mask) == GTF_transitive )
-         {
-+            if ( !opt_transitive_grants )
-+                PIN_FAIL(unlock_out_clear, GNTST_general_error,
-+                         "transitive grant disallowed by policy\n");
-+
-             if ( !allow_transitive )
-                 PIN_FAIL(unlock_out_clear, GNTST_general_error,
-                          "transitive grant when transitivity not allowed\n");
-@@ -3143,7 +3183,10 @@ do_grant_table_op(
-     }
-     case GNTTABOP_set_version:
-     {
--        rc = gnttab_set_version(guest_handle_cast(uop, gnttab_set_version_t));
-+        if ( opt_gnttab_max_version == 1 )
-+            rc = -ENOSYS; /* Behave as before set_version was introduced. */
-+        else
-+            rc = gnttab_set_version(guest_handle_cast(uop, gnttab_set_version_t));
-         break;
-     }
-     case GNTTABOP_get_status_frames:
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Tue, 20 Jun 2017 19:18:54 +0100
-Subject: [PATCH] x86/grant: Disallow misaligned PTEs
-
-Pagetable entries must be aligned to function correctly.  Disallow attempts
-from the guest to have a grant PTE created at a misaligned address, which
-would result in corruption of the L1 table with largely-guest-controlled
-values.
-
-This is XSA-227
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/mm.c        | 13 +++++++++++++
- xen/include/xen/config.h |  2 ++
- 2 files changed, 15 insertions(+)
-
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index 213b52a1bd..3bf728bfe5 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -3878,6 +3878,9 @@ static int create_grant_pte_mapping(
-     l1_pgentry_t ol1e;
-     struct domain *d = v->domain;
- 
-+    if ( !IS_ALIGNED(pte_addr, sizeof(nl1e)) )
-+        return GNTST_general_error;
-+
-     adjust_guest_l1e(nl1e, d);
- 
-     gmfn = pte_addr >> PAGE_SHIFT;
-@@ -3935,6 +3938,16 @@ static int destroy_grant_pte_mapping(
-     struct page_info *page;
-     l1_pgentry_t ol1e;
- 
-+    /*
-+     * addr comes from Xen's active_entry tracking so isn't guest controlled,
-+     * but it had still better be PTE-aligned.
-+     */
-+    if ( !IS_ALIGNED(addr, sizeof(ol1e)) )
-+    {
-+        ASSERT_UNREACHABLE();
-+        return GNTST_general_error;
-+    }
-+
-     gmfn = addr >> PAGE_SHIFT;
-     page = get_page_from_gfn(d, gmfn, NULL, P2M_ALLOC);
- 
-diff --git a/xen/include/xen/config.h b/xen/include/xen/config.h
-index f7258c7ff7..ded815628b 100644
---- a/xen/include/xen/config.h
-+++ b/xen/include/xen/config.h
-@@ -72,6 +72,8 @@
- #define MB(_mb)     (_AC(_mb, ULL) << 20)
- #define GB(_gb)     (_AC(_gb, ULL) << 30)
- 
-+#define IS_ALIGNED(val, align) (((val) & ((align) - 1)) == 0)
-+
- #define __STR(...) #__VA_ARGS__
- #define STR(...) __STR(__VA_ARGS__)
- 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
-Date: Mon, 31 Jul 2017 15:17:56 +0100
-Subject: [PATCH] gnttab: split maptrack lock to make it fulfill its purpose
- again
+Date: Thu, 12 Oct 2017 13:00:00 +0100
+Subject: [PATCH] x86: don't allow MSI pIRQ mapping on unowned device
 
-The way the lock is currently being used in get_maptrack_handle(), it
-protects only the maptrack limit: The function acts on current's list
-only, so races on list accesses are impossible even without the lock.
+MSI setup should be permitted only for existing devices owned by the
+respective guest (the operation may still be carried out by the domain
+controlling that guest).
 
-Otoh list access races are possible between __get_maptrack_handle() and
-put_maptrack_handle(), due to the invocation of the former for other
-than current from steal_maptrack_handle(). Introduce a per-vCPU lock
-for list accesses to become race free again. This lock will be
-uncontended except when it becomes necessary to take the steal path,
-i.e. in the common case there should be no meaningful performance
-impact.
-
-When in get_maptrack_handle adds a stolen entry to a fresh, empty,
-freelist, we think that there is probably no concurrency.  However,
-this is not a fast path and adding the locking there makes the code
-clearly correct.
-
-Also, while we are here: the stolen maptrack_entry's tail pointer was
-not properly set.  Set it.
-
-This is XSA-228.
-
-Reported-by: Ian Jackson <ian.jackson@eu.citrix.com>
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
----
- docs/misc/grant-tables.txt    |  7 ++++++-
- xen/common/grant_table.c      | 30 ++++++++++++++++++++++++------
- xen/include/xen/grant_table.h |  2 +-
- xen/include/xen/sched.h       |  1 +
- 4 files changed, 32 insertions(+), 8 deletions(-)
-
-diff --git a/docs/misc/grant-tables.txt b/docs/misc/grant-tables.txt
-index 417ce2d1cf..64da5cf2d9 100644
---- a/docs/misc/grant-tables.txt
-+++ b/docs/misc/grant-tables.txt
-@@ -87,7 +87,8 @@ is complete.
-                                inconsistent grant table state such as current
-                                version, partially initialized active table pages,
-                                etc.
--  grant_table->maptrack_lock : spinlock used to protect the maptrack free list
-+  grant_table->maptrack_lock : spinlock used to protect the maptrack limit
-+  v->maptrack_freelist_lock  : spinlock used to protect the maptrack free list
-   active_grant_entry->lock   : spinlock used to serialize modifications to
-                                active entries
- 
-@@ -102,6 +103,10 @@ is complete.
-  The maptrack free list is protected by its own spinlock. The maptrack
-  lock may be locked while holding the grant table lock.
- 
-+ The maptrack_freelist_lock is an innermost lock.  It may be locked
-+ while holding other locks, but no other locks may be acquired within
-+ it.
-+
-  Active entries are obtained by calling active_entry_acquire(gt, ref).
-  This function returns a pointer to the active entry after locking its
-  spinlock. The caller must hold the grant table read lock before
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index ff0b4475a6..eb6b770190 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -332,11 +332,16 @@ __get_maptrack_handle(
- {
-     unsigned int head, next, prev_head;
- 
-+    spin_lock(&v->maptrack_freelist_lock);
-+
-     do {
-         /* No maptrack pages allocated for this VCPU yet? */
-         head = read_atomic(&v->maptrack_head);
-         if ( unlikely(head == MAPTRACK_TAIL) )
-+        {
-+            spin_unlock(&v->maptrack_freelist_lock);
-             return -1;
-+        }
- 
-         /*
-          * Always keep one entry in the free list to make it easier to
-@@ -344,12 +349,17 @@ __get_maptrack_handle(
-          */
-         next = read_atomic(&maptrack_entry(t, head).ref);
-         if ( unlikely(next == MAPTRACK_TAIL) )
-+        {
-+            spin_unlock(&v->maptrack_freelist_lock);
-             return -1;
-+        }
- 
-         prev_head = head;
-         head = cmpxchg(&v->maptrack_head, prev_head, next);
-     } while ( head != prev_head );
- 
-+    spin_unlock(&v->maptrack_freelist_lock);
-+
-     return head;
- }
- 
-@@ -408,6 +418,8 @@ put_maptrack_handle(
-     /* 2. Add entry to the tail of the list on the original VCPU. */
-     v = currd->vcpu[maptrack_entry(t, handle).vcpu];
- 
-+    spin_lock(&v->maptrack_freelist_lock);
-+
-     cur_tail = read_atomic(&v->maptrack_tail);
-     do {
-         prev_tail = cur_tail;
-@@ -416,6 +428,8 @@ put_maptrack_handle(
- 
-     /* 3. Update the old tail entry to point to the new entry. */
-     write_atomic(&maptrack_entry(t, prev_tail).ref, handle);
-+
-+    spin_unlock(&v->maptrack_freelist_lock);
- }
- 
- static inline int
-@@ -439,10 +453,6 @@ get_maptrack_handle(
-      */
-     if ( nr_maptrack_frames(lgt) >= max_maptrack_frames )
-     {
--        /*
--         * Can drop the lock since no other VCPU can be adding a new
--         * frame once they've run out.
--         */
-         spin_unlock(&lgt->maptrack_lock);
- 
-         /*
-@@ -454,8 +464,12 @@ get_maptrack_handle(
-             handle = steal_maptrack_handle(lgt, curr);
-             if ( handle == -1 )
-                 return -1;
-+            spin_lock(&curr->maptrack_freelist_lock);
-+            maptrack_entry(lgt, handle).ref = MAPTRACK_TAIL;
-             curr->maptrack_tail = handle;
--            write_atomic(&curr->maptrack_head, handle);
-+            if ( curr->maptrack_head == MAPTRACK_TAIL )
-+                write_atomic(&curr->maptrack_head, handle);
-+            spin_unlock(&curr->maptrack_freelist_lock);
-         }
-         return steal_maptrack_handle(lgt, curr);
-     }
-@@ -488,12 +502,15 @@ get_maptrack_handle(
-     smp_wmb();
-     lgt->maptrack_limit += MAPTRACK_PER_PAGE;
- 
-+    spin_unlock(&lgt->maptrack_lock);
-+    spin_lock(&curr->maptrack_freelist_lock);
-+
-     do {
-         new_mt[i - 1].ref = read_atomic(&curr->maptrack_head);
-         head = cmpxchg(&curr->maptrack_head, new_mt[i - 1].ref, handle + 1);
-     } while ( head != new_mt[i - 1].ref );
- 
--    spin_unlock(&lgt->maptrack_lock);
-+    spin_unlock(&curr->maptrack_freelist_lock);
- 
-     return handle;
- }
-@@ -3468,6 +3485,7 @@ grant_table_destroy(
- 
- void grant_table_init_vcpu(struct vcpu *v)
- {
-+    spin_lock_init(&v->maptrack_freelist_lock);
-     v->maptrack_head = MAPTRACK_TAIL;
-     v->maptrack_tail = MAPTRACK_TAIL;
- }
-diff --git a/xen/include/xen/grant_table.h b/xen/include/xen/grant_table.h
-index 5263fd6e7d..234e109282 100644
---- a/xen/include/xen/grant_table.h
-+++ b/xen/include/xen/grant_table.h
-@@ -75,7 +75,7 @@ struct grant_table {
-     /* Mapping tracking table per vcpu. */
-     struct grant_mapping **maptrack;
-     unsigned int          maptrack_limit;
--    /* Lock protecting the maptrack page list, head, and limit */
-+    /* Lock protecting the maptrack limit */
-     spinlock_t            maptrack_lock;
-     /* The defined versions are 1 and 2.  Set to 0 if we don't know
-        what version to use yet. */
-diff --git a/xen/include/xen/sched.h b/xen/include/xen/sched.h
-index 8209e9ef14..21a6e4915d 100644
---- a/xen/include/xen/sched.h
-+++ b/xen/include/xen/sched.h
-@@ -222,6 +222,7 @@ struct vcpu
-     int              controller_pause_count;
- 
-     /* Maptrack */
-+    spinlock_t       maptrack_freelist_lock;
-     unsigned int     maptrack_head;
-     unsigned int     maptrack_tail;
- 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Wed, 23 Aug 2017 16:05:54 +0100
-Subject: [PATCH] gnttab: correct pin status fixup for copy
-
-Regardless of copy operations only setting GNTPIN_hst*, GNTPIN_dev*
-also need to be taken into account when deciding whether to clear
-_GTF_{read,writ}ing. At least for consistency with code elsewhere the
-read part better doesn't use any mask at all.
-
-This is XSA-230.
+This is part of XSA-237.
 
 Signed-off-by: Jan Beulich <jbeulich@suse.com>
 Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
 ---
- xen/common/grant_table.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+ xen/arch/x86/irq.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
 
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index eb6b770190..922c6dc2b6 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -2144,10 +2144,10 @@ __release_grant_for_copy(
- static void __fixup_status_for_copy_pin(const struct active_grant_entry *act,
-                                    uint16_t *status)
- {
--    if ( !(act->pin & GNTPIN_hstw_mask) )
-+    if ( !(act->pin & (GNTPIN_hstw_mask | GNTPIN_devw_mask)) )
-         gnttab_clear_flag(_GTF_writing, status);
+diff --git a/xen/arch/x86/irq.c b/xen/arch/x86/irq.c
+index db69264eb7..4068a47473 100644
+--- a/xen/arch/x86/irq.c
++++ b/xen/arch/x86/irq.c
+@@ -1961,7 +1961,10 @@ int map_domain_pirq(
+         if ( !cpu_has_apic )
+             goto done;
  
--    if ( !(act->pin & GNTPIN_hstr_mask) )
-+    if ( !act->pin )
-         gnttab_clear_flag(_GTF_reading, status);
+-        pdev = pci_get_pdev(msi->seg, msi->bus, msi->devfn);
++        pdev = pci_get_pdev_by_domain(d, msi->seg, msi->bus, msi->devfn);
++        if ( !pdev )
++            goto done;
++
+         ret = pci_enable_msi(msi, &msi_desc);
+         if ( ret )
+         {
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 12 Oct 2017 13:00:01 +0100
+Subject: [PATCH] x86: enforce proper privilege when (un)mapping pIRQ-s
+
+(Un)mapping of IRQs, just like other RESOURCE__ADD* / RESOURCE__REMOVE*
+actions (in FLASK terms) should be XSM_DM_PRIV rather than XSM_TARGET.
+This in turn requires bypassing the XSM check in physdev_unmap_pirq()
+for the HVM emuirq case just like is being done in physdev_map_pirq().
+The primary goal security wise, however, is to no longer allow HVM
+guests, by specifying their own domain ID instead of DOMID_SELF, to
+enter code paths intended for PV guest and the control domains of HVM
+guests only.
+
+This is part of XSA-237.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: George Dunlap <george.dunlap@citrix.com>
+---
+ xen/arch/x86/physdev.c  | 7 ++++---
+ xen/include/xsm/dummy.h | 4 ++--
+ 2 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/xen/arch/x86/physdev.c b/xen/arch/x86/physdev.c
+index 57b78001c1..da66099aab 100644
+--- a/xen/arch/x86/physdev.c
++++ b/xen/arch/x86/physdev.c
+@@ -110,7 +110,7 @@ int physdev_map_pirq(domid_t domid, int type, int *index, int *pirq_p,
+     if ( d == NULL )
+         return -ESRCH;
+ 
+-    ret = xsm_map_domain_pirq(XSM_TARGET, d);
++    ret = xsm_map_domain_pirq(XSM_DM_PRIV, d);
+     if ( ret )
+         goto free_domain;
+ 
+@@ -255,13 +255,14 @@ int physdev_map_pirq(domid_t domid, int type, int *index, int *pirq_p,
+ int physdev_unmap_pirq(domid_t domid, int pirq)
+ {
+     struct domain *d;
+-    int ret;
++    int ret = 0;
+ 
+     d = rcu_lock_domain_by_any_id(domid);
+     if ( d == NULL )
+         return -ESRCH;
+ 
+-    ret = xsm_unmap_domain_pirq(XSM_TARGET, d);
++    if ( domid != DOMID_SELF || !is_hvm_domain(d) )
++        ret = xsm_unmap_domain_pirq(XSM_DM_PRIV, d);
+     if ( ret )
+         goto free_domain;
+ 
+diff --git a/xen/include/xsm/dummy.h b/xen/include/xsm/dummy.h
+index 6f6ff5857a..c8fc0519b5 100644
+--- a/xen/include/xsm/dummy.h
++++ b/xen/include/xsm/dummy.h
+@@ -446,7 +446,7 @@ static XSM_INLINE char *xsm_show_irq_sid(int irq)
+ 
+ static XSM_INLINE int xsm_map_domain_pirq(XSM_DEFAULT_ARG struct domain *d)
+ {
+-    XSM_ASSERT_ACTION(XSM_TARGET);
++    XSM_ASSERT_ACTION(XSM_DM_PRIV);
+     return xsm_default_action(action, current->domain, d);
  }
  
-@@ -2359,7 +2359,7 @@ __acquire_grant_for_copy(
-  
-  unlock_out_clear:
-     if ( !(readonly) &&
--         !(act->pin & GNTPIN_hstw_mask) )
-+         !(act->pin & (GNTPIN_hstw_mask | GNTPIN_devw_mask)) )
-         gnttab_clear_flag(_GTF_writing, status);
+@@ -458,7 +458,7 @@ static XSM_INLINE int xsm_map_domain_irq(XSM_DEFAULT_ARG struct domain *d, int i
  
-     if ( !act->pin )
+ static XSM_INLINE int xsm_unmap_domain_pirq(XSM_DEFAULT_ARG struct domain *d)
+ {
+-    XSM_ASSERT_ACTION(XSM_TARGET);
++    XSM_ASSERT_ACTION(XSM_DM_PRIV);
+     return xsm_default_action(action, current->domain, d);
+ }
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 12 Oct 2017 13:00:01 +0100
+Subject: [PATCH] x86/MSI: disallow redundant enabling
+
+At the moment, Xen attempts to allow redundant enabling of MSI by
+having pci_enable_msi() return 0, and point to the existing MSI
+descriptor, when the msi already exists.
+
+Unfortunately, if subsequent errors are encountered, the cleanup
+paths assume pci_enable_msi() had done full initialization, and
+hence undo everything that was assumed to be done by that
+function without also undoing other setup that would normally
+occur only after that function was called (in map_domain_pirq()
+itself).
+
+Rather than try to make the redundant enabling case work properly, just
+forbid it entirely by having pci_enable_msi() return -EEXIST when MSI
+is already set up.
+
+This is part of XSA-237.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: George Dunlap <george.dunlap@citrix.com>
+---
+ xen/arch/x86/msi.c | 10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/xen/arch/x86/msi.c b/xen/arch/x86/msi.c
+index dd567b04cc..839870dbd2 100644
+--- a/xen/arch/x86/msi.c
++++ b/xen/arch/x86/msi.c
+@@ -1050,11 +1050,10 @@ static int __pci_enable_msi(struct msi_info *msi, struct msi_desc **desc)
+     old_desc = find_msi_entry(pdev, msi->irq, PCI_CAP_ID_MSI);
+     if ( old_desc )
+     {
+-        printk(XENLOG_WARNING "irq %d already mapped to MSI on %04x:%02x:%02x.%u\n",
++        printk(XENLOG_ERR "irq %d already mapped to MSI on %04x:%02x:%02x.%u\n",
+                msi->irq, msi->seg, msi->bus,
+                PCI_SLOT(msi->devfn), PCI_FUNC(msi->devfn));
+-        *desc = old_desc;
+-        return 0;
++        return -EEXIST;
+     }
+ 
+     old_desc = find_msi_entry(pdev, -1, PCI_CAP_ID_MSIX);
+@@ -1118,11 +1117,10 @@ static int __pci_enable_msix(struct msi_info *msi, struct msi_desc **desc)
+     old_desc = find_msi_entry(pdev, msi->irq, PCI_CAP_ID_MSIX);
+     if ( old_desc )
+     {
+-        printk(XENLOG_WARNING "irq %d already mapped to MSI-X on %04x:%02x:%02x.%u\n",
++        printk(XENLOG_ERR "irq %d already mapped to MSI-X on %04x:%02x:%02x.%u\n",
+                msi->irq, msi->seg, msi->bus,
+                PCI_SLOT(msi->devfn), PCI_FUNC(msi->devfn));
+-        *desc = old_desc;
+-        return 0;
++        return -EEXIST;
+     }
+ 
+     old_desc = find_msi_entry(pdev, -1, PCI_CAP_ID_MSI);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 12 Oct 2017 13:00:01 +0100
+Subject: [PATCH] x86/IRQ: conditionally preserve irq <-> pirq mapping on map
+ error paths
+
+Mappings that had been set up before should not be torn down when
+handling unrelated errors.
+
+This is part of XSA-237.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: George Dunlap <george.dunlap@citrix.com>
+---
+ xen/arch/x86/irq.c        | 25 ++++++++++++++++++-------
+ xen/arch/x86/physdev.c    |  2 +-
+ xen/include/asm-x86/msi.h |  2 ++
+ 3 files changed, 21 insertions(+), 8 deletions(-)
+
+diff --git a/xen/arch/x86/irq.c b/xen/arch/x86/irq.c
+index 4068a47473..4bb97a2a39 100644
+--- a/xen/arch/x86/irq.c
++++ b/xen/arch/x86/irq.c
+@@ -1249,7 +1249,8 @@ static int prepare_domain_irq_pirq(struct domain *d, int irq, int pirq,
+         return -ENOMEM;
+     }
+     *pinfo = info;
+-    return 0;
++
++    return !!err;
+ }
+ 
+ static void set_domain_irq_pirq(struct domain *d, int irq, struct pirq *pirq)
+@@ -1292,7 +1293,10 @@ int init_domain_irq_mapping(struct domain *d)
+             continue;
+         err = prepare_domain_irq_pirq(d, i, i, &info);
+         if ( err )
++        {
++            ASSERT(err < 0);
+             break;
++        }
+         set_domain_irq_pirq(d, i, info);
+     }
+ 
+@@ -1900,6 +1904,7 @@ int map_domain_pirq(
+     struct pirq *info;
+     struct irq_desc *desc;
+     unsigned long flags;
++    DECLARE_BITMAP(prepared, MAX_MSI_IRQS) = {};
+ 
+     ASSERT(spin_is_locked(&d->event_lock));
+ 
+@@ -1943,8 +1948,10 @@ int map_domain_pirq(
+     }
+ 
+     ret = prepare_domain_irq_pirq(d, irq, pirq, &info);
+-    if ( ret )
++    if ( ret < 0 )
+         goto revoke;
++    if ( !ret )
++        __set_bit(0, prepared);
+ 
+     desc = irq_to_desc(irq);
+ 
+@@ -2016,8 +2023,10 @@ int map_domain_pirq(
+             irq = create_irq(NUMA_NO_NODE);
+             ret = irq >= 0 ? prepare_domain_irq_pirq(d, irq, pirq + nr, &info)
+                            : irq;
+-            if ( ret )
++            if ( ret < 0 )
+                 break;
++            if ( !ret )
++                __set_bit(nr, prepared);
+             msi_desc[nr].irq = irq;
+ 
+             if ( irq_permit_access(d, irq) != 0 )
+@@ -2050,15 +2059,15 @@ int map_domain_pirq(
+                 desc->msi_desc = NULL;
+                 spin_unlock_irqrestore(&desc->lock, flags);
+             }
+-            while ( nr-- )
++            while ( nr )
+             {
+                 if ( irq >= 0 && irq_deny_access(d, irq) )
+                     printk(XENLOG_G_ERR
+                            "dom%d: could not revoke access to IRQ%d (pirq %d)\n",
+                            d->domain_id, irq, pirq);
+-                if ( info )
++                if ( info && test_bit(nr, prepared) )
+                     cleanup_domain_irq_pirq(d, irq, info);
+-                info = pirq_info(d, pirq + nr);
++                info = pirq_info(d, pirq + --nr);
+                 irq = info->arch.irq;
+             }
+             msi_desc->irq = -1;
+@@ -2074,12 +2083,14 @@ int map_domain_pirq(
+         spin_lock_irqsave(&desc->lock, flags);
+         set_domain_irq_pirq(d, irq, info);
+         spin_unlock_irqrestore(&desc->lock, flags);
++        ret = 0;
+     }
+ 
+ done:
+     if ( ret )
+     {
+-        cleanup_domain_irq_pirq(d, irq, info);
++        if ( test_bit(0, prepared) )
++            cleanup_domain_irq_pirq(d, irq, info);
+  revoke:
+         if ( irq_deny_access(d, irq) )
+             printk(XENLOG_G_ERR
+diff --git a/xen/arch/x86/physdev.c b/xen/arch/x86/physdev.c
+index da66099aab..f4237e10d3 100644
+--- a/xen/arch/x86/physdev.c
++++ b/xen/arch/x86/physdev.c
+@@ -185,7 +185,7 @@ int physdev_map_pirq(domid_t domid, int type, int *index, int *pirq_p,
+         }
+         else if ( type == MAP_PIRQ_TYPE_MULTI_MSI )
+         {
+-            if ( msi->entry_nr <= 0 || msi->entry_nr > 32 )
++            if ( msi->entry_nr <= 0 || msi->entry_nr > MAX_MSI_IRQS )
+                 ret = -EDOM;
+             else if ( msi->entry_nr != 1 && !iommu_intremap )
+                 ret = -EOPNOTSUPP;
+diff --git a/xen/include/asm-x86/msi.h b/xen/include/asm-x86/msi.h
+index f83e7480bd..a60388386d 100644
+--- a/xen/include/asm-x86/msi.h
++++ b/xen/include/asm-x86/msi.h
+@@ -55,6 +55,8 @@
+ /* MAX fixed pages reserved for mapping MSIX tables. */
+ #define FIX_MSIX_MAX_PAGES              512
+ 
++#define MAX_MSI_IRQS 32 /* limited by MSI capability struct properties */
++
+ struct msi_info {
+     u16 seg;
+     u8 bus;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 12 Oct 2017 13:00:02 +0100
+Subject: [PATCH] x86/FLASK: fix unmap-domain-IRQ XSM hook
+
+The caller and the FLASK implementation of xsm_unmap_domain_irq()
+disagreed about what the "data" argument points to in the MSI case:
+Change both sides to pass/take a PCI device.
+
+This is part of XSA-237.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/irq.c    | 3 ++-
+ xen/xsm/flask/hooks.c | 4 ++--
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/xen/arch/x86/irq.c b/xen/arch/x86/irq.c
+index 4bb97a2a39..c3f11e394a 100644
+--- a/xen/arch/x86/irq.c
++++ b/xen/arch/x86/irq.c
+@@ -2141,7 +2141,8 @@ int unmap_domain_pirq(struct domain *d, int pirq)
+         nr = msi_desc->msi.nvec;
+     }
+ 
+-    ret = xsm_unmap_domain_irq(XSM_HOOK, d, irq, msi_desc);
++    ret = xsm_unmap_domain_irq(XSM_HOOK, d, irq,
++                               msi_desc ? msi_desc->dev : NULL);
+     if ( ret )
+         goto done;
+ 
+diff --git a/xen/xsm/flask/hooks.c b/xen/xsm/flask/hooks.c
+index fafb1a4ba1..c48214eae6 100644
+--- a/xen/xsm/flask/hooks.c
++++ b/xen/xsm/flask/hooks.c
+@@ -897,8 +897,8 @@ static int flask_unmap_domain_msi (struct domain *d, int irq, void *data,
+                                    u32 *sid, struct avc_audit_data *ad)
+ {
+ #ifdef HAS_PCI
+-    struct msi_info *msi = data;
+-    u32 machine_bdf = (msi->seg << 16) | (msi->bus << 8) | msi->devfn;
++    const struct pci_dev *pdev = data;
++    u32 machine_bdf = (pdev->seg << 16) | (pdev->bus << 8) | pdev->devfn;
+ 
+     AVC_AUDIT_DATA_INIT(ad, DEV);
+     ad->device = machine_bdf;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: XenProject Security Team <security@xenproject.org>
+Date: Thu, 12 Oct 2017 13:00:33 +0100
+Subject: [PATCH] x86/ioreq server: correctly handle bogus
+ XEN_DMOP_{,un}map_io_range_to_ioreq_server arguments
+
+Misbehaving device model can pass incorrect XEN_DMOP_map/
+unmap_io_range_to_ioreq_server arguments, namely end < start when
+specifying address range. When this happens we hit ASSERT(s <= e) in
+rangeset_contains_range()/rangeset_overlaps_range() with debug builds.
+Production builds will not trap right away but may misbehave later
+while handling such bogus ranges.
+
+This is XSA-238.
+
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/hvm.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index 706834250b..35e9449caf 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -1271,6 +1271,9 @@ static int hvm_map_io_range_to_ioreq_server(struct domain *d, ioservid_t id,
+     struct hvm_ioreq_server *s;
+     int rc;
+ 
++    if ( start > end )
++        return -EINVAL;
++
+     spin_lock_recursive(&d->arch.hvm_domain.ioreq_server.lock);
+ 
+     rc = -ENOENT;
+@@ -1322,6 +1325,9 @@ static int hvm_unmap_io_range_from_ioreq_server(struct domain *d, ioservid_t id,
+     struct hvm_ioreq_server *s;
+     int rc;
+ 
++    if ( start > end )
++        return -EINVAL;
++
+     spin_lock_recursive(&d->arch.hvm_domain.ioreq_server.lock);
+ 
+     rc = -ENOENT;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 12 Oct 2017 13:00:53 +0100
+Subject: [PATCH] x86/HVM: prefill partially used variable on emulation paths
+
+Certain handlers ignore the access size (vioapic_write() being the
+example this was found with), perhaps leading to subsequent reads
+seeing data that wasn't actually written by the guest. For
+consistency and extra safety also do this on the read path of
+hvm_process_io_intercept(), even if this doesn't directly affect what
+guests get to see, as we've supposedly already dealt with read handlers
+leaving data completely unitialized.
+
+This is XSA-239.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/emulate.c   | 2 +-
+ xen/arch/x86/hvm/intercept.c | 2 ++
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/hvm/emulate.c b/xen/arch/x86/hvm/emulate.c
+index e230549c25..af14e2f697 100644
+--- a/xen/arch/x86/hvm/emulate.c
++++ b/xen/arch/x86/hvm/emulate.c
+@@ -106,7 +106,7 @@ static int hvmemul_do_io(
+         .count = *reps,
+         .dir = dir,
+         .df = df,
+-        .data = data,
++        .data = data_is_addr ? data : 0,
+         .data_is_ptr = data_is_addr, /* ioreq_t field name is misleading */
+         .state = STATE_IOREQ_READY,
+     };
+diff --git a/xen/arch/x86/hvm/intercept.c b/xen/arch/x86/hvm/intercept.c
+index 3a7a7dd33a..d4ecf659ac 100644
+--- a/xen/arch/x86/hvm/intercept.c
++++ b/xen/arch/x86/hvm/intercept.c
+@@ -128,6 +128,7 @@ int hvm_process_io_intercept(const struct hvm_io_handler *handler,
+             addr = (p->type == IOREQ_TYPE_COPY) ?
+                    p->addr + step * i :
+                    p->addr;
++            data = 0;
+             rc = ops->read(handler, addr, p->size, &data);
+             if ( rc != X86EMUL_OKAY )
+                 break;
+@@ -164,6 +165,7 @@ int hvm_process_io_intercept(const struct hvm_io_handler *handler,
+         {
+             if ( p->data_is_ptr )
+             {
++                data = 0;
+                 switch ( hvm_copy_from_guest_phys(&data, p->data + step * i,
+                                                   p->size) )
+                 {
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 28 Sep 2017 15:17:28 +0100
+Subject: [PATCH] x86: limit linear page table use to a single level
+
+That's the only way that they're meant to be used. Without such a
+restriction arbitrarily long chains of same-level page tables can be
+built, tearing down of which may then cause arbitrarily deep recursion,
+causing a stack overflow. To facilitate this restriction, a counter is
+being introduced to track both the number of same-level entries in a
+page table as well as the number of uses of a page table in another
+same-level one (counting into positive and negative direction
+respectively, utilizing the fact that both counts can't be non-zero at
+the same time).
+
+Note that the added accounting introduces a restriction on the number
+of times a page can be used in other same-level page tables - more than
+32k of such uses are no longer possible.
+
+Note also that some put_page_and_type[_preemptible]() calls are
+replaced with open-coded equivalents.  This seemed preferrable to
+adding "parent_table" to the matrix of functions.
+
+Note further that cross-domain same-level page table references are no
+longer permitted (they probably never should have been).
+
+This is XSA-240.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+---
+ xen/arch/x86/domain.c        |   1 +
+ xen/arch/x86/mm.c            | 171 ++++++++++++++++++++++++++++++++++++++-----
+ xen/include/asm-x86/domain.h |   2 +
+ xen/include/asm-x86/mm.h     |  25 +++++--
+ 4 files changed, 175 insertions(+), 24 deletions(-)
+
+diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
+index bfe614d7b7..23d034fa8d 100644
+--- a/xen/arch/x86/domain.c
++++ b/xen/arch/x86/domain.c
+@@ -1131,6 +1131,7 @@ int arch_set_info_guest(
+                 case -EINTR:
+                     rc = -ERESTART;
+                 case -ERESTART:
++                    v->arch.old_guest_ptpg = NULL;
+                     v->arch.old_guest_table =
+                         pagetable_get_page(v->arch.guest_table);
+                     v->arch.guest_table = pagetable_null();
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 213b52a1bd..6183e6587e 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -660,6 +660,61 @@ static void put_data_page(
+         put_page(page);
+ }
+ 
++static bool_t inc_linear_entries(struct page_info *pg)
++{
++    typeof(pg->linear_pt_count) nc = read_atomic(&pg->linear_pt_count), oc;
++
++    do {
++        /*
++         * The check below checks for the "linear use" count being non-zero
++         * as well as overflow.  Signed integer overflow is undefined behavior
++         * according to the C spec.  However, as long as linear_pt_count is
++         * smaller in size than 'int', the arithmetic operation of the
++         * increment below won't overflow; rather the result will be truncated
++         * when stored.  Ensure that this is always true.
++         */
++        BUILD_BUG_ON(sizeof(nc) >= sizeof(int));
++        oc = nc++;
++        if ( nc <= 0 )
++            return 0;
++        nc = cmpxchg(&pg->linear_pt_count, oc, nc);
++    } while ( oc != nc );
++
++    return 1;
++}
++
++static void dec_linear_entries(struct page_info *pg)
++{
++    typeof(pg->linear_pt_count) oc;
++
++    oc = arch_fetch_and_add(&pg->linear_pt_count, -1);
++    ASSERT(oc > 0);
++}
++
++static bool_t inc_linear_uses(struct page_info *pg)
++{
++    typeof(pg->linear_pt_count) nc = read_atomic(&pg->linear_pt_count), oc;
++
++    do {
++        /* See the respective comment in inc_linear_entries(). */
++        BUILD_BUG_ON(sizeof(nc) >= sizeof(int));
++        oc = nc--;
++        if ( nc >= 0 )
++            return 0;
++        nc = cmpxchg(&pg->linear_pt_count, oc, nc);
++    } while ( oc != nc );
++
++    return 1;
++}
++
++static void dec_linear_uses(struct page_info *pg)
++{
++    typeof(pg->linear_pt_count) oc;
++
++    oc = arch_fetch_and_add(&pg->linear_pt_count, 1);
++    ASSERT(oc < 0);
++}
++
+ /*
+  * We allow root tables to map each other (a.k.a. linear page tables). It
+  * needs some special care with reference counts and access permissions:
+@@ -689,15 +744,35 @@ get_##level##_linear_pagetable(                                             \
+                                                                             \
+     if ( (pfn = level##e_get_pfn(pde)) != pde_pfn )                         \
+     {                                                                       \
++        struct page_info *ptpg = mfn_to_page(pde_pfn);                      \
++                                                                            \
++        /* Make sure the page table belongs to the correct domain. */       \
++        if ( unlikely(page_get_owner(ptpg) != d) )                          \
++            return 0;                                                       \
++                                                                            \
+         /* Make sure the mapped frame belongs to the correct domain. */     \
+         if ( unlikely(!get_page_from_pagenr(pfn, d)) )                      \
+             return 0;                                                       \
+                                                                             \
+         /*                                                                  \
+-         * Ensure that the mapped frame is an already-validated page table. \
++         * Ensure that the mapped frame is an already-validated page table  \
++         * and is not itself having linear entries, as well as that the     \
++         * containing page table is not iself in use as a linear page table \
++         * elsewhere.                                                       \
+          * If so, atomically increment the count (checking for overflow).   \
+          */                                                                 \
+         page = mfn_to_page(pfn);                                            \
++        if ( !inc_linear_entries(ptpg) )                                    \
++        {                                                                   \
++            put_page(page);                                                 \
++            return 0;                                                       \
++        }                                                                   \
++        if ( !inc_linear_uses(page) )                                       \
++        {                                                                   \
++            dec_linear_entries(ptpg);                                       \
++            put_page(page);                                                 \
++            return 0;                                                       \
++        }                                                                   \
+         y = page->u.inuse.type_info;                                        \
+         do {                                                                \
+             x = y;                                                          \
+@@ -705,6 +780,8 @@ get_##level##_linear_pagetable(                                             \
+                  unlikely((x & (PGT_type_mask|PGT_validated)) !=            \
+                           (PGT_##level##_page_table|PGT_validated)) )       \
+             {                                                               \
++                dec_linear_uses(page);                                      \
++                dec_linear_entries(ptpg);                                   \
+                 put_page(page);                                             \
+                 return 0;                                                   \
+             }                                                               \
+@@ -1129,6 +1206,9 @@ get_page_from_l4e(
+             l3e_remove_flags((pl3e), _PAGE_USER|_PAGE_RW|_PAGE_ACCESSED);   \
+     } while ( 0 )
+ 
++static int _put_page_type(struct page_info *page, bool_t preemptible,
++                          struct page_info *ptpg);
++
+ void put_page_from_l1e(l1_pgentry_t l1e, struct domain *l1e_owner)
+ {
+     unsigned long     pfn = l1e_get_pfn(l1e);
+@@ -1198,17 +1278,22 @@ static int put_page_from_l2e(l2_pgentry_t l2e, unsigned long pfn)
+     if ( l2e_get_flags(l2e) & _PAGE_PSE )
+         put_superpage(l2e_get_pfn(l2e));
+     else
+-        put_page_and_type(l2e_get_page(l2e));
++    {
++        struct page_info *pg = l2e_get_page(l2e);
++        int rc = _put_page_type(pg, 0, mfn_to_page(pfn));
++
++        ASSERT(!rc);
++        put_page(pg);
++    }
+ 
+     return 0;
+ }
+ 
+-static int __put_page_type(struct page_info *, int preemptible);
+-
+ static int put_page_from_l3e(l3_pgentry_t l3e, unsigned long pfn,
+                              int partial, bool_t defer)
+ {
+     struct page_info *pg;
++    int rc;
+ 
+     if ( !(l3e_get_flags(l3e) & _PAGE_PRESENT) || (l3e_get_pfn(l3e) == pfn) )
+         return 1;
+@@ -1231,21 +1316,28 @@ static int put_page_from_l3e(l3_pgentry_t l3e, unsigned long pfn,
+     if ( unlikely(partial > 0) )
+     {
+         ASSERT(!defer);
+-        return __put_page_type(pg, 1);
++        return _put_page_type(pg, 1, mfn_to_page(pfn));
+     }
+ 
+     if ( defer )
+     {
++        current->arch.old_guest_ptpg = mfn_to_page(pfn);
+         current->arch.old_guest_table = pg;
+         return 0;
+     }
+ 
+-    return put_page_and_type_preemptible(pg);
++    rc = _put_page_type(pg, 1, mfn_to_page(pfn));
++    if ( likely(!rc) )
++        put_page(pg);
++
++    return rc;
+ }
+ 
+ static int put_page_from_l4e(l4_pgentry_t l4e, unsigned long pfn,
+                              int partial, bool_t defer)
+ {
++    int rc = 1;
++
+     if ( (l4e_get_flags(l4e) & _PAGE_PRESENT) && 
+          (l4e_get_pfn(l4e) != pfn) )
+     {
+@@ -1254,18 +1346,22 @@ static int put_page_from_l4e(l4_pgentry_t l4e, unsigned long pfn,
+         if ( unlikely(partial > 0) )
+         {
+             ASSERT(!defer);
+-            return __put_page_type(pg, 1);
++            return _put_page_type(pg, 1, mfn_to_page(pfn));
+         }
+ 
+         if ( defer )
+         {
++            current->arch.old_guest_ptpg = mfn_to_page(pfn);
+             current->arch.old_guest_table = pg;
+             return 0;
+         }
+ 
+-        return put_page_and_type_preemptible(pg);
++        rc = _put_page_type(pg, 1, mfn_to_page(pfn));
++        if ( likely(!rc) )
++            put_page(pg);
+     }
+-    return 1;
++
++    return rc;
+ }
+ 
+ static int alloc_l1_table(struct page_info *page)
+@@ -1463,6 +1559,7 @@ static int alloc_l3_table(struct page_info *page)
+         {
+             page->nr_validated_ptes = i;
+             page->partial_pte = 0;
++            current->arch.old_guest_ptpg = NULL;
+             current->arch.old_guest_table = page;
+         }
+         while ( i-- > 0 )
+@@ -1555,6 +1652,7 @@ static int alloc_l4_table(struct page_info *page)
+                 {
+                     if ( current->arch.old_guest_table )
+                         page->nr_validated_ptes++;
++                    current->arch.old_guest_ptpg = NULL;
+                     current->arch.old_guest_table = page;
+                 }
+             }
+@@ -2303,14 +2401,20 @@ int free_page_type(struct page_info *page, unsigned long type,
+ }
+ 
+ 
+-static int __put_final_page_type(
+-    struct page_info *page, unsigned long type, int preemptible)
++static int _put_final_page_type(struct page_info *page, unsigned long type,
++                                bool_t preemptible, struct page_info *ptpg)
+ {
+     int rc = free_page_type(page, type, preemptible);
+ 
+     /* No need for atomic update of type_info here: noone else updates it. */
+     if ( rc == 0 )
+     {
++        if ( ptpg && PGT_type_equal(type, ptpg->u.inuse.type_info) )
++        {
++            dec_linear_uses(page);
++            dec_linear_entries(ptpg);
++        }
++        ASSERT(!page->linear_pt_count || page_get_owner(page)->is_dying);
+         /*
+          * Record TLB information for flush later. We do not stamp page tables
+          * when running in shadow mode:
+@@ -2346,8 +2450,8 @@ static int __put_final_page_type(
+ }
+ 
+ 
+-static int __put_page_type(struct page_info *page,
+-                           int preemptible)
++static int _put_page_type(struct page_info *page, bool_t preemptible,
++                          struct page_info *ptpg)
+ {
+     unsigned long nx, x, y = page->u.inuse.type_info;
+     int rc = 0;
+@@ -2374,12 +2478,28 @@ static int __put_page_type(struct page_info *page,
+                                            x, nx)) != x) )
+                     continue;
+                 /* We cleared the 'valid bit' so we do the clean up. */
+-                rc = __put_final_page_type(page, x, preemptible);
++                rc = _put_final_page_type(page, x, preemptible, ptpg);
++                ptpg = NULL;
+                 if ( x & PGT_partial )
+                     put_page(page);
+                 break;
+             }
+ 
++            if ( ptpg && PGT_type_equal(x, ptpg->u.inuse.type_info) )
++            {
++                /*
++                 * page_set_tlbflush_timestamp() accesses the same union
++                 * linear_pt_count lives in. Unvalidated page table pages,
++                 * however, should occur during domain destruction only
++                 * anyway.  Updating of linear_pt_count luckily is not
++                 * necessary anymore for a dying domain.
++                 */
++                ASSERT(page_get_owner(page)->is_dying);
++                ASSERT(page->linear_pt_count < 0);
++                ASSERT(ptpg->linear_pt_count > 0);
++                ptpg = NULL;
++            }
++
+             /*
+              * Record TLB information for flush later. We do not stamp page
+              * tables when running in shadow mode:
+@@ -2399,6 +2519,13 @@ static int __put_page_type(struct page_info *page,
+             return -EINTR;
+     }
+ 
++    if ( ptpg && PGT_type_equal(x, ptpg->u.inuse.type_info) )
++    {
++        ASSERT(!rc);
++        dec_linear_uses(page);
++        dec_linear_entries(ptpg);
++    }
++
+     return rc;
+ }
+ 
+@@ -2533,6 +2660,7 @@ static int __get_page_type(struct page_info *page, unsigned long type,
+             page->nr_validated_ptes = 0;
+             page->partial_pte = 0;
+         }
++        page->linear_pt_count = 0;
+         rc = alloc_page_type(page, type, preemptible);
+     }
+ 
+@@ -2544,7 +2672,7 @@ static int __get_page_type(struct page_info *page, unsigned long type,
+ 
+ void put_page_type(struct page_info *page)
+ {
+-    int rc = __put_page_type(page, 0);
++    int rc = _put_page_type(page, 0, NULL);
+     ASSERT(rc == 0);
+     (void)rc;
+ }
+@@ -2560,7 +2688,7 @@ int get_page_type(struct page_info *page, unsigned long type)
+ 
+ int put_page_type_preemptible(struct page_info *page)
+ {
+-    return __put_page_type(page, 1);
++    return _put_page_type(page, 1, NULL);
+ }
+ 
+ int get_page_type_preemptible(struct page_info *page, unsigned long type)
+@@ -2766,11 +2894,14 @@ int put_old_guest_table(struct vcpu *v)
+     if ( !v->arch.old_guest_table )
+         return 0;
+ 
+-    switch ( rc = put_page_and_type_preemptible(v->arch.old_guest_table) )
++    switch ( rc = _put_page_type(v->arch.old_guest_table, 1,
++                                 v->arch.old_guest_ptpg) )
+     {
+     case -EINTR:
+     case -ERESTART:
+         return -ERESTART;
++    case 0:
++        put_page(v->arch.old_guest_table);
+     }
+ 
+     v->arch.old_guest_table = NULL;
+@@ -2927,6 +3058,7 @@ int new_guest_cr3(unsigned long mfn)
+                 rc = -ERESTART;
+                 /* fallthrough */
+             case -ERESTART:
++                curr->arch.old_guest_ptpg = NULL;
+                 curr->arch.old_guest_table = page;
+                 break;
+             default:
+@@ -3172,7 +3304,10 @@ long do_mmuext_op(
+                     if ( type == PGT_l1_page_table )
+                         put_page_and_type(page);
+                     else
++                    {
++                        curr->arch.old_guest_ptpg = NULL;
+                         curr->arch.old_guest_table = page;
++                    }
+                 }
+             }
+ 
+@@ -3205,6 +3340,7 @@ long do_mmuext_op(
+             {
+             case -EINTR:
+             case -ERESTART:
++                curr->arch.old_guest_ptpg = NULL;
+                 curr->arch.old_guest_table = page;
+                 rc = 0;
+                 break;
+@@ -3285,6 +3421,7 @@ long do_mmuext_op(
+                         rc = -ERESTART;
+                         /* fallthrough */
+                     case -ERESTART:
++                        curr->arch.old_guest_ptpg = NULL;
+                         curr->arch.old_guest_table = page;
+                         okay = 0;
+                         break;
+diff --git a/xen/include/asm-x86/domain.h b/xen/include/asm-x86/domain.h
+index a2d4f74696..4279549c28 100644
+--- a/xen/include/asm-x86/domain.h
++++ b/xen/include/asm-x86/domain.h
+@@ -512,6 +512,8 @@ struct arch_vcpu
+     pagetable_t guest_table_user;       /* (MFN) x86/64 user-space pagetable */
+     pagetable_t guest_table;            /* (MFN) guest notion of cr3 */
+     struct page_info *old_guest_table;  /* partially destructed pagetable */
++    struct page_info *old_guest_ptpg;   /* containing page table of the */
++                                        /* former, if any */
+     /* guest_table holds a ref to the page, and also a type-count unless
+      * shadow refcounts are in use */
+     pagetable_t shadow_table[4];        /* (MFN) shadow(s) of guest */
+diff --git a/xen/include/asm-x86/mm.h b/xen/include/asm-x86/mm.h
+index b4299fddea..4191e13112 100644
+--- a/xen/include/asm-x86/mm.h
++++ b/xen/include/asm-x86/mm.h
+@@ -124,11 +124,11 @@ struct page_info
+         u32 tlbflush_timestamp;
+ 
+         /*
+-         * When PGT_partial is true then this field is valid and indicates
+-         * that PTEs in the range [0, @nr_validated_ptes) have been validated.
+-         * An extra page reference must be acquired (or not dropped) whenever
+-         * PGT_partial gets set, and it must be dropped when the flag gets
+-         * cleared. This is so that a get() leaving a page in partially
++         * When PGT_partial is true then the first two fields are valid and
++         * indicate that PTEs in the range [0, @nr_validated_ptes) have been
++         * validated. An extra page reference must be acquired (or not dropped)
++         * whenever PGT_partial gets set, and it must be dropped when the flag
++         * gets cleared. This is so that a get() leaving a page in partially
+          * validated state (where the caller would drop the reference acquired
+          * due to the getting of the type [apparently] failing [-ERESTART])
+          * would not accidentally result in a page left with zero general
+@@ -152,10 +152,18 @@ struct page_info
+          * put_page_from_lNe() (due to the apparent failure), and hence it
+          * must be dropped when the put operation is resumed (and completes),
+          * but it must not be acquired if picking up the page for validation.
++         *
++         * The 3rd field, @linear_pt_count, indicates
++         * - by a positive value, how many same-level page table entries a page
++         *   table has,
++         * - by a negative value, in how many same-level page tables a page is
++         *   in use.
+          */
+         struct {
+-            u16 nr_validated_ptes;
+-            s8 partial_pte;
++            u16 nr_validated_ptes:PAGETABLE_ORDER + 1;
++            u16 :16 - PAGETABLE_ORDER - 1 - 2;
++            s16 partial_pte:2;
++            s16 linear_pt_count;
+         };
+ 
+         /*
+@@ -206,6 +214,9 @@ struct page_info
+ #define PGT_count_width   PG_shift(9)
+ #define PGT_count_mask    ((1UL<<PGT_count_width)-1)
+ 
++/* Are the 'type mask' bits identical? */
++#define PGT_type_equal(x, y) (!(((x) ^ (y)) & PGT_type_mask))
++
+  /* Cleared when the owning guest 'frees' this page. */
+ #define _PGC_allocated    PG_shift(1)
+ #define PGC_allocated     PG_mask(1, 1)
 -- 
 
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
-Date: Tue, 12 Sep 2017 12:14:31 +0100
-Subject: [PATCH] xen/mm: make sure node is less than MAX_NUMNODES
+Date: Fri, 22 Sep 2017 11:46:55 +0100
+Subject: [PATCH] x86/mm: Disable PV linear pagetables by default
 
-The output of MEMF_get_node(memflags) can be as large as nodeid_t can
-hold (currently 255).  This is then used as an index to arrays of size
-MAX_NUMNODE, which is 64 on x86 and 1 on ARM, can be passed in by an
-untrusted guest (via memory_exchange and increase_reservation) and is
-not currently bounds-checked.
+Allowing pagetables to point to other pagetables of the same level
+(often called 'linear pagetables') has been included in Xen since its
+inception.  But it is not used by the most common PV guests (Linux,
+NetBSD, minios), and has been the source of a number of subtle
+reference-counting bugs.
 
-Check the value in page_alloc.c before using it, and also check the
-value in the hypercall call sites and return -EINVAL if appropriate.
-Don't permit domains other than the hardware or control domain to
-allocate node-constrained memory.
-
-This is XSA-231.
+Add a command-line option to control whether PV linear pagetables are
+allowed (disabled by default).
 
 Signed-off-by: George Dunlap <george.dunlap@citrix.com>
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
 Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
 ---
- xen/common/memory.c     | 40 +++++++++++++++++++++++++++++++++-------
- xen/common/page_alloc.c |  6 +++++-
- 2 files changed, 38 insertions(+), 8 deletions(-)
+ docs/misc/xen-command-line.markdown | 15 +++++++++++++++
+ xen/arch/x86/mm.c                   |  9 +++++++++
+ 2 files changed, 24 insertions(+)
 
-diff --git a/xen/common/memory.c b/xen/common/memory.c
-index 8c7ee0975d..586a1da8e1 100644
---- a/xen/common/memory.c
-+++ b/xen/common/memory.c
-@@ -384,6 +384,31 @@ static void decrease_reservation(struct memop_args *a)
-     a->nr_done = i;
- }
+diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
+index d99a20a44b..dfe1bef7e2 100644
+--- a/docs/misc/xen-command-line.markdown
++++ b/docs/misc/xen-command-line.markdown
+@@ -1232,6 +1232,21 @@ The following resources are available:
+   * `cat` instructs Xen to enable/disable Cache Allocation Technology.
+   * `cos_max` indicates the max value for COS ID.
  
-+static bool_t propagate_node(unsigned int xmf, unsigned int *memflags)
-+{
-+    const struct domain *currd = current->domain;
++### pv-linear-pt
++> `= <boolean>`
 +
-+    BUILD_BUG_ON(XENMEMF_get_node(0) != NUMA_NO_NODE);
-+    BUILD_BUG_ON(MEMF_get_node(0) != NUMA_NO_NODE);
++> Default: `false`
 +
-+    if ( XENMEMF_get_node(xmf) == NUMA_NO_NODE )
-+        return 1;
++Allow PV guests to have pagetable entries pointing to other pagetables
++of the same level (i.e., allowing L2 PTEs to point to other L2 pages).
++This technique is often called "linear pagetables", and is sometimes
++used to allow operating systems a simple way to consistently map the
++current process's pagetables into its own virtual address space.
 +
-+    if ( is_hardware_domain(currd) || is_control_domain(currd) )
-+    {
-+        if ( XENMEMF_get_node(xmf) >= MAX_NUMNODES )
-+            return 0;
++None of the most common PV operating systems (Linux, NetBSD, MiniOS)
++use this technique, but there may be custom operating systems which
++do.
 +
-+        *memflags |= MEMF_node(XENMEMF_get_node(xmf));
-+        if ( xmf & XENMEMF_exact_node_request )
-+            *memflags |= MEMF_exact_node;
-+    }
-+    else if ( xmf & XENMEMF_exact_node_request )
-+        return 0;
+ ### reboot
+ > `= t[riple] | k[bd] | a[cpi] | p[ci] | P[ower] | e[fi] | n[o] [, [w]arm | [c]old]`
+ 
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 6183e6587e..3f5f796f9f 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -727,6 +727,9 @@ static void dec_linear_uses(struct page_info *pg)
+  *     frame if it is mapped by a different root table. This is sufficient and
+  *     also necessary to allow validation of a root table mapping itself.
+  */
++static bool_t __read_mostly pv_linear_pt_enable = 0;
++boolean_param("pv-linear-pt", pv_linear_pt_enable);
 +
-+    return 1;
-+}
-+
- static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
- {
-     struct xen_memory_exchange exch;
-@@ -456,6 +481,12 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
-         }
-     }
- 
-+    if ( unlikely(!propagate_node(exch.out.mem_flags, &memflags)) )
-+    {
-+        rc = -EINVAL;
-+        goto fail_early;
-+    }
-+
-     d = rcu_lock_domain_by_any_id(exch.in.domid);
-     if ( d == NULL )
-     {
-@@ -474,7 +505,6 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
-         d,
-         XENMEMF_get_address_bits(exch.out.mem_flags) ? :
-         (BITS_PER_LONG+PAGE_SHIFT)));
--    memflags |= MEMF_node(XENMEMF_get_node(exch.out.mem_flags));
- 
-     for ( i = (exch.nr_exchanged >> in_chunk_order);
-           i < (exch.in.nr_extents >> in_chunk_order);
-@@ -822,12 +852,8 @@ static int construct_memop_from_reservation(
-         }
-         read_unlock(&d->vnuma_rwlock);
-     }
--    else
--    {
--        a->memflags |= MEMF_node(XENMEMF_get_node(r->mem_flags));
--        if ( r->mem_flags & XENMEMF_exact_node_request )
--            a->memflags |= MEMF_exact_node;
--    }
-+    else if ( unlikely(!propagate_node(r->mem_flags, &a->memflags)) )
-+        return -EINVAL;
- 
-     return 0;
- }
-diff --git a/xen/common/page_alloc.c b/xen/common/page_alloc.c
-index 8a1f86c874..eb342a5639 100644
---- a/xen/common/page_alloc.c
-+++ b/xen/common/page_alloc.c
-@@ -611,9 +611,13 @@ static struct page_info *alloc_heap_pages(
-         if ( node >= MAX_NUMNODES )
-             node = cpu_to_node(smp_processor_id());
-     }
-+    else if ( unlikely(node >= MAX_NUMNODES) )
-+    {
-+        ASSERT_UNREACHABLE();
-+        return NULL;
-+    }
-     first_node = node;
- 
--    ASSERT(node < MAX_NUMNODES);
-     ASSERT(zone_lo <= zone_hi);
-     ASSERT(zone_hi < NR_ZONES);
- 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Tue, 12 Sep 2017 12:14:32 +0100
-Subject: [PATCH] grant_table: fix GNTTABOP_cache_flush handling
-
-Don't fall over a NULL grant_table pointer when the owner of the domain
-is a system domain (DOMID_{XEN,IO} etc).
-
-This is XSA-232.
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
----
- xen/common/grant_table.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 922c6dc2b6..48c1420f1b 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -3024,7 +3024,7 @@ static int __gnttab_cache_flush(gnttab_cache_flush_t *cflush,
- 
-     page = mfn_to_page(mfn);
-     owner = page_get_owner_and_reference(page);
--    if ( !owner )
-+    if ( !owner || !owner->grant_table )
-     {
-         rcu_unlock_domain(d);
-         return -EPERM;
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: Juergen Gross <jgross@suse.com>
-Date: Tue, 12 Sep 2017 12:14:32 +0100
-Subject: [PATCH] tools/xenstore: dont unlink connection object twice
-
-A connection object of a domain with associated stubdom has two
-parents: the domain and the stubdom. When cleaning up the list of
-active domains in domain_cleanup() make sure not to unlink the
-connection twice from the same domain. This could happen when the
-domain and its stubdom are being destroyed at the same time leading
-to the domain loop being entered twice.
-
-Additionally don't use talloc_free() in this case as it will remove
-a random parent link, leading eventually to a memory leak. Use
-talloc_unlink() instead specifying the context from which the
-connection object should be removed.
-
-This is XSA-233.
-
-Signed-off-by: Juergen Gross <jgross@suse.com>
-Reviewed-by: Ian Jackson <ian.jackson@eu.citrix.com>
----
- tools/xenstore/xenstored_domain.c | 13 +++++++++----
- 1 file changed, 9 insertions(+), 4 deletions(-)
-
-diff --git a/tools/xenstore/xenstored_domain.c b/tools/xenstore/xenstored_domain.c
-index e7a73f147c..16aa0b7fc2 100644
---- a/tools/xenstore/xenstored_domain.c
-+++ b/tools/xenstore/xenstored_domain.c
-@@ -220,10 +220,11 @@ static int destroy_domain(void *_domain)
- static void domain_cleanup(void)
- {
- 	xc_dominfo_t dominfo;
--	struct domain *domain, *tmp;
-+	struct domain *domain;
- 	int notify = 0;
- 
--	list_for_each_entry_safe(domain, tmp, &domains, list) {
-+ again:
-+	list_for_each_entry(domain, &domains, list) {
- 		if (xc_domain_getinfo(*xc_handle, domain->domid, 1,
- 				      &dominfo) == 1 &&
- 		    dominfo.domid == domain->domid) {
-@@ -235,8 +236,12 @@ static void domain_cleanup(void)
- 			if (!dominfo.dying)
- 				continue;
- 		}
--		talloc_free(domain->conn);
--		notify = 0; /* destroy_domain() fires the watch */
-+		if (domain->conn) {
-+			talloc_unlink(talloc_autofree_context(), domain->conn);
-+			domain->conn = NULL;
-+			notify = 0; /* destroy_domain() fires the watch */
-+			goto again;
-+		}
- 	}
- 
- 	if (notify)
+ #define define_get_linear_pagetable(level)                                  \
+ static int                                                                  \
+ get_##level##_linear_pagetable(                                             \
+@@ -736,6 +739,12 @@ get_##level##_linear_pagetable(                                             \
+     struct page_info *page;                                                 \
+     unsigned long pfn;                                                      \
+                                                                             \
++    if ( !pv_linear_pt_enable )                                             \
++    {                                                                       \
++        MEM_LOG("Attempt to create linear p.t. (feature disabled)");        \
++        return 0;                                                           \
++    }                                                                       \
++                                                                            \
+     if ( (level##e_get_flags(pde) & _PAGE_RW) )                             \
+     {                                                                       \
+         MEM_LOG("Attempt to create linear p.t. with write perms");          \
 -- 
 
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
-Date: Tue, 12 Sep 2017 12:14:32 +0100
-Subject: [PATCH] gnttab: also validate PTE permissions upon destroy/replace
+Date: Thu, 12 Oct 2017 13:01:36 +0100
+Subject: [PATCH] x86: don't store possibly stale TLB flush time stamp
 
-In order for PTE handling to match up with the reference counting done
-by common code, presence and writability of grant mapping PTEs must
-also be taken into account; validating just the frame number is not
-enough. This is in particular relevant if a guest fiddles with grant
-PTEs via non-grant hypercalls.
+While the timing window is extremely narrow, it is theoretically
+possible for an update to the TLB flush clock and a subsequent flush
+IPI to happen between the read and write parts of the update of the
+per-page stamp. Exclude this possibility by disabling interrupts
+across the update, preventing the IPI to be serviced in the middle.
 
-Note that the flags being passed to replace_grant_host_mapping()
-already happen to be those of the existing mapping, so no new function
-parameter is needed.
+This is XSA-241.
 
-This is XSA-234.
-
+Suggested-by: George Dunlap <george.dunlap@citrix.com>
 Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: George Dunlap <george.dunlap@citrix.com>
 ---
- xen/arch/x86/mm.c | 79 +++++++++++++++++++++++++++++++++++++++++++------------
- 1 file changed, 62 insertions(+), 17 deletions(-)
+ xen/arch/x86/mm.c               |  8 ++++----
+ xen/arch/x86/mm/shadow/common.c |  2 +-
+ xen/common/page_alloc.c         |  2 +-
+ xen/include/asm-arm/flushtlb.h  |  5 +++++
+ xen/include/asm-x86/flushtlb.h  | 14 ++++++++++++++
+ 5 files changed, 25 insertions(+), 6 deletions(-)
 
 diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index 3bf728bfe5..20d963cb22 100644
+index 3f5f796f9f..f07f35c03d 100644
 --- a/xen/arch/x86/mm.c
 +++ b/xen/arch/x86/mm.c
-@@ -3930,7 +3930,8 @@ static int create_grant_pte_mapping(
- }
+@@ -2433,7 +2433,7 @@ static int _put_final_page_type(struct page_info *page, unsigned long type,
+          */
+         if ( !(shadow_mode_enabled(page_get_owner(page)) &&
+                (page->count_info & PGC_page_table)) )
+-            page->tlbflush_timestamp = tlbflush_current_time();
++            page_set_tlbflush_timestamp(page);
+         wmb();
+         page->u.inuse.type_info--;
+     }
+@@ -2443,7 +2443,7 @@ static int _put_final_page_type(struct page_info *page, unsigned long type,
+                 (PGT_count_mask|PGT_validated|PGT_partial)) == 1);
+         if ( !(shadow_mode_enabled(page_get_owner(page)) &&
+                (page->count_info & PGC_page_table)) )
+-            page->tlbflush_timestamp = tlbflush_current_time();
++            page_set_tlbflush_timestamp(page);
+         wmb();
+         page->u.inuse.type_info |= PGT_validated;
+     }
+@@ -2497,7 +2497,7 @@ static int _put_page_type(struct page_info *page, bool_t preemptible,
+             if ( ptpg && PGT_type_equal(x, ptpg->u.inuse.type_info) )
+             {
+                 /*
+-                 * page_set_tlbflush_timestamp() accesses the same union
++                 * set_tlbflush_timestamp() accesses the same union
+                  * linear_pt_count lives in. Unvalidated page table pages,
+                  * however, should occur during domain destruction only
+                  * anyway.  Updating of linear_pt_count luckily is not
+@@ -2518,7 +2518,7 @@ static int _put_page_type(struct page_info *page, bool_t preemptible,
+              */
+             if ( !(shadow_mode_enabled(page_get_owner(page)) &&
+                    (page->count_info & PGC_page_table)) )
+-                page->tlbflush_timestamp = tlbflush_current_time();
++                page_set_tlbflush_timestamp(page);
+         }
  
- static int destroy_grant_pte_mapping(
--    uint64_t addr, unsigned long frame, struct domain *d)
-+    uint64_t addr, unsigned long frame, unsigned int grant_pte_flags,
-+    struct domain *d)
- {
-     int rc = GNTST_okay;
-     void *va;
-@@ -3976,16 +3977,27 @@ static int destroy_grant_pte_mapping(
+         if ( likely((y = cmpxchg(&page->u.inuse.type_info, x, nx)) == x) )
+diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
+index 74684cbbd9..ae108ddbee 100644
+--- a/xen/arch/x86/mm/shadow/common.c
++++ b/xen/arch/x86/mm/shadow/common.c
+@@ -1580,7 +1580,7 @@ void shadow_free(struct domain *d, mfn_t smfn)
+          * TLBs when we reuse the page.  Because the destructors leave the
+          * contents of the pages in place, we can delay TLB flushes until
+          * just before the allocator hands the page out again. */
+-        sp->tlbflush_timestamp = tlbflush_current_time();
++        page_set_tlbflush_timestamp(sp);
+         perfc_decr(shadow_alloc_count);
+         page_list_add_tail(sp, &d->arch.paging.shadow.freelist);
+         sp = next;
+diff --git a/xen/common/page_alloc.c b/xen/common/page_alloc.c
+index 8a1f86c874..6a819bb7e0 100644
+--- a/xen/common/page_alloc.c
++++ b/xen/common/page_alloc.c
+@@ -874,7 +874,7 @@ static void free_heap_pages(
+         /* If a page has no owner it will need no safety TLB flush. */
+         pg[i].u.free.need_tlbflush = (page_get_owner(&pg[i]) != NULL);
+         if ( pg[i].u.free.need_tlbflush )
+-            pg[i].tlbflush_timestamp = tlbflush_current_time();
++            page_set_tlbflush_timestamp(&pg[i]);
  
-     ol1e = *(l1_pgentry_t *)va;
-     
--    /* Check that the virtual address supplied is actually mapped to frame. */
--    if ( unlikely(l1e_get_pfn(ol1e) != frame) )
+         /* This page is not a guest frame any more. */
+         page_set_owner(&pg[i], NULL); /* set_gpfn_from_mfn snoops pg owner */
+diff --git a/xen/include/asm-arm/flushtlb.h b/xen/include/asm-arm/flushtlb.h
+index c986b3f9af..ea8c7ed2fd 100644
+--- a/xen/include/asm-arm/flushtlb.h
++++ b/xen/include/asm-arm/flushtlb.h
+@@ -14,6 +14,11 @@ do {                                                                    \
+ 
+ #define tlbflush_current_time()                 (0)
+ 
++static inline void page_set_tlbflush_timestamp(struct page_info *page)
++{
++    page->tlbflush_timestamp = tlbflush_current_time();
++}
++
+ #if defined(CONFIG_ARM_32)
+ # include <asm/arm32/flushtlb.h>
+ #elif defined(CONFIG_ARM_64)
+diff --git a/xen/include/asm-x86/flushtlb.h b/xen/include/asm-x86/flushtlb.h
+index 3c3e6b2769..f1389daa6f 100644
+--- a/xen/include/asm-x86/flushtlb.h
++++ b/xen/include/asm-x86/flushtlb.h
+@@ -24,6 +24,20 @@ DECLARE_PER_CPU(u32, tlbflush_time);
+ 
+ #define tlbflush_current_time() tlbflush_clock
+ 
++static inline void page_set_tlbflush_timestamp(struct page_info *page)
++{
 +    /*
-+     * Check that the PTE supplied actually maps frame (with appropriate
-+     * permissions).
++     * Prevent storing a stale time stamp, which could happen if an update
++     * to tlbflush_clock plus a subsequent flush IPI happen between the
++     * reading of tlbflush_clock and the writing of the struct page_info
++     * field.
 +     */
-+    if ( unlikely(l1e_get_pfn(ol1e) != frame) ||
-+         unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
-+                  (_PAGE_PRESENT | _PAGE_RW)) )
-     {
-         page_unlock(page);
--        MEM_LOG("PTE entry %lx for address %"PRIx64" doesn't match frame %lx",
--                (unsigned long)l1e_get_intpte(ol1e), addr, frame);
-+        MEM_LOG("PTE %"PRIpte" at %"PRIx64" doesn't match grant (%"PRIpte")",
-+                l1e_get_intpte(ol1e), addr,
-+                l1e_get_intpte(l1e_from_pfn(frame, grant_pte_flags)));
-         rc = GNTST_general_error;
-         goto failed;
-     }
- 
-+    if ( unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
-+                  ~(_PAGE_AVAIL | PAGE_CACHE_ATTRS)) )
-+        MEM_LOG("PTE flags %x at %"PRIx64" don't match grant (%x)\n",
-+                l1e_get_flags(ol1e), addr, grant_pte_flags);
++    ASSERT(local_irq_is_enabled());
++    local_irq_disable();
++    page->tlbflush_timestamp = tlbflush_current_time();
++    local_irq_enable();
++}
 +
-     /* Delete pagetable entry. */
-     if ( unlikely(!UPDATE_ENTRY
-                   (l1, 
-@@ -3994,7 +4006,7 @@ static int destroy_grant_pte_mapping(
-                    0)) )
-     {
-         page_unlock(page);
--        MEM_LOG("Cannot delete PTE entry at %p", va);
-+        MEM_LOG("Cannot delete PTE entry at %"PRIx64, addr);
-         rc = GNTST_general_error;
-         goto failed;
-     }
-@@ -4062,7 +4074,8 @@ static int create_grant_va_mapping(
+ /*
+  * @cpu_stamp is the timestamp at last TLB flush for the CPU we are testing.
+  * @lastuse_stamp is a timestamp taken when the PFN we are testing was last 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 12 Oct 2017 13:01:51 +0100
+Subject: [PATCH] x86: don't allow page_unlock() to drop the last type
+ reference
+
+Only _put_page_type() does the necessary cleanup, and hence not all
+domain pages can be released during guest cleanup (leaving around
+zombie domains) if we get this wrong.
+
+This is XSA-242.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/mm.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index f07f35c03d..1aacfe3079 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -1833,7 +1833,11 @@ void page_unlock(struct page_info *page)
+ 
+     do {
+         x = y;
++        ASSERT((x & PGT_count_mask) && (x & PGT_locked));
++
+         nx = x - (1 | PGT_locked);
++        /* We must not drop the last reference here. */
++        ASSERT(nx & PGT_count_mask);
+     } while ( (y = cmpxchg(&page->u.inuse.type_info, x, nx)) != x );
  }
  
- static int replace_grant_va_mapping(
--    unsigned long addr, unsigned long frame, l1_pgentry_t nl1e, struct vcpu *v)
-+    unsigned long addr, unsigned long frame, unsigned int grant_pte_flags,
-+    l1_pgentry_t nl1e, struct vcpu *v)
+@@ -2520,6 +2524,17 @@ static int _put_page_type(struct page_info *page, bool_t preemptible,
+                    (page->count_info & PGC_page_table)) )
+                 page_set_tlbflush_timestamp(page);
+         }
++        else if ( unlikely((nx & (PGT_locked | PGT_count_mask)) ==
++                           (PGT_locked | 1)) )
++        {
++            /*
++             * We must not drop the second to last reference when the page is
++             * locked, as page_unlock() doesn't do any cleanup of the type.
++             */
++            cpu_relax();
++            y = page->u.inuse.type_info;
++            continue;
++        }
+ 
+         if ( likely((y = cmpxchg(&page->u.inuse.type_info, x, nx)) == x) )
+             break;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Thu, 12 Oct 2017 13:02:32 +0100
+Subject: [PATCH] x86: Disable the use of auto-translated PV guests
+
+This is a minimal backport of c/s 92942fd3d469 "x86/mm: drop
+guest_{map,get_eff}_l1e() hooks" from Xen 4.7, which stated:
+
+  Disallow the unmaintained and presumed broken translated-but-not-external
+  paging mode combination ...
+
+It turns out that this mode is insecure to run with, as opposed to just simply
+broken.
+
+This is part of XSA-243.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/mm/paging.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/xen/arch/x86/mm/paging.c b/xen/arch/x86/mm/paging.c
+index dcff4fbc51..945bb61d94 100644
+--- a/xen/arch/x86/mm/paging.c
++++ b/xen/arch/x86/mm/paging.c
+@@ -835,6 +835,15 @@ void paging_final_teardown(struct domain *d)
+  * creation. */
+ int paging_enable(struct domain *d, u32 mode)
  {
-     l1_pgentry_t *pl1e, ol1e;
-     unsigned long gl1mfn;
-@@ -4098,19 +4111,30 @@ static int replace_grant_va_mapping(
- 
-     ol1e = *pl1e;
- 
--    /* Check that the virtual address supplied is actually mapped to frame. */
--    if ( unlikely(l1e_get_pfn(ol1e) != frame) )
-+    /*
-+     * Check that the virtual address supplied is actually mapped to frame
-+     * (with appropriate permissions).
-+     */
-+    if ( unlikely(l1e_get_pfn(ol1e) != frame) ||
-+         unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
-+                  (_PAGE_PRESENT | _PAGE_RW)) )
-     {
--        MEM_LOG("PTE entry %lx for address %lx doesn't match frame %lx",
--                l1e_get_pfn(ol1e), addr, frame);
-+        MEM_LOG("PTE %"PRIpte" for %lx doesn't match grant (%"PRIpte")",
-+                l1e_get_intpte(ol1e), addr,
-+                l1e_get_intpte(l1e_from_pfn(frame, grant_pte_flags)));
-         rc = GNTST_general_error;
-         goto unlock_and_out;
-     }
- 
-+    if ( unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
-+                  ~(_PAGE_AVAIL | PAGE_CACHE_ATTRS)) )
-+        MEM_LOG("PTE flags %x for %"PRIx64" don't match grant (%x)",
-+                l1e_get_flags(ol1e), addr, grant_pte_flags);
++    switch ( mode & (PG_external | PG_translate) )
++    {
++    case 0:
++    case PG_external | PG_translate:
++        break;
++    default:
++        return -EINVAL;
++    }
 +
-     /* Delete pagetable entry. */
-     if ( unlikely(!UPDATE_ENTRY(l1, pl1e, ol1e, nl1e, gl1mfn, v, 0)) )
-     {
--        MEM_LOG("Cannot delete PTE entry at %p", (unsigned long *)pl1e);
-+        MEM_LOG("Cannot delete PTE entry for %"PRIx64, addr);
-         rc = GNTST_general_error;
-         goto unlock_and_out;
+     if ( hap_enabled(d) )
+         return hap_enable(d, mode | PG_HAP_enable);
+     else
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Thu, 12 Oct 2017 13:02:32 +0100
+Subject: [PATCH] x86/shadow: Don't create self-linear shadow mappings for
+ 4-level translated guests
+
+When initially creating a monitor table for 4-level translated guests, don't
+install a shadow-linear mapping.  This mapping is actually self-linear, and
+trips up the writeable heuristic logic into following Xen's mappings, not the
+guests' shadows it was expecting to follow.
+
+A consequence of this is that sh_guess_wrmap() needs to cope with there being
+no shadow-linear mapping present, which in practice occurs once each time a
+vcpu switches to 4-level paging from a different paging mode.
+
+An appropriate shadow-linear slot will be inserted into the monitor table
+either while constructing lower level monitor tables, or by sh_update_cr3().
+
+While fixing this, clarify the safety of the other mappings.  Despite
+appearing unsafe, it is correct to create a guest-linear mapping for
+translated domains; this is self-linear and doesn't point into the translated
+domain.  Drop a dead clause for translate != external guests.
+
+This is part of XSA-243.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Acked-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm/shadow/multi.c | 45 +++++++++++++++++++++++++++++-------------
+ 1 file changed, 31 insertions(+), 14 deletions(-)
+
+diff --git a/xen/arch/x86/mm/shadow/multi.c b/xen/arch/x86/mm/shadow/multi.c
+index c34ebe07dd..cb8ddde074 100644
+--- a/xen/arch/x86/mm/shadow/multi.c
++++ b/xen/arch/x86/mm/shadow/multi.c
+@@ -1456,26 +1456,38 @@ void sh_install_xen_entries_in_l4(struct domain *d, mfn_t gl4mfn, mfn_t sl4mfn)
+         sl4e[shadow_l4_table_offset(RO_MPT_VIRT_START)] = shadow_l4e_empty();
      }
-@@ -4124,9 +4148,11 @@ static int replace_grant_va_mapping(
- }
  
- static int destroy_grant_va_mapping(
--    unsigned long addr, unsigned long frame, struct vcpu *v)
-+    unsigned long addr, unsigned long frame, unsigned int grant_pte_flags,
-+    struct vcpu *v)
+-    /* Shadow linear mapping for 4-level shadows.  N.B. for 3-level
+-     * shadows on 64-bit xen, this linear mapping is later replaced by the
+-     * monitor pagetable structure, which is built in make_monitor_table
+-     * and maintained by sh_update_linear_entries. */
+-    sl4e[shadow_l4_table_offset(SH_LINEAR_PT_VIRT_START)] =
+-        shadow_l4e_from_mfn(sl4mfn, __PAGE_HYPERVISOR);
+-
+-    /* Self linear mapping.  */
+-    if ( shadow_mode_translate(d) && !shadow_mode_external(d) )
+-    {
+-        // linear tables may not be used with translated PV guests
+-        sl4e[shadow_l4_table_offset(LINEAR_PT_VIRT_START)] =
++    /*
++     * Linear mapping slots:
++     *
++     * Calling this function with gl4mfn == sl4mfn is used to construct a
++     * monitor table for translated domains.  In this case, gl4mfn forms the
++     * self-linear mapping (i.e. not pointing into the translated domain), and
++     * the shadow-linear slot is skipped.  The shadow-linear slot is either
++     * filled when constructing lower level monitor tables, or via
++     * sh_update_cr3() for 4-level guests.
++     *
++     * Calling this function with gl4mfn != sl4mfn is used for non-translated
++     * guests, where the shadow-linear slot is actually self-linear, and the
++     * guest-linear slot points into the guests view of its pagetables.
++     */
++    if ( shadow_mode_translate(d) )
++    {
++        ASSERT(mfn_x(gl4mfn) == mfn_x(sl4mfn));
++
++        sl4e[shadow_l4_table_offset(SH_LINEAR_PT_VIRT_START)] =
+             shadow_l4e_empty();
+     }
+     else
+     {
+-        sl4e[shadow_l4_table_offset(LINEAR_PT_VIRT_START)] =
+-            shadow_l4e_from_mfn(gl4mfn, __PAGE_HYPERVISOR);
++        ASSERT(mfn_x(gl4mfn) != mfn_x(sl4mfn));
++
++        sl4e[shadow_l4_table_offset(SH_LINEAR_PT_VIRT_START)] =
++            shadow_l4e_from_mfn(sl4mfn, __PAGE_HYPERVISOR);
+     }
+ 
++    sl4e[shadow_l4_table_offset(LINEAR_PT_VIRT_START)] =
++        shadow_l4e_from_mfn(gl4mfn, __PAGE_HYPERVISOR);
++
+     unmap_domain_page(sl4e);
+ }
+ #endif
+@@ -4270,6 +4282,11 @@ static int sh_guess_wrmap(struct vcpu *v, unsigned long vaddr, mfn_t gmfn)
+ 
+     /* Carefully look in the shadow linear map for the l1e we expect */
+ #if SHADOW_PAGING_LEVELS >= 4
++    /* Is a shadow linear map is installed in the first place? */
++    sl4p  = v->arch.paging.shadow.guest_vtable;
++    sl4p += shadow_l4_table_offset(SH_LINEAR_PT_VIRT_START);
++    if ( !(shadow_l4e_get_flags(*sl4p) & _PAGE_PRESENT) )
++        return 0;
+     sl4p = sh_linear_l4_table(v) + shadow_l4_linear_offset(vaddr);
+     if ( !(shadow_l4e_get_flags(*sl4p) & _PAGE_PRESENT) )
+         return 0;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Thu, 12 Oct 2017 13:02:47 +0100
+Subject: [PATCH] x86/cpu: fix IST handling during PCPU bringup
+
+Clear IST references in newly allocated IDTs.  Nothing good will come of
+having them set before the TSS is suitably constructed (although the chances
+of the CPU surviving such an IST interrupt/exception is extremely slim).
+
+Uniformly set the IST references after the TSS is in place.  This fixes an
+issue on AMD hardware, where onlining a PCPU while PCPU0 is in HVM context
+will cause IST_NONE to be copied into the new IDT, making that PCPU vulnerable
+to privilege escalation from PV guests until it subsequently schedules an HVM
+guest.
+
+This is XSA-244.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/cpu/common.c | 5 +++++
+ xen/arch/x86/smpboot.c    | 3 +++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/xen/arch/x86/cpu/common.c b/xen/arch/x86/cpu/common.c
+index 528c283f65..5729e2d344 100644
+--- a/xen/arch/x86/cpu/common.c
++++ b/xen/arch/x86/cpu/common.c
+@@ -558,6 +558,7 @@ void __init early_cpu_init(void)
+  * - Sets up TSS with stack pointers, including ISTs
+  * - Inserts TSS selector into regular and compat GDTs
+  * - Loads GDT, IDT, TR then null LDT
++ * - Sets up IST references in the IDT
+  */
+ void __cpuinit load_system_tables(void)
  {
--    return replace_grant_va_mapping(addr, frame, l1e_empty(), v);
-+    return replace_grant_va_mapping(addr, frame, grant_pte_flags,
-+                                    l1e_empty(), v);
+@@ -604,6 +605,10 @@ void __cpuinit load_system_tables(void)
+ 	asm volatile ("lidt %0"  : : "m"  (idtr) );
+ 	asm volatile ("ltr  %w0" : : "rm" (TSS_ENTRY << 3) );
+ 	asm volatile ("lldt %w0" : : "rm" (0) );
++
++	set_ist(&idt_tables[cpu][TRAP_double_fault],  IST_DF);
++	set_ist(&idt_tables[cpu][TRAP_nmi],	      IST_NMI);
++	set_ist(&idt_tables[cpu][TRAP_machine_check], IST_MCE);
  }
  
- static int create_grant_p2m_mapping(uint64_t addr, unsigned long frame,
-@@ -4219,21 +4245,40 @@ int replace_grant_host_mapping(
-     unsigned long gl1mfn;
-     struct page_info *l1pg;
-     int rc;
-+    unsigned int grant_pte_flags;
-     
-     if ( paging_mode_external(current->domain) )
-         return replace_grant_p2m_mapping(addr, frame, new_addr, flags);
+ /*
+diff --git a/xen/arch/x86/smpboot.c b/xen/arch/x86/smpboot.c
+index 094699286f..91c8d789f5 100644
+--- a/xen/arch/x86/smpboot.c
++++ b/xen/arch/x86/smpboot.c
+@@ -749,6 +749,9 @@ static int cpu_smpboot_alloc(unsigned int cpu)
+     if ( idt_tables[cpu] == NULL )
+         goto oom;
+     memcpy(idt_tables[cpu], idt_table, IDT_ENTRIES * sizeof(idt_entry_t));
++    set_ist(&idt_tables[cpu][TRAP_double_fault],  IST_NONE);
++    set_ist(&idt_tables[cpu][TRAP_nmi],           IST_NONE);
++    set_ist(&idt_tables[cpu][TRAP_machine_check], IST_NONE);
  
-+    grant_pte_flags =
-+        _PAGE_PRESENT | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_GNTTAB | _PAGE_NX;
-+
-+    if ( flags & GNTMAP_application_map )
-+        grant_pte_flags |= _PAGE_USER;
-+    if ( !(flags & GNTMAP_readonly) )
-+        grant_pte_flags |= _PAGE_RW;
-+    /*
-+     * On top of the explicit settings done by create_grant_host_mapping()
-+     * also open-code relevant parts of adjust_guest_l1e(). Don't mirror
-+     * available and cachability flags, though.
-+     */
-+    if ( !is_pv_32bit_domain(curr->domain) )
-+        grant_pte_flags |= (grant_pte_flags & _PAGE_USER)
-+                           ? _PAGE_GLOBAL
-+                           : _PAGE_GUEST_KERNEL | _PAGE_USER;
-+
-     if ( flags & GNTMAP_contains_pte )
-     {
-         if ( !new_addr )
--            return destroy_grant_pte_mapping(addr, frame, curr->domain);
-+            return destroy_grant_pte_mapping(addr, frame, grant_pte_flags,
-+                                             curr->domain);
-         
-         MEM_LOG("Unsupported grant table operation");
-         return GNTST_general_error;
-     }
- 
-     if ( !new_addr )
--        return destroy_grant_va_mapping(addr, frame, curr);
-+        return destroy_grant_va_mapping(addr, frame, grant_pte_flags, curr);
- 
-     pl1e = guest_map_l1e(curr, new_addr, &gl1mfn);
-     if ( !pl1e )
-@@ -4281,7 +4326,7 @@ int replace_grant_host_mapping(
-     put_page(l1pg);
-     guest_unmap_l1e(curr, pl1e);
- 
--    rc = replace_grant_va_mapping(addr, frame, ol1e, curr);
-+    rc = replace_grant_va_mapping(addr, frame, grant_pte_flags, ol1e, curr);
-     if ( rc && !paging_mode_refcounts(curr->domain) )
-         put_page_from_l1e(ol1e, curr->domain);
- 
+     for ( stub_page = 0, i = cpu & ~(STUBS_PER_PAGE - 1);
+           i < nr_cpu_ids && i <= (cpu | (STUBS_PER_PAGE - 1)); ++i )
 -- 
 
