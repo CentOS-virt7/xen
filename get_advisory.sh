@@ -67,14 +67,27 @@ get_patches_list_from_advisory(){
   local advisory="$1"
   local glob="$2"
   local sums
+  local -a patches
 
   if [[ "$glob" =~ ^[^/]+/\*$ ]]; then
     sums="$(extract_sha256sum $advisory)"
-    glob=${glob%/\*}
-    sed -rn "s%^[0-9a-f]+  ($glob/.*)$%\1%p" <<<"$sums"
+    glob="${glob%/\*}"
+    IFS='
+'
+    patches=($(sed -rn "s%^[0-9a-f]+  ($glob/.*)$%\1%p" <<<"$sums"))
+  elif [[ "$glob" =~ ^[^/]+/\*\.patch$ ]]; then
+    sums="$(extract_sha256sum $advisory)"
+    glob="${glob%/\*.patch}"
+    IFS='
+'
+    patches=($(sed -rn "s%^[0-9a-f]+  ($glob/.*\.patch)$%\1%p" <<<"$sums"))
   else
-    echo "$glob"
+    patches=("$glob")
   fi
+  unset IFS
+  for p in "${patches[@]}"; do
+    echo -n " '$p'"
+  done
 }
 
 
@@ -90,8 +103,9 @@ if wget_file $metadata; then
   eval patches=($(get_list_of_patches $metadata))
   for patch in "${patches[@]}"; do
     # Check if "Patches" in the metadata are in a globing format
-    # if not, the function just return $patches unchanged
-    for patch in $(get_patches_list_from_advisory $advisory "$patches"); do
+    # if not, the function just return $patch unchanged
+    eval patch=($(get_patches_list_from_advisory $advisory "$patch"))
+    for patch in "${patch[@]}"; do
       wget_file "$patch"
       check_file $advisory "$patch"
     done
