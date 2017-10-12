@@ -66,6 +66,20 @@ get_list_of_patches(){
   fi
 }
 
+get_patches_list_from_advisory(){
+  local advisory="$1"
+  local glob="$2"
+  local sums
+
+  if [[ "$glob" =~ ^[^/]+/\*$ ]]; then
+    sums="$(extract_sha256sum $advisory)"
+    glob=${glob%/\*}
+    sed -rn "s%^[0-9a-f]+  ($glob/.*)$%\1%p" <<<"$sums"
+  else
+    echo "$glob"
+  fi
+}
+
 
 mkdir -p advisory-tmp
 pushd advisory-tmp >/dev/null
@@ -76,9 +90,13 @@ wget_file $advisory
 check_sig $advisory
 if wget_file $metadata; then
   check_file $advisory $metadata
-  for p in $(get_list_of_patches $metadata); do
-    wget_file $patch
-    check_file $advisory $patch
+  for patches in $(get_list_of_patches $metadata); do
+    # Check if "Patches" in the metadata are in a globing format
+    # if not, the function just return $patches unchanged
+    for patch in $(get_patches_list_from_advisory $advisory "$patches"); do
+      wget_file "$patch"
+      check_file $advisory "$patch"
+    done
   done
 else
   echo "No metadata, please read the advisory: advisory-tmp/$advisory"
