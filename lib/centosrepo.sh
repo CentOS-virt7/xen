@@ -167,19 +167,26 @@ function import-patches()
 	fail "No patches to import"
     fi
 
+    local original_dir="$(pwd)"
+
     local pqbranch=centos/pq/$XEN_VERSION
 
-    cd $TOPDIR/UPSTREAM/xen.git || fail "Directory doesn't exist!"
+    pushd >/dev/null $TOPDIR/UPSTREAM/xen.git || fail "Directory doesn't exist!"
 
     stg-check
 
     local p
     for p in "${args[@]}" ; do
+        if [ "${p:0:1}" != '/' ]; then
+            # If path is relative, add original path
+            p="$original_dir/$p"
+        fi
 	info "Importing patch  $p..."
-	stg import -m $p || fail "Importing patch $p"
+	stg import -m "$p" || fail "Importing patch $p"
     done
 
     info "Patches imported to patchqueue.  Don't forget to sync-queue and bump the release number."
+    popd >/dev/null
 }
 
 function sync-patches-internal()
