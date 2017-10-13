@@ -98,6 +98,7 @@ advisory=advisory-$xsa.txt
 metadata=xsa$xsa.meta
 wget_file $advisory
 check_sig $advisory
+to_import=()
 if wget_file $metadata; then
   check_file $advisory $metadata
   eval patches=($(get_list_of_patches $metadata))
@@ -108,8 +109,14 @@ if wget_file $metadata; then
     for patch in "${patch[@]}"; do
       wget_file "$patch"
       check_file $advisory "$patch"
+      to_import+=("$patch")
     done
   done
+  echo -n "Import patches ? ${to_import[@]} [yN] "
+  read answer
+  if [[ "$answer" =~ ^[Yy]$ ]]; then
+    ../repo import-patches "${to_import[@]}"
+  fi
 else
   echo "No metadata, please read the advisory: advisory-tmp/$advisory"
 fi
