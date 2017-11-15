@@ -12790,3 +12790,137 @@ index 130a815..f8adb94 100644
      if ( dd )
 -- 
 
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Wed, 15 Nov 2017 14:31:01 -0600
+Subject: [PATCH] x86: don't wrongly trigger linear page table assertion
+
+_put_page_type() may do multiple iterations until its cmpxchg()
+succeeds. It invokes set_tlbflush_timestamp() on the first
+iteration, however. Code inside the function takes care of this, but
+- the assertion in _put_final_page_type() would trigger on the second
+  iteration if time stamps in a debug build are permitted to be
+  sufficiently much wider than the default 6 bits (see WRAP_MASK in
+  flushtlb.c),
+- it returning -EINTR (for a continuation to be scheduled) would leave
+  the page inconsistent state (until the re-invocation completes).
+Make the set_tlbflush_timestamp() invocation conditional, bypassing it
+(for now) only in the case we really can't tolerate the stamp to be
+stored.
+
+This is part of XSA-240.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: George Dunlap <george.dunlap@citrix.com>
+---
+ xen/arch/x86/mm.c | 23 +++++++----------------
+ 1 file changed, 7 insertions(+), 16 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 4a24788..9e35677 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -2422,29 +2422,20 @@ static int _put_page_type(struct page_info *page, bool_t preemptible,
+                 break;
+             }
+ 
+-            if ( ptpg && PGT_type_equal(x, ptpg->u.inuse.type_info) )
+-            {
+-                /*
+-                 * set_tlbflush_timestamp() accesses the same union
+-                 * linear_pt_count lives in. Unvalidated page table pages,
+-                 * however, should occur during domain destruction only
+-                 * anyway.  Updating of linear_pt_count luckily is not
+-                 * necessary anymore for a dying domain.
+-                 */
+-                ASSERT(page_get_owner(page)->is_dying);
+-                ASSERT(page->linear_pt_count < 0);
+-                ASSERT(ptpg->linear_pt_count > 0);
+-                ptpg = NULL;
+-            }
+-
+             /*
+              * Record TLB information for flush later. We do not stamp page
+              * tables when running in shadow mode:
+              *  1. Pointless, since it's the shadow pt's which must be tracked.
+              *  2. Shadow mode reuses this field for shadowed page tables to
+              *     store flags info -- we don't want to conflict with that.
++             * Also page_set_tlbflush_timestamp() accesses the same union
++             * linear_pt_count lives in. Pages (including page table ones),
++             * however, don't need their flush time stamp set except when
++             * the last reference is being dropped. For page table pages
++             * this happens in _put_final_page_type().
+              */
+-            if ( !(shadow_mode_enabled(page_get_owner(page)) &&
++            if ( (!ptpg || !PGT_type_equal(x, ptpg->u.inuse.type_info)) &&
++                 !(shadow_mode_enabled(page_get_owner(page)) &&
+                    (page->count_info & PGC_page_table)) )
+                 page_set_tlbflush_timestamp(page);
+         }
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Kevin Stange <kevin@steadfast.net>
+Date: Wed, 15 Nov 2017 14:31:12 -0600
+Subject: [PATCH] None
+
+The fix for XSA-243 / CVE-2017-15592 (c/s bf2b4eadcf379) introduced a change
+in behaviour for sh_guest_wrmap(), where it had to cope with no shadow linear
+mapping being present.
+
+As the name suggests, guest_vtable is a mapping of the guests pagetable, not
+Xen's pagetable, meaning that it isn't the pagetable we need to check for the
+shadow linear slot in.
+
+The practical upshot is that a shadow HVM vcpu which switches into 4-level
+paging mode, with an L4 pagetable that contains a mapping which aliases Xen's
+SH_LINEAR_PT_VIRT_START will fool the safety check for whether a SHADOW_LINEAR
+mapping is present.  As the check passes (when it should have failed), Xen
+subsequently falls over the missing mapping with a pagefault such as:
+
+    (XEN) Pagetable walk from ffff8140a0503880:
+    (XEN)  L4[0x102] = 000000046c218063 ffffffffffffffff
+    (XEN)  L3[0x102] = 000000046c218063 ffffffffffffffff
+    (XEN)  L2[0x102] = 000000046c218063 ffffffffffffffff
+    (XEN)  L1[0x103] = 0000000000000000 ffffffffffffffff
+
+This is part of XSA-243.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm/shadow/multi.c | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/xen/arch/x86/mm/shadow/multi.c b/xen/arch/x86/mm/shadow/multi.c
+index d4f70b9..ecd073b 100644
+--- a/xen/arch/x86/mm/shadow/multi.c
++++ b/xen/arch/x86/mm/shadow/multi.c
+@@ -4270,11 +4270,18 @@ static int sh_guess_wrmap(struct vcpu *v, unsigned long vaddr, mfn_t gmfn)
+ 
+     /* Carefully look in the shadow linear map for the l1e we expect */
+ #if SHADOW_PAGING_LEVELS >= 4
+-    /* Is a shadow linear map is installed in the first place? */
+-    sl4p  = v->arch.paging.shadow.guest_vtable;
+-    sl4p += shadow_l4_table_offset(SH_LINEAR_PT_VIRT_START);
+-    if ( !(shadow_l4e_get_flags(*sl4p) & _PAGE_PRESENT) )
+-        return 0;
++    /*
++     * Non-external guests (i.e. PV) have a SHADOW_LINEAR mapping from the
++     * moment their shadows are created.  External guests (i.e. HVM) may not,
++     * but always have a regular linear mapping, which we can use to observe
++     * whether a SHADOW_LINEAR mapping is present.
++     */
++    if ( paging_mode_external(v->domain) )
++    {
++        sl4p =  __linear_l4_table + l4_linear_offset(SH_LINEAR_PT_VIRT_START);
++        if ( !(shadow_l4e_get_flags(*sl4p) & _PAGE_PRESENT) )
++            return 0;
++    }
+     sl4p = sh_linear_l4_table(v) + shadow_l4_linear_offset(vaddr);
+     if ( !(shadow_l4e_get_flags(*sl4p) & _PAGE_PRESENT) )
+         return 0;
+-- 
+
