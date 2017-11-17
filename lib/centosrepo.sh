@@ -271,10 +271,10 @@ function get-sources()
     fi
 
     if gpg --list-keys 0x${XEN_KEY}; then
-	if [[ ! -e SOURCES/$XEN_RELEASE_FILE.sig ]]; then
-            wget -P SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE.sig || exit 1
+	if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig ]]; then
+            wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE.sig || exit 1
 	fi
-	gpg --status-fd 1 --verify SOURCES/$XEN_RELEASE_FILE.sig SOURCES/$XEN_RELEASE_FILE \
+	gpg --status-fd 1 --verify $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig $TOPDIR/SOURCES/$XEN_RELEASE_FILE \
 	    | grep -q "GOODSIG ${XEN_KEY}" || exit 1
     else
 	echo "Not checking gpg signature due to missing key; add with gpg --recv-keys ${XEN_KEY}"
@@ -318,19 +318,19 @@ function get-sources()
     fi
 
     echo "Checking livepatch-build-tools..."
-    if [[ -n "$LIVEPATCH_FILE" && ! -e SOURCES/$LIVEPATCH_FILE ]] ; then
+    if [[ -n "$LIVEPATCH_FILE" && ! -e $TOPDIR/SOURCES/$LIVEPATCH_FILE ]] ; then
 	echo "Cloning livepatch-build-tools repo..."
-	mkdir -p git-tmp
-	pushd git-tmp
+	mkdir -p $TOPDIR/git-tmp
+	pushd $TOPDIR/git-tmp
 	
 	git clone $LIVEPATCH_URL livepatch-build-tools.git || exit 1
 	cd livepatch-build-tools.git
 	echo "Creating $LIVEPATCH_FILE..."
-	git archive --prefix=livepatch-build-tools/ -o ../../SOURCES/$LIVEPATCH_FILE $LIVEPATCH_CSET || exit 1
+	git archive --prefix=livepatch-build-tools/ -o $TOPDIR/SOURCES/$LIVEPATCH_FILE $LIVEPATCH_CSET || exit 1
 	popd
     fi
 
-if [[ -e $TOPDIR/git-tmp ]] ; then
+    if [[ -e $TOPDIR/git-tmp ]] ; then
 	echo "Cleaning up cloned repositores"
 	rm -rf $TOPDIR/git-tmp
     fi
@@ -383,7 +383,7 @@ function rebase-post()
 
     $arg_parse
 
-    cd $TOPDIR/UPSTREAM/xen.git
+    pushd $TOPDIR/UPSTREAM/xen.git
 
     if [[ -z "$new" ]] ; then
 	local new
@@ -399,6 +399,8 @@ function rebase-post()
     stg clean || fail "Cleaning patchqueue"
 
     sync-patches-internal basever=$new
+
+    popd
 
     info "Updating XEN_VERSION in sources.cfg"
     sed -i --follow-symlinks "s/XEN_VERSION=.*$/XEN_VERSION=$new/" $TOPDIR/sources.cfg || fail "Updating XEN_VERSION"
@@ -424,8 +426,6 @@ function stg-check-patch-one()
 
     info "Next patch: $patchname"
 
-    rm -rf /tmp/series-next.patch
-    
     stg export --stdout $patchname > /tmp/series-next.patch
 
     oneline=$(head -1 /tmp/series-next.patch)

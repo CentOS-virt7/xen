@@ -1,6 +1,6 @@
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 28 Jul 2016 12:10:38 +0100
+Date: Wed, 13 Sep 2017 17:16:30 +0100
 Subject: [PATCH] tools/hotplug: Before running xenstored, run restorecon if
  available to reset selinux labels
 
@@ -48,7 +48,7 @@ index 80c1d408a5..95d6a52fe6 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 28 Jul 2016 12:10:38 +0100
+Date: Wed, 13 Sep 2017 17:16:30 +0100
 Subject: [PATCH] tools/hotplug: Call xenstored directly rather than via sh
 
 Using sh to exec xenstored breaks on selinux systems (at least, on
@@ -120,7 +120,7 @@ index 95d6a52fe6..2b80eeeb83 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 28 Jul 2016 12:10:38 +0100
+Date: Wed, 13 Sep 2017 17:16:30 +0100
 Subject: [PATCH] tools/Linux: Fix blktap module name in default module list
 
 The name of the blktap2 kernel module is... blktap.
@@ -132,7 +132,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/configure b/tools/configure
-index e1a30e8189..a4b61f4f61 100755
+index abfc316ca8..71f38f888c 100755
 --- a/tools/configure
 +++ b/tools/configure
 @@ -4159,7 +4159,7 @@ xen-scsibk
@@ -145,7 +145,7 @@ index e1a30e8189..a4b61f4f61 100755
  ;;
  *)
 diff --git a/tools/configure.ac b/tools/configure.ac
-index 873e18dafb..b339df51b9 100644
+index 000c3ef264..1f04e93a1f 100644
 --- a/tools/configure.ac
 +++ b/tools/configure.ac
 @@ -108,7 +108,7 @@ xen-scsibk
@@ -162,7 +162,7 @@ index 873e18dafb..b339df51b9 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:17 +0000
+Date: Wed, 13 Sep 2017 17:16:30 +0100
 Subject: [PATCH] xen: Allow user to specify an alternate linker for EFI
  binaries
 
@@ -176,7 +176,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  3 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/xen/Makefile b/xen/Makefile
-index 02b79d915f..ff8f360f6d 100644
+index f40dc8e0da..a8b3e21fd5 100644
 --- a/xen/Makefile
 +++ b/xen/Makefile
 @@ -20,6 +20,7 @@ export XEN_ROOT := $(BASEDIR)/..
@@ -233,7 +233,7 @@ index ad3fdf7ff7..05153f4211 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:17 +0000
+Date: Wed, 13 Sep 2017 17:16:30 +0100
 Subject: [PATCH] Disable iptables on the bridge
 
 ---
@@ -277,7 +277,7 @@ index 92ffa603f7..0b1fde9dac 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:17 +0000
+Date: Wed, 13 Sep 2017 17:16:31 +0100
 Subject: [PATCH] xen.use.fedora.ipxe.patch
 
 ---
@@ -287,7 +287,7 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index 1dc6603ca3..7a81027425 100644
+index d3b2c1a2cb..cc8f245ac7 100644
 --- a/Config.mk
 +++ b/Config.mk
 @@ -286,7 +286,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.10.0
@@ -298,7 +298,7 @@ index 1dc6603ca3..7a81027425 100644
 +ETHERBOOT_NICS ?= 10ec8139 8086100e
  
  
- QEMU_TRADITIONAL_REVISION ?= xen-4.8.1
+ QEMU_TRADITIONAL_REVISION ?= xen-4.8.2
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
 index b840c6ab87..d3e552b373 100644
 --- a/tools/firmware/Makefile
@@ -330,7 +330,7 @@ index 80d7b448a5..1a498fcaca 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:17 +0000
+Date: Wed, 13 Sep 2017 17:16:31 +0100
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
  backend"
 
@@ -366,7 +366,7 @@ index 3e7a1026c4..5c84508328 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Feb 2016 11:29:18 +0000
+Date: Wed, 13 Sep 2017 17:16:31 +0100
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
@@ -479,7 +479,7 @@ index 5c9a0a2da8..a54a31e32b 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Julien Grall <julien.grall@linaro.org>
-Date: Thu, 11 Feb 2016 11:29:18 +0000
+Date: Wed, 13 Sep 2017 17:16:31 +0100
 Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
 
 ---
@@ -508,9 +508,10 @@ index bd974fb13d..da54f10df3 100644
  #define PSR_MODE_EL3t 0x0c
 -- 
 
-From dd448f732978efbff0d6f4c79661c9b64d557866 Mon Sep 17 00:00:00 2001
+
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
-Date: Tue, 7 Jun 2016 11:23:02 +0100
+Date: Wed, 13 Sep 2017 17:16:31 +0100
 Subject: [PATCH] libxc: Try /proc/xen/privcmd on EACCES as well
 
 /proc/xen/privcmd is deprecated in favor of /dev/xen/privcmd; but at
@@ -527,7 +528,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libs/call/linux.c b/tools/libs/call/linux.c
-index e8e0311..36572e9 100644
+index e8e03111ab..36572e96d5 100644
 --- a/tools/libs/call/linux.c
 +++ b/tools/libs/call/linux.c
 @@ -39,7 +39,7 @@ int osdep_xencall_open(xencall_handle *xcall)
@@ -540,7 +541,7 @@ index e8e0311..36572e9 100644
          /* Fallback to /proc/xen/privcmd */
          fd = open("/proc/xen/privcmd", O_RDWR|O_CLOEXEC);
 diff --git a/tools/libs/foreignmemory/linux.c b/tools/libs/foreignmemory/linux.c
-index 423c744..72e4b07 100644
+index 423c7441bc..72e4b07200 100644
 --- a/tools/libs/foreignmemory/linux.c
 +++ b/tools/libs/foreignmemory/linux.c
 @@ -41,7 +41,7 @@ int osdep_xenforeignmemory_open(xenforeignmemory_handle *fmem)
@@ -553,2531 +554,414 @@ index 423c744..72e4b07 100644
          /* Fallback to /proc/xen/privcmd */
          fd = open("/proc/xen/privcmd", O_RDWR|O_CLOEXEC);
 -- 
-1.9.1
-
-From 804cd4977020906b278743050d12d93a29626075 Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Fri, 9 Jun 2017 21:29:06 -0700
-Subject: [PATCH 1/2] multicall: deal with early exit conditions
-
-In particular changes to guest privilege level require the multicall
-sequence to be aborted, as hypercalls are permitted from kernel mode
-only. While likely not very useful in a multicall, also properly handle
-the return value in the HYPERVISOR_iret case (which should be the guest
-specified value).
-
-This is XSA-213.
-
-Reported-by: Jann Horn <jannh@google.com>
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Acked-by: Julien Grall <julien.grall@arm.com>
----
- xen/arch/arm/traps.c        | 11 +++++++----
- xen/arch/x86/hypercall.c    | 26 ++++++++++++++++++--------
- xen/common/multicall.c      | 17 ++++++++++++++---
- xen/include/xen/multicall.h |  6 +++++-
- 4 files changed, 44 insertions(+), 16 deletions(-)
-
-diff --git a/xen/arch/arm/traps.c b/xen/arch/arm/traps.c
-index 90aba2a..0f3ef1f 100644
---- a/xen/arch/arm/traps.c
-+++ b/xen/arch/arm/traps.c
-@@ -1531,7 +1531,7 @@ static bool_t check_multicall_32bit_clean(struct multicall_entry *multi)
-     return true;
- }
- 
--void arch_do_multicall_call(struct mc_state *state)
-+enum mc_disposition arch_do_multicall_call(struct mc_state *state)
- {
-     struct multicall_entry *multi = &state->call;
-     arm_hypercall_fn_t call = NULL;
-@@ -1539,23 +1539,26 @@ void arch_do_multicall_call(struct mc_state *state)
-     if ( multi->op >= ARRAY_SIZE(arm_hypercall_table) )
-     {
-         multi->result = -ENOSYS;
--        return;
-+        return mc_continue;
-     }
- 
-     call = arm_hypercall_table[multi->op].fn;
-     if ( call == NULL )
-     {
-         multi->result = -ENOSYS;
--        return;
-+        return mc_continue;
-     }
- 
-     if ( is_32bit_domain(current->domain) &&
-          !check_multicall_32bit_clean(multi) )
--        return;
-+        return mc_continue;
- 
-     multi->result = call(multi->args[0], multi->args[1],
-                          multi->args[2], multi->args[3],
-                          multi->args[4]);
-+
-+    return likely(!psr_mode_is_user(guest_cpu_user_regs()))
-+           ? mc_continue : mc_preempt;
- }
- 
- /*
-diff --git a/xen/arch/x86/hypercall.c b/xen/arch/x86/hypercall.c
-index d2b5331..3023041 100644
---- a/xen/arch/x86/hypercall.c
-+++ b/xen/arch/x86/hypercall.c
-@@ -255,15 +255,19 @@ void pv_hypercall(struct cpu_user_regs *regs)
-     perfc_incr(hypercalls);
- }
- 
--void arch_do_multicall_call(struct mc_state *state)
-+enum mc_disposition arch_do_multicall_call(struct mc_state *state)
- {
--    if ( !is_pv_32bit_vcpu(current) )
-+    struct vcpu *curr = current;
-+    unsigned long op;
-+
-+    if ( !is_pv_32bit_vcpu(curr) )
-     {
-         struct multicall_entry *call = &state->call;
- 
--        if ( (call->op < ARRAY_SIZE(pv_hypercall_table)) &&
--             pv_hypercall_table[call->op].native )
--            call->result = pv_hypercall_table[call->op].native(
-+        op = call->op;
-+        if ( (op < ARRAY_SIZE(pv_hypercall_table)) &&
-+             pv_hypercall_table[op].native )
-+            call->result = pv_hypercall_table[op].native(
-                 call->args[0], call->args[1], call->args[2],
-                 call->args[3], call->args[4], call->args[5]);
-         else
-@@ -274,15 +278,21 @@ void arch_do_multicall_call(struct mc_state *state)
-     {
-         struct compat_multicall_entry *call = &state->compat_call;
- 
--        if ( (call->op < ARRAY_SIZE(pv_hypercall_table)) &&
--             pv_hypercall_table[call->op].compat )
--            call->result = pv_hypercall_table[call->op].compat(
-+        op = call->op;
-+        if ( (op < ARRAY_SIZE(pv_hypercall_table)) &&
-+             pv_hypercall_table[op].compat )
-+            call->result = pv_hypercall_table[op].compat(
-                 call->args[0], call->args[1], call->args[2],
-                 call->args[3], call->args[4], call->args[5]);
-         else
-             call->result = -ENOSYS;
-     }
- #endif
-+
-+    return unlikely(op == __HYPERVISOR_iret)
-+           ? mc_exit
-+           : likely(guest_kernel_mode(curr, guest_cpu_user_regs()))
-+             ? mc_continue : mc_preempt;
- }
- 
- /*
-diff --git a/xen/common/multicall.c b/xen/common/multicall.c
-index 524c9bf..5d25376 100644
---- a/xen/common/multicall.c
-+++ b/xen/common/multicall.c
-@@ -40,6 +40,7 @@ do_multicall(
-     struct mc_state *mcs = &current->mc_state;
-     uint32_t         i;
-     int              rc = 0;
-+    enum mc_disposition disp = mc_continue;
- 
-     if ( unlikely(__test_and_set_bit(_MCSF_in_multicall, &mcs->flags)) )
-     {
-@@ -50,7 +51,7 @@ do_multicall(
-     if ( unlikely(!guest_handle_okay(call_list, nr_calls)) )
-         rc = -EFAULT;
- 
--    for ( i = 0; !rc && i < nr_calls; i++ )
-+    for ( i = 0; !rc && disp == mc_continue && i < nr_calls; i++ )
-     {
-         if ( i && hypercall_preempt_check() )
-             goto preempted;
-@@ -63,7 +64,7 @@ do_multicall(
- 
-         trace_multicall_call(&mcs->call);
- 
--        arch_do_multicall_call(mcs);
-+        disp = arch_do_multicall_call(mcs);
- 
- #ifndef NDEBUG
-         {
-@@ -77,7 +78,14 @@ do_multicall(
-         }
- #endif
- 
--        if ( unlikely(__copy_field_to_guest(call_list, &mcs->call, result)) )
-+        if ( unlikely(disp == mc_exit) )
-+        {
-+            if ( __copy_field_to_guest(call_list, &mcs->call, result) )
-+                /* nothing, best effort only */;
-+            rc = mcs->call.result;
-+        }
-+        else if ( unlikely(__copy_field_to_guest(call_list, &mcs->call,
-+                                                 result)) )
-             rc = -EFAULT;
-         else if ( mcs->flags & MCSF_call_preempted )
-         {
-@@ -93,6 +101,9 @@ do_multicall(
-             guest_handle_add_offset(call_list, 1);
-     }
- 
-+    if ( unlikely(disp == mc_preempt) && i < nr_calls )
-+        goto preempted;
-+
-     perfc_incr(calls_to_multicall);
-     perfc_add(calls_from_multicall, i);
-     mcs->flags = 0;
-diff --git a/xen/include/xen/multicall.h b/xen/include/xen/multicall.h
-index fff15eb..75e2cc5 100644
---- a/xen/include/xen/multicall.h
-+++ b/xen/include/xen/multicall.h
-@@ -24,6 +24,10 @@ struct mc_state {
-     };
- };
- 
--void arch_do_multicall_call(struct mc_state *mc);
-+enum mc_disposition {
-+    mc_continue,
-+    mc_exit,
-+    mc_preempt,
-+} arch_do_multicall_call(struct mc_state *mc);
- 
- #endif /* __XEN_MULTICALL_H__ */
--- 
-1.9.1
 
 
-From d5ce6b4410779ea6a99cc2520dff890896bd7012 Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Fri, 9 Jun 2017 21:29:10 -0700
-Subject: [PATCH 2/2] x86: discard type information when stealing pages
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Thu, 14 Sep 2017 11:35:06 +0100
+Subject: [PATCH] xen/mm: make sure node is less than MAX_NUMNODES
 
-While a page having just a single general reference left necessarily
-has a zero type reference count too, its type may still be valid (and
-in validated state; at present this is only possible and relevant for
-PGT_seg_desc_page, as page tables have their type forcibly zapped when
-their type reference count drops to zero, and
-PGT_{writable,shared}_page pages don't require any validation). In
-such a case when the page is being re-used with the same type again,
-validation is being skipped. As validation criteria differ between
-32- and 64-bit guests, pages to be transferred between guests need to
-have their validation indicator zapped (and with it we zap all other
-type information at once).
+The output of MEMF_get_node(memflags) can be as large as nodeid_t can
+hold (currently 255).  This is then used as an index to arrays of size
+MAX_NUMNODE, which is 64 on x86 and 1 on ARM, can be passed in by an
+untrusted guest (via memory_exchange and increase_reservation) and is
+not currently bounds-checked.
 
-This is XSA-214.
+Check the value in page_alloc.c before using it, and also check the
+value in the hypercall call sites and return -EINVAL if appropriate.
+Don't permit domains other than the hardware or control domain to
+allocate node-constrained memory.
 
-Reported-by: Jann Horn <jannh@google.com>
+This is XSA-231.
+
+Reported-by: Matthew Daley <mattd@bugfuzz.com>
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
 Signed-off-by: Jan Beulich <jbeulich@suse.com>
 Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
 ---
- xen/arch/x86/mm.c | 11 +++++++++++
- 1 file changed, 11 insertions(+)
+ xen/common/memory.c     | 40 +++++++++++++++++++++++++++++++++-------
+ xen/common/page_alloc.c |  6 +++++-
+ 2 files changed, 38 insertions(+), 8 deletions(-)
 
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index 03dcd71..20e94f7 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -4422,6 +4422,17 @@ int steal_page(
-         y = cmpxchg(&page->count_info, x, x & ~PGC_count_mask);
-     } while ( y != x );
- 
-+    /*
-+     * With the sole reference dropped temporarily, no-one can update type
-+     * information. Type count also needs to be zero in this case, but e.g.
-+     * PGT_seg_desc_page may still have PGT_validated set, which we need to
-+     * clear before transferring ownership (as validation criteria vary
-+     * depending on domain type).
-+     */
-+    BUG_ON(page->u.inuse.type_info & (PGT_count_mask | PGT_locked |
-+                                      PGT_pinned));
-+    page->u.inuse.type_info = 0;
-+
-     /* Swizzle the owner then reinstate the PGC_allocated reference. */
-     page_set_owner(page, NULL);
-     y = page->count_info;
--- 
-1.9.1
-
-From ed210551f56747f3ed7622cd79962c2d64841974 Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Sat, 10 Jun 2017 12:43:02 -0700
-Subject: [PATCH] x86/mm: disallow page stealing from HVM domains
-
-The operation's success can't be controlled by the guest, as the device
-model may have an active mapping of the page. If we nevertheless
-permitted this operation, we'd have to add further TLB flushing to
-prevent scenarios like
-
-"Domains A (HVM), B (PV), C (PV); B->target==A
- Steps:
- 1. B maps page X from A as writable
- 2. B unmaps page X without a TLB flush
- 3. A sends page X to C via GNTTABOP_transfer
- 4. C maps page X as pagetable (potentially causing a TLB flush in C,
- but not in B)
-
- At this point, X would be mapped as a pagetable in C while being
- writable through a stale TLB entry in B."
-
-A similar scenario could be constructed for A using XENMEM_exchange and
-some arbitrary PV domain C then having this page allocated.
-
-This is XSA-217.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Acked-by: George Dunlap <george.dunlap@citrix.com>
-Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
----
- xen/arch/x86/mm.c | 3 +++
- 1 file changed, 3 insertions(+)
-
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index 20e94f7..c03479b 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -4405,6 +4405,9 @@ int steal_page(
-     bool_t drop_dom_ref = 0;
-     const struct domain *owner = dom_xen;
- 
-+    if ( paging_mode_external(d) )
-+        return -1;
-+
-     spin_lock(&d->page_alloc_lock);
- 
-     if ( is_xen_heap_page(page) || ((owner = page_get_owner(page)) != d) )
--- 
-1.9.1
-
-From 9c587bb88daa9638ab71e2cfb62671aa106e4ef1 Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Thu, 11 May 2017 14:47:00 +0100
-Subject: [PATCH] x86/shadow: Hold references for the duration of emulated
- writes
-
-The (misnamed) emulate_gva_to_mfn() function translates a linear address to an
-mfn, but releases its page reference before returning the mfn to its caller.
-
-sh_emulate_map_dest() uses the results of one or two translations to construct
-a virtual mapping to the underlying frames, completes an emulated
-write/cmpxchg, then unmaps the virtual mappings.
-
-The page references need holding until the mappings are unmapped, or the
-frames can change ownership before the writes occurs.
-
-This is XSA-219
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
-Reviewed-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Tim Deegan <tim@xen.org>
----
- xen/arch/x86/mm/shadow/common.c | 54 +++++++++++++++++++++++++++--------------
- 1 file changed, 36 insertions(+), 18 deletions(-)
-
-diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
-index ced2313..13305d2 100644
---- a/xen/arch/x86/mm/shadow/common.c
-+++ b/xen/arch/x86/mm/shadow/common.c
-@@ -1703,7 +1703,10 @@ static unsigned int shadow_get_allocation(struct domain *d)
- /**************************************************************************/
- /* Handling guest writes to pagetables. */
- 
--/* Translate a VA to an MFN, injecting a page-fault if we fail. */
-+/*
-+ * Translate a VA to an MFN, injecting a page-fault if we fail.  If the
-+ * mapping succeeds, a reference will be held on the underlying page.
-+ */
- #define BAD_GVA_TO_GFN (~0UL)
- #define BAD_GFN_TO_MFN (~1UL)
- #define READONLY_GFN   (~2UL)
-@@ -1751,16 +1754,15 @@ static mfn_t emulate_gva_to_mfn(struct vcpu *v, unsigned long vaddr,
-     ASSERT(mfn_valid(mfn));
- 
-     v->arch.paging.last_write_was_pt = !!sh_mfn_is_a_page_table(mfn);
--    /*
--     * Note shadow cannot page out or unshare this mfn, so the map won't
--     * disappear. Otherwise, caller must hold onto page until done.
--     */
--    put_page(page);
- 
-     return mfn;
+diff --git a/xen/common/memory.c b/xen/common/memory.c
+index 74182d23d8..e1a8dc3f80 100644
+--- a/xen/common/memory.c
++++ b/xen/common/memory.c
+@@ -412,6 +412,31 @@ static void decrease_reservation(struct memop_args *a)
+     a->nr_done = i;
  }
  
--/* Check that the user is allowed to perform this write. */
-+/*
-+ * Check that the user is allowed to perform this write.  If a mapping is
-+ * returned, page references will be held on sh_ctxt->mfn[0] and
-+ * sh_ctxt->mfn[1] iff !INVALID_MFN.
-+ */
- void *sh_emulate_map_dest(struct vcpu *v, unsigned long vaddr,
-                           unsigned int bytes,
-                           struct sh_emulate_ctxt *sh_ctxt)
-@@ -1768,13 +1770,6 @@ void *sh_emulate_map_dest(struct vcpu *v, unsigned long vaddr,
-     struct domain *d = v->domain;
-     void *map;
- 
--    sh_ctxt->mfn[0] = emulate_gva_to_mfn(v, vaddr, sh_ctxt);
--    if ( !mfn_valid(sh_ctxt->mfn[0]) )
--        return ((mfn_x(sh_ctxt->mfn[0]) == BAD_GVA_TO_GFN) ?
--                MAPPING_EXCEPTION :
--                (mfn_x(sh_ctxt->mfn[0]) == READONLY_GFN) ?
--                MAPPING_SILENT_FAIL : MAPPING_UNHANDLEABLE);
--
- #ifndef NDEBUG
-     /* We don't emulate user-mode writes to page tables. */
-     if ( has_hvm_container_domain(d)
-@@ -1787,6 +1782,17 @@ void *sh_emulate_map_dest(struct vcpu *v, unsigned long vaddr,
-     }
- #endif
- 
-+    sh_ctxt->mfn[0] = emulate_gva_to_mfn(v, vaddr, sh_ctxt);
-+    if ( !mfn_valid(sh_ctxt->mfn[0]) )
++static bool propagate_node(unsigned int xmf, unsigned int *memflags)
++{
++    const struct domain *currd = current->domain;
++
++    BUILD_BUG_ON(XENMEMF_get_node(0) != NUMA_NO_NODE);
++    BUILD_BUG_ON(MEMF_get_node(0) != NUMA_NO_NODE);
++
++    if ( XENMEMF_get_node(xmf) == NUMA_NO_NODE )
++        return true;
++
++    if ( is_hardware_domain(currd) || is_control_domain(currd) )
 +    {
-+        switch ( mfn_x(sh_ctxt->mfn[0]) )
-+        {
-+        case BAD_GVA_TO_GFN: return MAPPING_EXCEPTION;
-+        case READONLY_GFN:   return MAPPING_SILENT_FAIL;
-+        default:             return MAPPING_UNHANDLEABLE;
-+        }
-+    }
++        if ( XENMEMF_get_node(xmf) >= MAX_NUMNODES )
++            return false;
 +
-     /* Unaligned writes mean probably this isn't a pagetable. */
-     if ( vaddr & (bytes - 1) )
-         sh_remove_shadows(d, sh_ctxt->mfn[0], 0, 0 /* Slow, can fail. */ );
-@@ -1803,6 +1809,7 @@ void *sh_emulate_map_dest(struct vcpu *v, unsigned long vaddr,
-          * Cross-page emulated writes are only supported for HVM guests;
-          * PV guests ought to know better.
-          */
-+        put_page(mfn_to_page(sh_ctxt->mfn[0]));
-         return MAPPING_UNHANDLEABLE;
-     }
-     else
-@@ -1810,17 +1817,26 @@ void *sh_emulate_map_dest(struct vcpu *v, unsigned long vaddr,
-         /* This write crosses a page boundary. Translate the second page. */
-         sh_ctxt->mfn[1] = emulate_gva_to_mfn(v, vaddr + bytes - 1, sh_ctxt);
-         if ( !mfn_valid(sh_ctxt->mfn[1]) )
--            return ((mfn_x(sh_ctxt->mfn[1]) == BAD_GVA_TO_GFN) ?
--                    MAPPING_EXCEPTION :
--                    (mfn_x(sh_ctxt->mfn[1]) == READONLY_GFN) ?
--                    MAPPING_SILENT_FAIL : MAPPING_UNHANDLEABLE);
-+        {
-+            put_page(mfn_to_page(sh_ctxt->mfn[0]));
-+            switch ( mfn_x(sh_ctxt->mfn[1]) )
-+            {
-+            case BAD_GVA_TO_GFN: return MAPPING_EXCEPTION;
-+            case READONLY_GFN:   return MAPPING_SILENT_FAIL;
-+            default:             return MAPPING_UNHANDLEABLE;
-+            }
-+        }
- 
-         /* Cross-page writes mean probably not a pagetable. */
-         sh_remove_shadows(d, sh_ctxt->mfn[1], 0, 0 /* Slow, can fail. */ );
- 
-         map = vmap(sh_ctxt->mfn, 2);
-         if ( !map )
-+        {
-+            put_page(mfn_to_page(sh_ctxt->mfn[0]));
-+            put_page(mfn_to_page(sh_ctxt->mfn[1]));
-             return MAPPING_UNHANDLEABLE;
-+        }
-         map += (vaddr & ~PAGE_MASK);
-     }
- 
-@@ -1890,10 +1906,12 @@ void sh_emulate_unmap_dest(struct vcpu *v, void *addr, unsigned int bytes,
-     }
- 
-     paging_mark_dirty(v->domain, mfn_x(sh_ctxt->mfn[0]));
-+    put_page(mfn_to_page(sh_ctxt->mfn[0]));
- 
-     if ( unlikely(mfn_valid(sh_ctxt->mfn[1])) )
-     {
-         paging_mark_dirty(v->domain, mfn_x(sh_ctxt->mfn[1]));
-+        put_page(mfn_to_page(sh_ctxt->mfn[1]));
-         vunmap((void *)((unsigned long)addr & PAGE_MASK));
-     }
-     else
--- 
-1.9.1
-
-From 3fce146a6484d2880ad23ac68d68458afb811df4 Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Sat, 10 Jun 2017 15:46:10 -0700
-Subject: [PATCH] x86: avoid leaking PKRU and BND* between vCPU-s
-
-PKRU is explicitly "XSAVE-managed but not XSAVE-enabled", so guests
-might access the register (via {RD,WR}PKRU) without setting XCR0.PKRU.
-Force context switching as well as migrating the register as soon as
-CR4.PKE is being set the first time.
-
-For MPX (BND<n>, BNDCFGU, and BNDSTATUS) the situation is less clear,
-and the SDM has not entirely consistent information for that case.
-While experimentally the instructions don't change register state as
-long as the two XCR0 bits aren't both 1, be on the safe side and enable
-both if BNDCFGS.EN is being set the first time.
-
-This is XSA-220.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/arch/x86/hvm/hvm.c | 58 ++++++++++++++++++++++++++++++++++++++++++++++----
- 1 file changed, 54 insertions(+), 4 deletions(-)
-
-diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
-index 6c30bec..53b99c3 100644
---- a/xen/arch/x86/hvm/hvm.c
-+++ b/xen/arch/x86/hvm/hvm.c
-@@ -311,10 +311,39 @@ int hvm_set_guest_pat(struct vcpu *v, u64 guest_pat)
- 
- bool hvm_set_guest_bndcfgs(struct vcpu *v, u64 val)
- {
--    return hvm_funcs.set_guest_bndcfgs &&
--           is_canonical_address(val) &&
--           !(val & IA32_BNDCFGS_RESERVED) &&
--           hvm_funcs.set_guest_bndcfgs(v, val);
-+    if ( !hvm_funcs.set_guest_bndcfgs ||
-+         !is_canonical_address(val) ||
-+         (val & IA32_BNDCFGS_RESERVED) )
++        *memflags |= MEMF_node(XENMEMF_get_node(xmf));
++        if ( xmf & XENMEMF_exact_node_request )
++            *memflags |= MEMF_exact_node;
++    }
++    else if ( xmf & XENMEMF_exact_node_request )
 +        return false;
 +
-+    /*
-+     * While MPX instructions are supposed to be gated on XCR0.BND*, let's
-+     * nevertheless force the relevant XCR0 bits on when the feature is being
-+     * enabled in BNDCFGS.
-+     */
-+    if ( (val & IA32_BNDCFGS_ENABLE) &&
-+         !(v->arch.xcr0_accum & (XSTATE_BNDREGS | XSTATE_BNDCSR)) )
++    return true;
++}
++
+ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+ {
+     struct xen_memory_exchange exch;
+@@ -484,6 +509,12 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+         }
+     }
+ 
++    if ( unlikely(!propagate_node(exch.out.mem_flags, &memflags)) )
 +    {
-+        uint64_t xcr0 = get_xcr0();
-+        int rc;
-+
-+        if ( v != current )
-+            return false;
-+
-+        rc = handle_xsetbv(XCR_XFEATURE_ENABLED_MASK,
-+                           xcr0 | XSTATE_BNDREGS | XSTATE_BNDCSR);
-+
-+        if ( rc )
-+        {
-+            HVM_DBG_LOG(DBG_LEVEL_1, "Failed to force XCR0.BND*: %d", rc);
-+            return false;
-+        }
-+
-+        if ( handle_xsetbv(XCR_XFEATURE_ENABLED_MASK, xcr0) )
-+            /* nothing, best effort only */;
++        rc = -EINVAL;
++        goto fail_early;
 +    }
 +
-+    return hvm_funcs.set_guest_bndcfgs(v, val);
- }
- 
- /*
-@@ -2477,6 +2506,27 @@ int hvm_set_cr4(unsigned long value, bool_t may_defer)
-             paging_update_paging_modes(v);
-     }
- 
-+    /*
-+     * {RD,WR}PKRU are not gated on XCR0.PKRU and hence an oddly behaving
-+     * guest may enable the feature in CR4 without enabling it in XCR0. We
-+     * need to context switch / migrate PKRU nevertheless.
-+     */
-+    if ( (value & X86_CR4_PKE) && !(v->arch.xcr0_accum & XSTATE_PKRU) )
-+    {
-+        int rc = handle_xsetbv(XCR_XFEATURE_ENABLED_MASK,
-+                               get_xcr0() | XSTATE_PKRU);
-+
-+        if ( rc )
-+        {
-+            HVM_DBG_LOG(DBG_LEVEL_1, "Failed to force XCR0.PKRU: %d", rc);
-+            goto gpf;
-+        }
-+
-+        if ( handle_xsetbv(XCR_XFEATURE_ENABLED_MASK,
-+                           get_xcr0() & ~XSTATE_PKRU) )
-+            /* nothing, best effort only */;
-+    }
-+
-     return X86EMUL_OKAY;
- 
-  gpf:
--- 
-1.9.1
-
-From c5601433bfaefcaf5aebc66d7c252ee24521eb45 Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Sat, 10 Jun 2017 15:53:31 -0700
-Subject: [PATCH] evtchn: avoid NULL derefs
-
-Commit fbbd5009e6 ("evtchn: refactor low-level event channel port ops")
-added a de-reference of the struct evtchn pointer for a port without
-first making sure the bucket pointer is non-NULL. This de-reference is
-actually entirely unnecessary, as all relevant callers (beyond the
-problematic do_poll()) already hold the port number in their hands, and
-the actual leaf functions need nothing else.
-
-For FIFO event channels there's a second problem in that the ordering
-of reads and updates to ->num_evtchns and ->event_array[] was so far
-undefined (the read side isn't always holding the domain's event lock).
-Add respective barriers.
-
-This is XSA-221.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
----
- xen/arch/x86/irq.c         |  8 +++-----
- xen/common/event_2l.c      | 16 ++++++++++------
- xen/common/event_channel.c |  4 ++--
- xen/common/event_fifo.c    | 20 ++++++++++++++------
- xen/common/schedule.c      |  2 +-
- xen/include/xen/event.h    | 12 ++++++------
- 6 files changed, 36 insertions(+), 26 deletions(-)
-
-diff --git a/xen/arch/x86/irq.c b/xen/arch/x86/irq.c
-index 8c1545a..686b128 100644
---- a/xen/arch/x86/irq.c
-+++ b/xen/arch/x86/irq.c
-@@ -1487,7 +1487,7 @@ int pirq_guest_unmask(struct domain *d)
-         {
-             pirq = pirqs[i]->pirq;
-             if ( pirqs[i]->masked &&
--                 !evtchn_port_is_masked(d, evtchn_from_port(d, pirqs[i]->evtchn)) )
-+                 !evtchn_port_is_masked(d, pirqs[i]->evtchn) )
-                 pirq_guest_eoi(pirqs[i]);
-         }
-     } while ( ++pirq < d->nr_pirqs && n == ARRAY_SIZE(pirqs) );
-@@ -2245,7 +2245,6 @@ static void dump_irqs(unsigned char key)
-     int i, irq, pirq;
-     struct irq_desc *desc;
-     irq_guest_action_t *action;
--    struct evtchn *evtchn;
-     struct domain *d;
-     const struct pirq *info;
-     unsigned long flags;
-@@ -2288,11 +2287,10 @@ static void dump_irqs(unsigned char key)
-                 d = action->guest[i];
-                 pirq = domain_irq_to_pirq(d, irq);
-                 info = pirq_info(d, pirq);
--                evtchn = evtchn_from_port(d, info->evtchn);
-                 printk("%u:%3d(%c%c%c)",
-                        d->domain_id, pirq,
--                       (evtchn_port_is_pending(d, evtchn) ? 'P' : '-'),
--                       (evtchn_port_is_masked(d, evtchn) ? 'M' : '-'),
-+                       evtchn_port_is_pending(d, info->evtchn) ? 'P' : '-',
-+                       evtchn_port_is_masked(d, info->evtchn) ? 'M' : '-',
-                        (info->masked ? 'M' : '-'));
-                 if ( i != action->nr_guests )
-                     printk(",");
-diff --git a/xen/common/event_2l.c b/xen/common/event_2l.c
-index 5837ae8..42a5476 100644
---- a/xen/common/event_2l.c
-+++ b/xen/common/event_2l.c
-@@ -62,16 +62,20 @@ static void evtchn_2l_unmask(struct domain *d, struct evtchn *evtchn)
-     }
- }
- 
--static bool_t evtchn_2l_is_pending(struct domain *d,
--                                   const struct evtchn *evtchn)
-+static bool_t evtchn_2l_is_pending(struct domain *d, evtchn_port_t port)
- {
--    return test_bit(evtchn->port, &shared_info(d, evtchn_pending));
-+    unsigned int max_ports = BITS_PER_EVTCHN_WORD(d) * BITS_PER_EVTCHN_WORD(d);
-+
-+    ASSERT(port < max_ports);
-+    return port < max_ports && test_bit(port, &shared_info(d, evtchn_pending));
- }
- 
--static bool_t evtchn_2l_is_masked(struct domain *d,
--                                  const struct evtchn *evtchn)
-+static bool_t evtchn_2l_is_masked(struct domain *d, evtchn_port_t port)
- {
--    return test_bit(evtchn->port, &shared_info(d, evtchn_mask));
-+    unsigned int max_ports = BITS_PER_EVTCHN_WORD(d) * BITS_PER_EVTCHN_WORD(d);
-+
-+    ASSERT(port < max_ports);
-+    return port >= max_ports || test_bit(port, &shared_info(d, evtchn_mask));
- }
- 
- static void evtchn_2l_print_state(struct domain *d,
-diff --git a/xen/common/event_channel.c b/xen/common/event_channel.c
-index 638dc5e..e048696 100644
---- a/xen/common/event_channel.c
-+++ b/xen/common/event_channel.c
-@@ -1381,8 +1381,8 @@ static void domain_dump_evtchn_info(struct domain *d)
- 
-         printk("    %4u [%d/%d/",
-                port,
--               !!evtchn_port_is_pending(d, chn),
--               !!evtchn_port_is_masked(d, chn));
-+               evtchn_port_is_pending(d, port),
-+               evtchn_port_is_masked(d, port));
-         evtchn_port_print_state(d, chn);
-         printk("]: s=%d n=%d x=%d",
-                chn->state, chn->notify_vcpu_id, chn->xen_consumer);
-diff --git a/xen/common/event_fifo.c b/xen/common/event_fifo.c
-index 45583e5..fc58a46 100644
---- a/xen/common/event_fifo.c
-+++ b/xen/common/event_fifo.c
-@@ -28,6 +28,12 @@ static inline event_word_t *evtchn_fifo_word_from_port(struct domain *d,
-     if ( unlikely(port >= d->evtchn_fifo->num_evtchns) )
-         return NULL;
- 
-+    /*
-+     * Callers aren't required to hold d->event_lock, so we need to synchronize
-+     * with add_page_to_event_array().
-+     */
-+    smp_rmb();
-+
-     p = port / EVTCHN_FIFO_EVENT_WORDS_PER_PAGE;
-     w = port % EVTCHN_FIFO_EVENT_WORDS_PER_PAGE;
- 
-@@ -288,24 +294,22 @@ static void evtchn_fifo_unmask(struct domain *d, struct evtchn *evtchn)
-         evtchn_fifo_set_pending(v, evtchn);
- }
- 
--static bool_t evtchn_fifo_is_pending(struct domain *d,
--                                     const struct evtchn *evtchn)
-+static bool_t evtchn_fifo_is_pending(struct domain *d, evtchn_port_t port)
- {
-     event_word_t *word;
- 
--    word = evtchn_fifo_word_from_port(d, evtchn->port);
-+    word = evtchn_fifo_word_from_port(d, port);
-     if ( unlikely(!word) )
-         return 0;
- 
-     return test_bit(EVTCHN_FIFO_PENDING, word);
- }
- 
--static bool_t evtchn_fifo_is_masked(struct domain *d,
--                                    const struct evtchn *evtchn)
-+static bool_t evtchn_fifo_is_masked(struct domain *d, evtchn_port_t port)
- {
-     event_word_t *word;
- 
--    word = evtchn_fifo_word_from_port(d, evtchn->port);
-+    word = evtchn_fifo_word_from_port(d, port);
-     if ( unlikely(!word) )
-         return 1;
- 
-@@ -594,6 +598,10 @@ static int add_page_to_event_array(struct domain *d, unsigned long gfn)
-         return rc;
- 
-     d->evtchn_fifo->event_array[slot] = virt;
-+
-+    /* Synchronize with evtchn_fifo_word_from_port(). */
-+    smp_wmb();
-+
-     d->evtchn_fifo->num_evtchns += EVTCHN_FIFO_EVENT_WORDS_PER_PAGE;
- 
-     /*
-diff --git a/xen/common/schedule.c b/xen/common/schedule.c
-index 47b2155..b1e3225 100644
---- a/xen/common/schedule.c
-+++ b/xen/common/schedule.c
-@@ -955,7 +955,7 @@ static long do_poll(struct sched_poll *sched_poll)
-             goto out;
- 
-         rc = 0;
--        if ( evtchn_port_is_pending(d, evtchn_from_port(d, port)) )
-+        if ( evtchn_port_is_pending(d, port) )
-             goto out;
-     }
- 
-diff --git a/xen/include/xen/event.h b/xen/include/xen/event.h
-index 5008c80..82caddb 100644
---- a/xen/include/xen/event.h
-+++ b/xen/include/xen/event.h
-@@ -137,8 +137,8 @@ struct evtchn_port_ops {
-     void (*set_pending)(struct vcpu *v, struct evtchn *evtchn);
-     void (*clear_pending)(struct domain *d, struct evtchn *evtchn);
-     void (*unmask)(struct domain *d, struct evtchn *evtchn);
--    bool_t (*is_pending)(struct domain *d, const struct evtchn *evtchn);
--    bool_t (*is_masked)(struct domain *d, const struct evtchn *evtchn);
-+    bool_t (*is_pending)(struct domain *d, evtchn_port_t port);
-+    bool_t (*is_masked)(struct domain *d, evtchn_port_t port);
-     /*
-      * Is the port unavailable because it's still being cleaned up
-      * after being closed?
-@@ -175,15 +175,15 @@ static inline void evtchn_port_unmask(struct domain *d,
- }
- 
- static inline bool_t evtchn_port_is_pending(struct domain *d,
--                                            const struct evtchn *evtchn)
-+                                            evtchn_port_t port)
- {
--    return d->evtchn_port_ops->is_pending(d, evtchn);
-+    return d->evtchn_port_ops->is_pending(d, port);
- }
- 
- static inline bool_t evtchn_port_is_masked(struct domain *d,
--                                           const struct evtchn *evtchn)
-+                                           evtchn_port_t port)
- {
--    return d->evtchn_port_ops->is_masked(d, evtchn);
-+    return d->evtchn_port_ops->is_masked(d, port);
- }
- 
- static inline bool_t evtchn_port_is_busy(struct domain *d, evtchn_port_t port)
--- 
-1.9.1
-
-From ef81c781feec8201f01c6ba7c39f53e9451bfe38 Mon Sep 17 00:00:00 2001
-From: Andrew Cooper <andrew.cooper3@citrix.com>
-Date: Sat, 10 Jun 2017 16:03:03 -0700
-Subject: [PATCH 1/2] xen/memory: Fix return value handing of
- guest_remove_page()
-
-Despite the description in mm.h, guest_remove_page() previously returned 0 for
-paging errors.
-
-Switch guest_remove_page() to having regular 0/-error semantics, and propagate
-the return values from clear_mmio_p2m_entry() and mem_sharing_unshare_page()
-to the callers (although decrease_reservation() is the only caller which
-currently cares).
-
-This is part of XSA-222.
-
-Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/common/memory.c  | 34 +++++++++++++++++++++-------------
- xen/include/xen/mm.h |  5 ++---
- 2 files changed, 23 insertions(+), 16 deletions(-)
-
-diff --git a/xen/common/memory.c b/xen/common/memory.c
-index 17f9e1e..2a14d8f 100644
---- a/xen/common/memory.c
-+++ b/xen/common/memory.c
-@@ -264,6 +264,7 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
-     p2m_type_t p2mt;
- #endif
-     mfn_t mfn;
-+    int rc;
- 
- #ifdef CONFIG_X86
-     mfn = get_gfn_query(d, gmfn, &p2mt);
-@@ -281,13 +282,15 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
-                 put_page(page);
-         }
-         p2m_mem_paging_drop_page(d, gmfn, p2mt);
--        return 1;
-+
-+        return 0;
-     }
-     if ( p2mt == p2m_mmio_direct )
+     d = rcu_lock_domain_by_any_id(exch.in.domid);
+     if ( d == NULL )
      {
--        clear_mmio_p2m_entry(d, gmfn, mfn, 0);
-+        rc = clear_mmio_p2m_entry(d, gmfn, mfn, PAGE_ORDER_4K);
-         put_gfn(d, gmfn);
--        return 1;
-+
-+        return rc;
-     }
- #else
-     mfn = gfn_to_mfn(d, _gfn(gmfn));
-@@ -297,21 +300,25 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
-         put_gfn(d, gmfn);
-         gdprintk(XENLOG_INFO, "Domain %u page number %lx invalid\n",
-                 d->domain_id, gmfn);
--        return 0;
-+
-+        return -EINVAL;
-     }
-             
- #ifdef CONFIG_X86
-     if ( p2m_is_shared(p2mt) )
-     {
--        /* Unshare the page, bail out on error. We unshare because 
--         * we might be the only one using this shared page, and we
--         * need to trigger proper cleanup. Once done, this is 
--         * like any other page. */
--        if ( mem_sharing_unshare_page(d, gmfn, 0) )
-+        /*
-+         * Unshare the page, bail out on error. We unshare because we
-+         * might be the only one using this shared page, and we need to
-+         * trigger proper cleanup. Once done, this is like any other page.
-+         */
-+        rc = mem_sharing_unshare_page(d, gmfn, 0);
-+        if ( rc )
-         {
-             put_gfn(d, gmfn);
-             (void)mem_sharing_notify_enomem(d, gmfn, 0);
--            return 0;
-+
-+            return rc;
+@@ -502,7 +533,6 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
+         d,
+         XENMEMF_get_address_bits(exch.out.mem_flags) ? :
+         (BITS_PER_LONG+PAGE_SHIFT)));
+-    memflags |= MEMF_node(XENMEMF_get_node(exch.out.mem_flags));
+ 
+     for ( i = (exch.nr_exchanged >> in_chunk_order);
+           i < (exch.in.nr_extents >> in_chunk_order);
+@@ -865,12 +895,8 @@ static int construct_memop_from_reservation(
          }
-         /* Maybe the mfn changed */
-         mfn = get_gfn_query_unlocked(d, gmfn, &p2mt);
-@@ -324,7 +331,8 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
-     {
-         put_gfn(d, gmfn);
-         gdprintk(XENLOG_INFO, "Bad page free for domain %u\n", d->domain_id);
--        return 0;
-+
-+        return -ENXIO;
+         read_unlock(&d->vnuma_rwlock);
      }
- 
-     if ( test_and_clear_bit(_PGT_pinned, &page->u.inuse.type_info) )
-@@ -347,7 +355,7 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
-     put_page(page);
-     put_gfn(d, gmfn);
- 
--    return 1;
-+    return 0;
- }
- 
- static void decrease_reservation(struct memop_args *a)
-@@ -391,7 +399,7 @@ static void decrease_reservation(struct memop_args *a)
-             continue;
- 
-         for ( j = 0; j < (1 << a->extent_order); j++ )
--            if ( !guest_remove_page(a->domain, gmfn + j) )
-+            if ( guest_remove_page(a->domain, gmfn + j) )
-                 goto out;
-     }
- 
-diff --git a/xen/include/xen/mm.h b/xen/include/xen/mm.h
-index 76fbb82..8b5ffd0 100644
---- a/xen/include/xen/mm.h
-+++ b/xen/include/xen/mm.h
-@@ -553,9 +553,8 @@ int xenmem_add_to_physmap_one(struct domain *d, unsigned int space,
-                               union xen_add_to_physmap_batch_extra extra,
-                               unsigned long idx, gfn_t gfn);
- 
--/* Returns 1 on success, 0 on error, negative if the ring
-- * for event propagation is full in the presence of paging */
--int guest_remove_page(struct domain *d, unsigned long gfn);
-+/* Returns 0 on success, or negative on error. */
-+int guest_remove_page(struct domain *d, unsigned long gmfn);
- 
- #define RAM_TYPE_CONVENTIONAL 0x00000001
- #define RAM_TYPE_RESERVED     0x00000002
--- 
-1.9.1
-
-
-From 942812daf5b784fd1237c27b368ff170b7afccf1 Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Sat, 10 Jun 2017 16:03:08 -0700
-Subject: [PATCH 2/2] guest_physmap_remove_page() needs its return value
- checked
-
-Callers, namely such subsequently freeing the page, must not blindly
-assume success - the function may namely fail when needing to shatter a
-super page, but there not being memory available for the then needed
-intermediate page table.
-
-As it happens, guest_remove_page() callers now also all check the
-return value.
-
-Furthermore a missed put_gfn() on an error path in gnttab_transfer() is
-also being taken care of.
-
-This is part of XSA-222.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
-Signed-off-by: Julien Grall <julien.grall@arm.com>
-Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
----
- xen/arch/arm/mm.c                  |  5 +++--
- xen/arch/arm/p2m.c                 |  7 +++----
- xen/arch/x86/domain.c              | 10 +++++++++-
- xen/arch/x86/domain_build.c        |  4 +++-
- xen/arch/x86/hvm/ioreq.c           |  5 +++--
- xen/arch/x86/mm.c                  | 21 +++++++++++++++------
- xen/arch/x86/mm/p2m.c              |  7 +++++--
- xen/common/grant_table.c           | 32 +++++++++++++++-----------------
- xen/common/memory.c                | 23 ++++++++++++++---------
- xen/drivers/passthrough/arm/smmu.c |  4 +---
- xen/include/asm-arm/p2m.h          |  4 ----
- xen/include/asm-x86/p2m.h          |  4 ----
- xen/include/xen/mm.h               |  2 +-
- xen/include/xen/p2m-common.h       |  6 ++++++
- 14 files changed, 78 insertions(+), 56 deletions(-)
-
-diff --git a/xen/arch/arm/mm.c b/xen/arch/arm/mm.c
-index 596283f..74acaf3 100644
---- a/xen/arch/arm/mm.c
-+++ b/xen/arch/arm/mm.c
-@@ -1340,13 +1340,14 @@ int replace_grant_host_mapping(unsigned long addr, unsigned long mfn,
- {
-     gfn_t gfn = _gfn(addr >> PAGE_SHIFT);
-     struct domain *d = current->domain;
-+    int rc;
- 
-     if ( new_addr != 0 || (flags & GNTMAP_contains_pte) )
-         return GNTST_general_error;
- 
--    guest_physmap_remove_page(d, gfn, _mfn(mfn), 0);
-+    rc = guest_physmap_remove_page(d, gfn, _mfn(mfn), 0);
- 
--    return GNTST_okay;
-+    return rc ? GNTST_general_error : GNTST_okay;
- }
- 
- int is_iomem_page(unsigned long mfn)
-diff --git a/xen/arch/arm/p2m.c b/xen/arch/arm/p2m.c
-index c7c726b..9e20a72 100644
---- a/xen/arch/arm/p2m.c
-+++ b/xen/arch/arm/p2m.c
-@@ -1211,11 +1211,10 @@ int guest_physmap_add_entry(struct domain *d,
-     return p2m_insert_mapping(d, gfn, (1 << page_order), mfn, t);
- }
- 
--void guest_physmap_remove_page(struct domain *d,
--                               gfn_t gfn,
--                               mfn_t mfn, unsigned int page_order)
-+int guest_physmap_remove_page(struct domain *d, gfn_t gfn, mfn_t mfn,
-+                              unsigned int page_order)
- {
--    p2m_remove_mapping(d, gfn, (1 << page_order), mfn);
-+    return p2m_remove_mapping(d, gfn, (1 << page_order), mfn);
- }
- 
- static int p2m_alloc_table(struct domain *d)
-diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
-index 093856a..2f01c76 100644
---- a/xen/arch/x86/domain.c
-+++ b/xen/arch/x86/domain.c
-@@ -808,7 +808,15 @@ int arch_domain_soft_reset(struct domain *d)
-         ret = -ENOMEM;
-         goto exit_put_gfn;
-     }
--    guest_physmap_remove_page(d, _gfn(gfn), _mfn(mfn), PAGE_ORDER_4K);
-+
-+    ret = guest_physmap_remove_page(d, _gfn(gfn), _mfn(mfn), PAGE_ORDER_4K);
-+    if ( ret )
-+    {
-+        printk(XENLOG_G_ERR "Failed to remove Dom%d's shared_info frame %lx\n",
-+               d->domain_id, gfn);
-+        free_domheap_page(new_page);
-+        goto exit_put_gfn;
-+    }
- 
-     ret = guest_physmap_add_page(d, _gfn(gfn), _mfn(page_to_mfn(new_page)),
-                                  PAGE_ORDER_4K);
-diff --git a/xen/arch/x86/domain_build.c b/xen/arch/x86/domain_build.c
-index 0a02d65..a34f7f5 100644
---- a/xen/arch/x86/domain_build.c
-+++ b/xen/arch/x86/domain_build.c
-@@ -427,7 +427,9 @@ static __init void pvh_add_mem_mapping(struct domain *d, unsigned long gfn,
-         if ( !iomem_access_permitted(d, mfn + i, mfn + i) )
-         {
-             omfn = get_gfn_query_unlocked(d, gfn + i, &t);
--            guest_physmap_remove_page(d, _gfn(gfn + i), omfn, PAGE_ORDER_4K);
-+            if ( guest_physmap_remove_page(d, _gfn(gfn + i), omfn,
-+                                           PAGE_ORDER_4K) )
-+                /* nothing, best effort only */;
-             continue;
-         }
- 
-diff --git a/xen/arch/x86/hvm/ioreq.c b/xen/arch/x86/hvm/ioreq.c
-index 88071ab..ea1536d 100644
---- a/xen/arch/x86/hvm/ioreq.c
-+++ b/xen/arch/x86/hvm/ioreq.c
-@@ -267,8 +267,9 @@ bool_t is_ioreq_server_page(struct domain *d, const struct page_info *page)
- static void hvm_remove_ioreq_gmfn(
-     struct domain *d, struct hvm_ioreq_page *iorp)
- {
--    guest_physmap_remove_page(d, _gfn(iorp->gmfn),
--                              _mfn(page_to_mfn(iorp->page)), 0);
-+    if ( guest_physmap_remove_page(d, _gfn(iorp->gmfn),
-+                                   _mfn(page_to_mfn(iorp->page)), 0) )
-+        domain_crash(d);
-     clear_page(iorp->va);
- }
- 
-diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
-index c03479b..afc65d4 100644
---- a/xen/arch/x86/mm.c
-+++ b/xen/arch/x86/mm.c
-@@ -4276,7 +4276,11 @@ static int replace_grant_p2m_mapping(
-                 type, mfn_x(old_mfn), frame);
-         return GNTST_general_error;
-     }
--    guest_physmap_remove_page(d, _gfn(gfn), _mfn(frame), PAGE_ORDER_4K);
-+    if ( guest_physmap_remove_page(d, _gfn(gfn), _mfn(frame), PAGE_ORDER_4K) )
-+    {
-+        put_gfn(d, gfn);
-+        return GNTST_general_error;
-+    }
- 
-     put_gfn(d, gfn);
-     return GNTST_okay;
-@@ -4801,7 +4805,7 @@ int xenmem_add_to_physmap_one(
-     struct page_info *page = NULL;
-     unsigned long gfn = 0; /* gcc ... */
-     unsigned long prev_mfn, mfn = 0, old_gpfn;
--    int rc;
-+    int rc = 0;
-     p2m_type_t p2mt;
- 
-     switch ( space )
-@@ -4875,25 +4879,30 @@ int xenmem_add_to_physmap_one(
-     {
-         if ( is_xen_heap_mfn(prev_mfn) )
-             /* Xen heap frames are simply unhooked from this phys slot. */
--            guest_physmap_remove_page(d, gpfn, _mfn(prev_mfn), PAGE_ORDER_4K);
-+            rc = guest_physmap_remove_page(d, gpfn, _mfn(prev_mfn), PAGE_ORDER_4K);
-         else
-             /* Normal domain memory is freed, to avoid leaking memory. */
--            guest_remove_page(d, gfn_x(gpfn));
-+            rc = guest_remove_page(d, gfn_x(gpfn));
-     }
-     /* In the XENMAPSPACE_gmfn case we still hold a ref on the old page. */
-     put_gfn(d, gfn_x(gpfn));
- 
-+    if ( rc )
-+        goto put_both;
-+
-     /* Unmap from old location, if any. */
-     old_gpfn = get_gpfn_from_mfn(mfn);
-     ASSERT( old_gpfn != SHARED_M2P_ENTRY );
-     if ( space == XENMAPSPACE_gmfn || space == XENMAPSPACE_gmfn_range )
-         ASSERT( old_gpfn == gfn );
-     if ( old_gpfn != INVALID_M2P_ENTRY )
--        guest_physmap_remove_page(d, _gfn(old_gpfn), _mfn(mfn), PAGE_ORDER_4K);
-+        rc = guest_physmap_remove_page(d, _gfn(old_gpfn), _mfn(mfn), PAGE_ORDER_4K);
- 
-     /* Map at new location. */
--    rc = guest_physmap_add_page(d, gpfn, _mfn(mfn), PAGE_ORDER_4K);
-+    if ( !rc )
-+        rc = guest_physmap_add_page(d, gpfn, _mfn(mfn), PAGE_ORDER_4K);
- 
-+ put_both:
-     /* In the XENMAPSPACE_gmfn, we took a ref of the gfn at the top */
-     if ( space == XENMAPSPACE_gmfn || space == XENMAPSPACE_gmfn_range )
-         put_gfn(d, gfn);
-diff --git a/xen/arch/x86/mm/p2m.c b/xen/arch/x86/mm/p2m.c
-index 162120c..7338fa1 100644
---- a/xen/arch/x86/mm/p2m.c
-+++ b/xen/arch/x86/mm/p2m.c
-@@ -2925,10 +2925,12 @@ int p2m_add_foreign(struct domain *tdom, unsigned long fgfn,
-     {
-         if ( is_xen_heap_mfn(mfn_x(prev_mfn)) )
-             /* Xen heap frames are simply unhooked from this phys slot */
--            guest_physmap_remove_page(tdom, _gfn(gpfn), prev_mfn, 0);
-+            rc = guest_physmap_remove_page(tdom, _gfn(gpfn), prev_mfn, 0);
-         else
-             /* Normal domain memory is freed, to avoid leaking memory. */
--            guest_remove_page(tdom, gpfn);
-+            rc = guest_remove_page(tdom, gpfn);
-+        if ( rc )
-+            goto put_both;
-     }
-     /*
-      * Create the new mapping. Can't use guest_physmap_add_page() because it
-@@ -2941,6 +2943,7 @@ int p2m_add_foreign(struct domain *tdom, unsigned long fgfn,
-                  "gpfn:%lx mfn:%lx fgfn:%lx td:%d fd:%d\n",
-                  gpfn, mfn_x(mfn), fgfn, tdom->domain_id, fdom->domain_id);
- 
-+ put_both:
-     put_page(page);
- 
-     /*
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 36f20d9..2bda9d2 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -1780,6 +1780,7 @@ gnttab_transfer(
-     for ( i = 0; i < count; i++ )
-     {
-         bool_t okay;
-+        int rc;
- 
-         if (i && hypercall_preempt_check())
-             return i;
-@@ -1830,27 +1831,33 @@ gnttab_transfer(
-             goto copyback;
-         }
- 
--        guest_physmap_remove_page(d, _gfn(gop.mfn), _mfn(mfn), 0);
-+        rc = guest_physmap_remove_page(d, _gfn(gop.mfn), _mfn(mfn), 0);
-         gnttab_flush_tlb(d);
-+        if ( rc )
-+        {
-+            gdprintk(XENLOG_INFO,
-+                     "gnttab_transfer: can't remove GFN %"PRI_xen_pfn" (MFN %lx)\n",
-+                     gop.mfn, mfn);
-+            gop.status = GNTST_general_error;
-+            goto put_gfn_and_copyback;
-+        }
- 
-         /* Find the target domain. */
-         if ( unlikely((e = rcu_lock_domain_by_id(gop.domid)) == NULL) )
-         {
--            put_gfn(d, gop.mfn);
-             gdprintk(XENLOG_INFO, "gnttab_transfer: can't find domain %d\n",
-                     gop.domid);
--            page->count_info &= ~(PGC_count_mask|PGC_allocated);
--            free_domheap_page(page);
-             gop.status = GNTST_bad_domain;
--            goto copyback;
-+            goto put_gfn_and_copyback;
-         }
- 
-         if ( xsm_grant_transfer(XSM_HOOK, d, e) )
-         {
--            put_gfn(d, gop.mfn);
-             gop.status = GNTST_permission_denied;
-         unlock_and_copyback:
-             rcu_unlock_domain(e);
-+        put_gfn_and_copyback:
-+            put_gfn(d, gop.mfn);
-             page->count_info &= ~(PGC_count_mask|PGC_allocated);
-             free_domheap_page(page);
-             goto copyback;
-@@ -1899,12 +1906,8 @@ gnttab_transfer(
-                          "Transferee (d%d) has no headroom (tot %u, max %u)\n",
-                          e->domain_id, e->tot_pages, e->max_pages);
- 
--            rcu_unlock_domain(e);
--            put_gfn(d, gop.mfn);
--            page->count_info &= ~(PGC_count_mask|PGC_allocated);
--            free_domheap_page(page);
-             gop.status = GNTST_general_error;
--            goto copyback;
-+            goto unlock_and_copyback;
-         }
- 
-         /* Okay, add the page to 'e'. */
-@@ -1933,13 +1936,8 @@ gnttab_transfer(
- 
-             if ( drop_dom_ref )
-                 put_domain(e);
--            rcu_unlock_domain(e);
--
--            put_gfn(d, gop.mfn);
--            page->count_info &= ~(PGC_count_mask|PGC_allocated);
--            free_domheap_page(page);
-             gop.status = GNTST_general_error;
--            goto copyback;
-+            goto unlock_and_copyback;
-         }
- 
-         page_list_add_tail(page, &e->page_list);
-diff --git a/xen/common/memory.c b/xen/common/memory.c
-index 2a14d8f..5e2092a 100644
---- a/xen/common/memory.c
-+++ b/xen/common/memory.c
-@@ -270,8 +270,12 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
-     mfn = get_gfn_query(d, gmfn, &p2mt);
-     if ( unlikely(p2m_is_paging(p2mt)) )
-     {
--        guest_physmap_remove_page(d, _gfn(gmfn), mfn, 0);
-+        rc = guest_physmap_remove_page(d, _gfn(gmfn), mfn, 0);
-         put_gfn(d, gmfn);
-+
-+        if ( rc )
-+            return rc;
-+
-         /* If the page hasn't yet been paged out, there is an
-          * actual page that needs to be released. */
-         if ( p2mt == p2m_ram_paging_out )
-@@ -335,7 +339,9 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
-         return -ENXIO;
-     }
- 
--    if ( test_and_clear_bit(_PGT_pinned, &page->u.inuse.type_info) )
-+    rc = guest_physmap_remove_page(d, _gfn(gmfn), mfn, 0);
-+
-+    if ( !rc && test_and_clear_bit(_PGT_pinned, &page->u.inuse.type_info) )
-         put_page_and_type(page);
- 
-     /*
-@@ -346,16 +352,14 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
-      * For this purpose (and to match populate_physmap() behavior), the page
-      * is kept allocated.
-      */
--    if ( !is_domain_direct_mapped(d) &&
-+    if ( !rc && !is_domain_direct_mapped(d) &&
-          test_and_clear_bit(_PGC_allocated, &page->count_info) )
-         put_page(page);
- 
--    guest_physmap_remove_page(d, _gfn(gmfn), mfn, 0);
--
-     put_page(page);
-     put_gfn(d, gmfn);
- 
--    return 0;
-+    return rc;
- }
- 
- static void decrease_reservation(struct memop_args *a)
-@@ -590,7 +594,8 @@ static long memory_exchange(XEN_GUEST_HANDLE_PARAM(xen_memory_exchange_t) arg)
-             gfn = mfn_to_gmfn(d, mfn);
-             /* Pages were unshared above */
-             BUG_ON(SHARED_M2P(gfn));
--            guest_physmap_remove_page(d, _gfn(gfn), _mfn(mfn), 0);
-+            if ( guest_physmap_remove_page(d, _gfn(gfn), _mfn(mfn), 0) )
-+                domain_crash(d);
-             put_page(page);
-         }
- 
-@@ -1146,8 +1151,8 @@ long do_memory_op(unsigned long cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
-         page = get_page_from_gfn(d, xrfp.gpfn, NULL, P2M_ALLOC);
-         if ( page )
-         {
--            guest_physmap_remove_page(d, _gfn(xrfp.gpfn),
--                                      _mfn(page_to_mfn(page)), 0);
-+            rc = guest_physmap_remove_page(d, _gfn(xrfp.gpfn),
-+                                           _mfn(page_to_mfn(page)), 0);
-             put_page(page);
-         }
-         else
-diff --git a/xen/drivers/passthrough/arm/smmu.c b/xen/drivers/passthrough/arm/smmu.c
-index cf8b8b8..48e4f1b 100644
---- a/xen/drivers/passthrough/arm/smmu.c
-+++ b/xen/drivers/passthrough/arm/smmu.c
-@@ -2786,9 +2786,7 @@ static int __must_check arm_smmu_unmap_page(struct domain *d, unsigned long gfn)
- 	if ( !is_domain_direct_mapped(d) )
- 		return -EINVAL;
- 
--	guest_physmap_remove_page(d, _gfn(gfn), _mfn(gfn), 0);
--
--	return 0;
-+	return guest_physmap_remove_page(d, _gfn(gfn), _mfn(gfn), 0);
- }
- 
- static const struct iommu_ops arm_smmu_iommu_ops = {
-diff --git a/xen/include/asm-arm/p2m.h b/xen/include/asm-arm/p2m.h
-index 9e71776..355c2bb 100644
---- a/xen/include/asm-arm/p2m.h
-+++ b/xen/include/asm-arm/p2m.h
-@@ -268,10 +268,6 @@ static inline int guest_physmap_add_page(struct domain *d,
-     return guest_physmap_add_entry(d, gfn, mfn, page_order, p2m_ram_rw);
- }
- 
--void guest_physmap_remove_page(struct domain *d,
--                               gfn_t gfn,
--                               mfn_t mfn, unsigned int page_order);
--
- mfn_t gfn_to_mfn(struct domain *d, gfn_t gfn);
- 
- /*
-diff --git a/xen/include/asm-x86/p2m.h b/xen/include/asm-x86/p2m.h
-index 7035860..8dc1320 100644
---- a/xen/include/asm-x86/p2m.h
-+++ b/xen/include/asm-x86/p2m.h
-@@ -561,10 +561,6 @@ static inline int guest_physmap_add_page(struct domain *d,
-     return guest_physmap_add_entry(d, gfn, mfn, page_order, p2m_ram_rw);
- }
- 
--/* Remove a page from a domain's p2m table */
--int guest_physmap_remove_page(struct domain *d,
--                              gfn_t gfn, mfn_t mfn, unsigned int page_order);
--
- /* Set a p2m range as populate-on-demand */
- int guest_physmap_mark_populate_on_demand(struct domain *d, unsigned long gfn,
-                                           unsigned int order);
-diff --git a/xen/include/xen/mm.h b/xen/include/xen/mm.h
-index 8b5ffd0..07b2401 100644
---- a/xen/include/xen/mm.h
-+++ b/xen/include/xen/mm.h
-@@ -554,7 +554,7 @@ int xenmem_add_to_physmap_one(struct domain *d, unsigned int space,
-                               unsigned long idx, gfn_t gfn);
- 
- /* Returns 0 on success, or negative on error. */
--int guest_remove_page(struct domain *d, unsigned long gmfn);
-+int __must_check guest_remove_page(struct domain *d, unsigned long gmfn);
- 
- #define RAM_TYPE_CONVENTIONAL 0x00000001
- #define RAM_TYPE_RESERVED     0x00000002
-diff --git a/xen/include/xen/p2m-common.h b/xen/include/xen/p2m-common.h
-index 3be1e91..0f64a6e 100644
---- a/xen/include/xen/p2m-common.h
-+++ b/xen/include/xen/p2m-common.h
-@@ -1,6 +1,7 @@
- #ifndef _XEN_P2M_COMMON_H
- #define _XEN_P2M_COMMON_H
- 
-+#include <xen/mm.h>
- #include <public/vm_event.h>
- 
- /*
-@@ -33,6 +34,11 @@ typedef enum {
-     /* NOTE: Assumed to be only 4 bits right now on x86. */
- } p2m_access_t;
- 
-+/* Remove a page from a domain's p2m table */
-+int __must_check
-+guest_physmap_remove_page(struct domain *d, gfn_t gfn, mfn_t mfn,
-+                          unsigned int page_order);
-+
- /* Map MMIO regions in the p2m: start_gfn and nr describe the range in
-  *  * the guest physical address space to map, starting from the machine
-  *   * frame number mfn. */
--- 
-1.9.1
-
-From 8ed30333b2e5fd3d2a38c1ad506a4c6a213daa74 Mon Sep 17 00:00:00 2001
-From: Julien Grall <julien.grall@arm.com>
-Date: Sat, 10 Jun 2017 16:43:37 -0700
-Subject: [PATCH] arm: vgic: Don't update the LR when the IRQ is not enabled
-
-gic_raise_inflight_irq will be called if the IRQ is already inflight
-(i.e the IRQ is injected to the guest). If the IRQ is already already in
-the LRs, then the associated LR will be updated.
-
-To know if the interrupt is already in the LR, the function check if the
-interrupt is queued. However, if the interrupt is not enabled then the
-interrupt may not be queued nor in the LR. So gic_update_one_lr may be
-called (if we inject on the current vCPU) and read the LR.
-
-Because the interrupt is not in the LR, Xen will either read:
-    * LR 0 if the interrupt was never injected before
-    * LR 255 (GIC_INVALID_LR) if the interrupt was injected once. This
-    is because gic_update_one_lr will reset p->lr.
-
-Reading LR 0 will result to potentially update the wrong interrupt and
-not keep the LRs in sync with Xen.
-
-Reading LR 255 will result to:
-    * Crash Xen on GICv3 as the LR index is bigger than supported (see
-    gicv3_ich_read_lr).
-    * Read/write always GICH_LR + 255 * 4 that is not part of the memory
-    mapped.
-
-The problem can be prevented by checking whether the interrupt is
-enabled in gic_raise_inflight_irq before calling gic_update_one_lr.
-
-A follow-up of this patch is expected to mitigate the issue in the
-future.
-
-This is XSA-223.
-
-Signed-off-by: Julien Grall <julien.grall@arm.com>
-Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
----
- xen/arch/arm/gic.c | 4 ++++
- 1 file changed, 4 insertions(+)
-
-diff --git a/xen/arch/arm/gic.c b/xen/arch/arm/gic.c
-index a5348f2..34c686a 100644
---- a/xen/arch/arm/gic.c
-+++ b/xen/arch/arm/gic.c
-@@ -418,6 +418,10 @@ void gic_raise_inflight_irq(struct vcpu *v, unsigned int virtual_irq)
- 
-     ASSERT(spin_is_locked(&v->arch.vgic.lock));
- 
-+    /* Don't try to update the LR if the interrupt is disabled */
-+    if ( !test_bit(GIC_IRQ_GUEST_ENABLED, &n->status) )
-+        return;
-+
-     if ( list_empty(&n->lr_queue) )
-     {
-         if ( v == current )
--- 
-1.9.1
-
-From 83ce1ae5b62c45e8e6341f3949cd7d8a9eee5baf Mon Sep 17 00:00:00 2001
-From: Julien Grall <julien.grall@arm.com>
-Date: Tue, 6 Jun 2017 15:35:42 +0100
-Subject: [PATCH] xen/arm: vgic: Sanitize target mask used to send SGI
-
-The current function vgic_to_sgi does not sanitize the target mask and
-may therefore get an invalid vCPU ID. This will result to an out of
-bound access of d->vcpu[...] as there is no check whether the vCPU ID is
-within the maximum supported by the guest.
-
-This was introduced by commit ea37fd2111 "xen/arm: split vgic driver
-into generic and vgic-v2 driver".
-
-Signed-off-by: Julien Grall <julien.grall@arm.com>
-Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
----
- xen/arch/arm/vgic.c | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
-
-diff --git a/xen/arch/arm/vgic.c b/xen/arch/arm/vgic.c
-index d12e6f0..d800afe 100644
---- a/xen/arch/arm/vgic.c
-+++ b/xen/arch/arm/vgic.c
-@@ -396,7 +396,8 @@ int vgic_to_sgi(struct vcpu *v, register_t sgir, enum gic_sgi_mode irqmode, int
-         for_each_set_bit( i, &bitmap, sizeof(target->list) * 8 )
-         {
-             vcpuid = base + i;
--            if ( d->vcpu[vcpuid] == NULL || !is_vcpu_online(d->vcpu[vcpuid]) )
-+            if ( vcpuid >= d->max_vcpus || d->vcpu[vcpuid] == NULL ||
-+                 !is_vcpu_online(d->vcpu[vcpuid]) )
-             {
-                 gprintk(XENLOG_WARNING, "VGIC: write r=%"PRIregister" \
-                         target->list=%hx, wrong CPUTargetList \n",
--- 
-1.9.1
-
-From 4efd11cda8176139758287129170635f1cbe145f Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Fri, 2 Jun 2017 12:22:42 +0100
-Subject: [PATCH 1/3] gnttab: fix unmap pin accounting race
-
-Once all {writable} mappings of a grant entry have been unmapped, the
-hypervisor informs the guest that the grant entry has been released by
-clearing the _GTF_{reading,writing} usage flags in the guest's grant
-table as appropriate.
-
-Unfortunately, at the moment, the code that updates the accounting
-happens in a different critical section than the one which updates the
-usage flags; this means that under the right circumstances, there may be
-a window in time after the hypervisor reported the grant as being free
-during which the grant referee still had access to the page.
-
-Move the grant accounting code into the same critical section as the
-reporting code to make sure this kind of race can't happen.
-
-This is part of XSA-218.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
----
- xen/common/grant_table.c | 32 +++++++++++++++++---------------
- 1 file changed, 17 insertions(+), 15 deletions(-)
-
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 54a7e7f..4c33429 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -1150,15 +1150,8 @@ __gnttab_unmap_common(
-             PIN_FAIL(act_release_out, GNTST_general_error,
-                      "Bad frame number doesn't match gntref. (%lx != %lx)\n",
-                      op->frame, act->frame);
--        if ( op->flags & GNTMAP_device_map )
--        {
--            ASSERT(act->pin & (GNTPIN_devw_mask | GNTPIN_devr_mask));
--            op->map->flags &= ~GNTMAP_device_map;
--            if ( op->flags & GNTMAP_readonly )
--                act->pin -= GNTPIN_devr_inc;
--            else
--                act->pin -= GNTPIN_devw_inc;
--        }
-+
-+        op->map->flags &= ~GNTMAP_device_map;
-     }
- 
-     if ( (op->host_addr != 0) && (op->flags & GNTMAP_host_map) )
-@@ -1168,12 +1161,7 @@ __gnttab_unmap_common(
-                                               op->flags)) < 0 )
-             goto act_release_out;
- 
--        ASSERT(act->pin & (GNTPIN_hstw_mask | GNTPIN_hstr_mask));
-         op->map->flags &= ~GNTMAP_host_map;
--        if ( op->flags & GNTMAP_readonly )
--            act->pin -= GNTPIN_hstr_inc;
--        else
--            act->pin -= GNTPIN_hstw_inc;
-     }
- 
-  act_release_out:
-@@ -1266,6 +1254,12 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-             else
-                 put_page_and_type(pg);
-         }
-+
-+        ASSERT(act->pin & (GNTPIN_devw_mask | GNTPIN_devr_mask));
-+        if ( op->flags & GNTMAP_readonly )
-+            act->pin -= GNTPIN_devr_inc;
-+        else
-+            act->pin -= GNTPIN_devw_inc;
-     }
- 
-     if ( (op->host_addr != 0) && (op->flags & GNTMAP_host_map) )
-@@ -1274,7 +1268,9 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-         {
-             /*
-              * Suggests that __gntab_unmap_common failed in
--             * replace_grant_host_mapping() so nothing further to do
-+             * replace_grant_host_mapping() or IOMMU handling, so nothing
-+             * further to do (short of re-establishing the mapping in the
-+             * latter case).
-              */
-             goto act_release_out;
-         }
-@@ -1285,6 +1281,12 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-                 put_page_type(pg);
-             put_page(pg);
-         }
-+
-+        ASSERT(act->pin & (GNTPIN_hstw_mask | GNTPIN_hstr_mask));
-+        if ( op->flags & GNTMAP_readonly )
-+            act->pin -= GNTPIN_hstr_inc;
-+        else
-+            act->pin -= GNTPIN_hstw_inc;
-     }
- 
-     if ( (op->map->flags & (GNTMAP_device_map|GNTMAP_host_map)) == 0 )
--- 
-1.9.1
-
-
-From 8e8a0586e86e1bddebecb48347f77f169d45e3bf Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@citrix.com>
-Date: Thu, 15 Jun 2017 12:05:14 +0100
-Subject: [PATCH 2/3] gnttab: Avoid potential double-put of maptrack entry
-
-Each grant mapping for a particular domain is tracked by an in-Xen
-"maptrack" entry.  This entry is is referenced by a "handle", which is
-given to the guest when it calls gnttab_map_grant_ref().
-
-There are two types of mapping a particular handle can refer to:
-GNTMAP_host_map and GNTMAP_device_map.  A given
-gnttab_unmap_grant_ref() call can remove either only one or both of
-these entries.  When a particular handle has no entries left, it must
-be freed.
-
-gnttab_unmap_grant_ref() loops through its grant unmap request list
-twice.  It first removes entries from any host pagetables and (if
-appropraite) iommus; then it does a single domain TLB flush; then it
-does the clean-up, including telling the granter that entries are no
-longer being used (if appropriate).
-
-At the moment, it's during the first pass that the maptrack flags are
-cleared, but the second pass that the maptrack entry is freed.
-
-Unfortunately this allows the following race, which results in a
-double-free:
-
- A: (pass 1) clear host_map
- B: (pass 1) clear device_map
- A: (pass 2) See that maptrack entry has no mappings, free it
- B: (pass 2) See that maptrack entry has no mappings, free it #
-
-Unfortunately, unlike the active entry pinning update, we can't simply
-move the maptrack flag changes to the second half, because the
-maptrack flags are used to determine if iommu entries need to be
-added: a domain's iommu must never have fewer permissions than the
-maptrack flags indicate, or a subsequent map_grant_ref() might fail to
-add the necessary iommu entries.
-
-Instead, free the maptrack entry in the first pass if there are no
-further mappings.
-
-This is part of XSA-218.
-
-Signed-off-by: George Dunlap <george.dunlap@citrix.com>
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
----
- xen/common/grant_table.c | 77 +++++++++++++++++++++++++++++++++---------------
- 1 file changed, 53 insertions(+), 24 deletions(-)
-
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 4c33429..5cf0526 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -98,8 +98,8 @@ struct gnttab_unmap_common {
-     /* Shared state beteen *_unmap and *_unmap_complete */
-     u16 flags;
-     unsigned long frame;
--    struct grant_mapping *map;
-     struct domain *rd;
-+    grant_ref_t ref;
- };
- 
- /* Number of unmap operations that are done between each tlb flush */
-@@ -1079,6 +1079,8 @@ __gnttab_unmap_common(
-     struct grant_table *lgt, *rgt;
-     struct active_grant_entry *act;
-     s16              rc = 0;
-+    struct grant_mapping *map;
-+    bool put_handle = false;
- 
-     ld = current->domain;
-     lgt = ld->grant_table;
-@@ -1092,11 +1094,11 @@ __gnttab_unmap_common(
-         return;
-     }
- 
--    op->map = &maptrack_entry(lgt, op->handle);
-+    map = &maptrack_entry(lgt, op->handle);
- 
-     grant_read_lock(lgt);
- 
--    if ( unlikely(!read_atomic(&op->map->flags)) )
-+    if ( unlikely(!read_atomic(&map->flags)) )
-     {
-         grant_read_unlock(lgt);
-         gdprintk(XENLOG_INFO, "Zero flags for handle (%d).\n", op->handle);
-@@ -1104,7 +1106,7 @@ __gnttab_unmap_common(
-         return;
-     }
- 
--    dom = op->map->domid;
-+    dom = map->domid;
-     grant_read_unlock(lgt);
- 
-     if ( unlikely((rd = rcu_lock_domain_by_id(dom)) == NULL) )
-@@ -1129,16 +1131,43 @@ __gnttab_unmap_common(
- 
-     grant_read_lock(rgt);
- 
--    op->flags = read_atomic(&op->map->flags);
--    if ( unlikely(!op->flags) || unlikely(op->map->domid != dom) )
-+    op->rd = rd;
-+    op->ref = map->ref;
-+
-+    /*
-+     * We can't assume there was no racing unmap for this maptrack entry,
-+     * and hence we can't assume map->ref is valid for rd. While the checks
-+     * below (with the active entry lock held) will reject any such racing
-+     * requests, we still need to make sure we don't attempt to acquire an
-+     * invalid lock.
-+     */
-+    smp_rmb();
-+    if ( unlikely(op->ref >= nr_grant_entries(rgt)) )
-     {
-         gdprintk(XENLOG_WARNING, "Unstable handle %u\n", op->handle);
-         rc = GNTST_bad_handle;
--        goto unmap_out;
-+        goto unlock_out;
-     }
- 
--    op->rd = rd;
--    act = active_entry_acquire(rgt, op->map->ref);
-+    act = active_entry_acquire(rgt, op->ref);
-+
-+    /*
-+     * Note that we (ab)use the active entry lock here to protect against
-+     * multiple unmaps of the same mapping here. We don't want to hold lgt's
-+     * lock, and we only hold rgt's lock for reading (but the latter wouldn't
-+     * be the right one anyway). Hence the easiest is to rely on a lock we
-+     * hold anyway; see docs/misc/grant-tables.txt's "Locking" section.
-+     */
-+
-+    op->flags = read_atomic(&map->flags);
-+    smp_rmb();
-+    if ( unlikely(!op->flags) || unlikely(map->domid != dom) ||
-+         unlikely(map->ref != op->ref) )
-+    {
-+        gdprintk(XENLOG_WARNING, "Unstable handle %#x\n", op->handle);
-+        rc = GNTST_bad_handle;
-+        goto act_release_out;
-+    }
- 
-     if ( op->frame == 0 )
-     {
-@@ -1151,7 +1180,7 @@ __gnttab_unmap_common(
-                      "Bad frame number doesn't match gntref. (%lx != %lx)\n",
-                      op->frame, act->frame);
- 
--        op->map->flags &= ~GNTMAP_device_map;
-+        map->flags &= ~GNTMAP_device_map;
-     }
- 
-     if ( (op->host_addr != 0) && (op->flags & GNTMAP_host_map) )
-@@ -1161,14 +1190,23 @@ __gnttab_unmap_common(
-                                               op->flags)) < 0 )
-             goto act_release_out;
- 
--        op->map->flags &= ~GNTMAP_host_map;
-+        map->flags &= ~GNTMAP_host_map;
-+    }
-+
-+    if ( !(map->flags & (GNTMAP_device_map|GNTMAP_host_map)) )
-+    {
-+        map->flags = 0;
-+        put_handle = true;
-     }
- 
-  act_release_out:
-     active_entry_release(act);
-- unmap_out:
-+ unlock_out:
-     grant_read_unlock(rgt);
- 
-+    if ( put_handle )
-+        put_maptrack_handle(lgt, op->handle);
-+
-     if ( rc == GNTST_okay && gnttab_need_iommu_mapping(ld) )
-     {
-         unsigned int kind;
-@@ -1205,7 +1243,6 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-     grant_entry_header_t *sha;
-     struct page_info *pg;
-     uint16_t *status;
--    bool_t put_handle = 0;
- 
-     if ( rd == NULL )
-     { 
-@@ -1226,13 +1263,13 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-     if ( rgt->gt_version == 0 )
-         goto unlock_out;
- 
--    act = active_entry_acquire(rgt, op->map->ref);
--    sha = shared_entry_header(rgt, op->map->ref);
-+    act = active_entry_acquire(rgt, op->ref);
-+    sha = shared_entry_header(rgt, op->ref);
- 
-     if ( rgt->gt_version == 1 )
-         status = &sha->flags;
-     else
--        status = &status_entry(rgt, op->map->ref);
-+        status = &status_entry(rgt, op->ref);
- 
-     if ( unlikely(op->frame != act->frame) ) 
-     {
-@@ -1289,9 +1326,6 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-             act->pin -= GNTPIN_hstw_inc;
-     }
- 
--    if ( (op->map->flags & (GNTMAP_device_map|GNTMAP_host_map)) == 0 )
--        put_handle = 1;
--
-     if ( ((act->pin & (GNTPIN_devw_mask|GNTPIN_hstw_mask)) == 0) &&
-          !(op->flags & GNTMAP_readonly) )
-         gnttab_clear_flag(_GTF_writing, status);
-@@ -1304,11 +1338,6 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-  unlock_out:
-     grant_read_unlock(rgt);
- 
--    if ( put_handle )
+-    else
 -    {
--        op->map->flags = 0;
--        put_maptrack_handle(ld->grant_table, op->handle);
+-        a->memflags |= MEMF_node(XENMEMF_get_node(r->mem_flags));
+-        if ( r->mem_flags & XENMEMF_exact_node_request )
+-            a->memflags |= MEMF_exact_node;
 -    }
-     rcu_unlock_domain(rd);
++    else if ( unlikely(!propagate_node(r->mem_flags, &a->memflags)) )
++        return -EINVAL;
+ 
+     return 0;
  }
+diff --git a/xen/common/page_alloc.c b/xen/common/page_alloc.c
+index 88102d72da..217a467282 100644
+--- a/xen/common/page_alloc.c
++++ b/xen/common/page_alloc.c
+@@ -711,9 +711,13 @@ static struct page_info *alloc_heap_pages(
+         if ( node >= MAX_NUMNODES )
+             node = cpu_to_node(smp_processor_id());
+     }
++    else if ( unlikely(node >= MAX_NUMNODES) )
++    {
++        ASSERT_UNREACHABLE();
++        return NULL;
++    }
+     first_node = node;
+ 
+-    ASSERT(node < MAX_NUMNODES);
+     ASSERT(zone_lo <= zone_hi);
+     ASSERT(zone_hi < NR_ZONES);
  
 -- 
-1.9.1
 
 
-From edf6fb35bf73e7b1a254dd9793db5fba3771a6b8 Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Thu, 15 Jun 2017 12:05:29 +0100
-Subject: [PATCH 3/3] gnttab: correct maptrack table accesses
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Thu, 14 Sep 2017 11:35:06 +0100
+Subject: [PATCH] grant_table: fix GNTTABOP_cache_flush handling
 
-In order to observe a consistent (limit,pointer-table) pair, the reader
-needs to either hold the maptrack lock (in line with documentation) or
-both sides need to order their accesses suitably (the writer side
-barrier was removed by commit dff515dfea ["gnttab: use per-VCPU
-maptrack free lists"], and a read side barrier has never been there).
+Don't fall over a NULL grant_table pointer when the owner of the domain
+is a system domain (DOMID_{XEN,IO} etc).
 
-Make the writer publish a new table page before limit (for bounds
-checks to work), and new list head only after having published those
-(for racing maptrack_entry() invocations to work). At the same time add
-read barriers to lockless readers.
+This is XSA-232.
 
-Additionally get_maptrack_handle() must not assume ->maptrack_head to
-not change behind its back: Another handle may be put (updating only
-->maptrack_tail) and then got or stolen (updating ->maptrack_head).
-
-This is part of XSA-218.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reported-by: Matthew Daley <mattd@bugfuzz.com>
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
 ---
- xen/common/grant_table.c | 13 +++++++++----
+ xen/common/grant_table.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
+index 5e3678a5f4..288aebf165 100644
+--- a/xen/common/grant_table.c
++++ b/xen/common/grant_table.c
+@@ -3030,7 +3030,7 @@ static int __gnttab_cache_flush(gnttab_cache_flush_t *cflush,
+ 
+     page = mfn_to_page(mfn);
+     owner = page_get_owner_and_reference(page);
+-    if ( !owner )
++    if ( !owner || !owner->grant_table )
+     {
+         rcu_unlock_domain(d);
+         return -EPERM;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Juergen Gross <jgross@suse.com>
+Date: Thu, 14 Sep 2017 11:35:06 +0100
+Subject: [PATCH] tools/xenstore: dont unlink connection object twice
+
+A connection object of a domain with associated stubdom has two
+parents: the domain and the stubdom. When cleaning up the list of
+active domains in domain_cleanup() make sure not to unlink the
+connection twice from the same domain. This could happen when the
+domain and its stubdom are being destroyed at the same time leading
+to the domain loop being entered twice.
+
+Additionally don't use talloc_free() in this case as it will remove
+a random parent link, leading eventually to a memory leak. Use
+talloc_unlink() instead specifying the context from which the
+connection object should be removed.
+
+This is XSA-233.
+
+Reported-by: Eric Chanudet <chanudete@ainfosec.com>
+Signed-off-by: Juergen Gross <jgross@suse.com>
+Reviewed-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/xenstore/xenstored_domain.c | 13 +++++++++----
  1 file changed, 9 insertions(+), 4 deletions(-)
 
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 5cf0526..7777a3f 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -395,7 +395,7 @@ get_maptrack_handle(
-     struct grant_table *lgt)
+diff --git a/tools/xenstore/xenstored_domain.c b/tools/xenstore/xenstored_domain.c
+index 18ac327a2d..17a66be339 100644
+--- a/tools/xenstore/xenstored_domain.c
++++ b/tools/xenstore/xenstored_domain.c
+@@ -221,10 +221,11 @@ static int destroy_domain(void *_domain)
+ static void domain_cleanup(void)
  {
-     struct vcpu          *curr = current;
--    int                   i;
-+    unsigned int          i, head;
-     grant_handle_t        handle;
-     struct grant_mapping *new_mt;
+ 	xc_dominfo_t dominfo;
+-	struct domain *domain, *tmp;
++	struct domain *domain;
+ 	int notify = 0;
  
-@@ -451,17 +451,20 @@ get_maptrack_handle(
-         new_mt[i].ref = handle + i + 1;
-         new_mt[i].vcpu = curr->vcpu_id;
-     }
--    new_mt[i - 1].ref = curr->maptrack_head;
+-	list_for_each_entry_safe(domain, tmp, &domains, list) {
++ again:
++	list_for_each_entry(domain, &domains, list) {
+ 		if (xc_domain_getinfo(*xc_handle, domain->domid, 1,
+ 				      &dominfo) == 1 &&
+ 		    dominfo.domid == domain->domid) {
+@@ -236,8 +237,12 @@ static void domain_cleanup(void)
+ 			if (!dominfo.dying)
+ 				continue;
+ 		}
+-		talloc_free(domain->conn);
+-		notify = 0; /* destroy_domain() fires the watch */
++		if (domain->conn) {
++			talloc_unlink(talloc_autofree_context(), domain->conn);
++			domain->conn = NULL;
++			notify = 0; /* destroy_domain() fires the watch */
++			goto again;
++		}
+ 	}
  
-     /* Set tail directly if this is the first page for this VCPU. */
-     if ( curr->maptrack_tail == MAPTRACK_TAIL )
-         curr->maptrack_tail = handle + MAPTRACK_PER_PAGE - 1;
- 
--    write_atomic(&curr->maptrack_head, handle + 1);
--
-     lgt->maptrack[nr_maptrack_frames(lgt)] = new_mt;
-+    smp_wmb();
-     lgt->maptrack_limit += MAPTRACK_PER_PAGE;
- 
-+    do {
-+        new_mt[i - 1].ref = read_atomic(&curr->maptrack_head);
-+        head = cmpxchg(&curr->maptrack_head, new_mt[i - 1].ref, handle + 1);
-+    } while ( head != new_mt[i - 1].ref );
-+
-     spin_unlock(&lgt->maptrack_lock);
- 
-     return handle;
-@@ -727,6 +730,7 @@ static unsigned int mapkind(
-     for ( handle = 0; !(kind & MAPKIND_WRITE) &&
-                       handle < lgt->maptrack_limit; handle++ )
-     {
-+        smp_rmb();
-         map = &maptrack_entry(lgt, handle);
-         if ( !(map->flags & (GNTMAP_device_map|GNTMAP_host_map)) ||
-              map->domid != rd->domain_id )
-@@ -1094,6 +1098,7 @@ __gnttab_unmap_common(
-         return;
-     }
- 
-+    smp_rmb();
-     map = &maptrack_entry(lgt, op->handle);
- 
-     grant_read_lock(lgt);
+ 	if (notify)
 -- 
-1.9.1
-
-From 9fd403fbbd98a8db88303ff3e27fd480a6a5879f Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@citrix.com>
-Date: Thu, 15 Jun 2017 16:24:02 +0100
-Subject: [PATCH 1/4] gnttab: Fix handling of dev_bus_addr during unmap
-
-If a grant has been mapped with the GNTTAB_device_map flag, calling
-grant_unmap_ref() with dev_bus_addr set to zero should cause the
-GNTTAB_device_map part of the mapping to be left alone.
-
-Unfortunately, at the moment, op->dev_bus_addr is implicitly checked
-before clearing the map and adjusting the pin count, but only the bits
-above 12; and it is not checked at all before dropping page
-references.  This means a guest can repeatedly make such a call to
-cause the reference count to drop to zero, causing the page to be
-freed and re-used, even though it's still mapped in its pagetables.
-
-To fix this, always check op->dev_bus_addr explicitly for being
-non-zero, as well as op->flag & GNTMAP_device_map, before doing
-operations on the device_map.
-
-While we're here, make the logic a bit cleaner:
-
-* Always initialize op->frame to zero and set it from act->frame, to reduce the
-chance of untrusted input being used
-
-* Explicitly check the full dev_bus_addr against act->frame <<
-  PAGE_SHIFT, rather than ignoring the lower 12 bits
-
-This is part of XSA-224.
-
-Signed-off-by: George Dunlap <george.dunlap@citrix.com>
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
----
- xen/common/grant_table.c | 23 +++++++++++------------
- 1 file changed, 11 insertions(+), 12 deletions(-)
-
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 7777a3f..548550b 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -1089,8 +1089,6 @@ __gnttab_unmap_common(
-     ld = current->domain;
-     lgt = ld->grant_table;
- 
--    op->frame = (unsigned long)(op->dev_bus_addr >> PAGE_SHIFT);
--
-     if ( unlikely(op->handle >= lgt->maptrack_limit) )
-     {
-         gdprintk(XENLOG_INFO, "Bad handle (%d).\n", op->handle);
-@@ -1174,16 +1172,14 @@ __gnttab_unmap_common(
-         goto act_release_out;
-     }
- 
--    if ( op->frame == 0 )
--    {
--        op->frame = act->frame;
--    }
--    else
-+    op->frame = act->frame;
-+
-+    if ( op->dev_bus_addr )
-     {
--        if ( unlikely(op->frame != act->frame) )
-+        if ( unlikely(op->dev_bus_addr != pfn_to_paddr(act->frame)) )
-             PIN_FAIL(act_release_out, GNTST_general_error,
--                     "Bad frame number doesn't match gntref. (%lx != %lx)\n",
--                     op->frame, act->frame);
-+                     "Bus address doesn't match gntref (%"PRIx64" != %"PRIpaddr")\n",
-+                     op->dev_bus_addr, pfn_to_paddr(act->frame));
- 
-         map->flags &= ~GNTMAP_device_map;
-     }
-@@ -1276,7 +1272,8 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-     else
-         status = &status_entry(rgt, op->ref);
- 
--    if ( unlikely(op->frame != act->frame) ) 
-+    if ( op->dev_bus_addr &&
-+         unlikely(op->dev_bus_addr != pfn_to_paddr(act->frame)) )
-     {
-         /*
-          * Suggests that __gntab_unmap_common failed early and so
-@@ -1287,7 +1284,7 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
- 
-     pg = mfn_to_page(op->frame);
- 
--    if ( op->flags & GNTMAP_device_map ) 
-+    if ( op->dev_bus_addr && (op->flags & GNTMAP_device_map) )
-     {
-         if ( !is_iomem_page(act->frame) )
-         {
-@@ -1358,6 +1355,7 @@ __gnttab_unmap_grant_ref(
-     /* Intialise these in case common contains old state */
-     common->new_addr = 0;
-     common->rd = NULL;
-+    common->frame = 0;
- 
-     __gnttab_unmap_common(common);
-     op->status = common->status;
-@@ -1422,6 +1420,7 @@ __gnttab_unmap_and_replace(
-     /* Intialise these in case common contains old state */
-     common->dev_bus_addr = 0;
-     common->rd = NULL;
-+    common->frame = 0;
- 
-     __gnttab_unmap_common(common);
-     op->status = common->status;
--- 
-1.9.1
 
 
-From f59d50caef148b42f58a30df5676b09e1d24fdcf Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
-Date: Fri, 2 Jun 2017 15:21:27 +0100
-Subject: [PATCH 2/4] gnttab: never create host mapping unless asked to
+Date: Thu, 14 Sep 2017 11:35:07 +0100
+Subject: [PATCH] gnttab: also validate PTE permissions upon destroy/replace
 
-We shouldn't create a host mapping unless asked to even in the case of
-mapping a granted MMIO page. In particular the mapping wouldn't be torn
-down when processing the matching unmap request.
+In order for PTE handling to match up with the reference counting done
+by common code, presence and writability of grant mapping PTEs must
+also be taken into account; validating just the frame number is not
+enough. This is in particular relevant if a guest fiddles with grant
+PTEs via non-grant hypercalls.
 
-This is part of XSA-224.
+Note that the flags being passed to replace_grant_host_mapping()
+already happen to be those of the existing mapping, so no new function
+parameter is needed.
 
+This is XSA-234.
+
+Reported-by: Andrew Cooper <andrew.cooper3@citrix.com>
 Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
 ---
- xen/common/grant_table.c | 11 +++++++----
- 1 file changed, 7 insertions(+), 4 deletions(-)
+ xen/arch/x86/mm.c | 79 +++++++++++++++++++++++++++++++++++++++++++------------
+ 1 file changed, 62 insertions(+), 17 deletions(-)
 
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 548550b..28d5015 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -911,10 +911,13 @@ __gnttab_map_grant_ref(
-             goto undo_out;
-         }
- 
--        rc = create_grant_host_mapping(
--            op->host_addr, frame, op->flags, cache_flags);
--        if ( rc != GNTST_okay )
--            goto undo_out;
-+        if ( op->flags & GNTMAP_host_map )
-+        {
-+            rc = create_grant_host_mapping(op->host_addr, frame, op->flags,
-+                                           cache_flags);
-+            if ( rc != GNTST_okay )
-+                goto undo_out;
-+        }
-     }
-     else if ( owner == rd || owner == dom_cow )
-     {
--- 
-1.9.1
-
-
-From 067838204a3864eebf17ac2b4dfb2ec908da283a Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@citrix.com>
-Date: Fri, 2 Jun 2017 15:21:27 +0100
-Subject: [PATCH 3/4] gnttab: correct logic to get page references during map
- requests
-
-The rules for reference counting are somewhat complicated:
-
-* Each of GNTTAB_host_map and GNTTAB_device_map need their own
-reference count
-
-* If the mapping is writeable:
- - GNTTAB_host_map needs a type count under only some conditions
- - GNTTAB_device_map always needs a type count
-
-If the mapping succeeds, we need to keep all of these; if the mapping
-fails, we need to release whatever references we have acquired so far.
-
-Additionally, the code that does a lot of this calculation "inherits"
-a reference as part of the process of finding out who the owner is.
-
-Finally, if the grant is mapped as writeable (without the
-GNTMAP_readonly flag), but the hypervisor cannot grab a
-PGT_writeable_page type, the entire operation should fail.
-
-Unfortunately, the current code has several logic holes:
-
-* If a grant is mapped only GNTTAB_device_map, and with a writeable
-  mapping, but in conditions where a *host* type count is not
-  necessary, the code will fail to grab the necessary type count.
-
-* If a grant is mapped both GNTTAB_device_map and GNTTAB_host_map,
-  with a writeable mapping, in conditions where the host type count is
-  not necessary, *and* where the page cannot be changed to type
-  PGT_writeable, the condition will not be detected.
-
-In both cases, this means that on success, the type count will be
-erroneously reduced when the grant is unmapped.  In the second case,
-the type count will be erroneously reduced on the failure path as
-well.  (In the first case the failure path logic has the same hole
-as the reference grabbing logic.)
-
-Additionally, the return value of get_page() is not checked; but this
-may fail even if the first get_page() succeeded due to a reference
-counting overflow.
-
-First of all, simplify the restoration logic by explicitly counting
-the reference and type references acquired.
-
-Consider each mapping type separately, explicitly marking the
-'incoming' reference as used so we know when we need to grab a second
-one.
-
-Finally, always check the return value of get_page[_type]() and go to
-the failure path if appropriate.
-
-This is part of XSA-224.
-
-Signed-off-by: George Dunlap <george.dunlap@citrix.com>
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
----
- xen/common/grant_table.c | 58 +++++++++++++++++++++++++++---------------------
- 1 file changed, 33 insertions(+), 25 deletions(-)
-
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 28d5015..0f11ce7 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -758,12 +758,12 @@ __gnttab_map_grant_ref(
-     struct grant_table *lgt, *rgt;
-     struct vcpu   *led;
-     int            handle;
--    unsigned long  frame = 0, nr_gets = 0;
-+    unsigned long  frame = 0;
-     struct page_info *pg = NULL;
-     int            rc = GNTST_okay;
-     u32            old_pin;
-     u32            act_pin;
--    unsigned int   cache_flags;
-+    unsigned int   cache_flags, refcnt = 0, typecnt = 0;
-     struct active_grant_entry *act = NULL;
-     struct grant_mapping *mt;
-     grant_entry_header_t *shah;
-@@ -889,11 +889,17 @@ __gnttab_map_grant_ref(
-     else
-         owner = page_get_owner(pg);
- 
-+    if ( owner )
-+        refcnt++;
-+
-     if ( !pg || (owner == dom_io) )
-     {
-         /* Only needed the reference to confirm dom_io ownership. */
-         if ( pg )
-+        {
-             put_page(pg);
-+            refcnt--;
-+        }
- 
-         if ( paging_mode_external(ld) )
-         {
-@@ -921,27 +927,38 @@ __gnttab_map_grant_ref(
-     }
-     else if ( owner == rd || owner == dom_cow )
-     {
--        if ( gnttab_host_mapping_get_page_type(op, ld, rd) )
-+        if ( (op->flags & GNTMAP_device_map) && !(op->flags & GNTMAP_readonly) )
-         {
-             if ( (owner == dom_cow) ||
-                  !get_page_type(pg, PGT_writable_page) )
-                 goto could_not_pin;
-+            typecnt++;
-         }
- 
--        nr_gets++;
-         if ( op->flags & GNTMAP_host_map )
-         {
--            rc = create_grant_host_mapping(op->host_addr, frame, op->flags, 0);
--            if ( rc != GNTST_okay )
--                goto undo_out;
--
-+            /*
-+             * Only need to grab another reference if device_map claimed
-+             * the other one.
-+             */
-             if ( op->flags & GNTMAP_device_map )
-             {
--                nr_gets++;
--                (void)get_page(pg, rd);
--                if ( !(op->flags & GNTMAP_readonly) )
--                    get_page_type(pg, PGT_writable_page);
-+                if ( !get_page(pg, rd) )
-+                    goto could_not_pin;
-+                refcnt++;
-+            }
-+
-+            if ( gnttab_host_mapping_get_page_type(op, ld, rd) )
-+            {
-+                if ( (owner == dom_cow) ||
-+                     !get_page_type(pg, PGT_writable_page) )
-+                    goto could_not_pin;
-+                typecnt++;
-             }
-+
-+            rc = create_grant_host_mapping(op->host_addr, frame, op->flags, 0);
-+            if ( rc != GNTST_okay )
-+                goto undo_out;
-         }
-     }
-     else
-@@ -950,8 +967,6 @@ __gnttab_map_grant_ref(
-         if ( !rd->is_dying )
-             gdprintk(XENLOG_WARNING, "Could not pin grant frame %lx\n",
-                      frame);
--        if ( owner != NULL )
--            put_page(pg);
-         rc = GNTST_general_error;
-         goto undo_out;
-     }
-@@ -1014,18 +1029,11 @@ __gnttab_map_grant_ref(
-     return;
- 
-  undo_out:
--    if ( nr_gets > 1 )
--    {
--        if ( !(op->flags & GNTMAP_readonly) )
--            put_page_type(pg);
--        put_page(pg);
--    }
--    if ( nr_gets > 0 )
--    {
--        if ( gnttab_host_mapping_get_page_type(op, ld, rd) )
--            put_page_type(pg);
-+    while ( typecnt-- )
-+        put_page_type(pg);
-+
-+    while ( refcnt-- )
-         put_page(pg);
--    }
- 
-     grant_read_lock(rgt);
- 
--- 
-1.9.1
-
-
-From 0f6d09a842e1a732bd2758f0987e5e08f467d695 Mon Sep 17 00:00:00 2001
-From: Jan Beulich <jbeulich@suse.com>
-Date: Thu, 15 Jun 2017 16:25:27 +0100
-Subject: [PATCH 4/4] gnttab: __gnttab_unmap_common_complete() is
- all-or-nothing
-
-All failures have to be detected in __gnttab_unmap_common(), the
-completion function must not skip part of its processing. In particular
-the GNTMAP_device_map related putting of page references and adjustment
-of pin count must not occur if __gnttab_unmap_common() signaled an
-error. Furthermore the function must not make adjustments to global
-state (here: clearing GNTTAB_device_map) before all possibly failing
-operations have been performed.
-
-There's one exception for IOMMU related failures: As IOMMU manipulation
-occurs after GNTMAP_*_map have been cleared already, the related page
-reference and pin count adjustments need to be done nevertheless. A
-fundamental requirement for the correctness of this is that
-iommu_{,un}map_page() crash any affected DomU in case of failure.
-
-The version check appears to be pointless (or could perhaps be a
-BUG_ON() or ASSERT()), but for the moment also move it.
-
-This is part of XSA-224.
-
-Signed-off-by: Jan Beulich <jbeulich@suse.com>
----
- xen/common/grant_table.c          | 108 ++++++++++++++++++--------------------
- xen/include/asm-arm/grant_table.h |   2 +-
- xen/include/asm-x86/grant_table.h |   5 +-
- 3 files changed, 55 insertions(+), 60 deletions(-)
-
-diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
-index 0f11ce7..c159c71 100644
---- a/xen/common/grant_table.c
-+++ b/xen/common/grant_table.c
-@@ -96,7 +96,7 @@ struct gnttab_unmap_common {
-     int16_t status;
- 
-     /* Shared state beteen *_unmap and *_unmap_complete */
--    u16 flags;
-+    u16 done;
-     unsigned long frame;
-     struct domain *rd;
-     grant_ref_t ref;
-@@ -948,7 +948,8 @@ __gnttab_map_grant_ref(
-                 refcnt++;
-             }
- 
--            if ( gnttab_host_mapping_get_page_type(op, ld, rd) )
-+            if ( gnttab_host_mapping_get_page_type(op->flags & GNTMAP_readonly,
-+                                                   ld, rd) )
-             {
-                 if ( (owner == dom_cow) ||
-                      !get_page_type(pg, PGT_writable_page) )
-@@ -1095,6 +1096,7 @@ __gnttab_unmap_common(
-     struct active_grant_entry *act;
-     s16              rc = 0;
-     struct grant_mapping *map;
-+    unsigned int flags;
-     bool put_handle = false;
- 
-     ld = current->domain;
-@@ -1145,6 +1147,20 @@ __gnttab_unmap_common(
- 
-     grant_read_lock(rgt);
- 
-+    if ( rgt->gt_version == 0 )
-+    {
-+        /*
-+         * This ought to be impossible, as such a mapping should not have
-+         * been established (see the nr_grant_entries(rgt) bounds check in
-+         * __gnttab_map_grant_ref()). Doing this check only in
-+         * __gnttab_unmap_common_complete() - as it used to be done - would,
-+         * however, be too late.
-+         */
-+        rc = GNTST_bad_gntref;
-+        flags = 0;
-+        goto unlock_out;
-+    }
-+
-     op->rd = rd;
-     op->ref = map->ref;
- 
-@@ -1160,6 +1176,7 @@ __gnttab_unmap_common(
-     {
-         gdprintk(XENLOG_WARNING, "Unstable handle %u\n", op->handle);
-         rc = GNTST_bad_handle;
-+        flags = 0;
-         goto unlock_out;
-     }
- 
-@@ -1173,9 +1190,9 @@ __gnttab_unmap_common(
-      * hold anyway; see docs/misc/grant-tables.txt's "Locking" section.
-      */
- 
--    op->flags = read_atomic(&map->flags);
-+    flags = read_atomic(&map->flags);
-     smp_rmb();
--    if ( unlikely(!op->flags) || unlikely(map->domid != dom) ||
-+    if ( unlikely(!flags) || unlikely(map->domid != dom) ||
-          unlikely(map->ref != op->ref) )
-     {
-         gdprintk(XENLOG_WARNING, "Unstable handle %#x\n", op->handle);
-@@ -1185,24 +1202,27 @@ __gnttab_unmap_common(
- 
-     op->frame = act->frame;
- 
--    if ( op->dev_bus_addr )
--    {
--        if ( unlikely(op->dev_bus_addr != pfn_to_paddr(act->frame)) )
--            PIN_FAIL(act_release_out, GNTST_general_error,
--                     "Bus address doesn't match gntref (%"PRIx64" != %"PRIpaddr")\n",
--                     op->dev_bus_addr, pfn_to_paddr(act->frame));
--
--        map->flags &= ~GNTMAP_device_map;
--    }
-+    if ( op->dev_bus_addr &&
-+         unlikely(op->dev_bus_addr != pfn_to_paddr(act->frame)) )
-+        PIN_FAIL(act_release_out, GNTST_general_error,
-+                 "Bus address doesn't match gntref (%"PRIx64" != %"PRIpaddr")\n",
-+                 op->dev_bus_addr, pfn_to_paddr(act->frame));
- 
--    if ( (op->host_addr != 0) && (op->flags & GNTMAP_host_map) )
-+    if ( op->host_addr && (flags & GNTMAP_host_map) )
-     {
-         if ( (rc = replace_grant_host_mapping(op->host_addr,
-                                               op->frame, op->new_addr, 
--                                              op->flags)) < 0 )
-+                                              flags)) < 0 )
-             goto act_release_out;
- 
-         map->flags &= ~GNTMAP_host_map;
-+        op->done |= GNTMAP_host_map | (flags & GNTMAP_readonly);
-+    }
-+
-+    if ( op->dev_bus_addr && (flags & GNTMAP_device_map) )
-+    {
-+        map->flags &= ~GNTMAP_device_map;
-+        op->done |= GNTMAP_device_map | (flags & GNTMAP_readonly);
-     }
- 
-     if ( !(map->flags & (GNTMAP_device_map|GNTMAP_host_map)) )
-@@ -1239,7 +1259,7 @@ __gnttab_unmap_common(
-     }
- 
-     /* If just unmapped a writable mapping, mark as dirtied */
--    if ( rc == GNTST_okay && !(op->flags & GNTMAP_readonly) )
-+    if ( rc == GNTST_okay && !(flags & GNTMAP_readonly) )
-          gnttab_mark_dirty(rd, op->frame);
- 
-     op->status = rc;
-@@ -1256,13 +1276,9 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-     struct page_info *pg;
-     uint16_t *status;
- 
--    if ( rd == NULL )
-+    if ( !op->done )
-     { 
--        /*
--         * Suggests that __gntab_unmap_common failed in
--         * rcu_lock_domain_by_id() or earlier, and so we have nothing
--         * to complete
--         */
-+        /* __gntab_unmap_common() didn't do anything - nothing to complete. */
-         return;
-     }
- 
-@@ -1272,8 +1288,6 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-     rgt = rd->grant_table;
- 
-     grant_read_lock(rgt);
--    if ( rgt->gt_version == 0 )
--        goto unlock_out;
- 
-     act = active_entry_acquire(rgt, op->ref);
-     sha = shared_entry_header(rgt, op->ref);
-@@ -1283,72 +1297,50 @@ __gnttab_unmap_common_complete(struct gnttab_unmap_common *op)
-     else
-         status = &status_entry(rgt, op->ref);
- 
--    if ( op->dev_bus_addr &&
--         unlikely(op->dev_bus_addr != pfn_to_paddr(act->frame)) )
--    {
--        /*
--         * Suggests that __gntab_unmap_common failed early and so
--         * nothing further to do
--         */
--        goto act_release_out;
--    }
--
-     pg = mfn_to_page(op->frame);
- 
--    if ( op->dev_bus_addr && (op->flags & GNTMAP_device_map) )
-+    if ( op->done & GNTMAP_device_map )
-     {
-         if ( !is_iomem_page(act->frame) )
-         {
--            if ( op->flags & GNTMAP_readonly )
-+            if ( op->done & GNTMAP_readonly )
-                 put_page(pg);
-             else
-                 put_page_and_type(pg);
-         }
- 
-         ASSERT(act->pin & (GNTPIN_devw_mask | GNTPIN_devr_mask));
--        if ( op->flags & GNTMAP_readonly )
-+        if ( op->done & GNTMAP_readonly )
-             act->pin -= GNTPIN_devr_inc;
-         else
-             act->pin -= GNTPIN_devw_inc;
-     }
- 
--    if ( (op->host_addr != 0) && (op->flags & GNTMAP_host_map) )
-+    if ( op->done & GNTMAP_host_map )
-     {
--        if ( op->status != 0 ) 
-+        if ( !is_iomem_page(op->frame) )
-         {
--            /*
--             * Suggests that __gntab_unmap_common failed in
--             * replace_grant_host_mapping() or IOMMU handling, so nothing
--             * further to do (short of re-establishing the mapping in the
--             * latter case).
--             */
--            goto act_release_out;
--        }
--
--        if ( !is_iomem_page(op->frame) ) 
--        {
--            if ( gnttab_host_mapping_get_page_type(op, ld, rd) )
-+            if ( gnttab_host_mapping_get_page_type(op->done & GNTMAP_readonly,
-+                                                   ld, rd) )
-                 put_page_type(pg);
-             put_page(pg);
-         }
- 
-         ASSERT(act->pin & (GNTPIN_hstw_mask | GNTPIN_hstr_mask));
--        if ( op->flags & GNTMAP_readonly )
-+        if ( op->done & GNTMAP_readonly )
-             act->pin -= GNTPIN_hstr_inc;
-         else
-             act->pin -= GNTPIN_hstw_inc;
-     }
- 
-     if ( ((act->pin & (GNTPIN_devw_mask|GNTPIN_hstw_mask)) == 0) &&
--         !(op->flags & GNTMAP_readonly) )
-+         !(op->done & GNTMAP_readonly) )
-         gnttab_clear_flag(_GTF_writing, status);
- 
-     if ( act->pin == 0 )
-         gnttab_clear_flag(_GTF_reading, status);
- 
-- act_release_out:
-     active_entry_release(act);
-- unlock_out:
-     grant_read_unlock(rgt);
- 
-     rcu_unlock_domain(rd);
-@@ -1364,6 +1356,7 @@ __gnttab_unmap_grant_ref(
-     common->handle = op->handle;
- 
-     /* Intialise these in case common contains old state */
-+    common->done = 0;
-     common->new_addr = 0;
-     common->rd = NULL;
-     common->frame = 0;
-@@ -1429,6 +1422,7 @@ __gnttab_unmap_and_replace(
-     common->handle = op->handle;
-     
-     /* Intialise these in case common contains old state */
-+    common->done = 0;
-     common->dev_bus_addr = 0;
-     common->rd = NULL;
-     common->frame = 0;
-@@ -3388,7 +3382,9 @@ gnttab_release_mappings(
-                 if ( gnttab_release_host_mappings(d) &&
-                      !is_iomem_page(act->frame) )
-                 {
--                    if ( gnttab_host_mapping_get_page_type(map, d, rd) )
-+                    if ( gnttab_host_mapping_get_page_type((map->flags &
-+                                                            GNTMAP_readonly),
-+                                                           d, rd) )
-                         put_page_type(pg);
-                     put_page(pg);
-                 }
-diff --git a/xen/include/asm-arm/grant_table.h b/xen/include/asm-arm/grant_table.h
-index eb02423..bc4d61a 100644
---- a/xen/include/asm-arm/grant_table.h
-+++ b/xen/include/asm-arm/grant_table.h
-@@ -9,7 +9,7 @@ void gnttab_clear_flag(unsigned long nr, uint16_t *addr);
- int create_grant_host_mapping(unsigned long gpaddr,
-         unsigned long mfn, unsigned int flags, unsigned int
-         cache_flags);
--#define gnttab_host_mapping_get_page_type(op, d, rd) (0)
-+#define gnttab_host_mapping_get_page_type(ro, ld, rd) (0)
- int replace_grant_host_mapping(unsigned long gpaddr, unsigned long mfn,
-         unsigned long new_gpaddr, unsigned int flags);
- void gnttab_mark_dirty(struct domain *d, unsigned long l);
-diff --git a/xen/include/asm-x86/grant_table.h b/xen/include/asm-x86/grant_table.h
-index 8c9bbcf..9ca631c 100644
---- a/xen/include/asm-x86/grant_table.h
-+++ b/xen/include/asm-x86/grant_table.h
-@@ -58,9 +58,8 @@ static inline void gnttab_clear_flag(unsigned int nr, uint16_t *st)
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 50b2fc4e19..a40461d4d6 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -4017,7 +4017,8 @@ static int create_grant_pte_mapping(
  }
  
- /* Foreign mappings of HHVM-guest pages do not modify the type count. */
--#define gnttab_host_mapping_get_page_type(op, ld, rd)   \
--    (!((op)->flags & GNTMAP_readonly) &&                \
--     (((ld) == (rd)) || !paging_mode_external(rd)))
-+#define gnttab_host_mapping_get_page_type(ro, ld, rd)   \
-+    (!(ro) && (((ld) == (rd)) || !paging_mode_external(rd)))
+ static int destroy_grant_pte_mapping(
+-    uint64_t addr, unsigned long frame, struct domain *d)
++    uint64_t addr, unsigned long frame, unsigned int grant_pte_flags,
++    struct domain *d)
+ {
+     int rc = GNTST_okay;
+     void *va;
+@@ -4063,16 +4064,27 @@ static int destroy_grant_pte_mapping(
  
- /* Done implicitly when page tables are destroyed. */
- #define gnttab_release_host_mappings(domain) ( paging_mode_external(domain) )
+     ol1e = *(l1_pgentry_t *)va;
+     
+-    /* Check that the virtual address supplied is actually mapped to frame. */
+-    if ( unlikely(l1e_get_pfn(ol1e) != frame) )
++    /*
++     * Check that the PTE supplied actually maps frame (with appropriate
++     * permissions).
++     */
++    if ( unlikely(l1e_get_pfn(ol1e) != frame) ||
++         unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
++                  (_PAGE_PRESENT | _PAGE_RW)) )
+     {
+         page_unlock(page);
+-        MEM_LOG("PTE entry %lx for address %"PRIx64" doesn't match frame %lx",
+-                (unsigned long)l1e_get_intpte(ol1e), addr, frame);
++        MEM_LOG("PTE %"PRIpte" at %"PRIx64" doesn't match grant (%"PRIpte")",
++                l1e_get_intpte(ol1e), addr,
++                l1e_get_intpte(l1e_from_pfn(frame, grant_pte_flags)));
+         rc = GNTST_general_error;
+         goto failed;
+     }
+ 
++    if ( unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
++                  ~(_PAGE_AVAIL | PAGE_CACHE_ATTRS)) )
++        MEM_LOG("PTE flags %x at %"PRIx64" don't match grant (%x)\n",
++                l1e_get_flags(ol1e), addr, grant_pte_flags);
++
+     /* Delete pagetable entry. */
+     if ( unlikely(!UPDATE_ENTRY
+                   (l1, 
+@@ -4081,7 +4093,7 @@ static int destroy_grant_pte_mapping(
+                    0)) )
+     {
+         page_unlock(page);
+-        MEM_LOG("Cannot delete PTE entry at %p", va);
++        MEM_LOG("Cannot delete PTE entry at %"PRIx64, addr);
+         rc = GNTST_general_error;
+         goto failed;
+     }
+@@ -4149,7 +4161,8 @@ static int create_grant_va_mapping(
+ }
+ 
+ static int replace_grant_va_mapping(
+-    unsigned long addr, unsigned long frame, l1_pgentry_t nl1e, struct vcpu *v)
++    unsigned long addr, unsigned long frame, unsigned int grant_pte_flags,
++    l1_pgentry_t nl1e, struct vcpu *v)
+ {
+     l1_pgentry_t *pl1e, ol1e;
+     unsigned long gl1mfn;
+@@ -4185,19 +4198,30 @@ static int replace_grant_va_mapping(
+ 
+     ol1e = *pl1e;
+ 
+-    /* Check that the virtual address supplied is actually mapped to frame. */
+-    if ( unlikely(l1e_get_pfn(ol1e) != frame) )
++    /*
++     * Check that the virtual address supplied is actually mapped to frame
++     * (with appropriate permissions).
++     */
++    if ( unlikely(l1e_get_pfn(ol1e) != frame) ||
++         unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
++                  (_PAGE_PRESENT | _PAGE_RW)) )
+     {
+-        MEM_LOG("PTE entry %lx for address %lx doesn't match frame %lx",
+-                l1e_get_pfn(ol1e), addr, frame);
++        MEM_LOG("PTE %"PRIpte" for %lx doesn't match grant (%"PRIpte")",
++                l1e_get_intpte(ol1e), addr,
++                l1e_get_intpte(l1e_from_pfn(frame, grant_pte_flags)));
+         rc = GNTST_general_error;
+         goto unlock_and_out;
+     }
+ 
++    if ( unlikely((l1e_get_flags(ol1e) ^ grant_pte_flags) &
++                  ~(_PAGE_AVAIL | PAGE_CACHE_ATTRS)) )
++        MEM_LOG("PTE flags %x for %"PRIx64" don't match grant (%x)",
++                l1e_get_flags(ol1e), addr, grant_pte_flags);
++
+     /* Delete pagetable entry. */
+     if ( unlikely(!UPDATE_ENTRY(l1, pl1e, ol1e, nl1e, gl1mfn, v, 0)) )
+     {
+-        MEM_LOG("Cannot delete PTE entry at %p", (unsigned long *)pl1e);
++        MEM_LOG("Cannot delete PTE entry for %"PRIx64, addr);
+         rc = GNTST_general_error;
+         goto unlock_and_out;
+     }
+@@ -4211,9 +4235,11 @@ static int replace_grant_va_mapping(
+ }
+ 
+ static int destroy_grant_va_mapping(
+-    unsigned long addr, unsigned long frame, struct vcpu *v)
++    unsigned long addr, unsigned long frame, unsigned int grant_pte_flags,
++    struct vcpu *v)
+ {
+-    return replace_grant_va_mapping(addr, frame, l1e_empty(), v);
++    return replace_grant_va_mapping(addr, frame, grant_pte_flags,
++                                    l1e_empty(), v);
+ }
+ 
+ static int create_grant_p2m_mapping(uint64_t addr, unsigned long frame,
+@@ -4307,21 +4333,40 @@ int replace_grant_host_mapping(
+     unsigned long gl1mfn;
+     struct page_info *l1pg;
+     int rc;
++    unsigned int grant_pte_flags;
+     
+     if ( paging_mode_external(current->domain) )
+         return replace_grant_p2m_mapping(addr, frame, new_addr, flags);
+ 
++    grant_pte_flags =
++        _PAGE_PRESENT | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_GNTTAB | _PAGE_NX;
++
++    if ( flags & GNTMAP_application_map )
++        grant_pte_flags |= _PAGE_USER;
++    if ( !(flags & GNTMAP_readonly) )
++        grant_pte_flags |= _PAGE_RW;
++    /*
++     * On top of the explicit settings done by create_grant_host_mapping()
++     * also open-code relevant parts of adjust_guest_l1e(). Don't mirror
++     * available and cachability flags, though.
++     */
++    if ( !is_pv_32bit_domain(curr->domain) )
++        grant_pte_flags |= (grant_pte_flags & _PAGE_USER)
++                           ? _PAGE_GLOBAL
++                           : _PAGE_GUEST_KERNEL | _PAGE_USER;
++
+     if ( flags & GNTMAP_contains_pte )
+     {
+         if ( !new_addr )
+-            return destroy_grant_pte_mapping(addr, frame, curr->domain);
++            return destroy_grant_pte_mapping(addr, frame, grant_pte_flags,
++                                             curr->domain);
+         
+         MEM_LOG("Unsupported grant table operation");
+         return GNTST_general_error;
+     }
+ 
+     if ( !new_addr )
+-        return destroy_grant_va_mapping(addr, frame, curr);
++        return destroy_grant_va_mapping(addr, frame, grant_pte_flags, curr);
+ 
+     pl1e = guest_map_l1e(new_addr, &gl1mfn);
+     if ( !pl1e )
+@@ -4369,7 +4414,7 @@ int replace_grant_host_mapping(
+     put_page(l1pg);
+     guest_unmap_l1e(pl1e);
+ 
+-    rc = replace_grant_va_mapping(addr, frame, ol1e, curr);
++    rc = replace_grant_va_mapping(addr, frame, grant_pte_flags, ol1e, curr);
+     if ( rc && !paging_mode_refcounts(curr->domain) )
+         put_page_from_l1e(ol1e, curr->domain);
+ 
 -- 
-1.9.1
 
