@@ -2,18 +2,25 @@
 
 set -e
 
+trap 'echo Failed to execute "$BASH_COMMAND" with $? at $LINENO' ERR
+
 usage() {
   echo "usage: $0 [XSA number]"
 }
 
-if [ $# -ne 1 ] || ! [[ "$1" =~ ^[0-9]+$ ]]; then
+if [ $# -lt 1 ] || ! [[ "$1" =~ ^[0-9]+$ ]]; then
   usage
   exit 1
 fi
 
 TOPDIR=$(pwd)
 
-xsa="$1"
+xsa="$1"; shift
+
+error_exit() {
+  echo >&2 "$@"
+  exit 1
+}
 
 wget_file(){
   local url="https://xenbits.xen.org/xsa"
@@ -27,8 +34,11 @@ check_sig(){
   local file="$1"
 
   if gpg --list-keys ${xen_key} >/dev/null; then
-    gpg --status-fd 1 --verify $file \
-	    | grep -q "VALIDSIG ${xen_key}" || exit 1
+    if ! gpg --status-fd 1 --verify $file \
+	    | grep -q "VALIDSIG ${xen_key}"; then
+      error_exit "Failed to check signature of '$file'"
+      return 1
+    fi
   else
     echo >&2 -n "Not checking gpg signature due to missing key;"
     echo >&2 "add with gpg --recv-keys ${xen_key}"
@@ -44,7 +54,8 @@ check_file(){
 
   sums="$(extract_sha256sum $advisory)"
   sum="$(grep -E "^[0-9a-f]+  $file$" <<<"$sums")"
-  [ "$(wc -l <<<"$sum")" -eq 1 ]
+  [ -n "$sum" ] || return 1
+  [ "$(wc -l <<<"$sum")" -eq 1 ] || return 1
   sha256sum -c <<<"$sum"
 }
 
@@ -99,8 +110,26 @@ metadata=xsa$xsa.meta
 wget_file $advisory
 check_sig $advisory
 to_import=()
-if wget_file $metadata; then
-  check_file $advisory $metadata
+if [ $# -ge 1 ]; then
+  # Hack for XSA240-v5, which have no metadata but v4 had
+
+  for patch in "$@"; do
+    # Check if "Patches" in the metadata are in a globing format
+    # if not, the function just return $patch unchanged
+    eval patch=($(get_patches_list_from_advisory $advisory "$patch"))
+    for patch in "${patch[@]}"; do
+      wget_file "$patch"
+      if ! check_file $advisory "$patch"; then
+        error_exit "Failed to check patch '$patch'"
+      fi
+      to_import+=("$patch")
+    done
+  done
+  echo "Done checking patchs: ${to_import[@]}"
+elif wget_file $metadata; then
+  if ! check_file $advisory $metadata; then
+    error_exit "Failed to check metadata file ($metadata)"
+  fi
   eval patches=($(get_list_of_patches $metadata))
   for patch in "${patches[@]}"; do
     # Check if "Patches" in the metadata are in a globing format
@@ -108,7 +137,9 @@ if wget_file $metadata; then
     eval patch=($(get_patches_list_from_advisory $advisory "$patch"))
     for patch in "${patch[@]}"; do
       wget_file "$patch"
-      check_file $advisory "$patch"
+      if ! check_file $advisory "$patch"; then
+        error_exit "Failed to check patch '$patch'"
+      fi
       to_import+=("$patch")
     done
   done
