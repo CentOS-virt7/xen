@@ -118,7 +118,9 @@ if [ $# -ge 1 ]; then
     # if not, the function just return $patch unchanged
     eval patch=($(get_patches_list_from_advisory $advisory "$patch"))
     for patch in "${patch[@]}"; do
-      wget_file "$patch"
+      if ! wget_file "$patch"; then
+        error_exit "Unable to download patch $patch"
+      fi
       if ! check_file $advisory "$patch"; then
         error_exit "Failed to check patch '$patch'"
       fi
@@ -136,7 +138,9 @@ elif wget_file $metadata; then
     # if not, the function just return $patch unchanged
     eval patch=($(get_patches_list_from_advisory $advisory "$patch"))
     for patch in "${patch[@]}"; do
-      wget_file "$patch"
+      if ! wget_file "$patch"; then
+        error_exit "Unable to download patch $patch"
+      fi
       if ! check_file $advisory "$patch"; then
         error_exit "Failed to check patch '$patch'"
       fi
