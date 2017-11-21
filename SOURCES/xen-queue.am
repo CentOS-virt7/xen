@@ -2383,3 +2383,337 @@ index 288aebf..7f796df 100644
  static int gnttab_copy_claim_buf(const struct gnttab_copy *op,
 -- 
 
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Thu, 16 Nov 2017 11:52:45 +0100
+Subject: [PATCH] x86/mm: Make PV linear pagetables optional
+
+Allowing pagetables to point to other pagetables of the same level
+(often called 'linear pagetables') has been included in Xen since its
+inception; but recently it has been the source of a number of subtle
+reference-counting bugs.
+
+It is not used by Linux or MiniOS; but it is used by NetBSD and Novell
+Netware.  There are significant numbers of people who are never going
+to use the feature, along with significant numbers who need the
+feature.
+
+Add a Kconfig option for the feature (default to 'y').  Also add a
+command-line option to control whether PV linear pagetables are
+allowed (default to 'true').
+
+NB that we leave linear_pt_count in the page struct.  It's in a union,
+so its presence doesn't increase the size of the data struct.
+Changing the layout of the other elements based on configuration
+options is asking for trouble however; so we'll just leave it there
+and ASSERT that it's zero.
+
+Reported-by: Jann Horn <jannh@google.com>
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+master commit: 3285e75dea89afb0ef5b3ee39bd15194bd7cc110
+master date: 2017-10-27 14:36:45 +0100
+
+(cherry picked from commit e1fa1c6ee152105c9adf5fb5ff4507028a87d2a3)
+---
+ docs/misc/xen-command-line.markdown | 19 +++++++++++++++++++
+ xen/arch/x86/Kconfig                | 19 +++++++++++++++++++
+ xen/arch/x86/mm.c                   | 38 ++++++++++++++++++++++++++++++++++++-
+ 3 files changed, 75 insertions(+), 1 deletion(-)
+
+diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
+index 54acc60..0fcdb7d 100644
+--- a/docs/misc/xen-command-line.markdown
++++ b/docs/misc/xen-command-line.markdown
+@@ -1350,6 +1350,25 @@ The following resources are available:
+     CDP, one COS will corespond two CBMs other than one with CAT, due to the
+     sum of CBMs is fixed, that means actual `cos_max` in use will automatically
+     reduce to half when CDP is enabled.
++	
++### pv-linear-pt
++> `= <boolean>`
++
++> Default: `true`
++
++Only available if Xen is compiled with CONFIG\_PV\_LINEAR\_PT support
++enabled.
++
++Allow PV guests to have pagetable entries pointing to other pagetables
++of the same level (i.e., allowing L2 PTEs to point to other L2 pages).
++This technique is often called "linear pagetables", and is sometimes
++used to allow operating systems a simple way to consistently map the
++current process's pagetables into its own virtual address space.
++
++Linux and MiniOS don't use this technique.  NetBSD and Novell Netware
++do; there may be other custom operating systems which do.  If you're
++certain you don't plan on having PV guests which use this feature,
++turning it off can reduce the attack surface.
+ 
+ ### reboot
+ > `= t[riple] | k[bd] | a[cpi] | p[ci] | P[ower] | e[fi] | n[o] [, [w]arm | [c]old]`
+diff --git a/xen/arch/x86/Kconfig b/xen/arch/x86/Kconfig
+index 96ca2bf..55ec5f8 100644
+--- a/xen/arch/x86/Kconfig
++++ b/xen/arch/x86/Kconfig
+@@ -32,6 +32,25 @@ menu "Architecture Features"
+ 
+ source "arch/Kconfig"
+ 
++config PV_LINEAR_PT
++       bool "Support for PV linear pagetables"
++       default y
++       ---help---
++         Linear pagetables (also called "recursive pagetables") refers
++         to the practice of a guest operating system having pagetable
++         entries pointing to other pagetables of the same level (i.e.,
++         allowing L2 PTEs to point to other L2 pages).  Some operating
++         systems use it as a simple way to consistently map the current
++         process's pagetables into its own virtual address space.
++
++         Linux and MiniOS don't use this technique.  NetBSD and Novell
++         Netware do; there may be other custom operating systems which
++         do.  If you're certain you don't plan on having PV guests
++         which use this feature, turning it off can reduce the attack
++         surface.
++
++         If unsure, say Y.
++
+ config SHADOW_PAGING
+         bool "Shadow Paging"
+         default y
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index bcc006d..86aeb06 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -83,7 +83,7 @@
+  * an application-supplied buffer).
+  */
+ 
+-#include <xen/config.h>
++#include <xen/kconfig.h>
+ #include <xen/init.h>
+ #include <xen/kernel.h>
+ #include <xen/lib.h>
+@@ -733,6 +733,8 @@ static void put_data_page(
+         put_page(page);
+ }
+ 
++#ifdef CONFIG_PV_LINEAR_PT
++
+ static bool inc_linear_entries(struct page_info *pg)
+ {
+     typeof(pg->linear_pt_count) nc = read_atomic(&pg->linear_pt_count), oc;
+@@ -800,6 +802,9 @@ static void dec_linear_uses(struct page_info *pg)
+  *     frame if it is mapped by a different root table. This is sufficient and
+  *     also necessary to allow validation of a root table mapping itself.
+  */
++static bool __read_mostly opt_pv_linear_pt = true;
++boolean_param("pv-linear-pt", opt_pv_linear_pt);
++
+ #define define_get_linear_pagetable(level)                                  \
+ static int                                                                  \
+ get_##level##_linear_pagetable(                                             \
+@@ -809,6 +814,12 @@ get_##level##_linear_pagetable(                                             \
+     struct page_info *page;                                                 \
+     unsigned long pfn;                                                      \
+                                                                             \
++    if ( !opt_pv_linear_pt )                                                \
++    {                                                                       \
++        MEM_LOG("Attempt to create linear p.t. (feature disabled)\n");      \
++        return 0;                                                           \
++    }                                                                       \
++                                                                            \
+     if ( (level##e_get_flags(pde) & _PAGE_RW) )                             \
+     {                                                                       \
+         MEM_LOG("Attempt to create linear p.t. with write perms");          \
+@@ -865,6 +876,27 @@ get_##level##_linear_pagetable(                                             \
+     return 1;                                                               \
+ }
+ 
++#else /* CONFIG_PV_LINEAR_PT */
++
++#define define_get_linear_pagetable(level)                              \
++static int                                                              \
++get_##level##_linear_pagetable(                                         \
++        level##_pgentry_t pde, unsigned long pde_pfn, struct domain *d) \
++{                                                                       \
++        return 0;                                                       \
++}
++
++static void dec_linear_uses(struct page_info *pg)
++{
++    ASSERT(pg->linear_pt_count == 0);
++}
++
++static void dec_linear_entries(struct page_info *pg)
++{
++    ASSERT(pg->linear_pt_count == 0);
++}
++
++#endif /* CONFIG_PV_LINEAR_PT */
+ 
+ int is_iomem_page(unsigned long mfn)
+ {
+@@ -2556,6 +2588,7 @@ static int _put_page_type(struct page_info *page, bool preemptible,
+                 break;
+             }
+ 
++#ifdef CONFIG_PV_LINEAR_PT
+             if ( ptpg && PGT_type_equal(x, ptpg->u.inuse.type_info) )
+             {
+                 /*
+@@ -2570,6 +2603,9 @@ static int _put_page_type(struct page_info *page, bool preemptible,
+                 ASSERT(ptpg->linear_pt_count > 0);
+                 ptpg = NULL;
+             }
++#else /* CONFIG_PV_LINEAR_PT */
++            BUG_ON(ptpg && PGT_type_equal(x, ptpg->u.inuse.type_info));
++#endif
+ 
+             /*
+              * Record TLB information for flush later. We do not stamp page
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 21 Nov 2017 15:38:05 +0000
+Subject: [PATCH] x86: don't wrongly trigger linear page table assertion
+
+_put_page_type() may do multiple iterations until its cmpxchg()
+succeeds. It invokes set_tlbflush_timestamp() on the first
+iteration, however. Code inside the function takes care of this, but
+- the assertion in _put_final_page_type() would trigger on the second
+  iteration if time stamps in a debug build are permitted to be
+  sufficiently much wider than the default 6 bits (see WRAP_MASK in
+  flushtlb.c),
+- it returning -EINTR (for a continuation to be scheduled) would leave
+  the page inconsistent state (until the re-invocation completes).
+Make the set_tlbflush_timestamp() invocation conditional, bypassing it
+(for now) only in the case we really can't tolerate the stamp to be
+stored.
+
+This is part of XSA-240.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: George Dunlap <george.dunlap@citrix.com>
+---
+ xen/arch/x86/mm.c | 30 +++++++++---------------------
+ 1 file changed, 9 insertions(+), 21 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 86aeb06..8fb9366 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -2588,34 +2588,22 @@ static int _put_page_type(struct page_info *page, bool preemptible,
+                 break;
+             }
+ 
+-#ifdef CONFIG_PV_LINEAR_PT
+-            if ( ptpg && PGT_type_equal(x, ptpg->u.inuse.type_info) )
+-            {
+-                /*
+-                 * set_tlbflush_timestamp() accesses the same union
+-                 * linear_pt_count lives in. Unvalidated page table pages,
+-                 * however, should occur during domain destruction only
+-                 * anyway.  Updating of linear_pt_count luckily is not
+-                 * necessary anymore for a dying domain.
+-                 */
+-                ASSERT(page_get_owner(page)->is_dying);
+-                ASSERT(page->linear_pt_count < 0);
+-                ASSERT(ptpg->linear_pt_count > 0);
+-                ptpg = NULL;
+-            }
+-#else /* CONFIG_PV_LINEAR_PT */
+-            BUG_ON(ptpg && PGT_type_equal(x, ptpg->u.inuse.type_info));
+-#endif
+-
+             /*
+              * Record TLB information for flush later. We do not stamp page
+              * tables when running in shadow mode:
+              *  1. Pointless, since it's the shadow pt's which must be tracked.
+              *  2. Shadow mode reuses this field for shadowed page tables to
+              *     store flags info -- we don't want to conflict with that.
++             * Also page_set_tlbflush_timestamp() accesses the same union
++             * linear_pt_count lives in. Pages (including page table ones),
++             * however, don't need their flush time stamp set except when
++             * the last reference is being dropped. For page table pages
++             * this happens in _put_final_page_type().
+              */
+-            if ( !(shadow_mode_enabled(page_get_owner(page)) &&
+-                   (page->count_info & PGC_page_table)) )
++            if ( ptpg && PGT_type_equal(x, ptpg->u.inuse.type_info) )
++                BUG_ON(!IS_ENABLED(CONFIG_PV_LINEAR_PT));
++            else if ( !(shadow_mode_enabled(page_get_owner(page)) &&
++                        (page->count_info & PGC_page_table)) )
+                 page_set_tlbflush_timestamp(page);
+         }
+         else if ( unlikely((nx & (PGT_locked | PGT_count_mask)) ==
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Tue, 21 Nov 2017 15:52:28 +0000
+Subject: [PATCH] x86/shadow: correct SH_LINEAR mapping detection in
+ sh_guess_wrmap()
+
+The fix for XSA-243 / CVE-2017-15592 (c/s bf2b4eadcf379) introduced a change
+in behaviour for sh_guest_wrmap(), where it had to cope with no shadow linear
+mapping being present.
+
+As the name suggests, guest_vtable is a mapping of the guests pagetable, not
+Xen's pagetable, meaning that it isn't the pagetable we need to check for the
+shadow linear slot in.
+
+The practical upshot is that a shadow HVM vcpu which switches into 4-level
+paging mode, with an L4 pagetable that contains a mapping which aliases Xen's
+SH_LINEAR_PT_VIRT_START will fool the safety check for whether a SHADOW_LINEAR
+mapping is present.  As the check passes (when it should have failed), Xen
+subsequently falls over the missing mapping with a pagefault such as:
+
+    (XEN) Pagetable walk from ffff8140a0503880:
+    (XEN)  L4[0x102] = 000000046c218063 ffffffffffffffff
+    (XEN)  L3[0x102] = 000000046c218063 ffffffffffffffff
+    (XEN)  L2[0x102] = 000000046c218063 ffffffffffffffff
+    (XEN)  L1[0x103] = 0000000000000000 ffffffffffffffff
+
+This is part of XSA-243.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm/shadow/multi.c | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/xen/arch/x86/mm/shadow/multi.c b/xen/arch/x86/mm/shadow/multi.c
+index 029e8d4..2881104 100644
+--- a/xen/arch/x86/mm/shadow/multi.c
++++ b/xen/arch/x86/mm/shadow/multi.c
+@@ -4299,11 +4299,18 @@ static int sh_guess_wrmap(struct vcpu *v, unsigned long vaddr, mfn_t gmfn)
+ 
+     /* Carefully look in the shadow linear map for the l1e we expect */
+ #if SHADOW_PAGING_LEVELS >= 4
+-    /* Is a shadow linear map is installed in the first place? */
+-    sl4p  = v->arch.paging.shadow.guest_vtable;
+-    sl4p += shadow_l4_table_offset(SH_LINEAR_PT_VIRT_START);
+-    if ( !(shadow_l4e_get_flags(*sl4p) & _PAGE_PRESENT) )
+-        return 0;
++    /*
++     * Non-external guests (i.e. PV) have a SHADOW_LINEAR mapping from the
++     * moment their shadows are created.  External guests (i.e. HVM) may not,
++     * but always have a regular linear mapping, which we can use to observe
++     * whether a SHADOW_LINEAR mapping is present.
++     */
++    if ( paging_mode_external(d) )
++    {
++        sl4p =  __linear_l4_table + l4_linear_offset(SH_LINEAR_PT_VIRT_START);
++        if ( !(shadow_l4e_get_flags(*sl4p) & _PAGE_PRESENT) )
++            return 0;
++    }
+     sl4p = sh_linear_l4_table(v) + shadow_l4_linear_offset(vaddr);
+     if ( !(shadow_l4e_get_flags(*sl4p) & _PAGE_PRESENT) )
+         return 0;
+-- 
+
