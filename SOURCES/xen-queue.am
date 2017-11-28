@@ -12924,3 +12924,402 @@ index d4f70b9..ecd073b 100644
          return 0;
 -- 
 
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Kevin Stange <kevin@steadfast.net>
+Date: Tue, 14 Nov 2017 13:46:03 -0600
+Subject: [PATCH] xen/physmap: Do not permit a guest to populate PoD pages for
+ itself
+
+PoD is supposed to be entirely transparent to guest, but this interface has
+been left exposed for a long time.
+
+The use of PoD requires careful co-ordination by the toolstack with the
+XENMEM_{get,set}_pod_target hypercalls, and xenstore ballooning target.  The
+best a guest can do without toolstack cooperation crash.
+
+Furthermore, there are combinations of features (e.g. c/s c63868f "libxl:
+disallow PCI device assignment for HVM guest when PoD is enabled") which a
+toolstack might wish to explicitly prohibit (in this case, because the two
+simply don't function in combination).  In such cases, the guest mustn't be
+able to subvert the configuration chosen by the toolstack.
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Acked-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/common/memory.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/xen/common/memory.c b/xen/common/memory.c
+index 89409a9..7774dc2 100644
+--- a/xen/common/memory.c
++++ b/xen/common/memory.c
+@@ -143,14 +143,14 @@ static void populate_physmap(struct memop_args *a)
+     struct page_info *page;
+     unsigned long i, j;
+     xen_pfn_t gpfn, mfn;
+-    struct domain *d = a->domain;
++    struct domain *d = a->domain, *curr_d = current->domain;
+ 
+     if ( !guest_handle_subrange_okay(a->extent_list, a->nr_done,
+                                      a->nr_extents-1) )
+         return;
+ 
+     if ( a->extent_order > (a->memflags & MEMF_populate_on_demand ? MAX_ORDER :
+-                            max_order(current->domain)) )
++                            max_order(curr_d)) )
+         return;
+ 
+     for ( i = a->nr_done; i < a->nr_extents; i++ )
+@@ -166,6 +166,10 @@ static void populate_physmap(struct memop_args *a)
+ 
+         if ( a->memflags & MEMF_populate_on_demand )
+         {
++            /* Disallow populating PoD pages on oneself. */
++            if ( d == curr_d )
++                goto out;
++
+             if ( guest_physmap_mark_populate_on_demand(d, gpfn,
+                                                        a->extent_order) < 0 )
+                 goto out;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Kevin Stange <kevin@steadfast.net>
+Date: Tue, 14 Nov 2017 14:09:04 -0600
+Subject: [PATCH] x86/pod: prevent infinite loop when shattering large pages
+
+When populating pages, the PoD may need to split large ones using
+set_p2m_entry and request the caller to retry (see ept_get_entry for
+instance).
+
+set_p2m_entry may fail to shatter if it is not possible to allocate
+memory for the new page table. However, the error is not propagated
+resulting to the callers to retry infinitely the PoD.
+
+Prevent the infinite loop by return false when it is not possible to
+shatter the large mapping.
+
+This is XSA-246.
+---
+ xen/arch/x86/mm/p2m-pod.c | 29 +++++++++++++++++++----------
+ 1 file changed, 19 insertions(+), 10 deletions(-)
+
+diff --git a/xen/arch/x86/mm/p2m-pod.c b/xen/arch/x86/mm/p2m-pod.c
+index d5e566e..e886477 100644
+--- a/xen/arch/x86/mm/p2m-pod.c
++++ b/xen/arch/x86/mm/p2m-pod.c
+@@ -1044,9 +1044,8 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
+          * NOTE: In a fine-grained p2m locking scenario this operation
+          * may need to promote its locking from gfn->1g superpage
+          */
+-        set_p2m_entry(p2m, gfn_aligned, _mfn(0), PAGE_ORDER_2M,
+-                      p2m_populate_on_demand, p2m->default_access);
+-        return 0;
++        return !set_p2m_entry(p2m, gfn_aligned, _mfn(0), PAGE_ORDER_2M,
++                              p2m_populate_on_demand, p2m->default_access);
+     }
+ 
+     pod_eager_reclaim(p2m);
+@@ -1075,7 +1074,12 @@ p2m_pod_demand_populate(struct p2m_domain *p2m, unsigned long gfn,
+ 
+     gfn_aligned = (gfn >> order) << order;
+ 
+-    set_p2m_entry(p2m, gfn_aligned, mfn, order, p2m_ram_rw, p2m->default_access);
++    if ( !set_p2m_entry(p2m, gfn_aligned, mfn, order, p2m_ram_rw,
++                        p2m->default_access) )
++    {
++        p2m_pod_cache_add(p2m, p, order);
++        goto out_fail;
++    }
+ 
+     for( i = 0; i < (1UL << order); i++ )
+     {
+@@ -1120,13 +1124,18 @@ remap_and_retry:
+     BUG_ON(order != PAGE_ORDER_2M);
+     pod_unlock(p2m);
+ 
+-    /* Remap this 2-meg region in singleton chunks */
+-    /* NOTE: In a p2m fine-grained lock scenario this might
+-     * need promoting the gfn lock from gfn->2M superpage */
++    /*
++     * Remap this 2-meg region in singleton chunks. See the comment on the
++     * 1G page splitting path above for why a single call suffices.
++     *
++     * NOTE: In a p2m fine-grained lock scenario this might
++     * need promoting the gfn lock from gfn->2M superpage.
++     */
+     gfn_aligned = (gfn>>order)<<order;
+-    for(i=0; i<(1<<order); i++)
+-        set_p2m_entry(p2m, gfn_aligned+i, _mfn(0), PAGE_ORDER_4K,
+-                      p2m_populate_on_demand, p2m->default_access);
++    if( !set_p2m_entry(p2m, gfn_aligned, _mfn(0), PAGE_ORDER_4K,
++                       p2m_populate_on_demand, p2m->default_access) )
++        return -1;
++
+     if ( tb_init_done )
+     {
+         struct {
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Kevin Stange <kevin@steadfast.net>
+Date: Tue, 14 Nov 2017 14:33:03 -0600
+Subject: [PATCH] p2m: Always check to see if removing a p2m entry actually
+ worked
+
+The PoD zero-check functions speculatively remove memory from the p2m,
+then check to see if it's completely zeroed, before putting it in the
+cache.
+
+Unfortunately, the set_p2m_entry() calls may fail if the underlying
+pagetable structure needs to change and the domain has exhausted its
+p2m memory pool: for instance, if we're removing a 2MiB region out of
+a 1GiB entry (in the p2m_pod_zero_check_superpage() case), or a 4k
+region out of a 2MiB or larger entry (in the p2m_pod_zero_check()
+case); and the return value is not checked.
+
+The underlying mfn will then be added into the PoD cache, and at some
+point mapped into another location in the p2m.  If the guest
+afterwards ballons out this memory, it will be freed to the hypervisor
+and potentially reused by another domain, in spite of the fact that
+the original domain still has writable mappings to it.
+
+There are several places where set_p2m_entry() shouldn't be able to
+fail, as it is guaranteed to write an entry of the same order that
+succeeded before.  Add a backstop of crashing the domain just in case,
+and an ASSERT_UNREACHABLE() to flag up the broken assumption on debug
+builds.
+
+While we're here, use PAGE_ORDER_2M rather than a magic constant.
+
+This is part of XSA-247.
+---
+ xen/arch/x86/mm/p2m-pod.c | 74 +++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 59 insertions(+), 15 deletions(-)
+
+diff --git a/xen/arch/x86/mm/p2m-pod.c b/xen/arch/x86/mm/p2m-pod.c
+index e886477..d1a8d6a 100644
+--- a/xen/arch/x86/mm/p2m-pod.c
++++ b/xen/arch/x86/mm/p2m-pod.c
+@@ -727,8 +727,9 @@ p2m_pod_zero_check_superpage(struct p2m_domain *p2m, unsigned long gfn)
+     }
+ 
+     /* Try to remove the page, restoring old mapping if it fails. */
+-    set_p2m_entry(p2m, gfn, _mfn(0), PAGE_ORDER_2M,
+-                  p2m_populate_on_demand, p2m->default_access);
++    if ( !set_p2m_entry(p2m, gfn, _mfn(0), PAGE_ORDER_2M,
++                        p2m_populate_on_demand, p2m->default_access) )
++        goto out;
+ 
+     /* Make none of the MFNs are used elsewhere... for example, mapped
+      * via the grant table interface, or by qemu.  Allow one refcount for
+@@ -784,8 +785,17 @@ p2m_pod_zero_check_superpage(struct p2m_domain *p2m, unsigned long gfn)
+     ret = SUPERPAGE_PAGES;
+ 
+ out_reset:
+-    if ( reset )
+-        set_p2m_entry(p2m, gfn, mfn0, 9, type0, p2m->default_access);
++    /*
++     * This set_p2m_entry() call shouldn't be able to fail, since the same order
++     * on the same gfn succeeded above.  If that turns out to be false, crashing
++     * the domain should be the safest way of making sure we don't leak memory.
++     */
++    if ( reset && !set_p2m_entry(p2m, gfn, mfn0, PAGE_ORDER_2M,
++                                 type0, p2m->default_access) )
++    {
++        ASSERT_UNREACHABLE();
++        domain_crash(d);
++    }
+     
+ out:
+     gfn_unlock(p2m, gfn, SUPERPAGE_ORDER);
+@@ -843,19 +853,30 @@ p2m_pod_zero_check(struct p2m_domain *p2m, unsigned long *gfns, int count)
+         }
+ 
+         /* Try to remove the page, restoring old mapping if it fails. */
+-        set_p2m_entry(p2m, gfns[i], _mfn(0), PAGE_ORDER_4K,
+-                      p2m_populate_on_demand, p2m->default_access);
++        if ( !set_p2m_entry(p2m, gfns[i], _mfn(0), PAGE_ORDER_4K,
++                            p2m_populate_on_demand, p2m->default_access) )
++            goto skip;
+ 
+         /* See if the page was successfully unmapped.  (Allow one refcount
+          * for being allocated to a domain.) */
+         if ( (mfn_to_page(mfns[i])->count_info & PGC_count_mask) > 1 )
+         {
++            /*
++             * If the previous set_p2m_entry call succeeded, this one shouldn't
++             * be able to fail.  If it does, crashing the domain should be safe.
++             */
++            if ( !set_p2m_entry(p2m, gfns[i], mfns[i], PAGE_ORDER_4K,
++                                types[i], p2m->default_access) )
++            {
++                ASSERT_UNREACHABLE();
++                domain_crash(d);
++                goto out_unmap;
++            }
++
++        skip:
+             unmap_domain_page(map[i]);
+             map[i] = NULL;
+ 
+-            set_p2m_entry(p2m, gfns[i], mfns[i], PAGE_ORDER_4K,
+-                types[i], p2m->default_access);
+-
+             continue;
+         }
+     }
+@@ -872,12 +893,25 @@ p2m_pod_zero_check(struct p2m_domain *p2m, unsigned long *gfns, int count)
+ 
+         unmap_domain_page(map[i]);
+ 
+-        /* See comment in p2m_pod_zero_check_superpage() re gnttab
+-         * check timing.  */
+-        if ( j < PAGE_SIZE/sizeof(*map[i]) )
++        map[i] = NULL;
++
++        /*
++         * See comment in p2m_pod_zero_check_superpage() re gnttab
++         * check timing.
++         */
++        if ( j < (PAGE_SIZE / sizeof(*map[i])) )
+         {
+-            set_p2m_entry(p2m, gfns[i], mfns[i], PAGE_ORDER_4K,
+-                types[i], p2m->default_access);
++            /*
++             * If the previous set_p2m_entry call succeeded, this one shouldn't
++             * be able to fail.  If it does, crashing the domain should be safe.
++             */
++            if ( !set_p2m_entry(p2m, gfns[i], mfns[i], PAGE_ORDER_4K,
++                                types[i], p2m->default_access) )
++            {
++                ASSERT_UNREACHABLE();
++                domain_crash(d);
++                goto out_unmap;
++            }
+         }
+         else
+         {
+@@ -901,7 +935,17 @@ p2m_pod_zero_check(struct p2m_domain *p2m, unsigned long *gfns, int count)
+             p2m->pod.entry_count++;
+         }
+     }
+-    
++
++    return;
++
++out_unmap:
++    /*
++     * Something went wrong, probably crashing the domain.  Unmap
++     * everything and return.
++     */
++    for ( i = 0; i < count; i++ )
++        if ( map[i] )
++            unmap_domain_page(map[i]);
+ }
+ 
+ #define POD_SWEEP_LIMIT 1024
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Kevin Stange <kevin@steadfast.net>
+Date: Tue, 14 Nov 2017 14:41:30 -0600
+Subject: [PATCH] p2m: Check return value of set_p2m_entry() when decreasing
+ reservation
+
+If the entire range specified to p2m_pod_decrease_reservation() is marked
+populate-on-demand, then it will make a single set_p2m_entry() call,
+reducing its PoD entry count.
+
+Unfortunately, in the right circumstances, this set_p2m_entry() call
+may fail.  It that case, repeated calls to decrease_reservation() may
+cause p2m->pod.entry_count to fall below zero, potentially tripping
+over BUG_ON()s to the contrary.
+
+Instead, check to see if the entry succeeded, and return false if not.
+The caller will then call guest_remove_page() on the gfns, which will
+return -EINVAL upon finding no valid memory there to return.
+
+Unfortunately if the order > 0, the entry may have partially changed.
+A domain_crash() is probably the safest thing in that case.
+
+Other set_p2m_entry() calls in the same function should be fine,
+because they are writing the entry at its current order.  Nonetheless,
+check the return value and crash if our assumption turns out to be
+wrong.
+
+This is part of XSA-247.
+---
+ xen/arch/x86/mm/p2m-pod.c | 39 +++++++++++++++++++++++++++++++++------
+ 1 file changed, 33 insertions(+), 6 deletions(-)
+
+diff --git a/xen/arch/x86/mm/p2m-pod.c b/xen/arch/x86/mm/p2m-pod.c
+index d1a8d6a..48c614d 100644
+--- a/xen/arch/x86/mm/p2m-pod.c
++++ b/xen/arch/x86/mm/p2m-pod.c
+@@ -560,10 +560,23 @@ recount:
+ 
+     if ( !nonpod )
+     {
+-        /* All PoD: Mark the whole region invalid and tell caller
+-         * we're done. */
+-        set_p2m_entry(p2m, gpfn, _mfn(INVALID_MFN), order, p2m_invalid, p2m->default_access);
+-        p2m->pod.entry_count-=(1<<order);
++        /*
++         * All PoD: Mark the whole region invalid and tell caller
++         * we're done.
++         */
++        if ( !set_p2m_entry(p2m, gpfn, _mfn(INVALID_MFN), order, p2m_invalid,
++                            p2m->default_access) )
++        {
++            /*
++             * If this fails, we can't tell how much of the range was changed.
++             * Best to crash the domain unless we're sure a partial change is
++             * impossible.
++             */
++            if ( order != 0 )
++                domain_crash(d);
++            goto out_unlock;
++        }
++        p2m->pod.entry_count -= 1UL << order;
+         BUG_ON(p2m->pod.entry_count < 0);
+         ret = 1;
+         goto out_entry_check;
+@@ -595,7 +608,14 @@ recount:
+         mfn = p2m->get_entry(p2m, gpfn + i, &t, &a, 0, NULL);
+         if ( t == p2m_populate_on_demand )
+         {
+-            set_p2m_entry(p2m, gpfn + i, _mfn(INVALID_MFN), 0, p2m_invalid, p2m->default_access);
++            /* This shouldn't be able to fail */
++            if ( !set_p2m_entry(p2m, gpfn + i, _mfn(INVALID_MFN), 0,
++                                p2m_invalid, p2m->default_access) )
++            {
++                ASSERT_UNREACHABLE();
++                domain_crash(d);
++                goto out_unlock;
++            }
+             p2m->pod.entry_count--;
+             BUG_ON(p2m->pod.entry_count < 0);
+             pod--;
+@@ -608,7 +628,14 @@ recount:
+ 
+             page = mfn_to_page(mfn);
+ 
+-            set_p2m_entry(p2m, gpfn + i, _mfn(INVALID_MFN), 0, p2m_invalid, p2m->default_access);
++            /* This shouldn't be able to fail */
++            if ( !set_p2m_entry(p2m, gpfn + i, _mfn(INVALID_MFN), 0,
++                                p2m_invalid, p2m->default_access) )
++            {
++                ASSERT_UNREACHABLE();
++                domain_crash(d);
++                goto out_unlock;
++            }
+             set_gpfn_from_mfn(mfn_x(mfn), INVALID_M2P_ENTRY);
+ 
+             p2m_pod_cache_add(p2m, page, 0);
+-- 
+
