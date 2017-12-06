@@ -57,7 +57,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.2
-Release: 5%{?dist}
+Release: 6%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -959,6 +959,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Dec 06 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.2-6.el7.centos
+- Apply XSAs 246 and 247
+
 * Fri Nov 24 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.2-5.el7.centos
 - Add OVMF, the guest EFI firmware (available via xen-ovmf package)
 
