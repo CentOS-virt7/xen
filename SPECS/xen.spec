@@ -52,7 +52,7 @@
 
 
 # Hypervisor ABI
-%define hv_abi  4.8
+%define hv_abi  4.10
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -63,7 +63,7 @@
 # Once Xen is released:
 # - Set xen_rc_base to 0
 # - Change the package Release number to 1
-%define xen_rc_base 0
+%define xen_rc_base rc8
 %if %{xen_rc_base}
 %define xen_rc_pkgver .%{xen_rc_base}
 %define xen_rc -%{xen_rc_base}
@@ -71,8 +71,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: %{hv_abi}.2
-Release: 6%{?xen_rc_pkgver}%{?dist}
+Version: %{hv_abi}.0
+Release: 0.1%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -94,7 +94,7 @@ Source49: tmpfiles.d.xen.conf
 Source50: xen-kernel.x86_64
 Source51: xen-kernel.aarch64
 Source52: efi-xen.cfg.aarch64
-Source53: edk2-bc54e50e0fe03c570014f363b547426913e92449.tar.gz
+Source53: edk2-947f3737abf65fda63f3ffd97fddfa6986986868.tar.gz
 
 %if %{with_livepatch}
 Source60: livepatch-tools-0c104573a1c168995ec553778d1d2d1ebe9c9042.tar.gz
@@ -412,6 +412,7 @@ export WGET=$(type -P false)
 export GIT=$(type -P false)
 
 %if %{with_blktap}
+%define extra_config_blktap --enable-blktap2
 %else
 %define extra_config_blktap --disable-blktap2
 %endif
@@ -789,6 +790,14 @@ rm -rf %{buildroot}
 %{_mandir}/man1/xenstore-chmod.1.gz
 %{_mandir}/man1/xenstore-ls.1.gz
 %{_mandir}/man1/xenstore.1.gz
+%{_mandir}/man5/xl-disk-configuration.5.gz
+%{_mandir}/man5/xl-network-configuration.5.gz
+%{_mandir}/man7/xen-pci-device-reservations.7.gz
+%{_mandir}/man7/xen-pv-channel.7.gz
+%{_mandir}/man7/xen-tscmode.7.gz
+%{_mandir}/man7/xen-vtpm.7.gz
+%{_mandir}/man7/xen-vtpmmgr.7.gz
+%{_mandir}/man7/xl-numa-placement.7.gz
 
 
 %{python_sitearch}/fsimage.so
@@ -847,7 +856,9 @@ rm -rf %{buildroot}
 # Misc stuff
 %{_bindir}/xen-cpuid
 %{_sbindir}/xen-bugtool
+%{_sbindir}/xen-diag
 %{_sbindir}/xen-livepatch
+%{_sbindir}/xen-tmem-list-parse
 %{_sbindir}/xen-tmem-list-parse
 %{_sbindir}/xenconsoled
 %{_sbindir}/xenlockprof
@@ -937,7 +948,19 @@ rm -rf %{buildroot}
 %{_libdir}/*.la
 %endif
 
+%{_datadir}/pkgconfig/xencall.pc
+%{_datadir}/pkgconfig/xencontrol.pc
+%{_datadir}/pkgconfig/xendevicemodel.pc
+%{_datadir}/pkgconfig/xenevtchn.pc
+%{_datadir}/pkgconfig/xenforeignmemory.pc
+%{_datadir}/pkgconfig/xengnttab.pc
+%{_datadir}/pkgconfig/xenguest.pc
 %{_datadir}/pkgconfig/xenlight.pc
+%{_datadir}/pkgconfig/xenstat.pc
+%{_datadir}/pkgconfig/xenstore.pc
+%{_datadir}/pkgconfig/xentoolcore.pc
+%{_datadir}/pkgconfig/xentoollog.pc
+%{_datadir}/pkgconfig/xenvchan.pc
 %{_datadir}/pkgconfig/xlutil.pc
 
 %files licenses
@@ -974,6 +997,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Dec 08 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.10.0-0.1.rc8.el7.centos
+- Xen 4.10.0-rc8
+
 * Wed Dec 06 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.2-6.el7.centos
 - Apply XSAs 246 and 247
 
