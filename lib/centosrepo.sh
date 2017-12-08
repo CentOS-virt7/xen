@@ -41,7 +41,7 @@ function version-type()
 
     if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
 	_type="release"
-    elif [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+rc[0-9]+$ ]] ; then
+    elif [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$ ]] ; then
 	_type="rc"
     else
 	_type="unknown"
@@ -54,7 +54,6 @@ function version-to-tag()
 {
     local _tag
     local type
-    #FIXME: Handle 4.8rc3
 
     $arg_parse
 
@@ -67,8 +66,8 @@ function version-to-tag()
 	    _tag="RELEASE-$version"
 	    ;;
 	"rc")
-	    if [[ "$version" =~ (^[0-9]+\.[0-9]+\.[0-9]+)(rc[0-9]+)$ ]] ; then
-		_tag="${BASH_REMATCH[0]}-${BASH_REMATCH[1]}"
+	    if [[ "$version" =~ (^[0-9]+\.[0-9]+\.[0-9]+)(-rc[0-9]+)$ ]] ; then
+		_tag="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
 	    else
 		fail "Couldn't parse version"
 	    fi
@@ -264,10 +263,16 @@ function get-sources()
 
     echo "Checking Xen $XEN_VERSION release tarball"
     if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE ]] ; then
-	if [[ "$vtype" != "release" ]] ; then
-	    fail "Don't know how to get xen tarball for version $XEN_VERSION (type $vtype)"
-	fi
-	wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE || exit 1
+        local url
+        case "$vtype" in
+            release|rc)
+                url="$XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE"
+                ;;
+            *)
+                fail "Don't know how to get xen tarball for version $XEN_VERSION (type $vtype)"
+                ;;
+        esac
+        wget -P $TOPDIR/SOURCES/ "$url" || exit 1
     fi
 
     if gpg --list-keys 0x${XEN_KEY}; then
