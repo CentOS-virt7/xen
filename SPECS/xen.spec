@@ -54,14 +54,29 @@
 # Hypervisor ABI
 %define hv_abi  4.8
 
+# Xen Project release candidates
+# To build a package for a RC:
+# - Set xen_rc_base to "rcX" (X been the RC release number)
+# - Change the package Release number to "0.X" (X is incremented for every new
+#   build of an RC package)
+# - Version should be the version of Xen once released
+# Once Xen is released:
+# - Set xen_rc_base to 0
+# - Change the package Release number to 1
+%define xen_rc_base 0
+%if %{xen_rc_base}
+%define xen_rc_pkgver .%{xen_rc_base}
+%define xen_rc -%{xen_rc_base}
+%endif
+
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.2
-Release: 6%{?dist}
+Release: 6%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
-Source0: https://downloads.xenproject.org/release/xen/%{version}/xen-%{version}.tar.gz
+Source0: https://downloads.xenproject.org/release/xen/%{version}%{?xen_rc}/xen-%{version}%{?xen_rc}.tar.gz
 Source1: xen.modules
 Source2: xen.logrotate
 # used by stubdoms
@@ -282,7 +297,7 @@ per https://wiki.xen.org/wiki/LivePatch .
 %endif
 
 %prep
-%setup -q
+%setup -q -n "%{name}-%{version}%{?xen_rc}"
 
 ########################
 # To manipulate the am patchqueue (using 4.4.3 as an example):
@@ -324,7 +339,7 @@ git config gc.auto 0
 # Have to remove the .gitignore so that tools/hotplug/Linux/init.d actually get included in the git tree
 rm -f .gitignore
 git add .
-git commit -a -q -m "%{version} baseline."
+git commit -a -q -m "%{version}%{?xen_rc} baseline."
 
 # Apply patches to code in the core Xen repo
 git am %{PATCH1}
@@ -332,7 +347,7 @@ git am %{PATCH1}
 #Optionally enable live patching
 %if %{with_livepatch}
 echo "CONFIG_LIVEPATCH=y" > xen/.config
-%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE60}
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/ -zxf %{SOURCE60}
 %endif
 
 make -C xen olddefconfig
@@ -352,9 +367,9 @@ popd
 
 %if %{with_blktap}
 pushd `pwd`
-rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
-%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
-cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
+rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/blktap2
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/ -zxf %{SOURCE101}
+cd ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/blktap2
 ./autogen.sh
 XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=%{_libexecdir}/xen/bin
 popd
@@ -370,8 +385,8 @@ cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} st
 %endif
 
 %if %with_tianocore
-rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/edk2
-%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE53}
+rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/edk2
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/ -zxf %{SOURCE53}
 %endif
 
 
@@ -467,7 +482,7 @@ make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-stubdom
 %endif
 
 %if %build_efi
-install -m 644 %{SOURCE52} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}${XEN_VENDORVERSION}.cfg.sample
+install -m 644 %{SOURCE52} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}%{?xen_rc}${XEN_VENDORVERSION}.cfg.sample
 mv %{buildroot}/boot/efi/efi %{buildroot}/boot/efi/EFI
 %endif
 
@@ -881,9 +896,9 @@ rm -rf %{buildroot}
 %files hypervisor
 %defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/xen-kernel
-/boot/xen-%{version}-%{release}.config
+/boot/xen-%{version}%{?xen_rc:-rc}-%{release}.config
 %ifarch x86_64
-/boot/xen-%{version}-%{release}.gz
+/boot/xen-%{version}%{?xen_rc:-rc}-%{release}.gz
 /boot/xen.gz
 %endif
 %ifarch aarch64
