@@ -3075,3 +3075,376 @@ index f4077a8..e415b1b 100644
                  set_gpfn_from_mfn(mfn_x(mfn), INVALID_M2P_ENTRY);
 -- 
 
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 12 Dec 2017 12:29:58 +0000
+Subject: [PATCH] x86: don't wrongly trigger linear page table assertion (2)
+
+_put_final_page_type(), when free_page_type() has exited early to allow
+for preemption, should not update the time stamp, as the page continues
+to retain the typ which is in the process of being unvalidated. I can't
+see why the time stamp update was put on that path in the first place
+(albeit it may well have been me who had put it there years ago).
+
+This is part of XSA-240.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: <George Dunlap <george.dunlap.com>
+---
+ xen/arch/x86/mm.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 8fb9366..e1fa171 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -2535,9 +2535,6 @@ static int _put_final_page_type(struct page_info *page, unsigned long type,
+     {
+         ASSERT((page->u.inuse.type_info &
+                 (PGT_count_mask|PGT_validated|PGT_partial)) == 1);
+-        if ( !(shadow_mode_enabled(page_get_owner(page)) &&
+-               (page->count_info & PGC_page_table)) )
+-            page_set_tlbflush_timestamp(page);
+         wmb();
+         page->u.inuse.type_info |= PGT_validated;
+     }
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 12 Dec 2017 16:51:40 +0000
+Subject: [PATCH] x86/mm: don't wrongly set page ownership
+
+PV domains can obtain mappings of any pages owned by the correct domain,
+including ones that aren't actually assigned as "normal" RAM, but used
+by Xen internally.  At the moment such "internal" pages marked as owned
+by a guest include pages used to track logdirty bits, as well as p2m
+pages and the "unpaged pagetable" for HVM guests. Since the PV memory
+management and shadow code conflict in their use of struct page_info
+fields, and since shadow code is being used for log-dirty handling for
+PV domains, pages coming from the shadow pool must, for PV domains, not
+have the domain set as their owner.
+
+While the change could be done conditionally for just the PV case in
+shadow code, do it unconditionally (and for consistency also for HAP),
+just to be on the safe side.
+
+There's one special case though for shadow code: The page table used for
+running a HVM guest in unpaged mode is subject to get_page() (in
+set_shadow_status()) and hence must have its owner set.
+
+This is XSA-248.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+Reviewed-by: George Dunlap <george.dunlap@citrix.com>
+---
+ xen/arch/x86/mm/hap/hap.c       | 23 ++++++++++-----------
+ xen/arch/x86/mm/shadow/common.c | 44 +++++++++++++++++++++++++++++------------
+ 2 files changed, 43 insertions(+), 24 deletions(-)
+
+diff --git a/xen/arch/x86/mm/hap/hap.c b/xen/arch/x86/mm/hap/hap.c
+index 3218fa2..c90fc36 100644
+--- a/xen/arch/x86/mm/hap/hap.c
++++ b/xen/arch/x86/mm/hap/hap.c
+@@ -283,8 +283,7 @@ static struct page_info *hap_alloc_p2m_page(struct domain *d)
+     {
+         d->arch.paging.hap.total_pages--;
+         d->arch.paging.hap.p2m_pages++;
+-        page_set_owner(pg, d);
+-        pg->count_info |= 1;
++        ASSERT(!page_get_owner(pg) && !(pg->count_info & PGC_count_mask));
+     }
+     else if ( !d->arch.paging.p2m_alloc_failed )
+     {
+@@ -299,21 +298,23 @@ static struct page_info *hap_alloc_p2m_page(struct domain *d)
+ 
+ static void hap_free_p2m_page(struct domain *d, struct page_info *pg)
+ {
++    struct domain *owner = page_get_owner(pg);
++
+     /* This is called both from the p2m code (which never holds the 
+      * paging lock) and the log-dirty code (which always does). */
+     paging_lock_recursive(d);
+ 
+-    ASSERT(page_get_owner(pg) == d);
+-    /* Should have just the one ref we gave it in alloc_p2m_page() */
+-    if ( (pg->count_info & PGC_count_mask) != 1 ) {
+-        HAP_ERROR("Odd p2m page %p count c=%#lx t=%"PRtype_info"\n",
+-                     pg, pg->count_info, pg->u.inuse.type_info);
++    /* Should still have no owner and count zero. */
++    if ( owner || (pg->count_info & PGC_count_mask) )
++    {
++        HAP_ERROR("d%d: Odd p2m page %"PRI_mfn" d=%d c=%lx t=%"PRtype_info"\n",
++                  d->domain_id, mfn_x(page_to_mfn(pg)),
++                  owner ? owner->domain_id : DOMID_INVALID,
++                  pg->count_info, pg->u.inuse.type_info);
+         WARN();
++        pg->count_info &= ~PGC_count_mask;
++        page_set_owner(pg, NULL);
+     }
+-    pg->count_info &= ~PGC_count_mask;
+-    /* Free should not decrement domain's total allocation, since
+-     * these pages were allocated without an owner. */
+-    page_set_owner(pg, NULL);
+     d->arch.paging.hap.p2m_pages--;
+     d->arch.paging.hap.total_pages++;
+     hap_free(d, page_to_mfn(pg));
+diff --git a/xen/arch/x86/mm/shadow/common.c b/xen/arch/x86/mm/shadow/common.c
+index 40fcde5..e50c8e0 100644
+--- a/xen/arch/x86/mm/shadow/common.c
++++ b/xen/arch/x86/mm/shadow/common.c
+@@ -1573,32 +1573,29 @@ shadow_alloc_p2m_page(struct domain *d)
+     pg = mfn_to_page(shadow_alloc(d, SH_type_p2m_table, 0));
+     d->arch.paging.shadow.p2m_pages++;
+     d->arch.paging.shadow.total_pages--;
++    ASSERT(!page_get_owner(pg) && !(pg->count_info & PGC_count_mask));
+ 
+     paging_unlock(d);
+ 
+-    /* Unlike shadow pages, mark p2m pages as owned by the domain.
+-     * Marking the domain as the owner would normally allow the guest to
+-     * create mappings of these pages, but these p2m pages will never be
+-     * in the domain's guest-physical address space, and so that is not
+-     * believed to be a concern. */
+-    page_set_owner(pg, d);
+-    pg->count_info |= 1;
+     return pg;
+ }
+ 
+ static void
+ shadow_free_p2m_page(struct domain *d, struct page_info *pg)
+ {
+-    ASSERT(page_get_owner(pg) == d);
+-    /* Should have just the one ref we gave it in alloc_p2m_page() */
+-    if ( (pg->count_info & PGC_count_mask) != 1 )
++    struct domain *owner = page_get_owner(pg);
++
++    /* Should still have no owner and count zero. */
++    if ( owner || (pg->count_info & PGC_count_mask) )
+     {
+-        SHADOW_ERROR("Odd p2m page count c=%#lx t=%"PRtype_info"\n",
++        SHADOW_ERROR("d%d: Odd p2m page %"PRI_mfn" d=%d c=%lx t=%"PRtype_info"\n",
++                     d->domain_id, mfn_x(page_to_mfn(pg)),
++                     owner ? owner->domain_id : DOMID_INVALID,
+                      pg->count_info, pg->u.inuse.type_info);
++        pg->count_info &= ~PGC_count_mask;
++        page_set_owner(pg, NULL);
+     }
+-    pg->count_info &= ~PGC_count_mask;
+     pg->u.sh.type = SH_type_p2m_table; /* p2m code reuses type-info */
+-    page_set_owner(pg, NULL);
+ 
+     /* This is called both from the p2m code (which never holds the
+      * paging lock) and the log-dirty code (which always does). */
+@@ -3216,7 +3213,9 @@ int shadow_enable(struct domain *d, u32 mode)
+                     | _PAGE_PRESENT | _PAGE_RW | _PAGE_USER
+                     | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_PSE);
+         unmap_domain_page(e);
++        pg->count_info = 1;
+         pg->u.inuse.type_info = PGT_l2_page_table | 1 | PGT_validated;
++        page_set_owner(pg, d);
+     }
+ 
+     paging_lock(d);
+@@ -3254,7 +3253,11 @@ int shadow_enable(struct domain *d, u32 mode)
+     if ( rv != 0 && !pagetable_is_null(p2m_get_pagetable(p2m)) )
+         p2m_teardown(p2m);
+     if ( rv != 0 && pg != NULL )
++    {
++        pg->count_info &= ~PGC_count_mask;
++        page_set_owner(pg, NULL);
+         shadow_free_p2m_page(d, pg);
++    }
+     domain_unpause(d);
+     return rv;
+ }
+@@ -3363,7 +3366,22 @@ out:
+ 
+     /* Must be called outside the lock */
+     if ( unpaged_pagetable )
++    {
++        if ( page_get_owner(unpaged_pagetable) == d &&
++             (unpaged_pagetable->count_info & PGC_count_mask) == 1 )
++        {
++            unpaged_pagetable->count_info &= ~PGC_count_mask;
++            page_set_owner(unpaged_pagetable, NULL);
++        }
++        /* Complain here in cases where shadow_free_p2m_page() won't. */
++        else if ( !page_get_owner(unpaged_pagetable) &&
++                  !(unpaged_pagetable->count_info & PGC_count_mask) )
++            SHADOW_ERROR("d%d: Odd unpaged pt %"PRI_mfn" c=%lx t=%"PRtype_info"\n",
++                         d->domain_id, mfn_x(page_to_mfn(unpaged_pagetable)),
++                         unpaged_pagetable->count_info,
++                         unpaged_pagetable->u.inuse.type_info);
+         shadow_free_p2m_page(d, unpaged_pagetable);
++    }
+ }
+ 
+ void shadow_final_teardown(struct domain *d)
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 12 Dec 2017 16:53:54 +0000
+Subject: [PATCH] x86/shadow: fix refcount overflow check
+
+Commit c385d27079 ("x86 shadow: for multi-page shadows, explicitly track
+the first page") reduced the refcount width to 25, without adjusting the
+overflow check. Eliminate the disconnect by using a manifest constant.
+
+Interestingly, up to commit 047782fa01 ("Out-of-sync L1 shadows: OOS
+snapshot") the refcount was 27 bits wide, yet the check was already
+using 26.
+
+This is XSA-249.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: George Dunlap <george.dunlap@citrix.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm/shadow/private.h | 2 +-
+ xen/include/asm-x86/mm.h         | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/xen/arch/x86/mm/shadow/private.h b/xen/arch/x86/mm/shadow/private.h
+index f0b0ed4..58e37f3 100644
+--- a/xen/arch/x86/mm/shadow/private.h
++++ b/xen/arch/x86/mm/shadow/private.h
+@@ -532,7 +532,7 @@ static inline int sh_get_ref(struct domain *d, mfn_t smfn, paddr_t entry_pa)
+     x = sp->u.sh.count;
+     nx = x + 1;
+ 
+-    if ( unlikely(nx >= 1U<<26) )
++    if ( unlikely(nx >= (1U << PAGE_SH_REFCOUNT_WIDTH)) )
+     {
+         SHADOW_PRINTK("shadow ref overflow, gmfn=%lx smfn=%lx\n",
+                        __backpointer(sp), mfn_x(smfn));
+diff --git a/xen/include/asm-x86/mm.h b/xen/include/asm-x86/mm.h
+index 63590a7..a900eca 100644
+--- a/xen/include/asm-x86/mm.h
++++ b/xen/include/asm-x86/mm.h
+@@ -83,7 +83,8 @@ struct page_info
+             unsigned long type:5;   /* What kind of shadow is this? */
+             unsigned long pinned:1; /* Is the shadow pinned? */
+             unsigned long head:1;   /* Is this the first page of the shadow? */
+-            unsigned long count:25; /* Reference count */
++#define PAGE_SH_REFCOUNT_WIDTH 25
++            unsigned long count:PAGE_SH_REFCOUNT_WIDTH; /* Reference count */
+         } sh;
+ 
+         /* Page is on a free list: ((count_info & PGC_count_mask) == 0). */
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 12 Dec 2017 16:55:15 +0000
+Subject: [PATCH] x86/shadow: fix ref-counting error handling
+
+The old-Linux handling in shadow_set_l4e() mistakenly ORed together the
+results of sh_get_ref() and sh_pin(). As the latter failing is not a
+correctness problem, simply ignore its return value.
+
+In sh_set_toplevel_shadow() a failing sh_get_ref() must not be
+accompanied by installing the entry, despite the domain being crashed.
+
+This is XSA-250.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/mm/shadow/multi.c | 20 +++++++++++---------
+ 1 file changed, 11 insertions(+), 9 deletions(-)
+
+diff --git a/xen/arch/x86/mm/shadow/multi.c b/xen/arch/x86/mm/shadow/multi.c
+index 2881104..aca28eb 100644
+--- a/xen/arch/x86/mm/shadow/multi.c
++++ b/xen/arch/x86/mm/shadow/multi.c
+@@ -910,7 +910,7 @@ static int shadow_set_l4e(struct domain *d,
+                           shadow_l4e_t new_sl4e,
+                           mfn_t sl4mfn)
+ {
+-    int flags = 0, ok;
++    int flags = 0;
+     shadow_l4e_t old_sl4e;
+     paddr_t paddr;
+     ASSERT(sl4e != NULL);
+@@ -925,15 +925,16 @@ static int shadow_set_l4e(struct domain *d,
+     {
+         /* About to install a new reference */
+         mfn_t sl3mfn = shadow_l4e_get_mfn(new_sl4e);
+-        ok = sh_get_ref(d, sl3mfn, paddr);
+-        /* Are we pinning l3 shadows to handle wierd linux behaviour? */
+-        if ( sh_type_is_pinnable(d, SH_type_l3_64_shadow) )
+-            ok |= sh_pin(d, sl3mfn);
+-        if ( !ok )
++
++        if ( !sh_get_ref(d, sl3mfn, paddr) )
+         {
+             domain_crash(d);
+             return SHADOW_SET_ERROR;
+         }
++
++        /* Are we pinning l3 shadows to handle weird Linux behaviour? */
++        if ( sh_type_is_pinnable(d, SH_type_l3_64_shadow) )
++            sh_pin(d, sl3mfn);
+     }
+ 
+     /* Write the new entry */
+@@ -3914,14 +3915,15 @@ sh_set_toplevel_shadow(struct vcpu *v,
+ 
+     /* Take a ref to this page: it will be released in sh_detach_old_tables()
+      * or the next call to set_toplevel_shadow() */
+-    if ( !sh_get_ref(d, smfn, 0) )
++    if ( sh_get_ref(d, smfn, 0) )
++        new_entry = pagetable_from_mfn(smfn);
++    else
+     {
+         SHADOW_ERROR("can't install %#lx as toplevel shadow\n", mfn_x(smfn));
+         domain_crash(d);
++        new_entry = pagetable_null();
+     }
+ 
+-    new_entry = pagetable_from_mfn(smfn);
+-
+  install_new_entry:
+     /* Done.  Install it */
+     SHADOW_PRINTK("%u/%u [%u] gmfn %#"PRI_mfn" smfn %#"PRI_mfn"\n",
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Tue, 12 Dec 2017 16:56:41 +0000
+Subject: [PATCH] x86/paging: don't unconditionally BUG() on finding
+ SHARED_M2P_ENTRY
+
+PV guests can fully control the values written into the P2M.
+
+This is XSA-251.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/mm/paging.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/mm/paging.c b/xen/arch/x86/mm/paging.c
+index cc44682..b5a8225 100644
+--- a/xen/arch/x86/mm/paging.c
++++ b/xen/arch/x86/mm/paging.c
+@@ -276,7 +276,7 @@ void paging_mark_gfn_dirty(struct domain *d, unsigned long pfn)
+         return;
+ 
+     /* Shared MFNs should NEVER be marked dirty */
+-    BUG_ON(SHARED_M2P(pfn));
++    BUG_ON(paging_mode_translate(d) && SHARED_M2P(pfn));
+ 
+     /*
+      * Values with the MSB set denote MFNs that aren't really part of the
+-- 
+
