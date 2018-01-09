@@ -33,6 +33,8 @@
 %define with_ocaml  1
 %define with_stubdom 1
 %define with_blktap 1
+# Provided by xen-ovmf package
+%define with_tianocore 0
 %if 0%{?centos_ver} <= 6
 %define with_spice 0
 %else
@@ -40,7 +42,6 @@
 %endif
 # FIXME
 %define build_efi 0
-%define with_tianocore 0
 %endif
 
 # Build ocaml bits unless rpmbuild was run with --without ocaml 
@@ -55,8 +56,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.8.2
-Release: 4%{?dist}
+Version: %{hv_abi}.2
+Release: 7%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -112,8 +113,8 @@ BuildRequires: perl texinfo graphviz
 BuildRequires: /usr/include/gnu/stubs-32.h
 # for the VMX "bios"
 BuildRequires: dev86
-# build using Fedora seabios and ipxe packages for roms
-BuildRequires: seabios ipxe-roms-qemu
+# build using Fedora ipxe packages for roms
+BuildRequires: ipxe-roms-qemu
 # iasl needed to build hvmloader
 BuildRequires: iasl
 %endif
@@ -146,9 +147,10 @@ Requires: chkconfig
 Requires: module-init-tools
 Requires: gawk
 Requires: grep
+#Recommends: xen-ovmf
 ExclusiveArch: x86_64 aarch64
 %if %with_ocaml
-BuildRequires: ocaml, ocaml-findlib
+BuildRequires: ocaml ocaml-findlib
 %endif
 %if %with_spice
 BuildRequires: spice-server-devel usbredir-devel
@@ -189,6 +191,7 @@ Requires: xen-libs = %{version}-%{release}
 %ifarch x86_64
 Requires: /usr/bin/qemu-img
 Requires: seabios
+Requires: xen-ovmf
 %endif
 # Ensure we at least have a suitable kernel installed, though we can't
 # force user to actually boot it.
@@ -410,9 +413,10 @@ export GIT=$(type -P false)
 
 %ifarch x86_64
 %define extra_config_arch --with-system-seabios=/usr/share/seabios/bios.bin
+%define extra_config_ovmf --with-system-ovmf=%{_libexecdir}/xen/boot/OVMF.fd
 %endif
 
-%define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_spice}
+%define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_spice} %{?extra_config_ovmf}
 
 WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-xenstored=xenstored --disable-xsmpolicy %{?extra_config}
 
@@ -434,8 +438,6 @@ make -C BaseTools
 export GCC48_AARCH64_PREFIX=
 bash -c "source edksetup.sh && build -a AARCH64 -t GCC48 -p ArmVirtPkg/ArmVirtXen.dsc -b RELEASE"
 popd
-%else
-echo "No tianocore available" && false
 %endif
 %endif
 
@@ -957,6 +959,16 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Dec 12 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.2-7.el7.centos
+- Apply new patch from XSA 240-v6
+- Apply XSAs 248-251
+
+* Wed Dec 06 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.2-6.el7.centos
+- Apply XSAs 246 and 247
+
+* Fri Nov 24 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.2-5.el7.centos
+- Add OVMF, the guest EFI firmware (available via xen-ovmf package)
+
 * Tue Nov 21 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.2-4.el7.centos
 - Import from upstream the updated optional patch from XSA-240, it is necessary
   to apply the update of XSA-240.
