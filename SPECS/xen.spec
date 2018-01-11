@@ -191,7 +191,10 @@ Requires: xen-libs = %{version}-%{release}
 %ifarch x86_64
 Requires: /usr/bin/qemu-img
 Requires: seabios
+# xen-ovmf is not being built on CentOS 6 right now.
+%if 0%{?centos_ver} > 6
 Requires: xen-ovmf
+%endif
 %endif
 # Ensure we at least have a suitable kernel installed, though we can't
 # force user to actually boot it.
