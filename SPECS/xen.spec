@@ -12,6 +12,8 @@
 # --without livepatch
 %define with_livepatch %{?_without_livepatch: 0} %{?!_without_livepatch: 1}
 
+%define with_vixen  %{?_without_vixen: 0} %{?!_without_vixen: 1}
+
 %if 0%{?centos_ver} == 6
 %define with_sysv 1
 %define with_systemd 0
@@ -57,7 +59,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.2
-Release: 7%{?dist}
+Release: 8%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -85,6 +87,11 @@ Source53: edk2-bc54e50e0fe03c570014f363b547426913e92449.tar.gz
 Source60: livepatch-tools-0c104573a1c168995ec553778d1d2d1ebe9c9042.tar.gz
 %endif
 
+%if %{with_vixen}
+Source70: xen-vixen-4.9.1-shim-vixen-1.tar.gz
+Source71: pvshim-converter
+%endif
+
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
 Patch1: xen-queue.am
@@ -95,12 +102,15 @@ Patch1: xen-queue.am
 # 1000+: blktap
 # 2000+: qemu-xen
 # 3000+: qemu-traditional
+# 4000+: vixen
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 # aarch64-only
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
+
+Patch4001: 0001-vixen-port-of-shadow-PV-console-s-page-for-L2-DomU.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -117,6 +127,10 @@ BuildRequires: dev86
 BuildRequires: ipxe-roms-qemu
 # iasl needed to build hvmloader
 BuildRequires: iasl
+%if %with_vixen
+Requires: grub2
+Requires: perl-JSON
+%endif
 %endif
 BuildRequires: gettext
 BuildRequires: gnutls-devel
@@ -340,6 +354,17 @@ echo "CONFIG_LIVEPATCH=y" > xen/.config
 
 make -C xen olddefconfig
 
+%ifarch x86_64
+%if %{with_vixen}
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE70}
+pushd `pwd`
+cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/xen-vixen
+%patch4001 -p1
+make -C xen olddefconfig
+popd
+%endif
+%endif
+
 # Now apply patches to things not in the core Xen repo
 
 pushd tools/qemu-xen
@@ -451,6 +476,15 @@ make
 popd
 %endif
 
+%if %{with_vixen}
+%ifarch x86_64
+pushd `pwd`
+cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/xen-vixen
+make build-xen
+popd
+%endif
+%endif
+
 %install
 rm -rf %{buildroot}
 %if %build_ocaml
@@ -482,6 +516,10 @@ install -D -m 644 tools/edk2/Build/ArmVirtXen-AARCH64/RELEASE_GCC48/FV/XEN_EFI.f
 
 %ifarch x86_64
 install -m 644 %{SOURCE50} $RPM_BUILD_ROOT/etc/sysconfig/xen-kernel
+%if %{with_vixen}
+install -m 644 tools/xen-vixen/xen/xen.gz $RPM_BUILD_ROOT/%{_libexecdir}/xen/boot/xen-vixen.gz
+install -m 755 %{SOURCE71} $RPM_BUILD_ROOT/%{_sbindir}/pvshim-converter
+%endif
 %endif
 
 %if %{with_livepatch}
@@ -592,6 +630,9 @@ rm -f %{buildroot}%{_sysconfdir}/qemu/target-x86_64.conf
 
 ############ create dirs in /var ############
 
+%if %{with_vixen}
+mkdir -p %{buildroot}%{_localstatedir}/lib/xen/pvshim-sidecars
+%endif
 mkdir -p %{buildroot}%{_localstatedir}/lib/xen/images
 mkdir -p %{buildroot}%{_localstatedir}/log/xen/console
 mkdir -p %{buildroot}%{_localstatedir}/run/xenstored
@@ -629,6 +670,9 @@ for f in pv-grub-x86_32.gz pv-grub-x86_64.gz ioemu-stubdom.gz xenstore-stubdom.g
   do
     ln -sf ../../../lib64/xen/boot/$f .
   done
+%if %with_vixen
+ln -sf ../../../lib64/xen/boot/xen-vixen.gz
+%endif
 popd
 %endif
 ############ all done now ############
@@ -798,6 +842,9 @@ rm -rf %{buildroot}
 /usr/lib/%{name}/boot/pv-grub-x86_64.gz
 /usr/lib/%{name}/boot/ioemu-stubdom.gz
 /usr/lib/%{name}/boot/xenstore-stubdom.gz
+%if %{with_vixen}
+/usr/lib/%{name}/boot/xen-vixen.gz
+%endif
 %endif
 %dir %{_libexecdir}/%{name}/boot
 %{_libexecdir}/xen/boot/hvmloader
@@ -805,6 +852,9 @@ rm -rf %{buildroot}
 %{_libexecdir}/xen/boot/xenstore-stubdom.gz
 %{_libexecdir}/xen/boot/pv-grub-x86_32.gz
 %{_libexecdir}/xen/boot/pv-grub-x86_64.gz
+%if %{with_vixen}
+%{_libexecdir}/xen/boot/xen-vixen.gz
+%endif
 %endif
 
 %if %{with_tianocore}
@@ -863,6 +913,9 @@ rm -rf %{buildroot}
 %{_sbindir}/xen-lowmemd
 %{_sbindir}/xen-mfndump
 %{_bindir}/xenalyze
+%if %{with_vixen}
+%{_sbindir}/pvshim-converter
+%endif
 %endif
 #blktap
 %if %{with_blktap}
@@ -962,6 +1015,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jan 11 2018 Sarah Newman <srn@prgmr.com> 4.8.2-8.el6.centos
+- Add Vixen related files. Includes console input, centos specific changes,
+  and minor improvements to the pvshim-converter script.
+- Did not apply XSA 253 as it is 4.10 only
+
 * Tue Dec 12 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.8.2-7.el7.centos
 - Apply new patch from XSA 240-v6
 - Apply XSAs 248-251
