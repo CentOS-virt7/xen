@@ -1,6 +1,6 @@
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Fri, 8 Dec 2017 17:06:13 +0000
+Date: Thu, 11 Jan 2018 18:41:40 +0000
 Subject: [PATCH] tools/hotplug: Before running xenstored, run restorecon if
  available to reset selinux labels
 
@@ -48,7 +48,7 @@ index 80c1d40..95d6a52 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Fri, 8 Dec 2017 17:06:14 +0000
+Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] tools/hotplug: Call xenstored directly rather than via sh
 
 Using sh to exec xenstored breaks on selinux systems (at least, on
@@ -120,7 +120,7 @@ index 95d6a52..2b80eee 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Fri, 8 Dec 2017 17:06:14 +0000
+Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] tools/Linux: Fix blktap module name in default module list
 
 The name of the blktap2 kernel module is... blktap.
@@ -162,7 +162,7 @@ index d1a3a78..5407f96 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Fri, 8 Dec 2017 17:06:14 +0000
+Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] xen: Allow user to specify an alternate linker for EFI
  binaries
 
@@ -176,7 +176,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  3 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/xen/Makefile b/xen/Makefile
-index 52af249..66d4302 100644
+index f8c359a..a774afa 100644
 --- a/xen/Makefile
 +++ b/xen/Makefile
 @@ -20,6 +20,7 @@ export XEN_ROOT := $(BASEDIR)/..
@@ -233,7 +233,7 @@ index 3edff1c..100b961 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 13 Sep 2017 17:16:30 +0100
+Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] Disable iptables on the bridge
 
 ---
@@ -277,7 +277,7 @@ index 92ffa60..0b1fde9 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 13 Sep 2017 17:16:31 +0100
+Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] xen.use.fedora.ipxe.patch
 
 ---
@@ -287,7 +287,7 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index 072a3bc..d43609b 100644
+index bb80583..b615636 100644
 --- a/Config.mk
 +++ b/Config.mk
 @@ -282,7 +282,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.10.2
@@ -298,7 +298,7 @@ index 072a3bc..d43609b 100644
 +ETHERBOOT_NICS ?= 10ec8139 8086100e
  
  
- QEMU_TRADITIONAL_REVISION ?= xen-4.10.0-rc1
+ QEMU_TRADITIONAL_REVISION ?= xen-4.10.0
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
 index 868b506..b2f7bc2 100644
 --- a/tools/firmware/Makefile
@@ -330,7 +330,7 @@ index a5b4c32..d48b225 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 13 Sep 2017 17:16:31 +0100
+Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
  backend"
 
@@ -366,7 +366,7 @@ index 5438577..b6c2b04 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Wed, 13 Sep 2017 17:16:31 +0100
+Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
@@ -479,7 +479,7 @@ index 5c9a0a2..a54a31e 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Julien Grall <julien.grall@linaro.org>
-Date: Wed, 13 Sep 2017 17:16:31 +0100
+Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
 
 ---
@@ -511,7 +511,7 @@ index 05fd11c..8aaa157 100644
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@citrix.com>
-Date: Wed, 13 Sep 2017 17:16:31 +0100
+Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] libxc: Try /proc/xen/privcmd on EACCES as well
 
 /proc/xen/privcmd is deprecated in favor of /dev/xen/privcmd; but at

@@ -63,7 +63,7 @@
 # Once Xen is released:
 # - Set xen_rc_base to 0
 # - Change the package Release number to 1
-%define xen_rc_base rc8
+%define xen_rc_base 0
 %if %{xen_rc_base}
 %define xen_rc_pkgver .%{xen_rc_base}
 %define xen_rc -%{xen_rc_base}
@@ -72,7 +72,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.0
-Release: 0.1%{?xen_rc_pkgver}%{?dist}
+Release: 1%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -997,6 +997,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jan 11 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.0-1.el7.centos
+- Xen 4.10.0
+
 * Fri Dec 08 2017 Anthony PERARD <anthony.perard@citrix.com> - 4.10.0-0.1.rc8.el7.centos
 - Xen 4.10.0-rc8
 
