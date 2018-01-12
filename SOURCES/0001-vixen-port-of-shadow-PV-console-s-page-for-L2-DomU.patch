@@ -1,0 +1,117 @@
+From 49349a2f1c99fefb473f0faab304adce0c6cfb40 Mon Sep 17 00:00:00 2001
+From: Sarah Newman <srn@prgmr.com>
+Date: Wed, 10 Jan 2018 09:07:30 -0800
+Subject: [PATCH v2] vixen: port of shadow PV console's page for L2 DomU
+
+The current version of vixen handles console output from the guest
+but not console input to the guest. This adds guest input as in
+
+0d50a85f x86/pv-shim: shadow PV console's page for L2 DomU,
+
+but with read_smb moved up in guest_tx.
+
+Signed-off-by: Sergey Dyasli <sergey.dyasli@citrix.com>
+Signed-off-by: Sarah Newman <srn@prgmr.com>
+---
+ xen/arch/x86/guest/vixen.c        | 42 +++++++++++++++++++++++++++++++++++++++
+ xen/drivers/char/console.c        |  6 +++++-
+ xen/include/asm-x86/guest/vixen.h |  1 +
+ 3 files changed, 48 insertions(+), 1 deletion(-)
+
+diff --git a/xen/arch/x86/guest/vixen.c b/xen/arch/x86/guest/vixen.c
+index 08619d1..4491d82 100644
+--- a/xen/arch/x86/guest/vixen.c
++++ b/xen/arch/x86/guest/vixen.c
+@@ -245,6 +245,48 @@ static void vixen_interrupt(int irq, void *dev_id, struct cpu_user_regs *regs)
+     vixen_upcall(smp_processor_id());
+ }
+ 
++static void notify_guest(void)
++{
++    struct evtchn *chn;
++    chn = evtchn_from_port(hardware_domain, vixen_xencons_port);
++    evtchn_port_set_pending(hardware_domain, chn->notify_vcpu_id, chn);
++}
++
++size_t vixen_guest_tx(char c)
++{
++    size_t sent = 0;
++    volatile struct xencons_interface *r = vixen_xencons_iface;
++    XENCONS_RING_IDX cons, prod;
++
++    if (r == NULL)
++        return 0;
++
++    cons = ACCESS_ONCE(r->in_cons);
++    prod = r->in_prod;
++    /* Update pointers before accessing the ring */
++    smp_rmb();
++
++    ASSERT((prod - cons) <= sizeof(r->in));
++
++    /* Is the ring out of space? */
++    if ( sizeof(r->in) - (prod - cons) == 0 )
++        goto notify;
++
++
++    r->in[MASK_XENCONS_IDX(prod++, r->in)] = c;
++    sent++;
++
++    /* Write to the ring before updating the pointer */
++    smp_wmb();
++    ACCESS_ONCE(r->in_prod) = prod;
++
++ notify:
++    /* Always notify the guest: prevents receive path from getting stuck. */
++    notify_guest();
++
++    return sent;
++}
++
+ bool vixen_ring_process(uint16_t port)
+ {
+     volatile struct xencons_interface *r = vixen_xencons_iface;
+diff --git a/xen/drivers/char/console.c b/xen/drivers/char/console.c
+index a83aeb2..be5875e 100644
+--- a/xen/drivers/char/console.c
++++ b/xen/drivers/char/console.c
+@@ -30,6 +30,7 @@
+ #include <xen/hypercall.h> /* for do_console_io */
+ #include <xen/early_printk.h>
+ #include <xen/warning.h>
++#include <asm/guest/vixen.h>
+ 
+ /* console: comma-separated list of console outputs. */
+ static char __initdata opt_console[30] = OPT_CONSOLE_STR;
+@@ -406,13 +407,16 @@ static void __serial_rx(char c, struct cpu_user_regs *regs)
+         serial_rx_ring[SERIAL_RX_MASK(serial_rx_prod++)] = c;
+     /* Always notify the guest: prevents receive path from getting stuck. */
+     send_global_virq(VIRQ_CONSOLE);
++
++    if ( is_vixen())
++        vixen_guest_tx(c);
+ }
+ 
+ static void serial_rx(char c, struct cpu_user_regs *regs)
+ {
+     static int switch_code_count = 0;
+ 
+-    if ( switch_code && (c == switch_code) )
++    if (!is_vixen() && switch_code && (c == switch_code) )
+     {
+         /* We eat CTRL-<switch_char> in groups of 3 to switch console input. */
+         if ( ++switch_code_count == 3 )
+diff --git a/xen/include/asm-x86/guest/vixen.h b/xen/include/asm-x86/guest/vixen.h
+index eca263a..2e2666e 100644
+--- a/xen/include/asm-x86/guest/vixen.h
++++ b/xen/include/asm-x86/guest/vixen.h
+@@ -86,5 +86,6 @@ vixen_transform(struct domain *dom0,
+                 xen_pfn_t *pconsole_mfn, uint32_t *pconsole_evtchn);
+ 
+ bool vixen_ring_process(uint16_t port);
++size_t vixen_guest_tx(char c);
+ 
+ #endif
+-- 
+1.9.1
+
