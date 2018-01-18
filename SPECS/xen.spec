@@ -12,6 +12,8 @@
 # --without livepatch
 %define with_livepatch %{?_without_livepatch: 0} %{?!_without_livepatch: 1}
 
+%define with_comet  %{?_without_comet: 0} %{?!_without_comet: 1}
+
 %if 0%{?centos_ver} == 6
 %define with_sysv 1
 %define with_systemd 0
@@ -57,7 +59,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.2
-Release: 10%{?dist}
+Release: 11%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -85,6 +87,10 @@ Source53: edk2-bc54e50e0fe03c570014f363b547426913e92449.tar.gz
 Source60: livepatch-tools-0c104573a1c168995ec553778d1d2d1ebe9c9042.tar.gz
 %endif
 
+%if %{with_comet}
+Source70: xen-comet-4.10.0-shim-comet-3.tar.gz
+%endif
+
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
 
 Patch1: xen-queue.am
@@ -95,6 +101,7 @@ Patch1: xen-queue.am
 # 1000+: blktap
 # 2000+: qemu-xen
 # 3000+: qemu-traditional
+# 5000+: comet
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
@@ -340,6 +347,17 @@ echo "CONFIG_LIVEPATCH=y" > xen/.config
 
 make -C xen olddefconfig
 
+%ifarch x86_64
+%if %{with_comet}
+mkdir -p ${RPM_BUILD_DIR}/%{name}-%{version}/shim/
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/shim/ -zxf %{SOURCE70}
+pushd `pwd`
+cd ${RPM_BUILD_DIR}/%{name}-%{version}/shim/xen-comet
+# Add patches to Comet here
+popd
+%endif
+%endif
+
 # Now apply patches to things not in the core Xen repo
 
 pushd tools/qemu-xen
@@ -451,6 +469,17 @@ make
 popd
 %endif
 
+%if %{with_comet}
+%ifarch x86_64
+pushd `pwd`
+cd ${RPM_BUILD_DIR}/%{name}-%{version}/shim/xen-comet
+./configure
+make -C tools/firmware/xen-dir
+cp tools/firmware/xen-dir/xen-shim .
+popd
+%endif
+%endif
+
 %install
 rm -rf %{buildroot}
 %if %build_ocaml
@@ -482,6 +511,9 @@ install -D -m 644 tools/edk2/Build/ArmVirtXen-AARCH64/RELEASE_GCC48/FV/XEN_EFI.f
 
 %ifarch x86_64
 install -m 644 %{SOURCE50} $RPM_BUILD_ROOT/etc/sysconfig/xen-kernel
+%if %{with_comet}
+install -m 644 shim/xen-comet/xen-shim $RPM_BUILD_ROOT/%{_libexecdir}/xen/boot/xen-shim
+%endif
 %endif
 
 %if %{with_livepatch}
@@ -629,6 +661,9 @@ for f in pv-grub-x86_32.gz pv-grub-x86_64.gz ioemu-stubdom.gz xenstore-stubdom.g
   do
     ln -sf ../../../lib64/xen/boot/$f .
   done
+%if %with_comet
+ln -sf ../../../lib64/xen/boot/xen-shim
+%endif
 popd
 %endif
 ############ all done now ############
@@ -798,6 +833,9 @@ rm -rf %{buildroot}
 /usr/lib/%{name}/boot/pv-grub-x86_64.gz
 /usr/lib/%{name}/boot/ioemu-stubdom.gz
 /usr/lib/%{name}/boot/xenstore-stubdom.gz
+%if %{with_comet}
+/usr/lib/%{name}/boot/xen-shim
+%endif
 %endif
 %dir %{_libexecdir}/%{name}/boot
 %{_libexecdir}/xen/boot/hvmloader
@@ -805,6 +843,9 @@ rm -rf %{buildroot}
 %{_libexecdir}/xen/boot/xenstore-stubdom.gz
 %{_libexecdir}/xen/boot/pv-grub-x86_32.gz
 %{_libexecdir}/xen/boot/pv-grub-x86_64.gz
+%if %{with_comet}
+%{_libexecdir}/xen/boot/xen-shim
+%endif
 %endif
 
 %if %{with_tianocore}
@@ -962,6 +1003,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jan 18 2018 George Dunlap <george.dunlap@citrix.com> - 4.8.2-11.el7.centos
+- Build "Comet" PVH shim
+- Add tools and hypervisor support for booting PV guests with Comet
+
 * Thu Jan 18 2018 George Dunlap <george.dunlap@citrix.com> - 4.8.2-10.el7.centos
 - Backport PVH functionality from 4.8.3pre-shim-comet branch
 - "Comet" shim functionality will come in a later update

@@ -8802,3 +8802,1199 @@ index 5306623649..c8b033286e 100644
  
 -- 
 
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Roger=20Pau=20Monn=C3=A9?= <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 17:25:02 +0000
+Subject: [PATCH] x86/upcall: inject a spurious event after setting upcall
+ vector
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+In case the vCPU has pending events to inject. This fixes a bug that
+happened if the guest mapped the vcpu info area using
+VCPUOP_register_vcpu_info without having setup the event channel
+upcall, and then setup the upcall vector.
+
+In this scenario the guest would not receive any upcalls, because the
+call to VCPUOP_register_vcpu_info would have marked the vCPU as having
+pending events, but the vector could not be injected because it was
+not yet setup.
+
+This has not caused issues so far because all the consumers first
+setup the vector callback and then map the vcpu info page, but there's
+no limitation that prevents doing it in the inverse order.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/hvm.c | 1 +
+ xen/arch/x86/hvm/irq.c | 5 +++++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index 53b99c36e6..68b684bed0 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -5078,6 +5078,7 @@ static int hvmop_set_evtchn_upcall_vector(
+     printk(XENLOG_G_INFO "%pv: upcall vector %02x\n", v, op.vector);
+ 
+     v->arch.hvm_vcpu.evtchn_upcall_vector = op.vector;
++    hvm_assert_evtchn_irq(v);
+     return 0;
+ }
+ 
+diff --git a/xen/arch/x86/hvm/irq.c b/xen/arch/x86/hvm/irq.c
+index e597114674..34814a2525 100644
+--- a/xen/arch/x86/hvm/irq.c
++++ b/xen/arch/x86/hvm/irq.c
+@@ -324,6 +324,7 @@ void hvm_set_callback_via(struct domain *d, uint64_t via)
+     struct hvm_irq *hvm_irq = &d->arch.hvm_domain.irq;
+     unsigned int gsi=0, pdev=0, pintx=0;
+     uint8_t via_type;
++    struct vcpu *v;
+ 
+     via_type = (uint8_t)MASK_EXTR(via, HVM_PARAM_CALLBACK_IRQ_TYPE_MASK) + 1;
+     if ( ((via_type == HVMIRQ_callback_gsi) && (via == 0)) ||
+@@ -386,6 +387,10 @@ void hvm_set_callback_via(struct domain *d, uint64_t via)
+ 
+     spin_unlock(&d->arch.hvm_domain.irq_lock);
+ 
++    for_each_vcpu ( d, v )
++        if ( is_vcpu_online(v) )
++            hvm_assert_evtchn_irq(v);
++
+ #ifndef NDEBUG
+     printk(XENLOG_G_INFO "Dom%u callback via changed to ", d->domain_id);
+     switch ( via_type )
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 17:25:03 +0000
+Subject: [PATCH] xen/x86: report domain id on cpuid
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Use the ECX register of the hypervisor leaf 5. The EAX register on
+this leaf is a flags field that can be used to notice the presence of
+the domain id in ECX. Note that this is only available to HVM guests.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+---
+Changes since v1:
+ - Use leaf 5 instead.
+---
+ xen/arch/x86/hvm/hvm.c              | 5 +++++
+ xen/include/public/arch-x86/cpuid.h | 2 ++
+ 2 files changed, 7 insertions(+)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index 68b684bed0..1a06345dbc 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -3479,6 +3479,11 @@ void hvm_hypervisor_cpuid_leaf(uint32_t sub_idx,
+         /* Indicate presence of vcpu id and set it in ebx */
+         *eax |= XEN_HVM_CPUID_VCPU_ID_PRESENT;
+         *ebx = current->vcpu_id;
++
++        /* Indicate presence of domain id and set it on ecx */
++        *eax |= XEN_HVM_CPUID_DOMID_PRESENT;
++        *ecx = current->domain->domain_id;
++
+     }
+ }
+ 
+diff --git a/xen/include/public/arch-x86/cpuid.h b/xen/include/public/arch-x86/cpuid.h
+index d709340f18..634d6aa571 100644
+--- a/xen/include/public/arch-x86/cpuid.h
++++ b/xen/include/public/arch-x86/cpuid.h
+@@ -78,12 +78,14 @@
+  * HVM-specific features
+  * EAX: Features
+  * EBX: vcpu id (iff EAX has XEN_HVM_CPUID_VCPU_ID_PRESENT flag)
++ * ECX: domain id (iff EAX has XEN_HVM_CPUID_DOMID_PRESENT flag)
+  */
+ #define XEN_HVM_CPUID_APIC_ACCESS_VIRT (1u << 0) /* Virtualized APIC registers */
+ #define XEN_HVM_CPUID_X2APIC_VIRT      (1u << 1) /* Virtualized x2APIC accesses */
+ /* Memory mapped from other domains has valid IOMMU entries */
+ #define XEN_HVM_CPUID_IOMMU_MAPPINGS   (1u << 2)
+ #define XEN_HVM_CPUID_VCPU_ID_PRESENT  (1u << 3) /* vcpu id is present in EBX */
++#define XEN_HVM_CPUID_DOMID_PRESENT    (1u << 4) /* domid is present in ECX */
+ 
+ #define XEN_CPUID_MAX_NUM_LEAVES 4
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Wei Liu <wei.liu2@citrix.com>
+Date: Thu, 18 Jan 2018 17:25:03 +0000
+Subject: [PATCH] tools/libelf: fix elf notes check for PVH guest
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+PVH only requires PHYS32_ENTRY to be set. Return immediately if that's
+the case.
+
+Also remove the printk in pvh_load_kernel.
+
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+[remove PVH dom0 builder chunk when backporting]
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+---
+ xen/common/libelf/libelf-dominfo.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/xen/common/libelf/libelf-dominfo.c b/xen/common/libelf/libelf-dominfo.c
+index a52900c00c..378bc05f39 100644
+--- a/xen/common/libelf/libelf-dominfo.c
++++ b/xen/common/libelf/libelf-dominfo.c
+@@ -373,6 +373,13 @@ static elf_errorstatus elf_xen_note_check(struct elf_binary *elf,
+          return 0;
+     }
+ 
++    /* PVH only requires one ELF note to be set */
++    if ( parms->phys_entry != UNSET_ADDR32 )
++    {
++        elf_msg(elf, "ELF: Found PVH image\n");
++        return 0;
++    }
++
+     /* Check the contents of the Xen notes or guest string. */
+     if ( ((strlen(parms->loader) == 0) ||
+           strncmp(parms->loader, "generic", 7)) &&
+@@ -381,7 +388,7 @@ static elf_errorstatus elf_xen_note_check(struct elf_binary *elf,
+     {
+         elf_err(elf,
+                 "ERROR: Will only load images built for the generic loader or Linux images"
+-                " (Not '%.*s' and '%.*s')\n",
++                " (Not '%.*s' and '%.*s') or with PHYS32_ENTRY set\n",
+                 (int)sizeof(parms->loader), parms->loader,
+                 (int)sizeof(parms->guest_os), parms->guest_os);
+         return -1;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jonathan Ludlam <jonathan.ludlam@citrix.com>
+Date: Thu, 18 Jan 2018 17:25:04 +0000
+Subject: [PATCH] tools/libxc: Multi modules support
+
+Signed-off-by: Jonathan Ludlam <jonathan.ludlam@citrix.com>
+Signed-off-by: Sergey Dyasli <sergey.dyasli@citrix.com>
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+---
+ stubdom/grub/kexec.c                 |   7 +-
+ tools/helpers/init-xenstore-domain.c |   4 +-
+ tools/libxc/include/xc_dom.h         |  48 ++++++-----
+ tools/libxc/xc_dom_compat_linux.c    |   2 +-
+ tools/libxc/xc_dom_core.c            | 152 +++++++++++++++++++++++------------
+ tools/libxc/xc_dom_x86.c             |  65 ++++++++-------
+ tools/libxl/libxl_dom.c              |  10 +--
+ 7 files changed, 175 insertions(+), 113 deletions(-)
+
+diff --git a/stubdom/grub/kexec.c b/stubdom/grub/kexec.c
+index 437a0a96e9..61ca082d42 100644
+--- a/stubdom/grub/kexec.c
++++ b/stubdom/grub/kexec.c
+@@ -202,7 +202,7 @@ static void tpm_hash2pcr(struct xc_dom_image *dom, char *cmdline)
+ 	ASSERT(rv == 0 && resp->status == 0);
+ 
+ 	cmd.pcr = bswap_32(5); // PCR #5 for initrd
+-	sha1(dom->ramdisk_blob, dom->ramdisk_size, cmd.hash);
++	sha1(dom->modules[0].blob, dom->modules[0].size, cmd.hash);
+ 	rv = tpmfront_cmd(tpm, (void*)&cmd, sizeof(cmd), (void*)&resp, &resplen);
+ 	ASSERT(rv == 0 && resp->status == 0);
+ 
+@@ -231,13 +231,12 @@ void kexec(void *kernel, long kernel_size, void *module, long module_size, char
+ 
+     /* We are using guest owned memory, therefore no limits. */
+     xc_dom_kernel_max_size(dom, 0);
+-    xc_dom_ramdisk_max_size(dom, 0);
++    xc_dom_module_max_size(dom, 0);
+ 
+     dom->kernel_blob = kernel;
+     dom->kernel_size = kernel_size;
+ 
+-    dom->ramdisk_blob = module;
+-    dom->ramdisk_size = module_size;
++    xc_dom_module_mem(dom, module, module_size, NULL);
+ 
+     dom->flags = flags;
+     dom->console_evtchn = start_info.console.domU.evtchn;
+diff --git a/tools/helpers/init-xenstore-domain.c b/tools/helpers/init-xenstore-domain.c
+index 8a41ee7d3a..4e6b213ffe 100644
+--- a/tools/helpers/init-xenstore-domain.c
++++ b/tools/helpers/init-xenstore-domain.c
+@@ -134,10 +134,10 @@ static int build(xc_interface *xch)
+ 
+     if ( ramdisk )
+     {
+-        rv = xc_dom_ramdisk_file(dom, ramdisk);
++        rv = xc_dom_module_file(dom, ramdisk, NULL);
+         if ( rv )
+         {
+-            fprintf(stderr, "xc_dom_ramdisk_file failed\n");
++            fprintf(stderr, "xc_dom_module_file failed\n");
+             goto err;
+         }
+     }
+diff --git a/tools/libxc/include/xc_dom.h b/tools/libxc/include/xc_dom.h
+index 608cbc2ad6..87400c293a 100644
+--- a/tools/libxc/include/xc_dom.h
++++ b/tools/libxc/include/xc_dom.h
+@@ -22,6 +22,7 @@
+ #define INVALID_PFN ((xen_pfn_t)-1)
+ #define X86_HVM_NR_SPECIAL_PAGES    8
+ #define X86_HVM_END_SPECIAL_REGION  0xff000u
++#define XG_MAX_MODULES 2
+ 
+ /* --- typedefs and structs ---------------------------------------- */
+ 
+@@ -56,17 +57,32 @@ struct xc_dom_phys {
+     xen_pfn_t count;
+ };
+ 
++struct xc_dom_module {
++    void *blob;
++    size_t size;
++    void *cmdline;
++    /* If seg.vstart is non zero then the module will be loaded at that
++     * address, otherwise it will automatically placed.
++     *
++     * If automatic placement is used and the module is gzip
++     * compressed then it will be decompressed as it is loaded. If the
++     * module has been explicitly placed then it is loaded as is
++     * otherwise decompressing risks undoing the manual placement.
++     */
++    struct xc_dom_seg seg;
++};
++
+ struct xc_dom_image {
+     /* files */
+     void *kernel_blob;
+     size_t kernel_size;
+-    void *ramdisk_blob;
+-    size_t ramdisk_size;
++    unsigned int num_modules;
++    struct xc_dom_module modules[XG_MAX_MODULES];
+     void *devicetree_blob;
+     size_t devicetree_size;
+ 
+     size_t max_kernel_size;
+-    size_t max_ramdisk_size;
++    size_t max_module_size;
+     size_t max_devicetree_size;
+ 
+     /* arguments and parameters */
+@@ -80,15 +96,6 @@ struct xc_dom_image {
+ 
+     /* memory layout */
+     struct xc_dom_seg kernel_seg;
+-    /* If ramdisk_seg.vstart is non zero then the ramdisk will be
+-     * loaded at that address, otherwise it will automatically placed.
+-     *
+-     * If automatic placement is used and the ramdisk is gzip
+-     * compressed then it will be decompressed as it is loaded. If the
+-     * ramdisk has been explicitly placed then it is loaded as is
+-     * otherwise decompressing risks undoing the manual placement.
+-     */
+-    struct xc_dom_seg ramdisk_seg;
+     struct xc_dom_seg p2m_seg;
+     struct xc_dom_seg pgtables_seg;
+     struct xc_dom_seg devicetree_seg;
+@@ -277,12 +284,12 @@ void xc_dom_release(struct xc_dom_image *dom);
+ int xc_dom_rambase_init(struct xc_dom_image *dom, uint64_t rambase);
+ int xc_dom_mem_init(struct xc_dom_image *dom, unsigned int mem_mb);
+ 
+-/* Set this larger if you have enormous ramdisks/kernels. Note that
++/* Set this larger if you have enormous modules/kernels. Note that
+  * you should trust all kernels not to be maliciously large (e.g. to
+  * exhaust all dom0 memory) if you do this (see CVE-2012-4544 /
+  * XSA-25). You can also set the default independently for
+- * ramdisks/kernels in xc_dom_allocate() or call
+- * xc_dom_{kernel,ramdisk}_max_size.
++ * modules/kernels in xc_dom_allocate() or call
++ * xc_dom_{kernel,module}_max_size.
+  */
+ #ifndef XC_DOM_DECOMPRESS_MAX
+ #define XC_DOM_DECOMPRESS_MAX (1024*1024*1024) /* 1GB */
+@@ -291,8 +298,8 @@ int xc_dom_mem_init(struct xc_dom_image *dom, unsigned int mem_mb);
+ int xc_dom_kernel_check_size(struct xc_dom_image *dom, size_t sz);
+ int xc_dom_kernel_max_size(struct xc_dom_image *dom, size_t sz);
+ 
+-int xc_dom_ramdisk_check_size(struct xc_dom_image *dom, size_t sz);
+-int xc_dom_ramdisk_max_size(struct xc_dom_image *dom, size_t sz);
++int xc_dom_module_check_size(struct xc_dom_image *dom, size_t sz);
++int xc_dom_module_max_size(struct xc_dom_image *dom, size_t sz);
+ 
+ int xc_dom_devicetree_max_size(struct xc_dom_image *dom, size_t sz);
+ 
+@@ -303,11 +310,12 @@ int xc_dom_do_gunzip(xc_interface *xch,
+ int xc_dom_try_gunzip(struct xc_dom_image *dom, void **blob, size_t * size);
+ 
+ int xc_dom_kernel_file(struct xc_dom_image *dom, const char *filename);
+-int xc_dom_ramdisk_file(struct xc_dom_image *dom, const char *filename);
++int xc_dom_module_file(struct xc_dom_image *dom, const char *filename,
++                       const char *cmdline);
+ int xc_dom_kernel_mem(struct xc_dom_image *dom, const void *mem,
+                       size_t memsize);
+-int xc_dom_ramdisk_mem(struct xc_dom_image *dom, const void *mem,
+-                       size_t memsize);
++int xc_dom_module_mem(struct xc_dom_image *dom, const void *mem,
++                       size_t memsize, const char *cmdline);
+ int xc_dom_devicetree_file(struct xc_dom_image *dom, const char *filename);
+ int xc_dom_devicetree_mem(struct xc_dom_image *dom, const void *mem,
+                           size_t memsize);
+diff --git a/tools/libxc/xc_dom_compat_linux.c b/tools/libxc/xc_dom_compat_linux.c
+index c922c61e90..b3d43feed9 100644
+--- a/tools/libxc/xc_dom_compat_linux.c
++++ b/tools/libxc/xc_dom_compat_linux.c
+@@ -56,7 +56,7 @@ int xc_linux_build(xc_interface *xch, uint32_t domid,
+     if ( (rc = xc_dom_kernel_file(dom, image_name)) != 0 )
+         goto out;
+     if ( initrd_name && strlen(initrd_name) &&
+-         ((rc = xc_dom_ramdisk_file(dom, initrd_name)) != 0) )
++         ((rc = xc_dom_module_file(dom, initrd_name, NULL)) != 0) )
+         goto out;
+ 
+     dom->flags |= flags;
+diff --git a/tools/libxc/xc_dom_core.c b/tools/libxc/xc_dom_core.c
+index 36cd3c8170..d9dd37fa6a 100644
+--- a/tools/libxc/xc_dom_core.c
++++ b/tools/libxc/xc_dom_core.c
+@@ -314,16 +314,16 @@ int xc_dom_kernel_check_size(struct xc_dom_image *dom, size_t sz)
+     return 0;
+ }
+ 
+-int xc_dom_ramdisk_check_size(struct xc_dom_image *dom, size_t sz)
++int xc_dom_module_check_size(struct xc_dom_image *dom, size_t sz)
+ {
+     /* No limit */
+-    if ( !dom->max_ramdisk_size )
++    if ( !dom->max_module_size )
+         return 0;
+ 
+-    if ( sz > dom->max_ramdisk_size )
++    if ( sz > dom->max_module_size )
+     {
+         xc_dom_panic(dom->xch, XC_INVALID_KERNEL,
+-                     "ramdisk image too large");
++                     "module image too large");
+         return 1;
+     }
+ 
+@@ -763,7 +763,7 @@ struct xc_dom_image *xc_dom_allocate(xc_interface *xch,
+     dom->xch = xch;
+ 
+     dom->max_kernel_size = XC_DOM_DECOMPRESS_MAX;
+-    dom->max_ramdisk_size = XC_DOM_DECOMPRESS_MAX;
++    dom->max_module_size = XC_DOM_DECOMPRESS_MAX;
+     dom->max_devicetree_size = XC_DOM_DECOMPRESS_MAX;
+ 
+     if ( cmdline )
+@@ -796,10 +796,10 @@ int xc_dom_kernel_max_size(struct xc_dom_image *dom, size_t sz)
+     return 0;
+ }
+ 
+-int xc_dom_ramdisk_max_size(struct xc_dom_image *dom, size_t sz)
++int xc_dom_module_max_size(struct xc_dom_image *dom, size_t sz)
+ {
+-    DOMPRINTF("%s: ramdisk_max_size=%zx", __FUNCTION__, sz);
+-    dom->max_ramdisk_size = sz;
++    DOMPRINTF("%s: module_max_size=%zx", __FUNCTION__, sz);
++    dom->max_module_size = sz;
+     return 0;
+ }
+ 
+@@ -820,16 +820,30 @@ int xc_dom_kernel_file(struct xc_dom_image *dom, const char *filename)
+     return xc_dom_try_gunzip(dom, &dom->kernel_blob, &dom->kernel_size);
+ }
+ 
+-int xc_dom_ramdisk_file(struct xc_dom_image *dom, const char *filename)
++int xc_dom_module_file(struct xc_dom_image *dom, const char *filename, const char *cmdline)
+ {
++    unsigned int mod = dom->num_modules++;
++
+     DOMPRINTF("%s: filename=\"%s\"", __FUNCTION__, filename);
+-    dom->ramdisk_blob =
+-        xc_dom_malloc_filemap(dom, filename, &dom->ramdisk_size,
+-                              dom->max_ramdisk_size);
++    dom->modules[mod].blob =
++        xc_dom_malloc_filemap(dom, filename, &dom->modules[mod].size,
++                              dom->max_module_size);
+ 
+-    if ( dom->ramdisk_blob == NULL )
++    if ( dom->modules[mod].blob == NULL )
+         return -1;
+-//    return xc_dom_try_gunzip(dom, &dom->ramdisk_blob, &dom->ramdisk_size);
++
++    if ( cmdline )
++    {
++        dom->modules[mod].cmdline = xc_dom_strdup(dom, cmdline);
++
++        if ( dom->modules[mod].cmdline == NULL )
++            return -1;
++    }
++    else
++    {
++        dom->modules[mod].cmdline = NULL;
++    }
++
+     return 0;
+ }
+ 
+@@ -858,13 +872,28 @@ int xc_dom_kernel_mem(struct xc_dom_image *dom, const void *mem, size_t memsize)
+     return xc_dom_try_gunzip(dom, &dom->kernel_blob, &dom->kernel_size);
+ }
+ 
+-int xc_dom_ramdisk_mem(struct xc_dom_image *dom, const void *mem,
+-                       size_t memsize)
++int xc_dom_module_mem(struct xc_dom_image *dom, const void *mem,
++                      size_t memsize, const char *cmdline)
+ {
++    unsigned int mod = dom->num_modules++;
++
+     DOMPRINTF_CALLED(dom->xch);
+-    dom->ramdisk_blob = (void *)mem;
+-    dom->ramdisk_size = memsize;
+-//    return xc_dom_try_gunzip(dom, &dom->ramdisk_blob, &dom->ramdisk_size);
++
++    dom->modules[mod].blob = (void *)mem;
++    dom->modules[mod].size = memsize;
++
++    if ( cmdline )
++    {
++        dom->modules[mod].cmdline = xc_dom_strdup(dom, cmdline);
++
++        if ( dom->modules[mod].cmdline == NULL )
++            return -1;
++    }
++    else
++    {
++        dom->modules[mod].cmdline = NULL;
++    }
++
+     return 0;
+ }
+ 
+@@ -998,41 +1027,42 @@ int xc_dom_update_guest_p2m(struct xc_dom_image *dom)
+     return 0;
+ }
+ 
+-static int xc_dom_build_ramdisk(struct xc_dom_image *dom)
++static int xc_dom_build_module(struct xc_dom_image *dom, unsigned int mod)
+ {
+-    size_t unziplen, ramdisklen;
+-    void *ramdiskmap;
++    size_t unziplen, modulelen;
++    void *modulemap;
++    char name[10];
+ 
+-    if ( !dom->ramdisk_seg.vstart )
++    if ( !dom->modules[mod].seg.vstart )
+     {
+         unziplen = xc_dom_check_gzip(dom->xch,
+-                                     dom->ramdisk_blob, dom->ramdisk_size);
+-        if ( xc_dom_ramdisk_check_size(dom, unziplen) != 0 )
++                                     dom->modules[mod].blob, dom->modules[mod].size);
++        if ( xc_dom_module_check_size(dom, unziplen) != 0 )
+             unziplen = 0;
+     }
+     else
+         unziplen = 0;
+ 
+-    ramdisklen = unziplen ? unziplen : dom->ramdisk_size;
+-
+-    if ( xc_dom_alloc_segment(dom, &dom->ramdisk_seg, "ramdisk",
+-                              dom->ramdisk_seg.vstart, ramdisklen) != 0 )
++    modulelen = unziplen ? unziplen : dom->modules[mod].size;
++    snprintf(name, sizeof(name), "module%u", mod);
++    if ( xc_dom_alloc_segment(dom, &dom->modules[mod].seg, name,
++                              dom->modules[mod].seg.vstart, modulelen) != 0 )
+         goto err;
+-    ramdiskmap = xc_dom_seg_to_ptr(dom, &dom->ramdisk_seg);
+-    if ( ramdiskmap == NULL )
++    modulemap = xc_dom_seg_to_ptr(dom, &dom->modules[mod].seg);
++    if ( modulemap == NULL )
+     {
+-        DOMPRINTF("%s: xc_dom_seg_to_ptr(dom, &dom->ramdisk_seg) => NULL",
+-                  __FUNCTION__);
++        DOMPRINTF("%s: xc_dom_seg_to_ptr(dom, &dom->modules[%u].seg) => NULL",
++                  __FUNCTION__, mod);
+         goto err;
+     }
+     if ( unziplen )
+     {
+-        if ( xc_dom_do_gunzip(dom->xch, dom->ramdisk_blob, dom->ramdisk_size,
+-                              ramdiskmap, ramdisklen) == -1 )
++        if ( xc_dom_do_gunzip(dom->xch, dom->modules[mod].blob, dom->modules[mod].size,
++                              modulemap, modulelen) == -1 )
+             goto err;
+     }
+     else
+-        memcpy(ramdiskmap, dom->ramdisk_blob, dom->ramdisk_size);
++        memcpy(modulemap, dom->modules[mod].blob, dom->modules[mod].size);
+ 
+     return 0;
+ 
+@@ -1139,6 +1169,7 @@ int xc_dom_build_image(struct xc_dom_image *dom)
+ {
+     unsigned int page_size;
+     bool unmapped_initrd;
++    unsigned int mod;
+ 
+     DOMPRINTF_CALLED(dom->xch);
+ 
+@@ -1162,15 +1193,24 @@ int xc_dom_build_image(struct xc_dom_image *dom)
+     if ( dom->kernel_loader->loader(dom) != 0 )
+         goto err;
+ 
+-    /* Don't load ramdisk now if no initial mapping required. */
+-    unmapped_initrd = dom->parms.unmapped_initrd && !dom->ramdisk_seg.vstart;
+-
+-    if ( dom->ramdisk_blob && !unmapped_initrd )
++    /* Don't load ramdisk / other modules now if no initial mapping required. */
++    for ( mod = 0; mod < dom->num_modules; mod++ )
+     {
+-        if ( xc_dom_build_ramdisk(dom) != 0 )
+-            goto err;
+-        dom->initrd_start = dom->ramdisk_seg.vstart;
+-        dom->initrd_len = dom->ramdisk_seg.vend - dom->ramdisk_seg.vstart;
++        unmapped_initrd = (dom->parms.unmapped_initrd &&
++                           !dom->modules[mod].seg.vstart);
++
++        if ( dom->modules[mod].blob && !unmapped_initrd )
++        {
++            if ( xc_dom_build_module(dom, mod) != 0 )
++                goto err;
++
++            if ( mod == 0 )
++            {
++                dom->initrd_start = dom->modules[mod].seg.vstart;
++                dom->initrd_len =
++                    dom->modules[mod].seg.vend - dom->modules[mod].seg.vstart;
++            }
++        }
+     }
+ 
+     /* load devicetree */
+@@ -1224,14 +1264,24 @@ int xc_dom_build_image(struct xc_dom_image *dom)
+     if ( dom->virt_pgtab_end && xc_dom_alloc_pad(dom, dom->virt_pgtab_end) )
+         return -1;
+ 
+-    /* Load ramdisk if no initial mapping required. */
+-    if ( dom->ramdisk_blob && unmapped_initrd )
++    for ( mod = 0; mod < dom->num_modules; mod++ )
+     {
+-        if ( xc_dom_build_ramdisk(dom) != 0 )
+-            goto err;
+-        dom->flags |= SIF_MOD_START_PFN;
+-        dom->initrd_start = dom->ramdisk_seg.pfn;
+-        dom->initrd_len = page_size * dom->ramdisk_seg.pages;
++        unmapped_initrd = (dom->parms.unmapped_initrd &&
++                           !dom->modules[mod].seg.vstart);
++
++        /* Load ramdisk / other modules if no initial mapping required. */
++        if ( dom->modules[mod].blob && unmapped_initrd )
++        {
++            if ( xc_dom_build_module(dom, mod) != 0 )
++                goto err;
++
++            if ( mod == 0 )
++            {
++                dom->flags |= SIF_MOD_START_PFN;
++                dom->initrd_start = dom->modules[mod].seg.pfn;
++                dom->initrd_len = page_size * dom->modules[mod].seg.pages;
++            }
++        }
+     }
+ 
+     /* Allocate p2m list if outside of initial kernel mapping. */
+diff --git a/tools/libxc/xc_dom_x86.c b/tools/libxc/xc_dom_x86.c
+index 6495e7fc30..ef728f9e53 100644
+--- a/tools/libxc/xc_dom_x86.c
++++ b/tools/libxc/xc_dom_x86.c
+@@ -70,8 +70,8 @@
+ #define round_up(addr, mask)     ((addr) | (mask))
+ #define round_pg_up(addr)  (((addr) + PAGE_SIZE_X86 - 1) & ~(PAGE_SIZE_X86 - 1))
+ 
+-#define HVMLOADER_MODULE_MAX_COUNT 1
+-#define HVMLOADER_MODULE_NAME_SIZE 10
++#define HVMLOADER_MODULE_MAX_COUNT 2
++#define HVMLOADER_MODULE_CMDLINE_SIZE MAX_GUEST_CMDLINE
+ 
+ struct xc_dom_params {
+     unsigned levels;
+@@ -627,6 +627,12 @@ static int alloc_magic_pages_hvm(struct xc_dom_image *dom)
+     xc_hvm_param_set(xch, domid, HVM_PARAM_SHARING_RING_PFN,
+                      special_pfn(SPECIALPAGE_SHARING));
+ 
++    start_info_size +=
++        sizeof(struct hvm_modlist_entry) * HVMLOADER_MODULE_MAX_COUNT;
++
++    start_info_size +=
++        HVMLOADER_MODULE_CMDLINE_SIZE * HVMLOADER_MODULE_MAX_COUNT;
++
+     if ( !dom->device_model )
+     {
+         if ( dom->cmdline )
+@@ -634,22 +640,9 @@ static int alloc_magic_pages_hvm(struct xc_dom_image *dom)
+             dom->cmdline_size = ROUNDUP(strlen(dom->cmdline) + 1, 8);
+             start_info_size += dom->cmdline_size;
+         }
+-
+-        /* Limited to one module. */
+-        if ( dom->ramdisk_blob )
+-            start_info_size += sizeof(struct hvm_modlist_entry);
+     }
+     else
+     {
+-        start_info_size +=
+-            sizeof(struct hvm_modlist_entry) * HVMLOADER_MODULE_MAX_COUNT;
+-        /*
+-         * Add extra space to write modules name.
+-         * The HVMLOADER_MODULE_NAME_SIZE accounts for NUL byte.
+-         */
+-        start_info_size +=
+-            HVMLOADER_MODULE_NAME_SIZE * HVMLOADER_MODULE_MAX_COUNT;
+-
+         /*
+          * Allocate and clear additional ioreq server pages. The default
+          * server will use the IOREQ and BUFIOREQ special pages above.
+@@ -746,7 +739,7 @@ static int start_info_x86_32(struct xc_dom_image *dom)
+     start_info->console.domU.mfn = xc_dom_p2m(dom, dom->console_pfn);
+     start_info->console.domU.evtchn = dom->console_evtchn;
+ 
+-    if ( dom->ramdisk_blob )
++    if ( dom->modules[0].blob )
+     {
+         start_info->mod_start = dom->initrd_start;
+         start_info->mod_len = dom->initrd_len;
+@@ -798,7 +791,7 @@ static int start_info_x86_64(struct xc_dom_image *dom)
+     start_info->console.domU.mfn = xc_dom_p2m(dom, dom->console_pfn);
+     start_info->console.domU.evtchn = dom->console_evtchn;
+ 
+-    if ( dom->ramdisk_blob )
++    if ( dom->modules[0].blob )
+     {
+         start_info->mod_start = dom->initrd_start;
+         start_info->mod_len = dom->initrd_len;
+@@ -1271,7 +1264,7 @@ static int meminit_hvm(struct xc_dom_image *dom)
+     unsigned long target_pages = dom->target_pages;
+     unsigned long cur_pages, cur_pfn;
+     int rc;
+-    unsigned long stat_normal_pages = 0, stat_2mb_pages = 0, 
++    unsigned long stat_normal_pages = 0, stat_2mb_pages = 0,
+         stat_1gb_pages = 0;
+     unsigned int memflags = 0;
+     int claim_enabled = dom->claim_enabled;
+@@ -1337,6 +1330,8 @@ static int meminit_hvm(struct xc_dom_image *dom)
+     p2m_size = 0;
+     for ( i = 0; i < nr_vmemranges; i++ )
+     {
++        DOMPRINTF("range: start=0x%"PRIx64" end=0x%"PRIx64, vmemranges[i].start, vmemranges[i].end);
++
+         total_pages += ((vmemranges[i].end - vmemranges[i].start)
+                         >> PAGE_SHIFT);
+         p2m_size = p2m_size > (vmemranges[i].end >> PAGE_SHIFT) ?
+@@ -1720,7 +1715,7 @@ static int alloc_pgtables_hvm(struct xc_dom_image *dom)
+  */
+ static void add_module_to_list(struct xc_dom_image *dom,
+                                struct xc_hvm_firmware_module *module,
+-                               const char *name,
++                               const char *cmdline,
+                                struct hvm_modlist_entry *modlist,
+                                struct hvm_start_info *start_info)
+ {
+@@ -1735,16 +1730,20 @@ static void add_module_to_list(struct xc_dom_image *dom,
+         return;
+ 
+     assert(start_info->nr_modules < HVMLOADER_MODULE_MAX_COUNT);
+-    assert(strnlen(name, HVMLOADER_MODULE_NAME_SIZE)
+-           < HVMLOADER_MODULE_NAME_SIZE);
+ 
+     modlist[index].paddr = module->guest_addr_out;
+     modlist[index].size = module->length;
+ 
+-    strncpy(modules_cmdline_start + HVMLOADER_MODULE_NAME_SIZE * index,
+-            name, HVMLOADER_MODULE_NAME_SIZE);
++    if ( cmdline )
++    {
++        assert(strnlen(cmdline, HVMLOADER_MODULE_CMDLINE_SIZE)
++               < HVMLOADER_MODULE_CMDLINE_SIZE);
++        strncpy(modules_cmdline_start + HVMLOADER_MODULE_CMDLINE_SIZE * index,
++                cmdline, HVMLOADER_MODULE_CMDLINE_SIZE);
++    }
++
+     modlist[index].cmdline_paddr =
+-        modules_cmdline_paddr + HVMLOADER_MODULE_NAME_SIZE * index;
++        modules_cmdline_paddr + HVMLOADER_MODULE_CMDLINE_SIZE * index;
+ 
+     start_info->nr_modules++;
+ }
+@@ -1756,10 +1755,10 @@ static int bootlate_hvm(struct xc_dom_image *dom)
+     struct hvm_start_info *start_info;
+     size_t start_info_size;
+     struct hvm_modlist_entry *modlist;
++    unsigned int i;
+ 
+     start_info_size = sizeof(*start_info) + dom->cmdline_size;
+-    if ( dom->ramdisk_blob )
+-        start_info_size += sizeof(struct hvm_modlist_entry);
++    start_info_size += sizeof(struct hvm_modlist_entry) * dom->num_modules;
+ 
+     if ( start_info_size >
+          dom->start_info_seg.pages << XC_DOM_PAGE_SHIFT(dom) )
+@@ -1790,12 +1789,18 @@ static int bootlate_hvm(struct xc_dom_image *dom)
+                                 ((uintptr_t)cmdline - (uintptr_t)start_info);
+         }
+ 
+-        if ( dom->ramdisk_blob )
++        for ( i = 0; i < dom->num_modules; i++ )
+         {
++            struct xc_hvm_firmware_module mod;
++
++            DOMPRINTF("Adding module %u", i);
++            mod.guest_addr_out =
++                dom->modules[i].seg.vstart - dom->parms.virt_base;
++            mod.length =
++                dom->modules[i].seg.vend - dom->modules[i].seg.vstart;
+ 
+-            modlist[0].paddr = dom->ramdisk_seg.vstart - dom->parms.virt_base;
+-            modlist[0].size = dom->ramdisk_seg.vend - dom->ramdisk_seg.vstart;
+-            start_info->nr_modules = 1;
++            add_module_to_list(dom, &mod, dom->modules[i].cmdline,
++                               modlist, start_info);
+         }
+ 
+         /* ACPI module 0 is the RSDP */
+diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
+index a89ff68cab..8c0a7e27bd 100644
+--- a/tools/libxl/libxl_dom.c
++++ b/tools/libxl/libxl_dom.c
+@@ -752,12 +752,12 @@ int libxl__build_pv(libxl__gc *gc, uint32_t domid,
+ 
+     if ( state->pv_ramdisk.path && strlen(state->pv_ramdisk.path) ) {
+         if (state->pv_ramdisk.mapped) {
+-            if ( (ret = xc_dom_ramdisk_mem(dom, state->pv_ramdisk.data, state->pv_ramdisk.size)) != 0 ) {
++            if ( (ret = xc_dom_module_mem(dom, state->pv_ramdisk.data, state->pv_ramdisk.size, NULL)) != 0 ) {
+                 LOGE(ERROR, "xc_dom_ramdisk_mem failed");
+                 goto out;
+             }
+         } else {
+-            if ( (ret = xc_dom_ramdisk_file(dom, state->pv_ramdisk.path)) != 0 ) {
++            if ( (ret = xc_dom_module_file(dom, state->pv_ramdisk.path, NULL)) != 0 ) {
+                 LOGE(ERROR, "xc_dom_ramdisk_file failed");
+                 goto out;
+             }
+@@ -998,14 +998,14 @@ static int libxl__domain_firmware(libxl__gc *gc,
+ 
+         if (state->pv_ramdisk.path && strlen(state->pv_ramdisk.path)) {
+             if (state->pv_ramdisk.mapped) {
+-                rc = xc_dom_ramdisk_mem(dom, state->pv_ramdisk.data,
+-                                        state->pv_ramdisk.size);
++                rc = xc_dom_module_mem(dom, state->pv_ramdisk.data,
++                                       state->pv_ramdisk.size, NULL);
+                 if (rc) {
+                     LOGE(ERROR, "xc_dom_ramdisk_mem failed");
+                     goto out;
+                 }
+             } else {
+-                rc = xc_dom_ramdisk_file(dom, state->pv_ramdisk.path);
++                rc = xc_dom_module_file(dom, state->pv_ramdisk.path, NULL);
+                 if (rc) {
+                     LOGE(ERROR, "xc_dom_ramdisk_file failed");
+                     goto out;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Date: Thu, 18 Jan 2018 17:25:04 +0000
+Subject: [PATCH] libxl: pvshim: Provide first-class config settings to enable
+ shim mode
+
+This is API-compatible because old callers are supposed to call
+libxl_*_init to initialise the struct; and the updated function clears
+these members.
+
+It is ABI-compatible because the new fields make this member of the
+guest type union larger but only within the existing size of that
+union.
+
+Unfortunately it is not easy to backport because it depends on the PVH
+domain type.  Attempts to avoid use of the PVH domain type involved
+working with two views of the configuration: the "underlying" domain
+type and the "visible" type (and corresponding config info).  Also
+there are different sets of config settings for PV and PVH, which
+callers would have to know to set.
+
+And, unfortunately, it will not be possible, with this approach, to
+enable the shim by default for all libxl callers.  (Although it could
+perhaps be done in xl.)
+
+For now, our config defaults are:
+ * if enabled, path is "xen-shim" in the xen firmware directory
+ * if enabled, cmdline is the one we are currently debugging with
+
+The debugging arguments will be rationalised in a moment.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+---
+v2: pvshim, not pvhshim
+    works with type "pvh", not type "pv"
+---
+ tools/libxl/libxl.h          |  8 +++++++
+ tools/libxl/libxl_create.c   | 15 ++++++++++++
+ tools/libxl/libxl_dom.c      | 57 +++++++++++++++++++++++++++++++++++---------
+ tools/libxl/libxl_internal.h |  4 ++++
+ tools/libxl/libxl_types.idl  |  3 +++
+ 5 files changed, 76 insertions(+), 11 deletions(-)
+
+diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
+index 097e54be63..baa23a7f1f 100644
+--- a/tools/libxl/libxl.h
++++ b/tools/libxl/libxl.h
+@@ -1100,6 +1100,14 @@ void libxl_mac_copy(libxl_ctx *ctx, libxl_mac *dst, const libxl_mac *src);
+  */
+ #define LIBXL_HAVE_MEMKB_64BITS 1
+ 
++/*
++ * LIBXL_HAVE_PV_SHIM
++ *
++ * If this is defined, libxl_domain_build_info's pvh type information
++ * contains members pvshim, pvshim_path, pvshim_cmdline.
++ */
++#define LIBXL_HAVE_PV_SHIM 1
++
+ typedef char **libxl_string_list;
+ void libxl_string_list_dispose(libxl_string_list *sl);
+ int libxl_string_list_length(const libxl_string_list *sl);
+diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
+index ceb5e520cb..2c70e83fd4 100644
+--- a/tools/libxl/libxl_create.c
++++ b/tools/libxl/libxl_create.c
+@@ -385,6 +385,18 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+         }
+         break;
+     case LIBXL_DOMAIN_TYPE_PVH:
++        libxl_defbool_setdefault(&b_info->u.pvh.pvshim, false);
++        if (libxl_defbool_val(b_info->u.pvh.pvshim)) {
++            if (!b_info->u.pvh.pvshim_path)
++                b_info->u.pvh.pvshim_path =
++                    libxl__sprintf(NOGC, "%s/%s",
++                                   libxl__xenfirmwaredir_path(),
++                                   PVSHIM_BASENAME);
++            if (!b_info->u.pvh.pvshim_cmdline)
++                b_info->u.pvh.pvshim_cmdline =
++                    libxl__strdup(NOGC, PVSHIM_CMDLINE);
++        }
++
+         break;
+     default:
+         LOG(ERROR, "invalid domain type %s in create info",
+@@ -493,6 +505,9 @@ int libxl__domain_build(libxl__gc *gc,
+ 
+         break;
+     case LIBXL_DOMAIN_TYPE_PVH:
++        state->shim_path = info->u.pvh.pvshim_path;
++        state->shim_cmdline = info->u.pvh.pvshim_cmdline;
++
+         ret = libxl__build_hvm(gc, domid, d_config, state);
+         if (ret)
+             goto out;
+diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
+index 8c0a7e27bd..3f91fc5072 100644
+--- a/tools/libxl/libxl_dom.c
++++ b/tools/libxl/libxl_dom.c
+@@ -980,22 +980,51 @@ static int libxl__domain_firmware(libxl__gc *gc,
+ 
+     if (state->pv_kernel.path != NULL &&
+         info->type == LIBXL_DOMAIN_TYPE_PVH) {
+-        /* Try to load a kernel instead of the firmware. */
+-        if (state->pv_kernel.mapped) {
+-            rc = xc_dom_kernel_mem(dom, state->pv_kernel.data,
+-                                   state->pv_kernel.size);
++
++        if (state->shim_path) {
++            rc = xc_dom_kernel_file(dom, state->shim_path);
+             if (rc) {
+-                LOGE(ERROR, "xc_dom_kernel_mem failed");
++                LOGE(ERROR, "xc_dom_kernel_file failed");
+                 goto out;
+             }
++
++            /* We've loaded the shim, so load the kernel as a secondary module */
++            if (state->pv_kernel.mapped) {
++                LOG(WARN, "xc_dom_module_mem, cmdline %s",
++                    state->pv_cmdline);
++                rc = xc_dom_module_mem(dom, state->pv_kernel.data,
++                                       state->pv_kernel.size, state->pv_cmdline);
++                if (rc) {
++                    LOGE(ERROR, "xc_dom_kernel_mem failed");
++                    goto out;
++                }
++            } else {
++                LOG(WARN, "xc_dom_module_file, path %s cmdline %s",
++                    state->pv_kernel.path, state->pv_cmdline);
++                rc = xc_dom_module_file(dom, state->pv_kernel.path, state->pv_cmdline);
++                if (rc) {
++                    LOGE(ERROR, "xc_dom_kernel_file failed");
++                    goto out;
++                }
++            }
+         } else {
+-            rc = xc_dom_kernel_file(dom, state->pv_kernel.path);
+-            if (rc) {
+-                LOGE(ERROR, "xc_dom_kernel_file failed");
+-                goto out;
++            /* No shim, so load the kernel directly */
++            if (state->pv_kernel.mapped) {
++                rc = xc_dom_kernel_mem(dom, state->pv_kernel.data,
++                                       state->pv_kernel.size);
++                if (rc) {
++                    LOGE(ERROR, "xc_dom_kernel_mem failed");
++                    goto out;
++                }
++            } else {
++                rc = xc_dom_kernel_file(dom, state->pv_kernel.path);
++                if (rc) {
++                    LOGE(ERROR, "xc_dom_kernel_file failed");
++                    goto out;
++                }
+             }
+         }
+-
++        
+         if (state->pv_ramdisk.path && strlen(state->pv_ramdisk.path)) {
+             if (state->pv_ramdisk.mapped) {
+                 rc = xc_dom_module_mem(dom, state->pv_ramdisk.data,
+@@ -1109,8 +1138,14 @@ int libxl__build_hvm(libxl__gc *gc, uint32_t domid,
+ 
+     xc_dom_loginit(ctx->xch);
+ 
++    /* 
++     * If PVH and we have a shim override, use the shim cmdline.
++     * If PVH and no shim override, use the pv cmdline.
++     * If not PVH, use info->cmdline.
++     */
+     dom = xc_dom_allocate(ctx->xch, info->type == LIBXL_DOMAIN_TYPE_PVH ?
+-                          state->pv_cmdline : info->cmdline, NULL);
++                          (state->shim_path ? state->shim_cmdline : state->pv_cmdline) :
++                          info->cmdline, NULL);
+     if (!dom) {
+         LOGE(ERROR, "xc_dom_allocate failed");
+         rc = ERROR_NOMEM;
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index 4460d21a69..66edc07966 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -116,6 +116,8 @@
+ #define TAP_DEVICE_SUFFIX "-emu"
+ #define DOMID_XS_PATH "domid"
+ #define INVALID_DOMID ~0
++#define PVSHIM_BASENAME "xen-shim"
++#define PVSHIM_CMDLINE "pv-shim console=xen,pv sched=null loglvl=all guest_loglvl=all apic_verbosity=debug e820-verbose"
+ 
+ /* Size macros. */
+ #define __AC(X,Y)   (X##Y)
+@@ -1126,6 +1128,8 @@ typedef struct {
+ 
+     libxl__file_reference pv_kernel;
+     libxl__file_reference pv_ramdisk;
++    const char * shim_path;
++    const char * shim_cmdline;
+     const char * pv_cmdline;
+     bool pvh_enabled;
+ 
+diff --git a/tools/libxl/libxl_types.idl b/tools/libxl/libxl_types.idl
+index 70ce42944c..512de2b70e 100644
+--- a/tools/libxl/libxl_types.idl
++++ b/tools/libxl/libxl_types.idl
+@@ -566,6 +566,9 @@ libxl_domain_build_info = Struct("domain_build_info",[
+                                        ("timer_mode",       libxl_timer_mode),
+                                        ("nested_hvm",       libxl_defbool),
+                                        ("apic",             libxl_defbool),
++                                       ("pvshim",           libxl_defbool),
++                                       ("pvshim_path",      string),
++                                       ("pvshim_cmdline",   string),
+                                        ])),
+                  ("invalid", None),
+                  ], keyvar_init_val = "LIBXL_DOMAIN_TYPE_INVALID")),
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Thu, 18 Jan 2018 17:25:04 +0000
+Subject: [PATCH] libxl: pvshim: Introduce pvshim_extra
+
+And move the debugging options from the default config into a doc
+comment in libxl_types.idl.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+---
+v2: pvshim, not pvhshim
+    works with type "pvh", not type "pv"
+---
+ tools/libxl/libxl.h          | 2 +-
+ tools/libxl/libxl_create.c   | 5 ++++-
+ tools/libxl/libxl_internal.h | 2 +-
+ tools/libxl/libxl_types.idl  | 1 +
+ 4 files changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
+index baa23a7f1f..dda33399d5 100644
+--- a/tools/libxl/libxl.h
++++ b/tools/libxl/libxl.h
+@@ -1104,7 +1104,7 @@ void libxl_mac_copy(libxl_ctx *ctx, libxl_mac *dst, const libxl_mac *src);
+  * LIBXL_HAVE_PV_SHIM
+  *
+  * If this is defined, libxl_domain_build_info's pvh type information
+- * contains members pvshim, pvshim_path, pvshim_cmdline.
++ * contains members pvshim, pvshim_path, pvshim_cmdline, pvshim_extra.
+  */
+ #define LIBXL_HAVE_PV_SHIM 1
+ 
+diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
+index 2c70e83fd4..82f6aacb80 100644
+--- a/tools/libxl/libxl_create.c
++++ b/tools/libxl/libxl_create.c
+@@ -506,7 +506,10 @@ int libxl__domain_build(libxl__gc *gc,
+         break;
+     case LIBXL_DOMAIN_TYPE_PVH:
+         state->shim_path = info->u.pvh.pvshim_path;
+-        state->shim_cmdline = info->u.pvh.pvshim_cmdline;
++        state->shim_cmdline = GCSPRINTF("%s%s%s",
++                    info->u.pvh.pvshim_cmdline,
++                    info->u.pvh.pvshim_extra ? " " : "",
++                    info->u.pvh.pvshim_extra ? info->u.pvh.pvshim_extra : "");
+ 
+         ret = libxl__build_hvm(gc, domid, d_config, state);
+         if (ret)
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index 66edc07966..41cf00ec91 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -117,7 +117,7 @@
+ #define DOMID_XS_PATH "domid"
+ #define INVALID_DOMID ~0
+ #define PVSHIM_BASENAME "xen-shim"
+-#define PVSHIM_CMDLINE "pv-shim console=xen,pv sched=null loglvl=all guest_loglvl=all apic_verbosity=debug e820-verbose"
++#define PVSHIM_CMDLINE "pv-shim console=xen,pv sched=null"
+ 
+ /* Size macros. */
+ #define __AC(X,Y)   (X##Y)
+diff --git a/tools/libxl/libxl_types.idl b/tools/libxl/libxl_types.idl
+index 512de2b70e..449865af8c 100644
+--- a/tools/libxl/libxl_types.idl
++++ b/tools/libxl/libxl_types.idl
+@@ -569,6 +569,7 @@ libxl_domain_build_info = Struct("domain_build_info",[
+                                        ("pvshim",           libxl_defbool),
+                                        ("pvshim_path",      string),
+                                        ("pvshim_cmdline",   string),
++                                       ("pvshim_extra", string), # eg "loglvl=all guest_loglvl=all apic_verbosity=debug e820-verbose"
+                                        ])),
+                  ("invalid", None),
+                  ], keyvar_init_val = "LIBXL_DOMAIN_TYPE_INVALID")),
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Thu, 18 Jan 2018 17:25:05 +0000
+Subject: [PATCH] xl: pvshim: Provide and document xl config
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+Signed-off-by: Wei Liu <wei.liu2@citrix.com>
+---
+v2: pvshim, not pvhshim
+    works with type "pvh", not type "pv"
+    pvshim_etc. options in config are not erroneously ignored
+---
+ docs/man/xl.cfg.pod.5.in | 35 +++++++++++++++++++++++++++++++++++
+ tools/libxl/xl_cmdimpl.c | 13 +++++++++++++
+ 2 files changed, 48 insertions(+)
+
+diff --git a/docs/man/xl.cfg.pod.5.in b/docs/man/xl.cfg.pod.5.in
+index d8b5fc74d5..a27ab09237 100644
+--- a/docs/man/xl.cfg.pod.5.in
++++ b/docs/man/xl.cfg.pod.5.in
+@@ -506,6 +506,41 @@ Load the specified file as firmware for the guest.
+ Currently there's no firmware available for PVH guests, they should be
+ booted using the B<Direct Kernel Boot> method or the B<bootloader> option.
+ 
++=over 4
++
++=item B<pvshim=BOOLEAN>
++
++Whether to boot this guest as a PV guest within a PVH container.
++Ie, the guest will experience a PV environment,
++but
++processor hardware extensions are used to
++separate its address space
++to mitigate the Meltdown attack (CVE-2017-5754).
++
++Default is false.
++
++=item B<pvshim_path="PATH">
++
++The PV shim is a specially-built firmware-like executable
++constructed from the hypervisor source tree.
++This option specifies to use a non-default shim.
++Ignored if pvhsim is false.
++
++=item B<pvshim_cmdline="STRING">
++
++Command line for the shim.
++Default is "pv-shim console=xen,pv sched=null".
++Ignored if pvhsim is false.
++
++=item B<pvshim_extra="STRING">
++
++Extra command line arguments for the shim.
++If supplied, appended to the value for pvshim_cmdline.
++Default is empty.
++Ignored if pvhsim is false.
++
++=back
++
+ =head3 Other Options
+ 
+ =over 4
+diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
+index 1bca1286d0..9bd09fac59 100644
+--- a/tools/libxl/xl_cmdimpl.c
++++ b/tools/libxl/xl_cmdimpl.c
+@@ -1433,6 +1433,19 @@ static void parse_config_data(const char *config_source,
+     if (blkdev_start)
+         b_info->blkdev_start = strdup(blkdev_start);
+ 
++    if (b_info->type == LIBXL_DOMAIN_TYPE_PVH) {
++        xlu_cfg_get_defbool(config, "pvshim", &b_info->u.pvh.pvshim, 0);
++        if (!xlu_cfg_get_string(config, "pvshim_path", &buf, 0))
++            xlu_cfg_replace_string(config, "pvshim_path",
++                                   &b_info->u.pvh.pvshim_path, 0);
++        if (!xlu_cfg_get_string(config, "pvshim_cmdline", &buf, 0))
++            xlu_cfg_replace_string(config, "pvshim_cmdline",
++                                   &b_info->u.pvh.pvshim_cmdline, 0);
++        if (!xlu_cfg_get_string(config, "pvshim_extra", &buf, 0))
++            xlu_cfg_replace_string(config, "pvshim_extra",
++                                   &b_info->u.pvh.pvshim_extra, 0);
++    }
++
+     /* the following is the actual config parsing with overriding
+      * values in the structures */
+     if (!xlu_cfg_get_long (config, "cpu_weight", &l, 0))
+-- 
+

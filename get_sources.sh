@@ -60,6 +60,19 @@ if [[ ! -e SOURCES/$LIVEPATCH_FILE ]] ; then
     popd
 fi
 
+echo "Checking comet..."
+if [[ ! -e SOURCES/$COMET_FILE ]] ; then
+    echo "Cloning comet repo..."
+    mkdir -p git-tmp
+    pushd git-tmp
+
+    git clone $COMET_URL comet.git || exit 1
+    cd comet.git
+    echo "Creating $COMET_FILE..."
+    git archive --prefix=xen-comet/ -o ../../SOURCES/$COMET_FILE $COMET_CSET || exit 1
+    popd
+fi
+
 if [[ -e git-tmp ]] ; then
     echo "Cleaning up cloned repositores"
     rm -rf git-tmp
