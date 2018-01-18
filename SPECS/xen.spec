@@ -9,7 +9,7 @@
 Summary: Xen Vixen is a "shim" allowing PV guests to run in HVM mode
 Name:    xen-vixen
 Version: 4.9.1
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -26,6 +26,7 @@ BuildRequires: /usr/include/gnu/stubs-32.h
 Requires: grub2
 Requires: perl perl-JSON
 Requires: python
+Requires: /usr/bin/xorriso /usr/bin/mformat
 %endif
 Requires: grep
 ExclusiveArch: x86_64 
@@ -91,6 +92,9 @@ rm -rf %{buildroot}
 %{_sbindir}/pvshim-converter
 
 %changelog
+* Thu Jan 18 2018 George Dunlap <george.dunlap@citrix.com> 4.9.1-2.el6.centos
+- Add dependencies for the script
+
 * Fri Jan 12 2018 George Dunlap <george.dunlap@citrix.com> 4.9.1-1.el6.centos
 - Move vixen to a separate package
 
