@@ -57,7 +57,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.2
-Release: 9%{?dist}
+Release: 10%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -962,6 +962,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jan 18 2018 George Dunlap <george.dunlap@citrix.com> - 4.8.2-10.el7.centos
+- Backport PVH functionality from 4.8.3pre-shim-comet branch
+- "Comet" shim functionality will come in a later update
+
 * Wed Jan 17 2018 George Dunlap <george.dunlap@citrix.com> - 4.8.2-9.el7.centos
 - Gratuitous version bump to make CBS happy
 

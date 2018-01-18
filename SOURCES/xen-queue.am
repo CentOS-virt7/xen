@@ -4813,3 +4813,3992 @@ index d1afb3cccd..505604fd6e 100644
          testw $TRAP_syscall,4(%rsp)
 -- 
 
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Date: Thu, 18 Jan 2018 16:12:07 +0000
+Subject: [PATCH] acpi: make pmtimer optional in FADT
+
+PM timer is not supported by PVH guests.
+
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Acked-by: Jan Beulich <jbeulich@suse.com>
+---
+ tools/firmware/hvmloader/util.c | 3 ++-
+ tools/libacpi/build.c           | 5 +++++
+ tools/libacpi/libacpi.h         | 1 +
+ 3 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/tools/firmware/hvmloader/util.c b/tools/firmware/hvmloader/util.c
+index 6e0cfe74d1..1d789736c8 100644
+--- a/tools/firmware/hvmloader/util.c
++++ b/tools/firmware/hvmloader/util.c
+@@ -948,7 +948,8 @@ void hvmloader_acpi_build_tables(struct acpi_config *config,
+     if ( !strncmp(xenstore_read("platform/acpi_s4", "1"), "1", 1)  )
+         config->table_flags |= ACPI_HAS_SSDT_S4;
+ 
+-    config->table_flags |= (ACPI_HAS_TCPA | ACPI_HAS_IOAPIC | ACPI_HAS_WAET);
++    config->table_flags |= (ACPI_HAS_TCPA | ACPI_HAS_IOAPIC |
++                            ACPI_HAS_WAET | ACPI_HAS_PMTIMER);
+ 
+     config->tis_hdr = (uint16_t *)ACPI_TIS_HDR_ADDRESS;
+ 
+diff --git a/tools/libacpi/build.c b/tools/libacpi/build.c
+index 47dae01ce6..e1fd381cb1 100644
+--- a/tools/libacpi/build.c
++++ b/tools/libacpi/build.c
+@@ -574,6 +574,11 @@ int acpi_build_tables(struct acpi_ctxt *ctxt, struct acpi_config *config)
+ 
+     fadt = ctxt->mem_ops.alloc(ctxt, sizeof(struct acpi_20_fadt), 16);
+     if (!fadt) goto oom;
++    if ( !(config->table_flags & ACPI_HAS_PMTIMER) )
++    {
++        Fadt.pm_tmr_blk = Fadt.pm_tmr_len = 0;
++        memset(&Fadt.x_pm_tmr_blk, 0, sizeof(Fadt.x_pm_tmr_blk));
++    }
+     memcpy(fadt, &Fadt, sizeof(struct acpi_20_fadt));
+     fadt->dsdt   = ctxt->mem_ops.v2p(ctxt, dsdt);
+     fadt->x_dsdt = ctxt->mem_ops.v2p(ctxt, dsdt);
+diff --git a/tools/libacpi/libacpi.h b/tools/libacpi/libacpi.h
+index 1d388f9e55..bda692ebfa 100644
+--- a/tools/libacpi/libacpi.h
++++ b/tools/libacpi/libacpi.h
+@@ -30,6 +30,7 @@
+ #define ACPI_HAS_TCPA        (1<<7)
+ #define ACPI_HAS_IOAPIC      (1<<8)
+ #define ACPI_HAS_WAET        (1<<9)
++#define ACPI_HAS_PMTIMER     (1<<10)
+ 
+ struct xen_vmemrange;
+ struct acpi_numa {
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Date: Thu, 18 Jan 2018 16:12:16 +0000
+Subject: [PATCH] acpi: power and sleep ACPI buttons are not emulated for PVH
+ guests
+
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Acked-by: Jan Beulich <jbeulich@suse.com>
+---
+ tools/firmware/hvmloader/util.c | 3 ++-
+ tools/libacpi/build.c           | 2 ++
+ tools/libacpi/libacpi.h         | 1 +
+ 3 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/tools/firmware/hvmloader/util.c b/tools/firmware/hvmloader/util.c
+index 1d789736c8..a3f12fe21c 100644
+--- a/tools/firmware/hvmloader/util.c
++++ b/tools/firmware/hvmloader/util.c
+@@ -949,7 +949,8 @@ void hvmloader_acpi_build_tables(struct acpi_config *config,
+         config->table_flags |= ACPI_HAS_SSDT_S4;
+ 
+     config->table_flags |= (ACPI_HAS_TCPA | ACPI_HAS_IOAPIC |
+-                            ACPI_HAS_WAET | ACPI_HAS_PMTIMER);
++                            ACPI_HAS_WAET | ACPI_HAS_PMTIMER |
++                            ACPI_HAS_BUTTONS);
+ 
+     config->tis_hdr = (uint16_t *)ACPI_TIS_HDR_ADDRESS;
+ 
+diff --git a/tools/libacpi/build.c b/tools/libacpi/build.c
+index e1fd381cb1..4a2e2a9986 100644
+--- a/tools/libacpi/build.c
++++ b/tools/libacpi/build.c
+@@ -579,6 +579,8 @@ int acpi_build_tables(struct acpi_ctxt *ctxt, struct acpi_config *config)
+         Fadt.pm_tmr_blk = Fadt.pm_tmr_len = 0;
+         memset(&Fadt.x_pm_tmr_blk, 0, sizeof(Fadt.x_pm_tmr_blk));
+     }
++    if ( !(config->table_flags & ACPI_HAS_BUTTONS) )
++        Fadt.flags |= (ACPI_PWR_BUTTON | ACPI_SLP_BUTTON);
+     memcpy(fadt, &Fadt, sizeof(struct acpi_20_fadt));
+     fadt->dsdt   = ctxt->mem_ops.v2p(ctxt, dsdt);
+     fadt->x_dsdt = ctxt->mem_ops.v2p(ctxt, dsdt);
+diff --git a/tools/libacpi/libacpi.h b/tools/libacpi/libacpi.h
+index bda692ebfa..dd6ef8b14c 100644
+--- a/tools/libacpi/libacpi.h
++++ b/tools/libacpi/libacpi.h
+@@ -31,6 +31,7 @@
+ #define ACPI_HAS_IOAPIC      (1<<8)
+ #define ACPI_HAS_WAET        (1<<9)
+ #define ACPI_HAS_PMTIMER     (1<<10)
++#define ACPI_HAS_BUTTONS     (1<<11)
+ 
+ struct xen_vmemrange;
+ struct acpi_numa {
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Date: Thu, 18 Jan 2018 16:13:06 +0000
+Subject: [PATCH] acpi: PVH guests need _E02 method
+
+This is the method that will get invoked on an SCI.
+
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Acked-by: Jan Beulich <jbeulich@suse.com>
+---
+ tools/libacpi/mk_dsdt.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/tools/libacpi/mk_dsdt.c b/tools/libacpi/mk_dsdt.c
+index 760d81bf4f..639d21e6de 100644
+--- a/tools/libacpi/mk_dsdt.c
++++ b/tools/libacpi/mk_dsdt.c
+@@ -280,11 +280,6 @@ int main(int argc, char **argv)
+ 
+     pop_block();
+ 
+-    if (dm_version == QEMU_NONE) {
+-        pop_block();
+-        return 0;
+-    }
+-
+     /* Define GPE control method. */
+     push_block("Scope", "\\_GPE");
+     push_block("Method",
+@@ -292,6 +287,11 @@ int main(int argc, char **argv)
+     stmt("\\_SB.PRSC ()", NULL);
+     pop_block();
+     pop_block();
++
++    if (dm_version == QEMU_NONE) {
++        pop_block();
++        return 0;
++    }
+     /**** Processor end ****/
+ 
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Roger=20Pau=20Monn=C3=A9?= <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:13:13 +0000
+Subject: [PATCH] libacpi: add _FADT_ to the FADT boot flags definitions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Wei Liu <wei.liu2@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ tools/libacpi/acpi2_0.h       | 4 ++--
+ tools/libacpi/static_tables.c | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tools/libacpi/acpi2_0.h b/tools/libacpi/acpi2_0.h
+index 775eb7a0b9..03c5dcb214 100644
+--- a/tools/libacpi/acpi2_0.h
++++ b/tools/libacpi/acpi2_0.h
+@@ -227,8 +227,8 @@ struct acpi_20_fadt {
+ /*
+  * FADT Boot Architecture Flags.
+  */
+-#define ACPI_LEGACY_DEVICES (1 << 0)
+-#define ACPI_8042           (1 << 1)
++#define ACPI_FADT_LEGACY_DEVICES    (1 << 0)
++#define ACPI_FADT_8042              (1 << 1)
+ 
+ /*
+  * FADT Fixed Feature Flags.
+diff --git a/tools/libacpi/static_tables.c b/tools/libacpi/static_tables.c
+index 617bf681e3..2659153882 100644
+--- a/tools/libacpi/static_tables.c
++++ b/tools/libacpi/static_tables.c
+@@ -63,7 +63,7 @@ struct acpi_20_fadt Fadt = {
+ 
+     .p_lvl2_lat = 0x0fff, /* >100,  means we do not support C2 state */
+     .p_lvl3_lat = 0x0fff, /* >1000, means we do not support C3 state */
+-    .iapc_boot_arch = ACPI_8042,
++    .iapc_boot_arch = ACPI_FADT_8042,
+     .flags = (ACPI_PROC_C1 |
+               ACPI_WBINVD |
+               ACPI_FIX_RTC | ACPI_TMR_VAL_EXT |
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Roger=20Pau=20Monn=C3=A9?= <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:13:21 +0000
+Subject: [PATCH] libacpi: set FADT boot flag to notify lack of VGA for PVHv2
+ guests
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+PVHv2 guests don't have any VGA card, and as so it must be notified in the FADT.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ tools/firmware/hvmloader/util.c | 2 +-
+ tools/libacpi/acpi2_0.h         | 1 +
+ tools/libacpi/build.c           | 2 ++
+ tools/libacpi/libacpi.h         | 1 +
+ 4 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/tools/firmware/hvmloader/util.c b/tools/firmware/hvmloader/util.c
+index a3f12fe21c..cddf09c1a0 100644
+--- a/tools/firmware/hvmloader/util.c
++++ b/tools/firmware/hvmloader/util.c
+@@ -950,7 +950,7 @@ void hvmloader_acpi_build_tables(struct acpi_config *config,
+ 
+     config->table_flags |= (ACPI_HAS_TCPA | ACPI_HAS_IOAPIC |
+                             ACPI_HAS_WAET | ACPI_HAS_PMTIMER |
+-                            ACPI_HAS_BUTTONS);
++                            ACPI_HAS_BUTTONS | ACPI_HAS_VGA);
+ 
+     config->tis_hdr = (uint16_t *)ACPI_TIS_HDR_ADDRESS;
+ 
+diff --git a/tools/libacpi/acpi2_0.h b/tools/libacpi/acpi2_0.h
+index 03c5dcb214..500f95eea7 100644
+--- a/tools/libacpi/acpi2_0.h
++++ b/tools/libacpi/acpi2_0.h
+@@ -229,6 +229,7 @@ struct acpi_20_fadt {
+  */
+ #define ACPI_FADT_LEGACY_DEVICES    (1 << 0)
+ #define ACPI_FADT_8042              (1 << 1)
++#define ACPI_FADT_NO_VGA            (1 << 2)
+ 
+ /*
+  * FADT Fixed Feature Flags.
+diff --git a/tools/libacpi/build.c b/tools/libacpi/build.c
+index 4a2e2a9986..b06dcfaebb 100644
+--- a/tools/libacpi/build.c
++++ b/tools/libacpi/build.c
+@@ -586,6 +586,8 @@ int acpi_build_tables(struct acpi_ctxt *ctxt, struct acpi_config *config)
+     fadt->x_dsdt = ctxt->mem_ops.v2p(ctxt, dsdt);
+     fadt->firmware_ctrl   = ctxt->mem_ops.v2p(ctxt, facs);
+     fadt->x_firmware_ctrl = ctxt->mem_ops.v2p(ctxt, facs);
++    if ( !(config->table_flags & ACPI_HAS_VGA) )
++        fadt->iapc_boot_arch |= ACPI_FADT_NO_VGA;
+     set_checksum(fadt,
+                  offsetof(struct acpi_header, checksum),
+                  sizeof(struct acpi_20_fadt));
+diff --git a/tools/libacpi/libacpi.h b/tools/libacpi/libacpi.h
+index dd6ef8b14c..0d50a82aeb 100644
+--- a/tools/libacpi/libacpi.h
++++ b/tools/libacpi/libacpi.h
+@@ -32,6 +32,7 @@
+ #define ACPI_HAS_WAET        (1<<9)
+ #define ACPI_HAS_PMTIMER     (1<<10)
+ #define ACPI_HAS_BUTTONS     (1<<11)
++#define ACPI_HAS_VGA         (1<<12)
+ 
+ struct xen_vmemrange;
+ struct acpi_numa {
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Roger=20Pau=20Monn=C3=A9?= <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:13:28 +0000
+Subject: [PATCH] libacpi: don't announce a 8042 controller in the FADT for
+ PVHv2 guests
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+There's no such controler available for PVHv2 guests.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ tools/firmware/hvmloader/util.c | 3 ++-
+ tools/libacpi/build.c           | 2 ++
+ tools/libacpi/libacpi.h         | 1 +
+ tools/libacpi/static_tables.c   | 1 -
+ 4 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/tools/firmware/hvmloader/util.c b/tools/firmware/hvmloader/util.c
+index cddf09c1a0..c05de53888 100644
+--- a/tools/firmware/hvmloader/util.c
++++ b/tools/firmware/hvmloader/util.c
+@@ -950,7 +950,8 @@ void hvmloader_acpi_build_tables(struct acpi_config *config,
+ 
+     config->table_flags |= (ACPI_HAS_TCPA | ACPI_HAS_IOAPIC |
+                             ACPI_HAS_WAET | ACPI_HAS_PMTIMER |
+-                            ACPI_HAS_BUTTONS | ACPI_HAS_VGA);
++                            ACPI_HAS_BUTTONS | ACPI_HAS_VGA |
++                            ACPI_HAS_8042);
+ 
+     config->tis_hdr = (uint16_t *)ACPI_TIS_HDR_ADDRESS;
+ 
+diff --git a/tools/libacpi/build.c b/tools/libacpi/build.c
+index b06dcfaebb..2bdfaab376 100644
+--- a/tools/libacpi/build.c
++++ b/tools/libacpi/build.c
+@@ -588,6 +588,8 @@ int acpi_build_tables(struct acpi_ctxt *ctxt, struct acpi_config *config)
+     fadt->x_firmware_ctrl = ctxt->mem_ops.v2p(ctxt, facs);
+     if ( !(config->table_flags & ACPI_HAS_VGA) )
+         fadt->iapc_boot_arch |= ACPI_FADT_NO_VGA;
++    if ( config->table_flags & ACPI_HAS_8042 )
++        fadt->iapc_boot_arch |= ACPI_FADT_8042;
+     set_checksum(fadt,
+                  offsetof(struct acpi_header, checksum),
+                  sizeof(struct acpi_20_fadt));
+diff --git a/tools/libacpi/libacpi.h b/tools/libacpi/libacpi.h
+index 0d50a82aeb..db2d7b28f1 100644
+--- a/tools/libacpi/libacpi.h
++++ b/tools/libacpi/libacpi.h
+@@ -33,6 +33,7 @@
+ #define ACPI_HAS_PMTIMER     (1<<10)
+ #define ACPI_HAS_BUTTONS     (1<<11)
+ #define ACPI_HAS_VGA         (1<<12)
++#define ACPI_HAS_8042        (1<<13)
+ 
+ struct xen_vmemrange;
+ struct acpi_numa {
+diff --git a/tools/libacpi/static_tables.c b/tools/libacpi/static_tables.c
+index 2659153882..1f6247d9d0 100644
+--- a/tools/libacpi/static_tables.c
++++ b/tools/libacpi/static_tables.c
+@@ -63,7 +63,6 @@ struct acpi_20_fadt Fadt = {
+ 
+     .p_lvl2_lat = 0x0fff, /* >100,  means we do not support C2 state */
+     .p_lvl3_lat = 0x0fff, /* >1000, means we do not support C3 state */
+-    .iapc_boot_arch = ACPI_FADT_8042,
+     .flags = (ACPI_PROC_C1 |
+               ACPI_WBINVD |
+               ACPI_FIX_RTC | ACPI_TMR_VAL_EXT |
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Roger=20Pau=20Monn=C3=A9?= <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:13:35 +0000
+Subject: [PATCH] libacpi: update FADT layout to support version 5
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Update the structure of the FADT table to version 5, and use that version for
+PVHv2 guests. Note that HVM guests will continue to use FADT 4. In order to do
+this, add a new field to acpi_config that contains the ACPI revision to use by
+libacpi. Note that currently this only applies to the FADT.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ tools/firmware/hvmloader/util.c |  1 +
+ tools/libacpi/acpi2_0.h         |  8 +++++---
+ tools/libacpi/build.c           | 35 ++++++++++++++++++++++++++++-------
+ tools/libacpi/libacpi.h         |  1 +
+ tools/libacpi/static_tables.c   |  6 ++----
+ tools/libxl/libxl_x86_acpi.c    |  1 +
+ 6 files changed, 38 insertions(+), 14 deletions(-)
+
+diff --git a/tools/firmware/hvmloader/util.c b/tools/firmware/hvmloader/util.c
+index c05de53888..f2bec517fa 100644
+--- a/tools/firmware/hvmloader/util.c
++++ b/tools/firmware/hvmloader/util.c
+@@ -952,6 +952,7 @@ void hvmloader_acpi_build_tables(struct acpi_config *config,
+                             ACPI_HAS_WAET | ACPI_HAS_PMTIMER |
+                             ACPI_HAS_BUTTONS | ACPI_HAS_VGA |
+                             ACPI_HAS_8042);
++    config->acpi_revision = 4;
+ 
+     config->tis_hdr = (uint16_t *)ACPI_TIS_HDR_ADDRESS;
+ 
+diff --git a/tools/libacpi/acpi2_0.h b/tools/libacpi/acpi2_0.h
+index 500f95eea7..571519732f 100644
+--- a/tools/libacpi/acpi2_0.h
++++ b/tools/libacpi/acpi2_0.h
+@@ -169,7 +169,7 @@ struct acpi_10_fadt {
+ /*
+  * Fixed ACPI Description Table Structure (FADT).
+  */
+-struct acpi_20_fadt {
++struct acpi_fadt {
+     struct acpi_header header;
+     uint32_t firmware_ctrl;
+     uint32_t dsdt;
+@@ -222,6 +222,9 @@ struct acpi_20_fadt {
+     struct acpi_20_generic_address x_pm_tmr_blk;
+     struct acpi_20_generic_address x_gpe0_blk;
+     struct acpi_20_generic_address x_gpe1_blk;
++    /* Only available starting from FADT revision 5. */
++    struct acpi_20_generic_address sleep_control;
++    struct acpi_20_generic_address sleep_status;
+ };
+ 
+ /*
+@@ -422,7 +425,7 @@ struct acpi_20_slit {
+  */
+ #define ACPI_2_0_RSDP_SIGNATURE ASCII64('R','S','D',' ','P','T','R',' ')
+ #define ACPI_2_0_FACS_SIGNATURE ASCII32('F','A','C','S')
+-#define ACPI_2_0_FADT_SIGNATURE ASCII32('F','A','C','P')
++#define ACPI_FADT_SIGNATURE     ASCII32('F','A','C','P')
+ #define ACPI_2_0_MADT_SIGNATURE ASCII32('A','P','I','C')
+ #define ACPI_2_0_RSDT_SIGNATURE ASCII32('R','S','D','T')
+ #define ACPI_2_0_XSDT_SIGNATURE ASCII32('X','S','D','T')
+@@ -436,7 +439,6 @@ struct acpi_20_slit {
+  * Table revision numbers.
+  */
+ #define ACPI_2_0_RSDP_REVISION 0x02
+-#define ACPI_2_0_FADT_REVISION 0x04
+ #define ACPI_2_0_MADT_REVISION 0x02
+ #define ACPI_2_0_RSDT_REVISION 0x01
+ #define ACPI_2_0_XSDT_REVISION 0x01
+diff --git a/tools/libacpi/build.c b/tools/libacpi/build.c
+index 2bdfaab376..6bd50b3d05 100644
+--- a/tools/libacpi/build.c
++++ b/tools/libacpi/build.c
+@@ -33,7 +33,7 @@
+ extern struct acpi_20_rsdp Rsdp;
+ extern struct acpi_20_rsdt Rsdt;
+ extern struct acpi_20_xsdt Xsdt;
+-extern struct acpi_20_fadt Fadt;
++extern struct acpi_fadt Fadt;
+ extern struct acpi_20_facs Facs;
+ extern struct acpi_20_waet Waet;
+ 
+@@ -503,12 +503,13 @@ int acpi_build_tables(struct acpi_ctxt *ctxt, struct acpi_config *config)
+     struct acpi_20_rsdp *rsdp;
+     struct acpi_20_rsdt *rsdt;
+     struct acpi_20_xsdt *xsdt;
+-    struct acpi_20_fadt *fadt;
++    struct acpi_fadt    *fadt;
+     struct acpi_10_fadt *fadt_10;
+     struct acpi_20_facs *facs;
+     unsigned char       *dsdt;
+     unsigned long        secondary_tables[ACPI_MAX_SECONDARY_TABLES];
+     int                  nr_secondaries, i;
++    unsigned int         fadt_size;
+ 
+     acpi_info = (struct acpi_info *)config->infop;
+     memset(acpi_info, 0, sizeof(*acpi_info));
+@@ -572,7 +573,23 @@ int acpi_build_tables(struct acpi_ctxt *ctxt, struct acpi_config *config)
+                  offsetof(struct acpi_header, checksum),
+                  sizeof(struct acpi_10_fadt));
+ 
+-    fadt = ctxt->mem_ops.alloc(ctxt, sizeof(struct acpi_20_fadt), 16);
++    switch ( config->acpi_revision )
++    {
++    case 4:
++        /*
++         * NB: we can use offsetof because there's no padding between
++         * x_gpe1_blk and sleep_control.
++         */
++        fadt_size = offsetof(struct acpi_fadt, sleep_control);
++        break;
++    case 5:
++        fadt_size = sizeof(*fadt);
++        break;
++    default:
++        printf("ACPI revision %u not supported\n", config->acpi_revision);
++        return -1;
++    }
++    fadt = ctxt->mem_ops.alloc(ctxt, fadt_size, 16);
+     if (!fadt) goto oom;
+     if ( !(config->table_flags & ACPI_HAS_PMTIMER) )
+     {
+@@ -581,7 +598,13 @@ int acpi_build_tables(struct acpi_ctxt *ctxt, struct acpi_config *config)
+     }
+     if ( !(config->table_flags & ACPI_HAS_BUTTONS) )
+         Fadt.flags |= (ACPI_PWR_BUTTON | ACPI_SLP_BUTTON);
+-    memcpy(fadt, &Fadt, sizeof(struct acpi_20_fadt));
++    memcpy(fadt, &Fadt, fadt_size);
++    /*
++     * For both ACPI 4 and 5 the revision of the FADT matches the ACPI
++     * revision.
++     */
++    fadt->header.revision = config->acpi_revision;
++    fadt->header.length = fadt_size;
+     fadt->dsdt   = ctxt->mem_ops.v2p(ctxt, dsdt);
+     fadt->x_dsdt = ctxt->mem_ops.v2p(ctxt, dsdt);
+     fadt->firmware_ctrl   = ctxt->mem_ops.v2p(ctxt, facs);
+@@ -590,9 +613,7 @@ int acpi_build_tables(struct acpi_ctxt *ctxt, struct acpi_config *config)
+         fadt->iapc_boot_arch |= ACPI_FADT_NO_VGA;
+     if ( config->table_flags & ACPI_HAS_8042 )
+         fadt->iapc_boot_arch |= ACPI_FADT_8042;
+-    set_checksum(fadt,
+-                 offsetof(struct acpi_header, checksum),
+-                 sizeof(struct acpi_20_fadt));
++    set_checksum(fadt, offsetof(struct acpi_header, checksum), fadt_size);
+ 
+     nr_secondaries = construct_secondary_tables(ctxt, secondary_tables,
+                  config, acpi_info);
+diff --git a/tools/libacpi/libacpi.h b/tools/libacpi/libacpi.h
+index db2d7b28f1..dbc6c8bd7a 100644
+--- a/tools/libacpi/libacpi.h
++++ b/tools/libacpi/libacpi.h
+@@ -63,6 +63,7 @@ struct acpi_config {
+     uint64_t pci_hi_start, pci_hi_len;
+ 
+     uint32_t table_flags;
++    uint8_t acpi_revision;
+ 
+     uint64_t vm_gid[2];
+     unsigned long vm_gid_addr; /* OUT parameter */
+diff --git a/tools/libacpi/static_tables.c b/tools/libacpi/static_tables.c
+index 1f6247d9d0..13946aaef3 100644
+--- a/tools/libacpi/static_tables.c
++++ b/tools/libacpi/static_tables.c
+@@ -38,11 +38,9 @@ struct acpi_20_facs Facs = {
+ #define ACPI_PM_TMR_BLK_BIT_WIDTH           0x20
+ #define ACPI_PM_TMR_BLK_BIT_OFFSET          0x00
+ 
+-struct acpi_20_fadt Fadt = {
++struct acpi_fadt Fadt = {
+     .header = {
+-        .signature    = ACPI_2_0_FADT_SIGNATURE,
+-        .length       = sizeof(struct acpi_20_fadt),
+-        .revision     = ACPI_2_0_FADT_REVISION,
++        .signature    = ACPI_FADT_SIGNATURE,
+         .oem_id       = ACPI_OEM_ID, 
+         .oem_table_id = ACPI_OEM_TABLE_ID,
+         .oem_revision = ACPI_OEM_REVISION,
+diff --git a/tools/libxl/libxl_x86_acpi.c b/tools/libxl/libxl_x86_acpi.c
+index b441adf7a4..173188f73e 100644
+--- a/tools/libxl/libxl_x86_acpi.c
++++ b/tools/libxl/libxl_x86_acpi.c
+@@ -151,6 +151,7 @@ static int init_acpi_config(libxl__gc *gc,
+ 
+     config->lapic_base_address = LAPIC_BASE_ADDRESS;
+     config->lapic_id = acpi_lapic_id;
++    config->acpi_revision = 5;
+ 
+     rc = 0;
+ out:
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Roger=20Pau=20Monn=C3=A9?= <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:13:44 +0000
+Subject: [PATCH] libacpi: announce that PVHv2 has no CMOS RTC in FADT
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+At the moment this flag is unconditionally set for PVHv2 domains. Note that
+using this boot flag requires that the FADT table revision is at least 5.
+
+Reported-by: Jan Beulich <jbeulich@suse.com>
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ tools/firmware/hvmloader/util.c | 2 +-
+ tools/libacpi/acpi2_0.h         | 1 +
+ tools/libacpi/build.c           | 9 +++++++++
+ tools/libacpi/libacpi.h         | 1 +
+ 4 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/tools/firmware/hvmloader/util.c b/tools/firmware/hvmloader/util.c
+index f2bec517fa..03cfb795d3 100644
+--- a/tools/firmware/hvmloader/util.c
++++ b/tools/firmware/hvmloader/util.c
+@@ -951,7 +951,7 @@ void hvmloader_acpi_build_tables(struct acpi_config *config,
+     config->table_flags |= (ACPI_HAS_TCPA | ACPI_HAS_IOAPIC |
+                             ACPI_HAS_WAET | ACPI_HAS_PMTIMER |
+                             ACPI_HAS_BUTTONS | ACPI_HAS_VGA |
+-                            ACPI_HAS_8042);
++                            ACPI_HAS_8042 | ACPI_HAS_CMOS_RTC);
+     config->acpi_revision = 4;
+ 
+     config->tis_hdr = (uint16_t *)ACPI_TIS_HDR_ADDRESS;
+diff --git a/tools/libacpi/acpi2_0.h b/tools/libacpi/acpi2_0.h
+index 571519732f..2619ba32db 100644
+--- a/tools/libacpi/acpi2_0.h
++++ b/tools/libacpi/acpi2_0.h
+@@ -233,6 +233,7 @@ struct acpi_fadt {
+ #define ACPI_FADT_LEGACY_DEVICES    (1 << 0)
+ #define ACPI_FADT_8042              (1 << 1)
+ #define ACPI_FADT_NO_VGA            (1 << 2)
++#define ACPI_FADT_NO_CMOS_RTC       (1 << 5)
+ 
+ /*
+  * FADT Fixed Feature Flags.
+diff --git a/tools/libacpi/build.c b/tools/libacpi/build.c
+index 6bd50b3d05..a02ffbf43c 100644
+--- a/tools/libacpi/build.c
++++ b/tools/libacpi/build.c
+@@ -613,6 +613,15 @@ int acpi_build_tables(struct acpi_ctxt *ctxt, struct acpi_config *config)
+         fadt->iapc_boot_arch |= ACPI_FADT_NO_VGA;
+     if ( config->table_flags & ACPI_HAS_8042 )
+         fadt->iapc_boot_arch |= ACPI_FADT_8042;
++    if ( !(config->table_flags & ACPI_HAS_CMOS_RTC) )
++    {
++        if ( fadt->header.revision < 5 )
++        {
++            printf("ACPI_FADT_NO_CMOS_RTC requires FADT revision 5\n");
++            return -1;
++        }
++        fadt->iapc_boot_arch |= ACPI_FADT_NO_CMOS_RTC;
++    }
+     set_checksum(fadt, offsetof(struct acpi_header, checksum), fadt_size);
+ 
+     nr_secondaries = construct_secondary_tables(ctxt, secondary_tables,
+diff --git a/tools/libacpi/libacpi.h b/tools/libacpi/libacpi.h
+index dbc6c8bd7a..67bd67fa0a 100644
+--- a/tools/libacpi/libacpi.h
++++ b/tools/libacpi/libacpi.h
+@@ -34,6 +34,7 @@
+ #define ACPI_HAS_BUTTONS     (1<<11)
+ #define ACPI_HAS_VGA         (1<<12)
+ #define ACPI_HAS_8042        (1<<13)
++#define ACPI_HAS_CMOS_RTC    (1<<14)
+ 
+ struct xen_vmemrange;
+ struct acpi_numa {
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:13:53 +0000
+Subject: [PATCH] firmware/rombios: fix after update to libacpi
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fix a build breakage after the libacpi changes, this is due to rombios using the
+libacpi headers in order to parse the ACPI tables.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Reported-by: Razvan Cojocaru <rcojocaru@bitdefender.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/firmware/rombios/32bit/util.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tools/firmware/rombios/32bit/util.c b/tools/firmware/rombios/32bit/util.c
+index e473e89431..6c1c480514 100644
+--- a/tools/firmware/rombios/32bit/util.c
++++ b/tools/firmware/rombios/32bit/util.c
+@@ -438,7 +438,7 @@ uint32_t get_s3_waking_vector(void)
+ {
+     struct acpi_20_rsdp *rsdp = find_rsdp();
+     struct acpi_20_xsdt *xsdt;
+-    struct acpi_20_fadt *fadt;
++    struct acpi_fadt *fadt;
+     struct acpi_20_facs *facs;
+     uint32_t vector;
+ 
+@@ -449,8 +449,8 @@ uint32_t get_s3_waking_vector(void)
+     if (!xsdt)
+         return 0;
+ 
+-    fadt = (struct acpi_20_fadt *)(long)xsdt->entry[0];
+-    if (!fadt || (fadt->header.signature != ACPI_2_0_FADT_SIGNATURE))
++    fadt = (struct acpi_fadt *)(long)xsdt->entry[0];
++    if (!fadt || (fadt->header.signature != ACPI_FADT_SIGNATURE))
+         return 0;
+ 
+     facs = (struct acpi_20_facs *)(long)fadt->x_firmware_ctrl;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Date: Thu, 18 Jan 2018 16:13:59 +0000
+Subject: [PATCH] x86/pmtimer: move ACPI registers from PMTState to hvm_domain
+
+These registers (pm1a specifically) are not all specific to pm timer
+and are accessed by non-pmtimer code (for example, sleep/power button
+emulation).
+
+The public name for save state structure is kept as 'pmtimer' to avoid
+code churn with the expected changes in migration code. hvm_hw_acpi
+name is introduced for internal use but when migration code is updated
+hvm_hw_pmtimer will be renamed to hvm_hw_acpi.
+
+No functional changes are introduced.
+
+(While this file is being modified, also add emacs mode style rune)
+
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/hvm/pmtimer.c       | 67 +++++++++++++++++++++++++---------------
+ xen/include/asm-x86/hvm/domain.h | 10 ++++++
+ xen/include/asm-x86/hvm/vpt.h    |  1 -
+ 3 files changed, 52 insertions(+), 26 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/pmtimer.c b/xen/arch/x86/hvm/pmtimer.c
+index 99d1e86f05..b70c299ed3 100644
+--- a/xen/arch/x86/hvm/pmtimer.c
++++ b/xen/arch/x86/hvm/pmtimer.c
+@@ -56,9 +56,11 @@
+ /* Dispatch SCIs based on the PM1a_STS and PM1a_EN registers */
+ static void pmt_update_sci(PMTState *s)
+ {
++    struct hvm_hw_acpi *acpi = &s->vcpu->domain->arch.hvm_domain.acpi;
++
+     ASSERT(spin_is_locked(&s->lock));
+ 
+-    if ( s->pm.pm1a_en & s->pm.pm1a_sts & SCI_MASK )
++    if ( acpi->pm1a_en & acpi->pm1a_sts & SCI_MASK )
+         hvm_isa_irq_assert(s->vcpu->domain, SCI_IRQ);
+     else
+         hvm_isa_irq_deassert(s->vcpu->domain, SCI_IRQ);
+@@ -72,7 +74,7 @@ void hvm_acpi_power_button(struct domain *d)
+         return;
+ 
+     spin_lock(&s->lock);
+-    s->pm.pm1a_sts |= PWRBTN_STS;
++    d->arch.hvm_domain.acpi.pm1a_sts |= PWRBTN_STS;
+     pmt_update_sci(s);
+     spin_unlock(&s->lock);
+ }
+@@ -85,7 +87,7 @@ void hvm_acpi_sleep_button(struct domain *d)
+         return;
+ 
+     spin_lock(&s->lock);
+-    s->pm.pm1a_sts |= SLPBTN_STS;
++    d->arch.hvm_domain.acpi.pm1a_sts |= PWRBTN_STS;
+     pmt_update_sci(s);
+     spin_unlock(&s->lock);
+ }
+@@ -95,7 +97,8 @@ void hvm_acpi_sleep_button(struct domain *d)
+ static void pmt_update_time(PMTState *s)
+ {
+     uint64_t curr_gtime, tmp;
+-    uint32_t tmr_val = s->pm.tmr_val, msb = tmr_val & TMR_VAL_MSB;
++    struct hvm_hw_acpi *acpi = &s->vcpu->domain->arch.hvm_domain.acpi;
++    uint32_t tmr_val = acpi->tmr_val, msb = tmr_val & TMR_VAL_MSB;
+     
+     ASSERT(spin_is_locked(&s->lock));
+ 
+@@ -108,12 +111,12 @@ static void pmt_update_time(PMTState *s)
+     s->last_gtime = curr_gtime;
+ 
+     /* Update timer value atomically wrt lock-free reads in handle_pmt_io(). */
+-    *(volatile uint32_t *)&s->pm.tmr_val = tmr_val;
++    write_atomic(&acpi->tmr_val, tmr_val);
+ 
+     /* If the counter's MSB has changed, set the status bit */
+     if ( (tmr_val & TMR_VAL_MSB) != msb )
+     {
+-        s->pm.pm1a_sts |= TMR_STS;
++        acpi->pm1a_sts |= TMR_STS;
+         pmt_update_sci(s);
+     }
+ }
+@@ -133,7 +136,8 @@ static void pmt_timer_callback(void *opaque)
+     pmt_update_time(s);
+ 
+     /* How close are we to the next MSB flip? */
+-    pmt_cycles_until_flip = TMR_VAL_MSB - (s->pm.tmr_val & (TMR_VAL_MSB - 1));
++    pmt_cycles_until_flip = TMR_VAL_MSB -
++        (s->vcpu->domain->arch.hvm_domain.acpi.tmr_val & (TMR_VAL_MSB - 1));
+ 
+     /* Overall time between MSB flips */
+     time_until_flip = (1000000000ULL << 23) / FREQUENCE_PMTIMER;
+@@ -152,6 +156,7 @@ static int handle_evt_io(
+     int dir, unsigned int port, unsigned int bytes, uint32_t *val)
+ {
+     struct vcpu *v = current;
++    struct hvm_hw_acpi *acpi = &v->domain->arch.hvm_domain.acpi;
+     PMTState *s = &v->domain->arch.hvm_domain.pl_time->vpmt;
+     uint32_t addr, data, byte;
+     int i;
+@@ -175,16 +180,16 @@ static int handle_evt_io(
+             {
+                 /* PM1a_STS register bits are write-to-clear */
+             case 0 /* PM1a_STS_ADDR */:
+-                s->pm.pm1a_sts &= ~byte;
++                acpi->pm1a_sts &= ~byte;
+                 break;
+             case 1 /* PM1a_STS_ADDR + 1 */:
+-                s->pm.pm1a_sts &= ~(byte << 8);
++                acpi->pm1a_sts &= ~(byte << 8);
+                 break;
+             case 2 /* PM1a_EN_ADDR */:
+-                s->pm.pm1a_en = (s->pm.pm1a_en & 0xff00) | byte;
++                acpi->pm1a_en = (acpi->pm1a_en & 0xff00) | byte;
+                 break;
+             case 3 /* PM1a_EN_ADDR + 1 */:
+-                s->pm.pm1a_en = (s->pm.pm1a_en & 0xff) | (byte << 8);
++                acpi->pm1a_en = (acpi->pm1a_en & 0xff) | (byte << 8);
+                 break;
+             default:
+                 gdprintk(XENLOG_WARNING, 
+@@ -197,7 +202,7 @@ static int handle_evt_io(
+     }
+     else /* p->dir == IOREQ_READ */
+     {
+-        data = s->pm.pm1a_sts | (((uint32_t) s->pm.pm1a_en) << 16);
++        data = acpi->pm1a_sts | ((uint32_t)acpi->pm1a_en << 16);
+         data >>= 8 * addr;
+         if ( bytes == 1 ) data &= 0xff;
+         else if ( bytes == 2 ) data &= 0xffff;
+@@ -215,6 +220,7 @@ static int handle_pmt_io(
+     int dir, unsigned int port, unsigned int bytes, uint32_t *val)
+ {
+     struct vcpu *v = current;
++    struct hvm_hw_acpi *acpi = &v->domain->arch.hvm_domain.acpi;
+     PMTState *s = &v->domain->arch.hvm_domain.pl_time->vpmt;
+ 
+     if ( bytes != 4 || dir != IOREQ_READ )
+@@ -226,7 +232,7 @@ static int handle_pmt_io(
+     {
+         /* We hold the lock: update timer value and return it. */
+         pmt_update_time(s);
+-        *val = s->pm.tmr_val;
++        *val = acpi->tmr_val;
+         spin_unlock(&s->lock);
+     }
+     else
+@@ -237,16 +243,17 @@ static int handle_pmt_io(
+          * updated value with a lock-free atomic read.
+          */
+         spin_barrier(&s->lock);
+-        *val = read_atomic(&s->pm.tmr_val);
++        *val = read_atomic(&acpi->tmr_val);
+     }
+ 
+     return X86EMUL_OKAY;
+ }
+ 
+-static int pmtimer_save(struct domain *d, hvm_domain_context_t *h)
++static int acpi_save(struct domain *d, hvm_domain_context_t *h)
+ {
++    struct hvm_hw_acpi *acpi = &d->arch.hvm_domain.acpi;
+     PMTState *s = &d->arch.hvm_domain.pl_time->vpmt;
+-    uint32_t x, msb = s->pm.tmr_val & TMR_VAL_MSB;
++    uint32_t x, msb = acpi->tmr_val & TMR_VAL_MSB;
+     int rc;
+ 
+     if ( !has_vpm(d) )
+@@ -261,21 +268,21 @@ static int pmtimer_save(struct domain *d, hvm_domain_context_t *h)
+     x = (((s->vcpu->arch.hvm_vcpu.guest_time ?: hvm_get_guest_time(s->vcpu)) -
+           s->last_gtime) * s->scale) >> 32;
+     if ( x < 1UL<<31 )
+-        s->pm.tmr_val += x;
+-    if ( (s->pm.tmr_val & TMR_VAL_MSB) != msb )
+-        s->pm.pm1a_sts |= TMR_STS;
++        acpi->tmr_val += x;
++    if ( (acpi->tmr_val & TMR_VAL_MSB) != msb )
++        acpi->pm1a_sts |= TMR_STS;
+     /* No point in setting the SCI here because we'll already have saved the 
+      * IRQ and *PIC state; we'll fix it up when we restore the domain */
+-
+-    rc = hvm_save_entry(PMTIMER, 0, h, &s->pm);
++    rc = hvm_save_entry(PMTIMER, 0, h, acpi);
+ 
+     spin_unlock(&s->lock);
+ 
+     return rc;
+ }
+ 
+-static int pmtimer_load(struct domain *d, hvm_domain_context_t *h)
++static int acpi_load(struct domain *d, hvm_domain_context_t *h)
+ {
++    struct hvm_hw_acpi *acpi = &d->arch.hvm_domain.acpi;
+     PMTState *s = &d->arch.hvm_domain.pl_time->vpmt;
+ 
+     if ( !has_vpm(d) )
+@@ -284,7 +291,7 @@ static int pmtimer_load(struct domain *d, hvm_domain_context_t *h)
+     spin_lock(&s->lock);
+ 
+     /* Reload the registers */
+-    if ( hvm_load_entry(PMTIMER, h, &s->pm) )
++    if ( hvm_load_entry(PMTIMER, h, acpi) )
+     {
+         spin_unlock(&s->lock);
+         return -EINVAL;
+@@ -302,7 +309,7 @@ static int pmtimer_load(struct domain *d, hvm_domain_context_t *h)
+     return 0;
+ }
+ 
+-HVM_REGISTER_SAVE_RESTORE(PMTIMER, pmtimer_save, pmtimer_load, 
++HVM_REGISTER_SAVE_RESTORE(PMTIMER, acpi_save, acpi_load,
+                           1, HVMSR_PER_DOM);
+ 
+ int pmtimer_change_ioport(struct domain *d, unsigned int version)
+@@ -377,5 +384,15 @@ void pmtimer_reset(struct domain *d)
+         return;
+ 
+     /* Reset the counter. */
+-    d->arch.hvm_domain.pl_time->vpmt.pm.tmr_val = 0;
++    d->arch.hvm_domain.acpi.tmr_val = 0;
+ }
++
++/*
++ * Local variables:
++ * mode: C
++ * c-file-style: "BSD"
++ * c-basic-offset: 4
++ * tab-width: 4
++ * indent-tabs-mode: nil
++ * End:
++ */
+diff --git a/xen/include/asm-x86/hvm/domain.h b/xen/include/asm-x86/hvm/domain.h
+index f34d784c6c..d55d180d2a 100644
+--- a/xen/include/asm-x86/hvm/domain.h
++++ b/xen/include/asm-x86/hvm/domain.h
+@@ -102,6 +102,16 @@ struct hvm_domain {
+     struct hvm_vioapic    *vioapic;
+     struct hvm_hw_stdvga   stdvga;
+ 
++    /*
++     * hvm_hw_pmtimer is a publicly-visible name. We will defer renaming
++     * it to the more appropriate hvm_hw_acpi until the expected
++     * comprehensive rewrte of migration code, thus avoiding code churn
++     * in public header files.
++     * Internally, however, we will be using hvm_hw_acpi.
++     */
++#define hvm_hw_acpi hvm_hw_pmtimer
++    struct hvm_hw_acpi     acpi;
++
+     /* VCPU which is current target for 8259 interrupts. */
+     struct vcpu           *i8259_target;
+ 
+diff --git a/xen/include/asm-x86/hvm/vpt.h b/xen/include/asm-x86/hvm/vpt.h
+index a27bea4ff2..1b7213d6be 100644
+--- a/xen/include/asm-x86/hvm/vpt.h
++++ b/xen/include/asm-x86/hvm/vpt.h
+@@ -121,7 +121,6 @@ typedef struct RTCState {
+ 
+ #define FREQUENCE_PMTIMER  3579545  /* Timer should run at 3.579545 MHz */
+ typedef struct PMTState {
+-    struct hvm_hw_pmtimer pm;   /* 32bit timer value */
+     struct vcpu *vcpu;          /* Keeps sync with this vcpu's guest-time */
+     uint64_t last_gtime;        /* Last (guest) time we updated the timer */
+     uint32_t not_accounted;     /* time not accounted at last update */
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Date: Thu, 18 Jan 2018 16:14:05 +0000
+Subject: [PATCH] libxl: Update xenstore on VCPU hotplug for all guest types
+
+Currently HVM guests that use upstream qemu do not update xenstore's
+availability entry for VCPUs. While it is not strictly necessary for
+hotplug to work, xenstore ends up not reflecting actual status of
+VCPUs. We should fix this.
+
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index acf714e1f9..003f377a1b 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -5157,7 +5157,6 @@ int libxl_set_vcpuonline(libxl_ctx *ctx, uint32_t domid, libxl_bitmap *cpumap)
+         switch (libxl__device_model_version_running(gc, domid)) {
+         case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN_TRADITIONAL:
+         case LIBXL_DEVICE_MODEL_VERSION_NONE:
+-            rc = libxl__set_vcpuonline_xenstore(gc, domid, cpumap, &info);
+             break;
+         case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN:
+             rc = libxl__set_vcpuonline_qmp(gc, domid, cpumap, &info);
+@@ -5167,11 +5166,14 @@ int libxl_set_vcpuonline(libxl_ctx *ctx, uint32_t domid, libxl_bitmap *cpumap)
+         }
+         break;
+     case LIBXL_DOMAIN_TYPE_PV:
+-        rc = libxl__set_vcpuonline_xenstore(gc, domid, cpumap, &info);
+         break;
+     default:
+         rc = ERROR_INVAL;
+     }
++
++    if (!rc)
++        rc = libxl__set_vcpuonline_xenstore(gc, domid, cpumap, &info);
++
+ out:
+     libxl_dominfo_dispose(&info);
+     GC_FREE;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:14:11 +0000
+Subject: [PATCH] libxl: add is_default checkers for string and timer_mode
+ types
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Those types are missing a helper to check whether a definition of the
+type holds the default value. This will be required by a later patch
+that will implement deprecation of fields inside of a libxl type.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+
+Rebased over changes to libxl_internal.h
+---
+ tools/libxl/idl.py           |  3 ++-
+ tools/libxl/libxl_internal.h | 10 ++++++++++
+ tools/libxl/libxl_types.idl  |  3 ++-
+ 3 files changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/idl.py b/tools/libxl/idl.py
+index 437049ebb9..a4a084e1ce 100644
+--- a/tools/libxl/idl.py
++++ b/tools/libxl/idl.py
+@@ -302,7 +302,8 @@ string = Builtin("char *", namespace = None, copy_fn = "libxl_string_copy", disp
+                  json_gen_fn = "libxl__string_gen_json",
+                  json_parse_type = "JSON_STRING | JSON_NULL",
+                  json_parse_fn = "libxl__string_parse_json",
+-                 autogenerate_json = False)
++                 autogenerate_json = False,
++                 check_default_fn="libxl__string_is_default")
+ 
+ class Array(Type):
+     """An array of the same type"""
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index 8366fee25f..60f012be8a 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -4303,6 +4303,16 @@ static inline bool libxl__acpi_defbool_val(const libxl_domain_build_info *b_info
+     return libxl_defbool_val(b_info->acpi) &&
+            libxl_defbool_val(b_info->u.hvm.acpi);
+ }
++
++static inline bool libxl__timer_mode_is_default(libxl_timer_mode *tm)
++{
++    return *tm == LIBXL_TIMER_MODE_DEFAULT;
++}
++
++static inline bool libxl__string_is_default(char **s)
++{
++    return *s == NULL;
++}
+ #endif
+ 
+ /*
+diff --git a/tools/libxl/libxl_types.idl b/tools/libxl/libxl_types.idl
+index a32c751b0e..094303f151 100644
+--- a/tools/libxl/libxl_types.idl
++++ b/tools/libxl/libxl_types.idl
+@@ -172,7 +172,8 @@ libxl_timer_mode = Enumeration("timer_mode", [
+     (1, "no_delay_for_missed_ticks"),
+     (2, "no_missed_ticks_pending"),
+     (3, "one_missed_tick_pending"),
+-    ], init_val = "LIBXL_TIMER_MODE_DEFAULT")
++    ], init_val = "LIBXL_TIMER_MODE_DEFAULT",
++       check_default_fn = "libxl__timer_mode_is_default")
+ 
+ libxl_bios_type = Enumeration("bios_type", [
+     (0, "unknown"),
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:14:22 +0000
+Subject: [PATCH] xl: parsing code movement
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Code movement in preparation for making the bootloader,
+bootloader_args, nested_hvm and timer_mode fields shared between all
+guests types. While moving the code, limit the line-length to 80
+columns.
+
+No functional change.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Ported to modify xl_cmdimpl.c (which was refactored in 4.9).
+---
+ tools/libxl/xl_cmdimpl.c | 95 +++++++++++++++++++++++++-----------------------
+ 1 file changed, 50 insertions(+), 45 deletions(-)
+
+diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
+index 7e8a8ae5c4..a6df0c9de7 100644
+--- a/tools/libxl/xl_cmdimpl.c
++++ b/tools/libxl/xl_cmdimpl.c
+@@ -1552,6 +1552,56 @@ static void parse_config_data(const char *config_source,
+     xlu_cfg_get_defbool(config, "driver_domain", &c_info->driver_domain, 0);
+     xlu_cfg_get_defbool(config, "acpi", &b_info->acpi, 0);
+ 
++    if (b_info->type == LIBXL_DOMAIN_TYPE_PV) {
++        xlu_cfg_replace_string (config, "bootloader",
++                                &b_info->u.pv.bootloader, 0);
++        switch (xlu_cfg_get_list_as_string_list(config, "bootloader_args",
++                                      &b_info->u.pv.bootloader_args, 1))
++        {
++
++        case 0: break; /* Success */
++        case ESRCH: break; /* Option not present */
++        case EINVAL:
++            if (!xlu_cfg_get_string(config, "bootloader_args", &buf, 0)) {
++
++                fprintf(stderr, "WARNING: Specifying \"bootloader_args\""
++                        " as a string is deprecated. "
++                        "Please use a list of arguments.\n");
++                split_string_into_string_list(buf, " \t\n",
++                                              &b_info->u.pv.bootloader_args);
++            }
++            break;
++        default:
++            fprintf(stderr,"xl: Unable to parse bootloader_args.\n");
++            exit(-ERROR_FAIL);
++        }
++    } else {
++        if (!xlu_cfg_get_long(config, "timer_mode", &l, 1)) {
++            const char *s = libxl_timer_mode_to_string(l);
++            fprintf(stderr, "WARNING: specifying \"timer_mode\" as an integer is deprecated. "
++                    "Please use the named parameter variant. %s%s%s\n",
++                    s ? "e.g. timer_mode=\"" : "",
++                    s ? s : "",
++                    s ? "\"" : "");
++
++            if (l < LIBXL_TIMER_MODE_DELAY_FOR_MISSED_TICKS ||
++                l > LIBXL_TIMER_MODE_ONE_MISSED_TICK_PENDING) {
++                fprintf(stderr, "ERROR: invalid value %ld for \"timer_mode\"\n", l);
++                exit (1);
++            }
++            b_info->u.hvm.timer_mode = l;
++        } else if (!xlu_cfg_get_string(config, "timer_mode", &buf, 0)) {
++            if (libxl_timer_mode_from_string(buf, &b_info->u.hvm.timer_mode)) {
++                fprintf(stderr, "ERROR: invalid value \"%s\" for \"timer_mode\"\n",
++                        buf);
++                exit (1);
++            }
++        }
++
++        xlu_cfg_get_defbool(config, "nestedhvm", &b_info->u.hvm.nested_hvm, 0);
++
++    }
++    
+     switch(b_info->type) {
+     case LIBXL_DOMAIN_TYPE_HVM:
+         kernel_basename = libxl_basename(b_info->kernel);
+@@ -1648,29 +1698,6 @@ static void parse_config_data(const char *config_source,
+                 exit (1);
+             }
+         }
+-        if (!xlu_cfg_get_long(config, "timer_mode", &l, 1)) {
+-            const char *s = libxl_timer_mode_to_string(l);
+-            fprintf(stderr, "WARNING: specifying \"timer_mode\" as an integer is deprecated. "
+-                    "Please use the named parameter variant. %s%s%s\n",
+-                    s ? "e.g. timer_mode=\"" : "",
+-                    s ? s : "",
+-                    s ? "\"" : "");
+-
+-            if (l < LIBXL_TIMER_MODE_DELAY_FOR_MISSED_TICKS ||
+-                l > LIBXL_TIMER_MODE_ONE_MISSED_TICK_PENDING) {
+-                fprintf(stderr, "ERROR: invalid value %ld for \"timer_mode\"\n", l);
+-                exit (1);
+-            }
+-            b_info->u.hvm.timer_mode = l;
+-        } else if (!xlu_cfg_get_string(config, "timer_mode", &buf, 0)) {
+-            if (libxl_timer_mode_from_string(buf, &b_info->u.hvm.timer_mode)) {
+-                fprintf(stderr, "ERROR: invalid value \"%s\" for \"timer_mode\"\n",
+-                        buf);
+-                exit (1);
+-            }
+-        }
+-
+-        xlu_cfg_get_defbool(config, "nestedhvm", &b_info->u.hvm.nested_hvm, 0);
+ 
+         xlu_cfg_get_defbool(config, "altp2mhvm", &b_info->u.hvm.altp2m, 0);
+ 
+@@ -1699,28 +1726,6 @@ static void parse_config_data(const char *config_source,
+         break;
+     case LIBXL_DOMAIN_TYPE_PV:
+     {
+-        xlu_cfg_replace_string (config, "bootloader", &b_info->u.pv.bootloader, 0);
+-        switch (xlu_cfg_get_list_as_string_list(config, "bootloader_args",
+-                                      &b_info->u.pv.bootloader_args, 1))
+-        {
+-
+-        case 0: break; /* Success */
+-        case ESRCH: break; /* Option not present */
+-        case EINVAL:
+-            if (!xlu_cfg_get_string(config, "bootloader_args", &buf, 0)) {
+-
+-                fprintf(stderr, "WARNING: Specifying \"bootloader_args\""
+-                        " as a string is deprecated. "
+-                        "Please use a list of arguments.\n");
+-                split_string_into_string_list(buf, " \t\n",
+-                                              &b_info->u.pv.bootloader_args);
+-            }
+-            break;
+-        default:
+-            fprintf(stderr,"xl: Unable to parse bootloader_args.\n");
+-            exit(-ERROR_FAIL);
+-        }
+-
+         if (!b_info->u.pv.bootloader && !b_info->kernel) {
+             fprintf(stderr, "Neither kernel nor bootloader specified\n");
+             exit(1);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Thu, 18 Jan 2018 16:14:30 +0000
+Subject: [PATCH] libxl: pvh: Add accessor macros for domain-type and -version
+ dependent fields
+
+We are going to have some fields whose location now depends in a
+complicated way on the domain type, the Xen release, and the Meltdown
+patch status.
+
+Introduce some macros to help access these fields.  Currently they
+don't do very much interesting because we don't have the PVH guest
+type.
+
+And nothing uses them yet, so no functional change in this patch.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+---
+ tools/libxl/libxl.h | 92 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 92 insertions(+)
+
+diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
+index acbf47690e..0064db94af 100644
+--- a/tools/libxl/libxl.h
++++ b/tools/libxl/libxl.h
+@@ -287,6 +287,98 @@
+  */
+ #define LIBXL_HAVE_SCHED_CREDIT2_PARAMS 1
+ 
++/*
++ * LIBXL_BUILDINFO_SUBFIELD_PVH     #defined to simply   u.pvh.  or empty
++ * LIBXL_BUILDINFO_SUBFIELD_PV      #defined to simply   u.pv.   or empty
++ * LIBXL_BUILDINFO_SUBFIELD_HVM     #defined to simply   u.hvm.  or empty
++ *
++ * int LIBXL_BUILDINFO_ACCESS_PVH_{PV,HVM}_OK(
++ *                 libxl_domain_build_info *b_info,
++ *            )
++ * field_type *LIBXL_BUILDINFO_ACCESS_PVH_{PV,HVM}(
++ *                 libxl_domain_build_info *b_info,
++ *                 field_name
++ *            )
++ *
++ * Maybe used to access these fields of libxl_domain_build_info
++ *
++ *     Xen 4.9 and earlier      Xen <= 4.9        Xen 4.10 and later
++ *      HVM and PV guests        PVH guests        all guests
++ *
++ *       .u.pv.bootloader        .u.pvh.bootloader         .bootloader
++ *       .u.pv.bootloader_args   .u.pvh.bootloader_args    .bootloader_args
++ *       .u.hvm.timer_mode       .u.pvh.timer_mode         .timer_mode
++ *       .u.hvm.apic             .u.pvh.apic               .apic
++ *       .u.hvm.nested_hvm       .u.pvh.nested_hvm         .nested_hvm
++ *
++ *     [1] introduced, like this macro, in the PVH backport series
++ #       for Meltdown.
++ *
++ * _SUBFIELD_FOO can be used when the guest type is known to be FOO
++ * (specifically, when b_info->type is LIBXL_DOMAIN_TYPE_FOO)
++ *
++ * _ACCESS_PVH_FOO should be used for fields which were in .u.foo,
++ * at points in the code where the guest type is not fully known.
++ * It is only safe to evaluate if the guest type is PVH or FOO.
++ * This can be checked with _ACCESS_PVH_FOO_OK.
++ *
++ * We recommend the folllowing idiom:
++ *
++ *    #if defined(LIBXL_BUILDINFO_PVH_ACCESS_PVH_HVM) // post-Meltdown
++ *    # define U_PV_OK( b) LIBXL_BUILDINFO_ACCESS_PVH_PV_OK( (b))
++ *    # define U_HVM_OK(b) LIBXL_BUILDINFO_ACCESS_PVH_HVM_OK((b))
++ *    # define U_PV_F( b, f) LIBXL_BUILDINFO_ACCESS_PVH_PV( (b),f)
++ *    # define U_HVM_F(b, f) LIBXL_BUILDINFO_ACCESS_PVH_HVM((b),f)
++ *    # define U_PVH LIBXL_BUILDINFO_SUBFIELD_PVH
++ *    # define U_PV  LIBXL_BUILDINFO_SUBFIELD_PV
++ *    # define U_HVM LIBXL_BUILDINFO_SUBFIELD_HVM
++ #    #elif defined(LIBXL_HAVE_BUILDINFO_APIC) // >= 4.10 pre-Meltdown
++ *    # define U_PV_OK( b) 1
++ *    # define U_HVM_OK(b) 1
++ *    # define U_PV_F( b, f) (&(b)->f)
++ *    # define U_HVM_F(b, f) (&(b)->f)
++ *    * define U_PVH // empty
++ *    * define U_PV  // empty
++ *    * define U_HVM // empty
++ *    #else // Xen <= 4.9 pre-Meltdown
++ #    # define U_PV_OK( b) ((b)->type == LIBXL_DOMAIN_TYPE_PV )
++ #    # define U_HVM_OK(b) ((b)->type == LIBXL_DOMAIN_TYPE_HVM)
++ *    # define U_PV_F( b, f) (&(b)->u.pv .f)
++ *    # define U_HVM_F(b, f) (&(b)->u.hvm.f)
++ *    # define U_PVH UNAVAILABLE_BECAUSE_NO_PVH_SUPPORT_XEN_TOO_OLD
++ *    # define U_PV  u.pv.
++ *    # define U_HVM u.hvm.
++ *    #endif
++ *
++ * And then something like this:
++ *
++ *     if (U_HVM_OK(b_info))
++ *         libxl_defbool_set(U_HVM(b_info, apic), 1);
++ *
++ *     case LIBXL_DOMAIN_TYPE_PV:
++ *         if (b_info->U_PV bootloader) {
++ */
++
++#define LIBXL_BUILDINFO_ACCESS_PVH_PV(b_info, field_name)               \
++  ((b_info)->type == LIBXL_DOMAIN_TYPE_PV  ? &(b_info)->u.pv .field_name : \
++   (abort(), (typeof(&(b_info)->u.pv. field_name))0))
++
++#define LIBXL_BUILDINFO_ACCESS_PVH_HVM(b_info, field_name)              \
++  ((b_info)->type == LIBXL_DOMAIN_TYPE_HVM ? &(b_info)->u.hvm.field_name : \
++   (abort(), (typeof(&(b_info)->u.hvm.field_name))0))
++
++#define LIBXL_BUILDINFO_ACCESS_PVH_PV_OK(b_info, field_name)    \
++  ((b_info)->type == LIBXL_DOMAIN_TYPE_PV  ? 1 :               \
++   0)
++
++#define LIBXL_BUILDINFO_ACCESS_PVH_HVM_OK(b_info, field_name)   \
++  ((b_info)->type == LIBXL_DOMAIN_TYPE_HVM ? 1 :               \
++   0)
++
++#define LIBXL_BUILDINFO_SUBFIELD_PVH  UNAVAILABLE_BECAUSE_NO_PVH_SUPPORT_XEN_TOO_OLD
++#define LIBXL_BUILDINFO_SUBFIELD_PV   u.pv.
++#define LIBXL_BUILDINFO_SUBFIELD_HVM  u.hvm.
++
+ /*
+  * libxl ABI compatibility
+  *
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Thu, 18 Jan 2018 16:14:40 +0000
+Subject: [PATCH] libxl: pvh: Use accessor macros internally
+
+This prepares the way for the pvh guest type, which will duplicate
+some of the fields in the hvm libxl_domain_build_info.  (In 4.10 these
+fields were extracted into the top level but that is an ABI break so
+is not suitable for 4.8/4.9.)
+
+No functional change.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_bootloader.c | 14 +++++++-------
+ tools/libxl/libxl_create.c     |  8 +++-----
+ tools/libxl/libxl_dom.c        |  6 +++---
+ tools/libxl/libxl_internal.h   |  9 +++++++++
+ tools/libxl/libxl_x86_acpi.c   |  2 +-
+ 5 files changed, 23 insertions(+), 16 deletions(-)
+
+diff --git a/tools/libxl/libxl_bootloader.c b/tools/libxl/libxl_bootloader.c
+index 2cfc8cfaf2..2b6b051419 100644
+--- a/tools/libxl/libxl_bootloader.c
++++ b/tools/libxl/libxl_bootloader.c
+@@ -51,7 +51,7 @@ static void make_bootloader_args(libxl__gc *gc, libxl__bootloader_state *bl,
+ {
+     const libxl_domain_build_info *info = bl->info;
+ 
+-    bl->argsspace = 9 + libxl_string_list_length(&info->u.pv.bootloader_args);
++    bl->argsspace = 9 + libxl_string_list_length(U_PV_F(info,bootloader_args));
+ 
+     GCNEW_ARRAY(bl->args, bl->argsspace);
+ 
+@@ -70,8 +70,8 @@ static void make_bootloader_args(libxl__gc *gc, libxl__bootloader_state *bl,
+     ARG("--output-format=simple0");
+     ARG(GCSPRINTF("--output-directory=%s", bl->outputdir));
+ 
+-    if (info->u.pv.bootloader_args) {
+-        char **p = info->u.pv.bootloader_args;
++    if (*U_PV_F(info,bootloader_args)) {
++        char **p = *U_PV_F(info,bootloader_args);
+         while (*p) {
+             ARG(*p);
+             p++;
+@@ -326,7 +326,7 @@ void libxl__bootloader_run(libxl__egc *egc, libxl__bootloader_state *bl)
+         goto out_ok;
+     }
+ 
+-    if (!info->u.pv.bootloader) {
++    if (!*U_PV_F(info,bootloader)) {
+         LOG(DEBUG, "no bootloader configured, using user supplied kernel");
+         bl->kernel->path = bl->info->kernel;
+         bl->ramdisk->path = bl->info->ramdisk;
+@@ -409,13 +409,13 @@ static void bootloader_disk_attached_cb(libxl__egc *egc,
+         goto out;
+     }
+ 
+-    LOG(DEBUG, "Config bootloader value: %s", info->u.pv.bootloader);
++    LOG(DEBUG, "Config bootloader value: %s", *U_PV_F(info,bootloader));
+ 
+-    if ( !strcmp(info->u.pv.bootloader, "/usr/bin/pygrub") )
++    if ( !strcmp(*U_PV_F(info,bootloader), "/usr/bin/pygrub") )
+         LOG(WARN, "bootloader='/usr/bin/pygrub' is deprecated; use " \
+             "bootloader='pygrub' instead");
+ 
+-    bootloader = info->u.pv.bootloader;
++    bootloader = *U_PV_F(info,bootloader);
+ 
+     /* If the full path is not specified, check in the libexec path */
+     if ( bootloader[0] != '/' ) {
+diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
+index 7c1695a1fd..824689b726 100644
+--- a/tools/libxl/libxl_create.c
++++ b/tools/libxl/libxl_create.c
+@@ -65,7 +65,7 @@ void libxl__rdm_setdefault(libxl__gc *gc, libxl_domain_build_info *b_info)
+ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+                                         libxl_domain_build_info *b_info)
+ {
+-    int i;
++    int i, rc;
+ 
+     if (b_info->type != LIBXL_DOMAIN_TYPE_HVM &&
+         b_info->type != LIBXL_DOMAIN_TYPE_PV) {
+@@ -94,7 +94,6 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+         if (b_info->device_model_version
+                 == LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN) {
+             const char *dm;
+-            int rc;
+ 
+             dm = libxl__domain_device_model(gc, b_info);
+             rc = access(dm, X_OK);
+@@ -307,9 +306,8 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+             break;
+         }
+ 
+-        if (b_info->u.hvm.timer_mode == LIBXL_TIMER_MODE_DEFAULT)
+-            b_info->u.hvm.timer_mode =
+-                LIBXL_TIMER_MODE_NO_DELAY_FOR_MISSED_TICKS;
++        if (libxl__timer_mode_is_default(&b_info->u.hvm.timer_mode))
++            b_info->u.hvm.timer_mode = LIBXL_TIMER_MODE_NO_DELAY_FOR_MISSED_TICKS;
+ 
+         libxl_defbool_setdefault(&b_info->u.hvm.pae,                true);
+         libxl_defbool_setdefault(&b_info->u.hvm.apic,               true);
+diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
+index d519c8d440..f36712aaa8 100644
+--- a/tools/libxl/libxl_dom.c
++++ b/tools/libxl/libxl_dom.c
+@@ -190,7 +190,7 @@ static int numa_place_domain(libxl__gc *gc, uint32_t domid,
+ 
+ static unsigned long timer_mode(const libxl_domain_build_info *info)
+ {
+-    const libxl_timer_mode mode = info->u.hvm.timer_mode;
++    const libxl_timer_mode mode = *U_HVM_F(info,timer_mode);
+     assert(mode >= LIBXL_TIMER_MODE_DELAY_FOR_MISSED_TICKS &&
+            mode <= LIBXL_TIMER_MODE_ONE_MISSED_TICK_PENDING);
+     return ((unsigned long)mode);
+@@ -801,7 +801,7 @@ static int hvm_build_set_params(xc_interface *handle, uint32_t domid,
+             return ERROR_FAIL;
+ 
+         va_hvm = (struct hvm_info_table *)(va_map + HVM_INFO_OFFSET);
+-        va_hvm->apic_mode = libxl_defbool_val(info->u.hvm.apic);
++        va_hvm->apic_mode = libxl_defbool_val(*U_HVM_F(info,apic));
+         va_hvm->nr_vcpus = info->max_vcpus;
+         memset(va_hvm->vcpu_online, 0, sizeof(va_hvm->vcpu_online));
+         memcpy(va_hvm->vcpu_online, info->avail_vcpus.map, info->avail_vcpus.size);
+@@ -1086,7 +1086,7 @@ int libxl__build_hvm(libxl__gc *gc, uint32_t domid,
+         dom->mmio_size = HVM_BELOW_4G_MMIO_LENGTH;
+     else if (dom->mmio_size == 0 && !device_model) {
+ #if defined(__i386__) || defined(__x86_64__)
+-        if (libxl_defbool_val(info->u.hvm.apic)) {
++        if (libxl_defbool_val(*U_HVM_F(info,apic))) {
+             /* Make sure LAPIC_BASE_ADDRESS is below special pages */
+             assert(((((X86_HVM_END_SPECIAL_REGION - X86_HVM_NR_SPECIAL_PAGES)
+                       << XC_PAGE_SHIFT) - LAPIC_BASE_ADDRESS)) >= XC_PAGE_SIZE);
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index 60f012be8a..dd1db906af 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -165,6 +165,15 @@
+ /* Convert pfn to physical address space. */
+ #define pfn_to_paddr(x) ((uint64_t)(x) << XC_PAGE_SHIFT)
+ 
++/* see libxl.h's definitions of LIBXL_BUILDINFO_SUBFIELD_PVH etc. */
++# define U_PV_OK( b) LIBXL_BUILDINFO_ACCESS_PVH_PV_OK( (b))
++# define U_HVM_OK(b) LIBXL_BUILDINFO_ACCESS_PVH_HVM_OK((b))
++# define U_PV_F( b, f) LIBXL_BUILDINFO_ACCESS_PVH_PV( (b),f)
++# define U_HVM_F(b, f) LIBXL_BUILDINFO_ACCESS_PVH_HVM((b),f)
++# define U_PVH LIBXL_BUILDINFO_SUBFIELD_PVH
++# define U_PV  LIBXL_BUILDINFO_SUBFIELD_PV
++# define U_HVM LIBXL_BUILDINFO_SUBFIELD_HVM
++
+ /* logging */
+ _hidden void libxl__logv(libxl_ctx *ctx, xentoollog_level msglevel, int errnoval,
+              const char *file /* may be 0 */, int line /* ignored if !file */,
+diff --git a/tools/libxl/libxl_x86_acpi.c b/tools/libxl/libxl_x86_acpi.c
+index 173188f73e..535b11c6a4 100644
+--- a/tools/libxl/libxl_x86_acpi.c
++++ b/tools/libxl/libxl_x86_acpi.c
+@@ -111,7 +111,7 @@ static int init_acpi_config(libxl__gc *gc,
+ 
+     hvminfo = libxl__zalloc(gc, sizeof(*hvminfo));
+ 
+-    hvminfo->apic_mode = libxl_defbool_val(b_info->u.hvm.apic);
++    hvminfo->apic_mode = libxl_defbool_val(*U_HVM_F(b_info,apic));
+ 
+     if (dom->nr_vnodes) {
+         unsigned int *vcpu_to_vnode, *vdistance;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Thu, 18 Jan 2018 16:14:45 +0000
+Subject: [PATCH] xl: pvh: Use accessor macros
+
+Again, no functional change.
+
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+---
+ tools/libxl/xl.h         | 32 ++++++++++++++++
+ tools/libxl/xl_cmdimpl.c | 98 +++++++++++++++++++++++++++---------------------
+ tools/libxl/xl_sxp.c     | 16 ++++----
+ 3 files changed, 95 insertions(+), 51 deletions(-)
+
+diff --git a/tools/libxl/xl.h b/tools/libxl/xl.h
+index 0a8c8133cf..3dd04efb33 100644
+--- a/tools/libxl/xl.h
++++ b/tools/libxl/xl.h
+@@ -216,6 +216,38 @@ extern void printf_info_sexp(int domid, libxl_domain_config *d_config, FILE *fh)
+ #define XL_GLOBAL_CONFIG XEN_CONFIG_DIR "/xl.conf"
+ #define XL_LOCK_FILE XEN_LOCK_DIR "/xl"
+ 
++
++/*
++ * straight out of libxl.h
++ * we don't need all this compat but it's harmless
++ */
++#if defined(LIBXL_BUILDINFO_PVH_ACCESS_PVH_HVM) // post-Meltdown
++# define U_PV_OK( b) LIBXL_BUILDINFO_ACCESS_PVH_PV_OK( (b))
++# define U_HVM_OK(b) LIBXL_BUILDINFO_ACCESS_PVH_HVM_OK((b))
++# define U_PV_F( b, f) LIBXL_BUILDINFO_ACCESS_PVH_PV( (b),f)
++# define U_HVM_F(b, f) LIBXL_BUILDINFO_ACCESS_PVH_HVM((b),f)
++# define U_PVH LIBXL_BUILDINFO_SUBFIELD_PVH
++# define U_PV  LIBXL_BUILDINFO_SUBFIELD_PV
++# define U_HVM LIBXL_BUILDINFO_SUBFIELD_HVM
++#elif defined(LIBXL_HAVE_BUILDINFO_APIC) // >= 4.10 pre-Meltdown
++# define U_PV_OK( b) 1
++# define U_HVM_OK(b) 1
++# define U_PV_F( b, f) (&(b)->f)
++# define U_HVM_F(b, f) (&(b)->f)
++* define U_PVH // empty
++* define U_PV  // empty
++* define U_HVM // empty
++#else // Xen <= 4.9 pre-Meltdown
++# define U_PV_OK( b) ((b)->type == LIBXL_DOMAIN_TYPE_PV )
++# define U_HVM_OK(b) ((b)->type == LIBXL_DOMAIN_TYPE_HVM)
++# define U_PV_F( b, f) (&(b)->u.pv .f)
++# define U_HVM_F(b, f) (&(b)->u.hvm.f)
++# define U_PVH UNAVAILABLE_BECAUSE_NO_PVH_SUPPORT_XEN_TOO_OLD
++# define U_PV  u.pv.
++# define U_HVM u.hvm.
++#endif
++
++
+ #endif /* XL_H */
+ 
+ /*
+diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
+index a6df0c9de7..5e634037ee 100644
+--- a/tools/libxl/xl_cmdimpl.c
++++ b/tools/libxl/xl_cmdimpl.c
+@@ -1552,54 +1552,67 @@ static void parse_config_data(const char *config_source,
+     xlu_cfg_get_defbool(config, "driver_domain", &c_info->driver_domain, 0);
+     xlu_cfg_get_defbool(config, "acpi", &b_info->acpi, 0);
+ 
+-    if (b_info->type == LIBXL_DOMAIN_TYPE_PV) {
+-        xlu_cfg_replace_string (config, "bootloader",
+-                                &b_info->u.pv.bootloader, 0);
+-        switch (xlu_cfg_get_list_as_string_list(config, "bootloader_args",
+-                                      &b_info->u.pv.bootloader_args, 1))
+-        {
++    xlu_cfg_replace_string (config, "bootloader",
++                            &b_info->u.pv.bootloader, 0);
++    switch (xlu_cfg_get_list_as_string_list(config, "bootloader_args",
++                                            &b_info->u.pv.bootloader_args, 1))
++    {
++        
++    case 0: break; /* Success */
++    case ESRCH: break; /* Option not present */
++    case EINVAL:
++        if (!xlu_cfg_get_string(config, "bootloader_args", &buf, 0)) {
++            
++            fprintf(stderr, "WARNING: Specifying \"bootloader_args\""
++                    " as a string is deprecated. "
++                    "Please use a list of arguments.\n");
++            split_string_into_string_list(buf, " \t\n",
++                                          &b_info->u.pv.bootloader_args);
++        }
++        break;
++    default:
++        fprintf(stderr,"xl: Unable to parse bootloader_args.\n");
++        exit(-ERROR_FAIL);
++    }
+ 
+-        case 0: break; /* Success */
+-        case ESRCH: break; /* Option not present */
+-        case EINVAL:
+-            if (!xlu_cfg_get_string(config, "bootloader_args", &buf, 0)) {
++    if (!xlu_cfg_get_long(config, "timer_mode", &l, 1)) {
++        const char *s = libxl_timer_mode_to_string(l);
+ 
+-                fprintf(stderr, "WARNING: Specifying \"bootloader_args\""
+-                        " as a string is deprecated. "
+-                        "Please use a list of arguments.\n");
+-                split_string_into_string_list(buf, " \t\n",
+-                                              &b_info->u.pv.bootloader_args);
+-            }
+-            break;
+-        default:
+-            fprintf(stderr,"xl: Unable to parse bootloader_args.\n");
++        if (b_info->type == LIBXL_DOMAIN_TYPE_PV) {
++            fprintf(stderr,
++                    "ERROR: \"timer_mode\" option is not supported for PV guests.\n");
+             exit(-ERROR_FAIL);
+         }
+-    } else {
+-        if (!xlu_cfg_get_long(config, "timer_mode", &l, 1)) {
+-            const char *s = libxl_timer_mode_to_string(l);
+-            fprintf(stderr, "WARNING: specifying \"timer_mode\" as an integer is deprecated. "
+-                    "Please use the named parameter variant. %s%s%s\n",
+-                    s ? "e.g. timer_mode=\"" : "",
+-                    s ? s : "",
+-                    s ? "\"" : "");
+-
+-            if (l < LIBXL_TIMER_MODE_DELAY_FOR_MISSED_TICKS ||
+-                l > LIBXL_TIMER_MODE_ONE_MISSED_TICK_PENDING) {
+-                fprintf(stderr, "ERROR: invalid value %ld for \"timer_mode\"\n", l);
+-                exit (1);
+-            }
+-            b_info->u.hvm.timer_mode = l;
+-        } else if (!xlu_cfg_get_string(config, "timer_mode", &buf, 0)) {
+-            if (libxl_timer_mode_from_string(buf, &b_info->u.hvm.timer_mode)) {
+-                fprintf(stderr, "ERROR: invalid value \"%s\" for \"timer_mode\"\n",
+-                        buf);
+-                exit (1);
+-            }
++
++        fprintf(stderr, "WARNING: specifying \"timer_mode\" as an integer is deprecated. "
++                "Please use the named parameter variant. %s%s%s\n",
++                s ? "e.g. timer_mode=\"" : "",
++                s ? s : "",
++                s ? "\"" : "");
++        
++        if (l < LIBXL_TIMER_MODE_DELAY_FOR_MISSED_TICKS ||
++            l > LIBXL_TIMER_MODE_ONE_MISSED_TICK_PENDING) {
++            fprintf(stderr, "ERROR: invalid value %ld for \"timer_mode\"\n", l);
++            exit (1);
++        }
++        b_info->u.hvm.timer_mode = l;
++    } else if (!xlu_cfg_get_string(config, "timer_mode", &buf, 0)) {
++        if (b_info->type == LIBXL_DOMAIN_TYPE_PV) {
++            fprintf(stderr,
++            "ERROR: \"timer_mode\" option is not supported for PV guests.\n");
++            exit(-ERROR_FAIL);
+         }
+ 
+-        xlu_cfg_get_defbool(config, "nestedhvm", &b_info->u.hvm.nested_hvm, 0);
++        if (libxl_timer_mode_from_string(buf, &b_info->u.hvm.timer_mode)) {
++            fprintf(stderr, "ERROR: invalid value \"%s\" for \"timer_mode\"\n",
++                    buf);
++            exit (1);
++        }
++    }
+ 
++    if (U_HVM_OK(b_info)) {
++        xlu_cfg_get_defbool(config, "nestedhvm", U_HVM_F(b_info, nested_hvm), 0);
++        xlu_cfg_get_defbool(config, "apic", U_HVM_F(b_info, apic), 0);
+     }
+     
+     switch(b_info->type) {
+@@ -1629,7 +1642,6 @@ static void parse_config_data(const char *config_source,
+                     "bios_path_override given without specific bios name\n");
+ 
+         xlu_cfg_get_defbool(config, "pae", &b_info->u.hvm.pae, 0);
+-        xlu_cfg_get_defbool(config, "apic", &b_info->u.hvm.apic, 0);
+         xlu_cfg_get_defbool(config, "acpi_s3", &b_info->u.hvm.acpi_s3, 0);
+         xlu_cfg_get_defbool(config, "acpi_s4", &b_info->u.hvm.acpi_s4, 0);
+         xlu_cfg_get_defbool(config, "nx", &b_info->u.hvm.nx, 0);
+@@ -1726,7 +1738,7 @@ static void parse_config_data(const char *config_source,
+         break;
+     case LIBXL_DOMAIN_TYPE_PV:
+     {
+-        if (!b_info->u.pv.bootloader && !b_info->kernel) {
++        if (!b_info->U_PV bootloader && !b_info->kernel) {
+             fprintf(stderr, "Neither kernel nor bootloader specified\n");
+             exit(1);
+         }
+diff --git a/tools/libxl/xl_sxp.c b/tools/libxl/xl_sxp.c
+index a8c127b439..07a481f511 100644
+--- a/tools/libxl/xl_sxp.c
++++ b/tools/libxl/xl_sxp.c
+@@ -74,12 +74,12 @@ void printf_info_sexp(int domid, libxl_domain_config *d_config, FILE *fh)
+     fprintf(fh, "\t(nomigrate %s)\n",
+            libxl_defbool_to_string(b_info->disable_migrate));
+ 
+-    if (c_info->type == LIBXL_DOMAIN_TYPE_PV && b_info->u.pv.bootloader) {
+-        fprintf(fh, "\t(bootloader %s)\n", b_info->u.pv.bootloader);
+-        if (b_info->u.pv.bootloader_args) {
++    if (c_info->type == LIBXL_DOMAIN_TYPE_PV && b_info->U_PV bootloader) {
++        fprintf(fh, "\t(bootloader %s)\n", b_info->U_PV bootloader);
++        if (b_info->U_PV bootloader_args) {
+             fprintf(fh, "\t(bootloader_args");
+-            for (i=0; b_info->u.pv.bootloader_args[i]; i++)
+-                fprintf(fh, " %s", b_info->u.pv.bootloader_args[i]);
++            for (i=0; b_info->U_PV bootloader_args[i]; i++)
++                fprintf(fh, " %s", b_info->U_PV bootloader_args[i]);
+             fprintf(fh, ")\n");
+         }
+     }
+@@ -93,7 +93,7 @@ void printf_info_sexp(int domid, libxl_domain_config *d_config, FILE *fh)
+         fprintf(fh, "\t\t\t(shadow_memkb %"PRId64")\n", b_info->shadow_memkb);
+         fprintf(fh, "\t\t\t(pae %s)\n", libxl_defbool_to_string(b_info->u.hvm.pae));
+         fprintf(fh, "\t\t\t(apic %s)\n",
+-               libxl_defbool_to_string(b_info->u.hvm.apic));
++               libxl_defbool_to_string(b_info->U_HVM apic));
+         fprintf(fh, "\t\t\t(acpi %s)\n",
+                libxl_defbool_to_string(b_info->u.hvm.acpi));
+         fprintf(fh, "\t\t\t(nx %s)\n", libxl_defbool_to_string(b_info->u.hvm.nx));
+@@ -104,9 +104,9 @@ void printf_info_sexp(int domid, libxl_domain_config *d_config, FILE *fh)
+         fprintf(fh, "\t\t\t(vpt_align %s)\n",
+                libxl_defbool_to_string(b_info->u.hvm.vpt_align));
+         fprintf(fh, "\t\t\t(timer_mode %s)\n",
+-               libxl_timer_mode_to_string(b_info->u.hvm.timer_mode));
++               libxl_timer_mode_to_string(b_info->U_HVM timer_mode));
+         fprintf(fh, "\t\t\t(nestedhvm %s)\n",
+-               libxl_defbool_to_string(b_info->u.hvm.nested_hvm));
++               libxl_defbool_to_string(b_info->U_HVM nested_hvm));
+         fprintf(fh, "\t\t\t(stdvga %s)\n", b_info->u.hvm.vga.kind ==
+                                       LIBXL_VGA_INTERFACE_TYPE_STD ?
+                                       "True" : "False");
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:14:53 +0000
+Subject: [PATCH] MAYBE FIX libxl/xl: use the new location of domain_build_info
+ fields
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This is required because those options will be used by the new PVH
+guest type, and thus need to be shared between PV and HVM.
+
+Defines are added in order to signal consumers that the fields are
+available.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Rebased over changes to libxl.h
+4.8: Rebased over lots of changes
+---
+ tools/libxl/libxl_bootloader.c |  1 -
+ tools/libxl/libxl_create.c     | 10 +++++-----
+ tools/libxl/libxl_dom.c        |  2 +-
+ tools/libxl/libxl_x86.c        |  2 +-
+ tools/libxl/xl_cmdimpl.c       |  6 +++---
+ tools/libxl/xl_sxp.c           | 14 +++++++-------
+ 6 files changed, 17 insertions(+), 18 deletions(-)
+
+diff --git a/tools/libxl/libxl_bootloader.c b/tools/libxl/libxl_bootloader.c
+index 2b6b051419..e91eeeca8f 100644
+--- a/tools/libxl/libxl_bootloader.c
++++ b/tools/libxl/libxl_bootloader.c
+@@ -410,7 +410,6 @@ static void bootloader_disk_attached_cb(libxl__egc *egc,
+     }
+ 
+     LOG(DEBUG, "Config bootloader value: %s", *U_PV_F(info,bootloader));
+-
+     if ( !strcmp(*U_PV_F(info,bootloader), "/usr/bin/pygrub") )
+         LOG(WARN, "bootloader='/usr/bin/pygrub' is deprecated; use " \
+             "bootloader='pygrub' instead");
+diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
+index 824689b726..5811007e44 100644
+--- a/tools/libxl/libxl_create.c
++++ b/tools/libxl/libxl_create.c
+@@ -306,11 +306,11 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+             break;
+         }
+ 
+-        if (libxl__timer_mode_is_default(&b_info->u.hvm.timer_mode))
+-            b_info->u.hvm.timer_mode = LIBXL_TIMER_MODE_NO_DELAY_FOR_MISSED_TICKS;
++        if (libxl__timer_mode_is_default(U_HVM_F(b_info,timer_mode)))
++            *U_HVM_F(b_info,timer_mode) = LIBXL_TIMER_MODE_NO_DELAY_FOR_MISSED_TICKS;
+ 
+         libxl_defbool_setdefault(&b_info->u.hvm.pae,                true);
+-        libxl_defbool_setdefault(&b_info->u.hvm.apic,               true);
++        libxl_defbool_setdefault(U_HVM_F(b_info,apic),              true);
+         libxl_defbool_setdefault(&b_info->u.hvm.acpi,               true);
+         libxl_defbool_setdefault(&b_info->u.hvm.acpi_s3,            true);
+         libxl_defbool_setdefault(&b_info->u.hvm.acpi_s4,            true);
+@@ -318,7 +318,7 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+         libxl_defbool_setdefault(&b_info->u.hvm.viridian,           false);
+         libxl_defbool_setdefault(&b_info->u.hvm.hpet,               true);
+         libxl_defbool_setdefault(&b_info->u.hvm.vpt_align,          true);
+-        libxl_defbool_setdefault(&b_info->u.hvm.nested_hvm,         false);
++        libxl_defbool_setdefault(U_HVM_F(b_info,nested_hvm),        false);
+         libxl_defbool_setdefault(&b_info->u.hvm.altp2m,             false);
+         libxl_defbool_setdefault(&b_info->u.hvm.usb,                false);
+         libxl_defbool_setdefault(&b_info->u.hvm.xen_platform_pci,   true);
+@@ -906,7 +906,7 @@ static void initiate_domain_create(libxl__egc *egc,
+     }
+ 
+     if (d_config->c_info.type == LIBXL_DOMAIN_TYPE_HVM &&
+-        (libxl_defbool_val(d_config->b_info.u.hvm.nested_hvm) &&
++        (libxl_defbool_val(*U_HVM_F(&d_config->b_info,nested_hvm)) &&
+          libxl_defbool_val(d_config->b_info.u.hvm.altp2m))) {
+         ret = ERROR_INVAL;
+         LOG(ERROR, "nestedhvm and altp2mhvm cannot be used together");
+diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
+index f36712aaa8..30b53fa64f 100644
+--- a/tools/libxl/libxl_dom.c
++++ b/tools/libxl/libxl_dom.c
+@@ -290,7 +290,7 @@ static void hvm_set_conf_params(xc_interface *handle, uint32_t domid,
+     xc_hvm_param_set(handle, domid, HVM_PARAM_VPT_ALIGN,
+                     libxl_defbool_val(info->u.hvm.vpt_align));
+     xc_hvm_param_set(handle, domid, HVM_PARAM_NESTEDHVM,
+-                    libxl_defbool_val(info->u.hvm.nested_hvm));
++                    libxl_defbool_val(*U_HVM_F(info,nested_hvm)));
+     xc_hvm_param_set(handle, domid, HVM_PARAM_ALTP2M,
+                     libxl_defbool_val(info->u.hvm.altp2m));
+ }
+diff --git a/tools/libxl/libxl_x86.c b/tools/libxl/libxl_x86.c
+index e1844c859d..f76493e93a 100644
+--- a/tools/libxl/libxl_x86.c
++++ b/tools/libxl/libxl_x86.c
+@@ -12,7 +12,7 @@ int libxl__arch_domain_prepare_config(libxl__gc *gc,
+         if (d_config->b_info.device_model_version !=
+             LIBXL_DEVICE_MODEL_VERSION_NONE) {
+             xc_config->emulation_flags = XEN_X86_EMU_ALL;
+-        } else if (libxl_defbool_val(d_config->b_info.u.hvm.apic)) {
++        } else if (libxl_defbool_val(*U_HVM_F(&d_config->b_info,apic))) {
+             /*
+              * HVM guests without device model may want
+              * to have LAPIC emulation.
+diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
+index 5e634037ee..ad1720311f 100644
+--- a/tools/libxl/xl_cmdimpl.c
++++ b/tools/libxl/xl_cmdimpl.c
+@@ -1611,8 +1611,8 @@ static void parse_config_data(const char *config_source,
+     }
+ 
+     if (U_HVM_OK(b_info)) {
+-        xlu_cfg_get_defbool(config, "nestedhvm", U_HVM_F(b_info, nested_hvm), 0);
+-        xlu_cfg_get_defbool(config, "apic", U_HVM_F(b_info, apic), 0);
++        xlu_cfg_get_defbool(config, "nestedhvm", U_HVM_F(b_info,nested_hvm), 0);
++        xlu_cfg_get_defbool(config, "apic", U_HVM_F(b_info,apic), 0);
+     }
+     
+     switch(b_info->type) {
+@@ -1738,7 +1738,7 @@ static void parse_config_data(const char *config_source,
+         break;
+     case LIBXL_DOMAIN_TYPE_PV:
+     {
+-        if (!b_info->U_PV bootloader && !b_info->kernel) {
++        if (!*U_PV_F(b_info,bootloader) && !b_info->kernel) {
+             fprintf(stderr, "Neither kernel nor bootloader specified\n");
+             exit(1);
+         }
+diff --git a/tools/libxl/xl_sxp.c b/tools/libxl/xl_sxp.c
+index 07a481f511..69fa584d50 100644
+--- a/tools/libxl/xl_sxp.c
++++ b/tools/libxl/xl_sxp.c
+@@ -74,12 +74,12 @@ void printf_info_sexp(int domid, libxl_domain_config *d_config, FILE *fh)
+     fprintf(fh, "\t(nomigrate %s)\n",
+            libxl_defbool_to_string(b_info->disable_migrate));
+ 
+-    if (c_info->type == LIBXL_DOMAIN_TYPE_PV && b_info->U_PV bootloader) {
+-        fprintf(fh, "\t(bootloader %s)\n", b_info->U_PV bootloader);
+-        if (b_info->U_PV bootloader_args) {
++    if (c_info->type == LIBXL_DOMAIN_TYPE_PV && *U_PV_F(b_info,bootloader)) {
++        fprintf(fh, "\t(bootloader %s)\n", *U_PV_F(b_info,bootloader));
++        if (*U_PV_F(b_info,bootloader_args)) {
+             fprintf(fh, "\t(bootloader_args");
+-            for (i=0; b_info->U_PV bootloader_args[i]; i++)
+-                fprintf(fh, " %s", b_info->U_PV bootloader_args[i]);
++            for (i=0; *U_PV_F(b_info,bootloader_args)[i]; i++)
++                fprintf(fh, " %s", (*U_PV_F(b_info,bootloader_args))[i]);
+             fprintf(fh, ")\n");
+         }
+     }
+@@ -104,9 +104,9 @@ void printf_info_sexp(int domid, libxl_domain_config *d_config, FILE *fh)
+         fprintf(fh, "\t\t\t(vpt_align %s)\n",
+                libxl_defbool_to_string(b_info->u.hvm.vpt_align));
+         fprintf(fh, "\t\t\t(timer_mode %s)\n",
+-               libxl_timer_mode_to_string(b_info->U_HVM timer_mode));
++               libxl_timer_mode_to_string(*U_HVM_F(b_info,timer_mode)));
+         fprintf(fh, "\t\t\t(nestedhvm %s)\n",
+-               libxl_defbool_to_string(b_info->U_HVM nested_hvm));
++               libxl_defbool_to_string(*U_HVM_F(b_info,nested_hvm)));
+         fprintf(fh, "\t\t\t(stdvga %s)\n", b_info->u.hvm.vga.kind ==
+                                       LIBXL_VGA_INTERFACE_TYPE_STD ?
+                                       "True" : "False");
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:15:03 +0000
+Subject: [PATCH] xl: introduce a domain type option
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Introduce a new type option to xl configuration files in order to
+specify the domain type. This supersedes the current builder option.
+
+The new option is documented in the xl.cfg man page, and the previous
+builder option is marked as deprecated.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ docs/man/xl.cfg.pod.5.in | 23 +++++++++++++++++++++--
+ tools/libxl/xl_cmdimpl.c | 44 ++++++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 61 insertions(+), 6 deletions(-)
+
+diff --git a/docs/man/xl.cfg.pod.5.in b/docs/man/xl.cfg.pod.5.in
+index 21b58bc21e..d96d8bdb16 100644
+--- a/docs/man/xl.cfg.pod.5.in
++++ b/docs/man/xl.cfg.pod.5.in
+@@ -52,9 +52,9 @@ Pairs may be separated either by a newline or a semicolon.  Both
+ of the following are valid:
+ 
+   name="h0"
+-  builder="hvm"
++  type="hvm"
+ 
+-  name="h0"; builder="hvm"
++  name="h0"; type="hvm"
+ 
+ =head1 OPTIONS
+ 
+@@ -75,6 +75,25 @@ single host must be unique.
+ 
+ =over 4
+ 
++=item B<type="pv">
++
++Specifies that this is to be a PV domain, suitable for hosting Xen-aware
++guest operating systems. This is the default.
++
++=item B<type="hvm">
++
++Specifies that this is to be an HVM domain. That is, a fully virtualised
++computer with emulated BIOS, disk and network peripherals, etc.
++
++=back
++
++=head3 Deprecated guest type selection
++
++Note that the builder option is being deprecated in favor of the type
++option.
++
++=over 4
++
+ =item B<builder="generic">
+ 
+ Specifies that this is to be a PV domain. This is the default.
+diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
+index ad1720311f..df94c29839 100644
+--- a/tools/libxl/xl_cmdimpl.c
++++ b/tools/libxl/xl_cmdimpl.c
+@@ -1367,11 +1367,47 @@ static void parse_config_data(const char *config_source,
+     }
+ 
+     libxl_defbool_set(&c_info->run_hotplug_scripts, run_hotplug_scripts);
+-    c_info->type = LIBXL_DOMAIN_TYPE_PV;
+-    if (!xlu_cfg_get_string (config, "builder", &buf, 0) &&
+-        !strncmp(buf, "hvm", strlen(buf)))
+-        c_info->type = LIBXL_DOMAIN_TYPE_HVM;
++    
++    if (!xlu_cfg_get_string(config, "type", &buf, 0)) {
++        if (!strncmp(buf, "hvm", strlen(buf)))
++            c_info->type = LIBXL_DOMAIN_TYPE_HVM;
++        else if (!strncmp(buf, "pv", strlen(buf)))
++            c_info->type = LIBXL_DOMAIN_TYPE_PV;
++        else {
++            fprintf(stderr, "Invalid domain type %s.\n", buf);
++            exit(1);
++        }
++    }
++
++    /* Deprecated since Xen 4.10. */
++    if (!xlu_cfg_get_string(config, "builder", &buf, 0)) {
++        libxl_domain_type builder_type;
++
++        if (c_info->type == LIBXL_DOMAIN_TYPE_INVALID)
++            fprintf(stderr,
++"The \"builder\" option is being deprecated, please use \"type\" instead.\n");
++        if (!strncmp(buf, "hvm", strlen(buf)))
++            builder_type = LIBXL_DOMAIN_TYPE_HVM;
++        else if (!strncmp(buf, "generic", strlen(buf)))
++            builder_type = LIBXL_DOMAIN_TYPE_PV;
++        else {
++            fprintf(stderr, "Invalid domain type %s.\n", buf);
++            exit(1);
++        }
+ 
++        if (c_info->type != LIBXL_DOMAIN_TYPE_INVALID &&
++            c_info->type != builder_type) {
++            fprintf(stderr,
++            "Contradicting \"builder\" and \"type\" options specified.\n");
++            exit(1);
++        }
++        c_info->type = builder_type;
++    }
++
++    if (c_info->type == LIBXL_DOMAIN_TYPE_INVALID)
++        c_info->type = LIBXL_DOMAIN_TYPE_PV;
++
++    
+     xlu_cfg_get_defbool(config, "pvh", &c_info->pvh, 0);
+     xlu_cfg_get_defbool(config, "hap", &c_info->hap, 0);
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:36 +0000
+Subject: [PATCH] xl: introduce a firmware option
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The new firmware option aims to provide a coherent way to set the
+firmware for the different kind of guests Xen supports.
+
+For PV guests the available firmwares are pvgrub{32|64}, and for HVM
+the following are supported: bios, uefi, seabios, rombios and ovmf.
+Note that uefi maps to ovmf, and bios maps to the default firmware for
+each device model.
+
+The xl.cfg man page is updated to document the new feature.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Ported over changes to xl_parse.c
+---
+ docs/man/xl.cfg.pod.5.in | 56 ++++++++++++++++++++++++++++++++++++++++++++++++
+ tools/libxl/xl_cmdimpl.c | 47 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 103 insertions(+)
+
+diff --git a/docs/man/xl.cfg.pod.5.in b/docs/man/xl.cfg.pod.5.in
+index d96d8bdb16..5c6e8e7d45 100644
+--- a/docs/man/xl.cfg.pod.5.in
++++ b/docs/man/xl.cfg.pod.5.in
+@@ -439,6 +439,62 @@ specific what meaning this has).
+ 
+ =back
+ 
++=head3 Non direct Kernel Boot
++
++Non direct kernel boot allows booting guests with a firmware. This can be
++used by all types of guests, although the selection of options is different
++depending on the guest type.
++
++This option provides the flexibly of letting the guest decide which kernel
++they want to boot, while preventing having to poke at the guest file
++system form the toolstack domain.
++
++=head4 PV guest options
++
++=over 4
++
++=item B<firmware="pvgrub32|pvgrub64">
++
++Boots a guest using a para-virtualized version of grub that runs inside
++of the guest. The bitness of the guest needs to be know, so that the right
++version of pvgrub can be selected.
++
++Note that xl expects to find the pvgrub32.bin and pvgrub64.bin binaries in
++F<@XENFIRMWAREDIR@>.
++
++=back
++
++=head4 HVM guest options
++
++=over 4
++
++=item B<firmware="bios">
++
++Boot the guest using the default BIOS firmware, which depends on the
++chosen device model.
++
++=item B<firmware="uefi">
++
++Boot the guest using the default UEFI firmware, currently OVMF.
++
++=item B<firmware="seabios">
++
++Boot the guest using the SeaBIOS BIOS firmware.
++
++=item B<firmware="rombios">
++
++Boot the guest using the ROMBIOS BIOS firmware.
++
++=item B<firmware="ovmf">
++
++Boot the guest using the OVMF UEFI firmware.
++
++=item B<firmware="PATH">
++
++Load the specified file as firmware for the guest.
++
++=back
++
+ =head3 Other Options
+ 
+ =over 4
+diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
+index df94c29839..0490048179 100644
+--- a/tools/libxl/xl_cmdimpl.c
++++ b/tools/libxl/xl_cmdimpl.c
+@@ -1771,9 +1771,56 @@ static void parse_config_data(const char *config_source,
+ 
+         if (!xlu_cfg_get_long (config, "rdm_mem_boundary", &l, 0))
+             b_info->u.hvm.rdm_mem_boundary_memkb = l * 1024;
++        
++        /*
++         * The firmware config option can be used as a simplification
++         * instead of setting bios or firmware_override. It has the
++         * following meanings for HVM guests:
++         *
++         *  - ovmf | seabios | rombios: maps directly into the "bios"
++         *    option.
++         *  - uefi | bios: maps into one of the above options and is set
++         *    in the bios field.
++         *  - Anything else is treated as a path that is copied into
++         *    firmware.
++         */
++        if (!xlu_cfg_get_string (config, "firmware", &buf, 0) &&
++            libxl_bios_type_from_string(buf, &b_info->u.hvm.bios)) {
++            if (!strncmp(buf, "uefi", strlen(buf)))
++                b_info->u.hvm.bios = LIBXL_BIOS_TYPE_OVMF;
++            else if (strncmp(buf, "bios", strlen(buf)))
++                /* Assume it's a path to a custom firmware. */
++                xlu_cfg_replace_string(config, "firmware",
++                                       &b_info->u.hvm.firmware, 0);
++            /*
++             * BIOS is the default, and will be chosen by libxl based on
++             * the device model specified.
++             */
++        }
++
+         break;
+     case LIBXL_DOMAIN_TYPE_PV:
+     {
++        /*
++         * The firmware config option can be used as a simplification
++         * instead of directly setting kernel. It will be translated to
++         * XENFIRMWAREDIR/<string>.bin
++         */
++        if (!xlu_cfg_get_string (config, "firmware", &buf, 0)) {
++            if (b_info->kernel) {
++                fprintf(stderr,
++                        "ERROR: both kernel and firmware specified\n");
++                exit(1);
++            }
++            if (strncmp(buf, "pvgrub32", strlen(buf)) &&
++                strncmp(buf, "pvgrub64", strlen(buf))) {
++                fprintf(stderr,
++            "ERROR: only pvgrub{32|64} supported as firmware options\n");
++                exit(1);
++            }
++
++            xasprintf(&b_info->kernel, XENFIRMWAREDIR "/%s.bin", buf);
++        }
+         if (!*U_PV_F(b_info,bootloader) && !b_info->kernel) {
+             fprintf(stderr, "Neither kernel nor bootloader specified\n");
+             exit(1);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Juergen Gross <jgross@suse.com>
+Date: Thu, 18 Jan 2018 16:16:36 +0000
+Subject: [PATCH] libxl: don't segfault when creating domain with invalid pvusb
+ device
+
+Creating a domain with an invalid controller specification for a pvusb
+device will currently segfault.
+
+Avoid this by bailing out early in case of a mandatory xenstore path
+not existing.
+
+Signed-of-by: Juergen Gross <jgross@suse.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+---
+ tools/libxl/libxl_internal.h |  7 +++++++
+ tools/libxl/libxl_usb.c      |  6 +++---
+ tools/libxl/libxl_xshelp.c   | 12 ++++++++++++
+ 3 files changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index dd1db906af..4460d21a69 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -734,6 +734,13 @@ int libxl__xs_mknod(libxl__gc *gc, xs_transaction_t t,
+                     const char *path, struct xs_permissions *perms,
+                     unsigned int num_perms);
+ 
++/* On success, *result_out came from the gc.
++ * On error, *result_out is undefined.
++ * ENOENT is regarded as error.
++ */
++int libxl__xs_read_mandatory(libxl__gc *gc, xs_transaction_t t,
++                             const char *path, const char **result_out);
++
+ /* On success, *result_out came from the gc.
+  * On error, *result_out is undefined.
+  * ENOENT counts as success but sets *result_out=0
+diff --git a/tools/libxl/libxl_usb.c b/tools/libxl/libxl_usb.c
+index 76260b13f5..e5609aa070 100644
+--- a/tools/libxl/libxl_usb.c
++++ b/tools/libxl/libxl_usb.c
+@@ -652,9 +652,9 @@ int libxl_device_usbctrl_getinfo(libxl_ctx *ctx, uint32_t domid,
+     usbctrlinfo->devid = usbctrl->devid;
+ 
+ #define READ_SUBPATH(path, subpath) ({                                  \
+-        rc = libxl__xs_read_checked(gc, XBT_NULL,                       \
+-                                    GCSPRINTF("%s/" subpath, path),     \
+-                                    &tmp);                              \
++        rc = libxl__xs_read_mandatory(gc, XBT_NULL,                     \
++                                      GCSPRINTF("%s/" subpath, path),   \
++                                      &tmp);                            \
+         if (rc) goto out;                                               \
+         (char *)tmp;                                                    \
+     })
+diff --git a/tools/libxl/libxl_xshelp.c b/tools/libxl/libxl_xshelp.c
+index b3bac6d270..b64c8b0e8a 100644
+--- a/tools/libxl/libxl_xshelp.c
++++ b/tools/libxl/libxl_xshelp.c
+@@ -193,6 +193,18 @@ char *libxl__xs_libxl_path(libxl__gc *gc, uint32_t domid)
+     return s;
+ }
+ 
++int libxl__xs_read_mandatory(libxl__gc *gc, xs_transaction_t t,
++                             const char *path, const char **result_out)
++{
++    char *result = libxl__xs_read(gc, t, path);
++    if (!result) {
++        LOGE(ERROR, "xenstore read failed: `%s'", path);
++        return ERROR_FAIL;
++    }
++    *result_out = result;
++    return 0;
++}
++
+ int libxl__xs_read_checked(libxl__gc *gc, xs_transaction_t t,
+                            const char *path, const char **result_out)
+ {
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:36 +0000
+Subject: [PATCH] libxl: introduce a PVH guest type
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The new guest type is introduced to the libxl IDL. libxl__domain_make
+is also modified to save the guest type, and libxl__domain_type is
+expanded to fetch that information when detecting guest type.
+
+This is required because the hypervisor only differentiates between PV
+and HVM guests, so libxl needs some extra information in order to
+differentiate between a HVM and a PVH guest.
+
+The new PVH guest type and its options are documented on the xl.cfg
+man page.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Xen 4.8 backport: pvh struct contains copies of the fields that in
+4.10 were added to the main libxl_domain_build_info, and the accessor
+macros are updated to be use them when appropriate.
+---
+ docs/man/xl.cfg.pod.5.in    | 121 ++++++++++++++++++++++++++++++++++++++++++++
+ tools/libxl/libxl.h         |   4 ++
+ tools/libxl/libxl_create.c  |  21 ++++++--
+ tools/libxl/libxl_dom.c     |  28 ++++++++--
+ tools/libxl/libxl_types.idl |   7 +++
+ 5 files changed, 173 insertions(+), 8 deletions(-)
+
+diff --git a/docs/man/xl.cfg.pod.5.in b/docs/man/xl.cfg.pod.5.in
+index 5c6e8e7d45..cbabe2738e 100644
+--- a/docs/man/xl.cfg.pod.5.in
++++ b/docs/man/xl.cfg.pod.5.in
+@@ -80,6 +80,12 @@ single host must be unique.
+ Specifies that this is to be a PV domain, suitable for hosting Xen-aware
+ guest operating systems. This is the default.
+ 
++=item B<type="pvh">
++
++Specifies that this is to be an PVH domain. That is a lightweight HVM-like
++guest without a device model and without many of the emulated devices
++available to HVM guests. Note that this mode requires a PVH aware kernel.
++
+ =item B<type="hvm">
+ 
+ Specifies that this is to be an HVM domain. That is, a fully virtualised
+@@ -495,6 +501,11 @@ Load the specified file as firmware for the guest.
+ 
+ =back
+ 
++=head4 PVH guest options
++
++Currently there's no firmware available for PVH guests, they should be
++booted using the B<Direct Kernel Boot> method or the B<bootloader> option.
++
+ =head3 Other Options
+ 
+ =over 4
+@@ -1974,6 +1985,116 @@ See F<docs/misc/pci-device-reservations.txt> for more information.
+ 
+ =back
+ 
++=head2 PVH Guest Specific Options
++
++=over 4
++
++=item B<nestedhvm=BOOLEAN>
++
++Enable or disables guest access to hardware virtualisation features,
++e.g. it allows a guest Operating System to also function as a hypervisor.
++You may want this option if you want to run another hypervisor (including
++another copy of Xen) within a Xen guest or to support a guest Operating
++System which uses hardware virtualisation extensions (e.g. Windows XP
++compatibility mode on more modern Windows OS).
++
++This option is disabled by default.
++
++=item B<apic=BOOLEAN>
++
++Enable the local APIC emulation for the guest. The local APIC information
++will be exposed to the guest in the ACPI tables. This option is enabled by
++default.
++
++=item B<bootloader="PROGRAM">
++
++Run C<PROGRAM> to find the kernel image and ramdisk to use.  Normally
++C<PROGRAM> would be C<pygrub>, which is an emulation of
++grub/grub2/syslinux. Either B<kernel> or B<bootloader> must be specified
++for PV guests.
++
++=item B<bootloader_args=[ "ARG", "ARG", ...]>
++
++Append B<ARG>s to the arguments to the B<bootloader>
++program. Alternatively if the argument is a simple string then it will
++be split into words at whitespace B<(this second option is deprecated)>.
++
++=item B<timer_mode="MODE">
++
++Specifies the mode for Virtual Timers. The valid values are as follows:
++
++=over 4
++
++=item B<delay_for_missed_ticks>
++
++Delay for missed ticks. Do not advance a vCPU's time beyond the
++correct delivery time for interrupts that have been missed due to
++preemption. Deliver missed interrupts when the vCPU is rescheduled and
++advance the vCPU's virtual time stepwise for each one.
++
++=item B<no_delay_for_missed_ticks>
++
++No delay for missed ticks. As above, missed interrupts are delivered,
++but guest time always tracks wallclock (i.e., real) time while doing
++so.
++
++=item B<no_missed_ticks_pending>
++
++No missed interrupts are held pending. Instead, to ensure ticks are
++delivered at some non-zero rate, if we detect missed ticks then the
++internal tick alarm is not disabled if the vCPU is preempted during
++the next tick period.
++
++=item B<one_missed_tick_pending>
++
++One missed tick pending. Missed interrupts are collapsed
++together and delivered as one 'late tick'.  Guest time always tracks
++wallclock (i.e., real) time.
++
++=back
++
++=back
++
++=head3 Paging
++
++The following options control the mechanisms used to virtualise guest
++memory.  The defaults are selected to give the best results for the
++common cases so you should normally leave these options
++unspecified.
++
++=over 4
++
++=item B<hap=BOOLEAN>
++
++Turns "hardware assisted paging" (the use of the hardware nested page
++table feature) on or off.  This feature is called EPT (Extended Page
++Tables) by Intel and NPT (Nested Page Tables) or RVI (Rapid
++Virtualisation Indexing) by AMD. If turned
++off, Xen will run the guest in "shadow page table" mode where the
++guest's page table updates and/or TLB flushes etc. will be emulated.
++Use of HAP is the default when available.
++
++=item B<oos=BOOLEAN>
++
++Turns "out of sync pagetables" on or off.  When running in shadow page
++table mode, the guest's page table updates may be deferred as
++specified in the Intel/AMD architecture manuals.  However, this may
++expose unexpected bugs in the guest, or find bugs in Xen, so it is
++possible to disable this feature.  Use of out of sync page tables,
++when Xen thinks it appropriate, is the default.
++
++=item B<shadow_memory=MBYTES>
++
++Number of megabytes to set aside for shadowing guest pagetable pages
++(effectively acting as a cache of translated pages) or to use for HAP
++state. By default this is 1MB per guest vCPU plus 8KB per MB of guest
++RAM. You should not normally need to adjust this value. However, if you
++are not using hardware assisted paging (i.e. you are using shadow
++mode) and your guest workload consists of a very large number of
++similar processes then increasing this value may improve performance.
++
++=back
++
+ =head2 Device-Model Options
+ 
+ The following options control the selection of the device-model.  This
+diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
+index 0064db94af..2c939a18b1 100644
+--- a/tools/libxl/libxl.h
++++ b/tools/libxl/libxl.h
+@@ -361,18 +361,22 @@
+ 
+ #define LIBXL_BUILDINFO_ACCESS_PVH_PV(b_info, field_name)               \
+   ((b_info)->type == LIBXL_DOMAIN_TYPE_PV  ? &(b_info)->u.pv .field_name : \
++   (b_info)->type == LIBXL_DOMAIN_TYPE_PVH ? &(b_info)->u.pvh.field_name : \
+    (abort(), (typeof(&(b_info)->u.pv. field_name))0))
+ 
+ #define LIBXL_BUILDINFO_ACCESS_PVH_HVM(b_info, field_name)              \
+   ((b_info)->type == LIBXL_DOMAIN_TYPE_HVM ? &(b_info)->u.hvm.field_name : \
++   (b_info)->type == LIBXL_DOMAIN_TYPE_PVH ? &(b_info)->u.pvh.field_name : \
+    (abort(), (typeof(&(b_info)->u.hvm.field_name))0))
+ 
+ #define LIBXL_BUILDINFO_ACCESS_PVH_PV_OK(b_info, field_name)    \
+   ((b_info)->type == LIBXL_DOMAIN_TYPE_PV  ? 1 :               \
++   (b_info)->type == LIBXL_DOMAIN_TYPE_PVH ? 1 :               \
+    0)
+ 
+ #define LIBXL_BUILDINFO_ACCESS_PVH_HVM_OK(b_info, field_name)   \
+   ((b_info)->type == LIBXL_DOMAIN_TYPE_HVM ? 1 :               \
++   (b_info)->type == LIBXL_DOMAIN_TYPE_PVH ? 1 :               \
+    0)
+ 
+ #define LIBXL_BUILDINFO_SUBFIELD_PVH  UNAVAILABLE_BECAUSE_NO_PVH_SUPPORT_XEN_TOO_OLD
+diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
+index 5811007e44..50d3de640d 100644
+--- a/tools/libxl/libxl_create.c
++++ b/tools/libxl/libxl_create.c
+@@ -306,11 +306,7 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+             break;
+         }
+ 
+-        if (libxl__timer_mode_is_default(U_HVM_F(b_info,timer_mode)))
+-            *U_HVM_F(b_info,timer_mode) = LIBXL_TIMER_MODE_NO_DELAY_FOR_MISSED_TICKS;
+-
+         libxl_defbool_setdefault(&b_info->u.hvm.pae,                true);
+-        libxl_defbool_setdefault(U_HVM_F(b_info,apic),              true);
+         libxl_defbool_setdefault(&b_info->u.hvm.acpi,               true);
+         libxl_defbool_setdefault(&b_info->u.hvm.acpi_s3,            true);
+         libxl_defbool_setdefault(&b_info->u.hvm.acpi_s4,            true);
+@@ -318,7 +314,6 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+         libxl_defbool_setdefault(&b_info->u.hvm.viridian,           false);
+         libxl_defbool_setdefault(&b_info->u.hvm.hpet,               true);
+         libxl_defbool_setdefault(&b_info->u.hvm.vpt_align,          true);
+-        libxl_defbool_setdefault(U_HVM_F(b_info,nested_hvm),        false);
+         libxl_defbool_setdefault(&b_info->u.hvm.altp2m,             false);
+         libxl_defbool_setdefault(&b_info->u.hvm.usb,                false);
+         libxl_defbool_setdefault(&b_info->u.hvm.xen_platform_pci,   true);
+@@ -406,6 +401,16 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+             libxl_domain_type_to_string(b_info->type));
+         return ERROR_INVAL;
+     }
++
++    /* Configuration fields shared between PVH and HVM. */
++    if (b_info->type != LIBXL_DOMAIN_TYPE_PV) {
++        if (libxl__timer_mode_is_default(U_HVM_F(b_info, timer_mode)))
++            *U_HVM_F(b_info,timer_mode) = LIBXL_TIMER_MODE_NO_DELAY_FOR_MISSED_TICKS;
++
++        libxl_defbool_setdefault(U_HVM_F(b_info, apic),             true);
++        libxl_defbool_setdefault(U_HVM_F(b_info, nested_hvm),       false);
++    }
++
+     return 0;
+ }
+ 
+@@ -511,6 +516,7 @@ int libxl__domain_make(libxl__gc *gc, libxl_domain_config *d_config,
+ {
+     libxl_ctx *ctx = libxl__gc_owner(gc);
+     int flags, ret, rc, nb_vm;
++    const char *dom_type;
+     char *uuid_string;
+     char *dom_path, *vm_path, *libxl_path;
+     struct xs_permissions roperm[2];
+@@ -709,6 +715,11 @@ retry_transaction:
+ 
+     xs_write(ctx->xsh, t, GCSPRINTF("%s/control/platform-feature-multiprocessor-suspend", dom_path), "1", 1);
+     xs_write(ctx->xsh, t, GCSPRINTF("%s/control/platform-feature-xs_reset_watches", dom_path), "1", 1);
++
++    dom_type = libxl_domain_type_to_string(info->type);
++    xs_write(ctx->xsh, t, GCSPRINTF("%s/type", libxl_path), dom_type,
++             strlen(dom_type));
++
+     if (!xs_transaction_end(ctx->xsh, t, 0)) {
+         if (errno == EAGAIN) {
+             t = 0;
+diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
+index 30b53fa64f..50ffad4802 100644
+--- a/tools/libxl/libxl_dom.c
++++ b/tools/libxl/libxl_dom.c
+@@ -38,9 +38,31 @@ libxl_domain_type libxl__domain_type(libxl__gc *gc, uint32_t domid)
+         LOG(ERROR, "unable to get domain type for domid=%"PRIu32, domid);
+         return LIBXL_DOMAIN_TYPE_INVALID;
+     }
+-    if (info.flags & XEN_DOMINF_hvm_guest)
+-        return LIBXL_DOMAIN_TYPE_HVM;
+-    else
++    if (info.flags & XEN_DOMINF_hvm_guest) {
++        const char *type_path = GCSPRINTF("%s/type",
++                                          libxl__xs_libxl_path(gc, domid));
++        const char *type;
++        libxl_domain_type t;
++        int rc;
++
++        rc = libxl__xs_read_mandatory(gc, XBT_NULL, type_path, &type);
++        if (rc) {
++            LOG(WARN,
++            "unable to get domain type for domid=%"PRIu32", assuming HVM",
++                domid);
++            return LIBXL_DOMAIN_TYPE_HVM;
++        }
++
++        rc = libxl_domain_type_from_string(type, &t);
++        if (rc) {
++            LOG(WARN,
++            "unable to get domain type for domid=%"PRIu32", assuming HVM",
++                domid);
++            return LIBXL_DOMAIN_TYPE_HVM;
++        }
++
++        return t;
++    } else
+         return LIBXL_DOMAIN_TYPE_PV;
+ }
+ 
+diff --git a/tools/libxl/libxl_types.idl b/tools/libxl/libxl_types.idl
+index 094303f151..1e9621c76f 100644
+--- a/tools/libxl/libxl_types.idl
++++ b/tools/libxl/libxl_types.idl
+@@ -75,6 +75,7 @@ libxl_domain_type = Enumeration("domain_type", [
+     (-1, "INVALID"),
+     (1, "HVM"),
+     (2, "PV"),
++    (3, "PVH"),
+     ], init_val = "LIBXL_DOMAIN_TYPE_INVALID")
+ 
+ libxl_rdm_reserve_strategy = Enumeration("rdm_reserve_strategy", [
+@@ -561,6 +562,12 @@ libxl_domain_build_info = Struct("domain_build_info",[
+                                       # Use host's E820 for PCI passthrough.
+                                       ("e820_host", libxl_defbool),
+                                       ])),
++                 ("pvh", Struct(None, [("bootloader",       string),
++                                       ("bootloader_args",  libxl_string_list),
++                                       ("timer_mode",       libxl_timer_mode),
++                                       ("nested_hvm",       libxl_defbool),
++                                       ("apic",             libxl_defbool),
++                                       ])),
+                  ("invalid", None),
+                  ], keyvar_init_val = "LIBXL_DOMAIN_TYPE_INVALID")),
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:37 +0000
+Subject: [PATCH] libxl: allow PVH guests to use a bootloader
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Allow PVH guests to boot using a bootloader.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_bootloader.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl_bootloader.c b/tools/libxl/libxl_bootloader.c
+index e91eeeca8f..df154dee9a 100644
+--- a/tools/libxl/libxl_bootloader.c
++++ b/tools/libxl/libxl_bootloader.c
+@@ -320,8 +320,8 @@ void libxl__bootloader_run(libxl__egc *egc, libxl__bootloader_state *bl)
+ 
+     libxl__bootloader_init(bl);
+ 
+-    if (info->type != LIBXL_DOMAIN_TYPE_PV) {
+-        LOG(DEBUG, "not a PV domain, skipping bootloader");
++    if (info->type == LIBXL_DOMAIN_TYPE_HVM) {
++        LOG(DEBUG, "not a PV/PVH domain, skipping bootloader");
+         rc = 0;
+         goto out_ok;
+     }
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:37 +0000
+Subject: [PATCH] libxl: set PVH guests to use the PV console
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Ported over move to libxl_console.c
+---
+ tools/libxl/libxl.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 003f377a1b..1dfb85b961 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -1859,6 +1859,7 @@ static int libxl__primary_console_find(libxl_ctx *ctx, uint32_t domid_vm,
+             *cons_num = 0;
+             *type = LIBXL_CONSOLE_TYPE_SERIAL;
+             break;
++        case LIBXL_DOMAIN_TYPE_PVH:
+         case LIBXL_DOMAIN_TYPE_PV:
+             *domid = domid_vm;
+             *cons_num = 0;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:38 +0000
+Subject: [PATCH] libxl: add PVH support to domain creation
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Remove the device model "none" support from domain creation and
+introduce support for PVH.
+
+This requires changing some of the HVM checks to be applied for both
+HVM and PVH.
+
+Setting device model to none was never supported since it was an
+unstable interface used while transitioning from PVHv1 to PVHv2.
+
+Now that PVHv1 has been finally removed and that a supported
+interface for PVHv2 is being added this option is no longer necessary,
+hence it's removed.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Ported over changes to libxl_create.c
+---
+ tools/libxl/libxl_create.c | 74 +++++++++++++++++++++++++---------------------
+ 1 file changed, 40 insertions(+), 34 deletions(-)
+
+diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
+index 50d3de640d..3b19cb2c74 100644
+--- a/tools/libxl/libxl_create.c
++++ b/tools/libxl/libxl_create.c
+@@ -35,7 +35,7 @@ int libxl__domain_create_info_setdefault(libxl__gc *gc,
+         return ERROR_INVAL;
+     }
+ 
+-    if (c_info->type == LIBXL_DOMAIN_TYPE_HVM) {
++    if (c_info->type != LIBXL_DOMAIN_TYPE_PV) {
+         libxl_defbool_setdefault(&c_info->hap, true);
+         libxl_defbool_setdefault(&c_info->oos, true);
+     } else {
+@@ -68,7 +68,8 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+     int i, rc;
+ 
+     if (b_info->type != LIBXL_DOMAIN_TYPE_HVM &&
+-        b_info->type != LIBXL_DOMAIN_TYPE_PV) {
++        b_info->type != LIBXL_DOMAIN_TYPE_PV &&
++        b_info->type != LIBXL_DOMAIN_TYPE_PVH) {
+         LOG(ERROR, "invalid domain type");
+         return ERROR_INVAL;
+     }
+@@ -122,8 +123,6 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+                 b_info->u.hvm.bios = LIBXL_BIOS_TYPE_ROMBIOS; break;
+             case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN:
+                 b_info->u.hvm.bios = LIBXL_BIOS_TYPE_SEABIOS; break;
+-            case LIBXL_DEVICE_MODEL_VERSION_NONE:
+-                break;
+             default:
+                 LOG(ERROR, "unknown device model version");
+                 return ERROR_INVAL;
+@@ -143,8 +142,6 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+                 return ERROR_INVAL;
+             }
+             break;
+-        case LIBXL_DEVICE_MODEL_VERSION_NONE:
+-            break;
+         default:abort();
+         }
+ 
+@@ -224,10 +221,7 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+             b_info->u.hvm.mmio_hole_memkb = 0;
+ 
+         if (b_info->u.hvm.vga.kind == LIBXL_VGA_INTERFACE_TYPE_UNKNOWN) {
+-            if (b_info->device_model_version == LIBXL_DEVICE_MODEL_VERSION_NONE)
+-                b_info->u.hvm.vga.kind = LIBXL_VGA_INTERFACE_TYPE_NONE;
+-            else
+-                b_info->u.hvm.vga.kind = LIBXL_VGA_INTERFACE_TYPE_CIRRUS;
++            b_info->u.hvm.vga.kind = LIBXL_VGA_INTERFACE_TYPE_CIRRUS;
+         }
+ 
+         if (!b_info->u.hvm.hdtype)
+@@ -261,12 +255,6 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+                 break;
+             }
+             break;
+-        case LIBXL_DEVICE_MODEL_VERSION_NONE:
+-            if (b_info->u.hvm.vga.kind != LIBXL_VGA_INTERFACE_TYPE_NONE) {
+-                LOG(ERROR,
+-        "guests without a device model cannot have an emulated video card");
+-                return ERROR_INVAL;
+-            }
+             b_info->video_memkb = 0;
+             break;
+         case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN:
+@@ -396,6 +384,8 @@ int libxl__domain_build_info_setdefault(libxl__gc *gc,
+             b_info->u.pv.cmdline = NULL;
+         }
+         break;
++    case LIBXL_DOMAIN_TYPE_PVH:
++        break;
+     default:
+         LOG(ERROR, "invalid domain type %s in create info",
+             libxl_domain_type_to_string(b_info->type));
+@@ -501,6 +491,18 @@ int libxl__domain_build(libxl__gc *gc,
+             vments[i++] = (char *) state->pv_cmdline;
+         }
+ 
++        break;
++    case LIBXL_DOMAIN_TYPE_PVH:
++        ret = libxl__build_hvm(gc, domid, d_config, state);
++        if (ret)
++            goto out;
++
++        vments = libxl__calloc(gc, 3, sizeof(char *));
++        vments[0] = "start_time";
++        vments[1] = GCSPRINTF("%"PRIu64".%02ld",
++                              (uint64_t)start_time.tv_sec,
++                              (long)start_time.tv_usec/10000);
++
+         break;
+     default:
+         ret = ERROR_INVAL;
+@@ -536,7 +538,7 @@ int libxl__domain_make(libxl__gc *gc, libxl_domain_config *d_config,
+     }
+ 
+     flags = 0;
+-    if (info->type == LIBXL_DOMAIN_TYPE_HVM) {
++    if (info->type != LIBXL_DOMAIN_TYPE_PV) {
+         flags |= XEN_DOMCTL_CDF_hvm_guest;
+         flags |= libxl_defbool_val(info->hap) ? XEN_DOMCTL_CDF_hap : 0;
+         flags |= libxl_defbool_val(info->oos) ? 0 : XEN_DOMCTL_CDF_oos_off;
+@@ -869,7 +871,7 @@ static void initiate_domain_create(libxl__egc *egc,
+     /* If target_memkb is smaller than max_memkb, the subsequent call
+      * to libxc when building HVM domain will enable PoD mode.
+      */
+-    pod_enabled = (d_config->c_info.type == LIBXL_DOMAIN_TYPE_HVM) &&
++    pod_enabled = (d_config->c_info.type != LIBXL_DOMAIN_TYPE_PV) &&
+         (d_config->b_info.target_memkb < d_config->b_info.max_memkb);
+ 
+     /* We cannot have PoD and PCI device assignment at the same time
+@@ -878,7 +880,7 @@ static void initiate_domain_create(libxl__egc *egc,
+      * guest. To stay on the safe side, we disable PCI device
+      * assignment when PoD is enabled.
+      */
+-    if (d_config->c_info.type == LIBXL_DOMAIN_TYPE_HVM &&
++    if (d_config->c_info.type != LIBXL_DOMAIN_TYPE_PV &&
+         d_config->num_pcidevs && pod_enabled) {
+         ret = ERROR_INVAL;
+         LOG(ERROR, "PCI device assignment for HVM guest failed due to PoD enabled");
+@@ -916,7 +918,7 @@ static void initiate_domain_create(libxl__egc *egc,
+         goto error_out;
+     }
+ 
+-    if (d_config->c_info.type == LIBXL_DOMAIN_TYPE_HVM &&
++    if (d_config->c_info.type != LIBXL_DOMAIN_TYPE_PV &&
+         (libxl_defbool_val(*U_HVM_F(&d_config->b_info,nested_hvm)) &&
+          libxl_defbool_val(d_config->b_info.u.hvm.altp2m))) {
+         ret = ERROR_INVAL;
+@@ -924,7 +926,7 @@ static void initiate_domain_create(libxl__egc *egc,
+         goto error_out;
+     }
+ 
+-    if (d_config->c_info.type == LIBXL_DOMAIN_TYPE_HVM &&
++    if (d_config->c_info.type != LIBXL_DOMAIN_TYPE_PV &&
+         libxl_defbool_val(d_config->b_info.u.hvm.altp2m) &&
+         pod_enabled) {
+         ret = ERROR_INVAL;
+@@ -1109,7 +1111,7 @@ static void domcreate_bootloader_done(libxl__egc *egc,
+             crs->domid = domid;
+             crs->send_back_fd = dcs->send_back_fd;
+             crs->recv_fd = restore_fd;
+-            crs->hvm = (info->type == LIBXL_DOMAIN_TYPE_HVM);
++            crs->hvm = (info->type != LIBXL_DOMAIN_TYPE_PV);
+             crs->callback = libxl__colo_restore_setup_done;
+             libxl__colo_restore_setup(egc, crs);
+             break;
+@@ -1190,6 +1192,13 @@ static void domcreate_stream_done(libxl__egc *egc,
+             vments[i++] = (char *) state->pv_cmdline;
+         }
+         break;
++    case LIBXL_DOMAIN_TYPE_PVH:
++        vments = libxl__calloc(gc, 3, sizeof(char *));
++        vments[0] = "start_time";
++        vments[1] = GCSPRINTF("%"PRIu64".%02ld",
++                              (uint64_t)start_time.tv_sec,
++                              (long)start_time.tv_usec/10000);
++        break;
+     default:
+         ret = ERROR_INVAL;
+         goto out;
+@@ -1351,12 +1360,6 @@ static void domcreate_launch_dm(libxl__egc *egc, libxl__multidev *multidev,
+         libxl__device_console_add(gc, domid, &console, state, &device);
+         libxl__device_console_dispose(&console);
+ 
+-        if (d_config->b_info.device_model_version ==
+-            LIBXL_DEVICE_MODEL_VERSION_NONE) {
+-            domcreate_devmodel_started(egc, &dcs->sdss.dm, 0);
+-            return;
+-        }
+-
+         libxl_device_vkb_init(&vkb);
+         libxl__device_vkb_add(gc, domid, &vkb);
+         libxl_device_vkb_dispose(&vkb);
+@@ -1378,6 +1381,7 @@ static void domcreate_launch_dm(libxl__egc *egc, libxl__multidev *multidev,
+         return;
+     }
+     case LIBXL_DOMAIN_TYPE_PV:
++    case LIBXL_DOMAIN_TYPE_PVH:
+     {
+         libxl__device_console console;
+         libxl__device device;
+@@ -1675,12 +1679,14 @@ static void domain_soft_reset_cb(libxl__egc *egc,
+         goto error;
+     }
+ 
+-    savefile = GCSPRINTF(LIBXL_DEVICE_MODEL_SAVE_FILE".%d", dds->domid);
+-    restorefile = GCSPRINTF(LIBXL_DEVICE_MODEL_RESTORE_FILE".%d", dds->domid);
+-    rc = rename(savefile, restorefile);
+-    if (rc) {
+-        LOG(ERROR, "failed to rename dm save file.");
+-        goto error;
++    if (cdcs->dcs.guest_config->b_info.type == LIBXL_DOMAIN_TYPE_HVM) {
++        savefile = GCSPRINTF(LIBXL_DEVICE_MODEL_SAVE_FILE".%d", dds->domid);
++        restorefile = GCSPRINTF(LIBXL_DEVICE_MODEL_RESTORE_FILE".%d", dds->domid);
++        rc = rename(savefile, restorefile);
++        if (rc) {
++            LOG(ERROR, "failed to rename dm save file.");
++            goto error;
++        }
+     }
+ 
+     initiate_domain_create(egc, &cdcs->dcs);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:38 +0000
+Subject: [PATCH] libxl: remove device model "none" support from disk related
+ functions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+CD-ROM backend selection was partially based on the device model, this
+is no longer needed since the device model "none" is now removed, so
+HVM guests always have a device model.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Ported over splitting libxl.c into libxl_disk.c
+---
+ tools/libxl/libxl.c | 10 +---------
+ 1 file changed, 1 insertion(+), 9 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 1dfb85b961..526eb70bf4 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -2064,9 +2064,7 @@ int libxl__device_disk_setdefault(libxl__gc *gc, libxl_device_disk *disk,
+ 
+     /* Force Qdisk backend for CDROM devices of guests with a device model. */
+     if (disk->is_cdrom != 0 &&
+-        libxl__domain_type(gc, domid) == LIBXL_DOMAIN_TYPE_HVM &&
+-        libxl__device_model_version_running(gc, domid) !=
+-        LIBXL_DEVICE_MODEL_VERSION_NONE) {
++        libxl__domain_type(gc, domid) == LIBXL_DOMAIN_TYPE_HVM) {
+         if (!(disk->backend == LIBXL_DISK_BACKEND_QDISK ||
+               disk->backend == LIBXL_DISK_BACKEND_UNKNOWN)) {
+             LOG(ERROR, "Backend for CD devices on HVM guests must be Qdisk");
+@@ -2675,12 +2673,6 @@ int libxl_cdrom_insert(libxl_ctx *ctx, uint32_t domid, libxl_device_disk *disk,
+         goto out;
+     }
+ 
+-    if (dm_ver == LIBXL_DEVICE_MODEL_VERSION_NONE) {
+-        LOG(ERROR, "Guests without a device model cannot use cd-insert");
+-        rc = ERROR_FAIL;
+-        goto out;
+-    }
+-
+     disks = libxl_device_disk_list(ctx, domid, &num);
+     for (i = 0; i < num; i++) {
+         if (disks[i].is_cdrom && !strcmp(disk->vdev, disks[i].vdev))
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:38 +0000
+Subject: [PATCH] libxl: set device model for PVH guests
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+PVH guests use the same device model selection as PV guests, because
+PVH guests only use the device model for the PV backends.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_dm.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index ad366a8cd3..5306623649 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -648,6 +648,7 @@ static int libxl__build_device_model_args_old(libxl__gc *gc,
+         flexarray_append(dm_args, b_info->extra[i]);
+     flexarray_append(dm_args, "-M");
+     switch (b_info->type) {
++    case LIBXL_DOMAIN_TYPE_PVH:
+     case LIBXL_DOMAIN_TYPE_PV:
+         flexarray_append(dm_args, "xenpv");
+         for (i = 0; b_info->extra_pv && b_info->extra_pv[i] != NULL; i++)
+@@ -1263,6 +1264,7 @@ static int libxl__build_device_model_args_new(libxl__gc *gc,
+ 
+     flexarray_append(dm_args, "-machine");
+     switch (b_info->type) {
++    case LIBXL_DOMAIN_TYPE_PVH:
+     case LIBXL_DOMAIN_TYPE_PV:
+         flexarray_append(dm_args, "xenpv");
+         for (i = 0; b_info->extra_pv && b_info->extra_pv[i] != NULL; i++)
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:39 +0000
+Subject: [PATCH] libxl: add PVH support to domain building
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+And remove device model "none" support.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Ported over changes in libxl_dom.c
+---
+ tools/libxl/libxl_create.c |   2 +-
+ tools/libxl/libxl_dom.c    | 151 ++++++++++++++++++++++++++++-----------------
+ 2 files changed, 96 insertions(+), 57 deletions(-)
+
+diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
+index 3b19cb2c74..ceb5e520cb 100644
+--- a/tools/libxl/libxl_create.c
++++ b/tools/libxl/libxl_create.c
+@@ -926,7 +926,7 @@ static void initiate_domain_create(libxl__egc *egc,
+         goto error_out;
+     }
+ 
+-    if (d_config->c_info.type != LIBXL_DOMAIN_TYPE_PV &&
++    if (d_config->c_info.type == LIBXL_DOMAIN_TYPE_HVM &&
+         libxl_defbool_val(d_config->b_info.u.hvm.altp2m) &&
+         pod_enabled) {
+         ret = ERROR_INVAL;
+diff --git a/tools/libxl/libxl_dom.c b/tools/libxl/libxl_dom.c
+index 50ffad4802..a89ff68cab 100644
+--- a/tools/libxl/libxl_dom.c
++++ b/tools/libxl/libxl_dom.c
+@@ -302,19 +302,34 @@ err:
+ static void hvm_set_conf_params(xc_interface *handle, uint32_t domid,
+                                 libxl_domain_build_info *const info)
+ {
+-    xc_hvm_param_set(handle, domid, HVM_PARAM_PAE_ENABLED,
+-                    libxl_defbool_val(info->u.hvm.pae));
++    switch(info->type) {
++    case LIBXL_DOMAIN_TYPE_PVH:
++        xc_hvm_param_set(handle, domid, HVM_PARAM_PAE_ENABLED, true);
++        xc_hvm_param_set(handle, domid, HVM_PARAM_TIMER_MODE,
++                         timer_mode(info));
++        xc_hvm_param_set(handle, domid, HVM_PARAM_NESTEDHVM,
++                         libxl_defbool_val(*U_HVM_F(info,nested_hvm)));
++        break;
++    case LIBXL_DOMAIN_TYPE_HVM:
++        xc_hvm_param_set(handle, domid, HVM_PARAM_PAE_ENABLED,
++                         libxl_defbool_val(info->u.hvm.pae));
+ #if defined(__i386__) || defined(__x86_64__)
+-    xc_hvm_param_set(handle, domid, HVM_PARAM_HPET_ENABLED,
+-                    libxl_defbool_val(info->u.hvm.hpet));
++        xc_hvm_param_set(handle, domid, HVM_PARAM_HPET_ENABLED,
++                         libxl_defbool_val(info->u.hvm.hpet));
+ #endif
+-    xc_hvm_param_set(handle, domid, HVM_PARAM_TIMER_MODE, timer_mode(info));
+-    xc_hvm_param_set(handle, domid, HVM_PARAM_VPT_ALIGN,
+-                    libxl_defbool_val(info->u.hvm.vpt_align));
+-    xc_hvm_param_set(handle, domid, HVM_PARAM_NESTEDHVM,
+-                    libxl_defbool_val(*U_HVM_F(info,nested_hvm)));
+-    xc_hvm_param_set(handle, domid, HVM_PARAM_ALTP2M,
+-                    libxl_defbool_val(info->u.hvm.altp2m));
++        xc_hvm_param_set(handle, domid, HVM_PARAM_TIMER_MODE,
++                         timer_mode(info));
++        xc_hvm_param_set(handle, domid, HVM_PARAM_VPT_ALIGN,
++                         libxl_defbool_val(info->u.hvm.vpt_align));
++        xc_hvm_param_set(handle, domid, HVM_PARAM_NESTEDHVM,
++                         libxl_defbool_val(*U_HVM_F(info,nested_hvm)));
++        /* XXX */
++        xc_hvm_param_set(handle, domid, HVM_PARAM_ALTP2M,
++                         libxl_defbool_val(info->u.hvm.altp2m));
++        break;
++    default:
++        abort();
++    }
+ }
+ 
+ int libxl__build_pre(libxl__gc *gc, uint32_t domid,
+@@ -454,17 +469,19 @@ int libxl__build_pre(libxl__gc *gc, uint32_t domid,
+     state->store_port = xc_evtchn_alloc_unbound(ctx->xch, domid, state->store_domid);
+     state->console_port = xc_evtchn_alloc_unbound(ctx->xch, domid, state->console_domid);
+ 
+-    if (info->type == LIBXL_DOMAIN_TYPE_HVM) {
++    if (info->type != LIBXL_DOMAIN_TYPE_PV)
+         hvm_set_conf_params(ctx->xch, domid, info);
++
+ #if defined(__i386__) || defined(__x86_64__)
++    if (info->type == LIBXL_DOMAIN_TYPE_HVM) {
+         rc = hvm_set_viridian_features(gc, domid, info);
+         if (rc)
+             return rc;
+-#endif
+     }
++#endif
+ 
+     rc = libxl__arch_domain_create(gc, d_config, domid);
+-
++    
+     return rc;
+ }
+ 
+@@ -815,7 +832,7 @@ static int hvm_build_set_params(xc_interface *handle, uint32_t domid,
+     uint64_t str_mfn, cons_mfn;
+     int i;
+ 
+-    if (info->device_model_version != LIBXL_DEVICE_MODEL_VERSION_NONE) {
++    if (info->type == LIBXL_DOMAIN_TYPE_HVM) {
+         va_map = xc_map_foreign_range(handle, domid,
+                                       XC_PAGE_SIZE, PROT_READ | PROT_WRITE,
+                                       HVM_INFO_PFN);
+@@ -871,7 +888,7 @@ static int hvm_build_set_xs_values(libxl__gc *gc,
+ 
+     /* Only one module can be passed. PVHv2 guests do not support this. */
+     if (dom->acpi_modules[0].guest_addr_out && 
+-        info->device_model_version !=LIBXL_DEVICE_MODEL_VERSION_NONE) {
++        info->type == LIBXL_DOMAIN_TYPE_HVM) {
+         path = GCSPRINTF("/local/domain/%d/"HVM_XS_ACPI_PT_ADDRESS, domid);
+ 
+         ret = libxl__xs_printf(gc, XBT_NULL, path, "0x%"PRIx64,
+@@ -932,6 +949,7 @@ out:
+ 
+ static int libxl__domain_firmware(libxl__gc *gc,
+                                   libxl_domain_build_info *info,
++                                  libxl__domain_build_state *state,
+                                   struct xc_dom_image *dom)
+ {
+     libxl_ctx *ctx = libxl__gc_owner(gc);
+@@ -941,39 +959,65 @@ static int libxl__domain_firmware(libxl__gc *gc,
+     void *data;
+     const char *bios_filename = NULL;
+ 
+-    if (info->u.hvm.firmware)
+-        firmware = info->u.hvm.firmware;
+-    else {
+-        switch (info->device_model_version)
+-        {
+-        case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN_TRADITIONAL:
+-            firmware = "hvmloader";
+-            break;
+-        case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN:
+-            firmware = "hvmloader";
+-            break;
+-        case LIBXL_DEVICE_MODEL_VERSION_NONE:
+-            if (info->kernel == NULL) {
+-                LOG(ERROR, "no device model requested without a kernel");
++    if (info->type == LIBXL_DOMAIN_TYPE_HVM) {
++        if (info->u.hvm.firmware) {
++            firmware = info->u.hvm.firmware;
++        } else {
++            switch (info->device_model_version)
++            {
++            case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN:
++            case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN_TRADITIONAL:
++                firmware = "hvmloader";
++                break;
++            default:
++                LOG(ERROR, "invalid device model version %d",
++                    info->device_model_version);
+                 rc = ERROR_FAIL;
+                 goto out;
+             }
+-            break;
+-        default:
+-            LOG(ERROR, "invalid device model version %d",
+-                info->device_model_version);
+-            rc = ERROR_FAIL;
+-            goto out;
+         }
+     }
+ 
+-    if (info->kernel != NULL &&
+-        info->device_model_version == LIBXL_DEVICE_MODEL_VERSION_NONE) {
++    if (state->pv_kernel.path != NULL &&
++        info->type == LIBXL_DOMAIN_TYPE_PVH) {
+         /* Try to load a kernel instead of the firmware. */
+-        rc = xc_dom_kernel_file(dom, info->kernel);
+-        if (rc == 0 && info->ramdisk != NULL)
+-            rc = xc_dom_ramdisk_file(dom, info->ramdisk);
++        if (state->pv_kernel.mapped) {
++            rc = xc_dom_kernel_mem(dom, state->pv_kernel.data,
++                                   state->pv_kernel.size);
++            if (rc) {
++                LOGE(ERROR, "xc_dom_kernel_mem failed");
++                goto out;
++            }
++        } else {
++            rc = xc_dom_kernel_file(dom, state->pv_kernel.path);
++            if (rc) {
++                LOGE(ERROR, "xc_dom_kernel_file failed");
++                goto out;
++            }
++        }
++
++        if (state->pv_ramdisk.path && strlen(state->pv_ramdisk.path)) {
++            if (state->pv_ramdisk.mapped) {
++                rc = xc_dom_ramdisk_mem(dom, state->pv_ramdisk.data,
++                                        state->pv_ramdisk.size);
++                if (rc) {
++                    LOGE(ERROR, "xc_dom_ramdisk_mem failed");
++                    goto out;
++                }
++            } else {
++                rc = xc_dom_ramdisk_file(dom, state->pv_ramdisk.path);
++                if (rc) {
++                    LOGE(ERROR, "xc_dom_ramdisk_file failed");
++                    goto out;
++                }
++            }
++        }
+     } else {
++        /*
++         * Only HVM guests should get here, PVH should always have a set
++         * kernel at this point.
++         */
++        assert(info->type == LIBXL_DOMAIN_TYPE_HVM);
+         rc = xc_dom_kernel_file(dom, libxl__abs_path(gc, firmware,
+                                                  libxl__xenfirmwaredir_path()));
+     }
+@@ -983,7 +1027,8 @@ static int libxl__domain_firmware(libxl__gc *gc,
+         goto out;
+     }
+ 
+-    if (info->device_model_version == LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN) {
++    if (info->type == LIBXL_DOMAIN_TYPE_HVM &&
++        info->device_model_version == LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN) {
+         if (info->u.hvm.system_firmware) {
+             bios_filename = info->u.hvm.system_firmware;
+         } else {
+@@ -1007,7 +1052,8 @@ static int libxl__domain_firmware(libxl__gc *gc,
+         if (rc) goto out;
+     }
+ 
+-    if (info->u.hvm.smbios_firmware) {
++    if (info->type == LIBXL_DOMAIN_TYPE_HVM &&
++        info->u.hvm.smbios_firmware) {
+         data = NULL;
+         e = libxl_read_file_contents(ctx, info->u.hvm.smbios_firmware,
+                                      &data, &datalen);
+@@ -1025,14 +1071,8 @@ static int libxl__domain_firmware(libxl__gc *gc,
+         }
+     }
+ 
+-    if (info->u.hvm.acpi_firmware) {
+-
+-        if (info->device_model_version == LIBXL_DEVICE_MODEL_VERSION_NONE) {
+-            LOGE(ERROR, "PVH guests do not allow loading ACPI modules");
+-            rc = ERROR_FAIL;
+-            goto out;
+-        }
+-
++    if (info->type == LIBXL_DOMAIN_TYPE_HVM &&
++        info->u.hvm.acpi_firmware) {
+         data = NULL;
+         e = libxl_read_file_contents(ctx, info->u.hvm.acpi_firmware,
+                                      &data, &datalen);
+@@ -1065,13 +1105,12 @@ int libxl__build_hvm(libxl__gc *gc, uint32_t domid,
+     uint64_t mmio_start, lowmem_end, highmem_end, mem_size;
+     libxl_domain_build_info *const info = &d_config->b_info;
+     struct xc_dom_image *dom = NULL;
+-    bool device_model =
+-        info->device_model_version != LIBXL_DEVICE_MODEL_VERSION_NONE ?
+-        true : false;
++    bool device_model = info->type == LIBXL_DOMAIN_TYPE_HVM ? true : false;
+ 
+     xc_dom_loginit(ctx->xch);
+ 
+-    dom = xc_dom_allocate(ctx->xch, info->cmdline, NULL);
++    dom = xc_dom_allocate(ctx->xch, info->type == LIBXL_DOMAIN_TYPE_PVH ?
++                          state->pv_cmdline : info->cmdline, NULL);
+     if (!dom) {
+         LOGE(ERROR, "xc_dom_allocate failed");
+         rc = ERROR_NOMEM;
+@@ -1096,7 +1135,7 @@ int libxl__build_hvm(libxl__gc *gc, uint32_t domid,
+             dom->mmio_size = info->u.hvm.mmio_hole_memkb << 10;
+     }
+ 
+-    rc = libxl__domain_firmware(gc, info, dom);
++    rc = libxl__domain_firmware(gc, info, state, dom);
+     if (rc != 0) {
+         LOG(ERROR, "initializing domain firmware failed");
+         goto out;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:39 +0000
+Subject: [PATCH] libxl: add PVH support to domain save/suspend
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+And remove the device model "none" support.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Backport over minor changes to libxl_dom_suspend.c
+---
+ tools/libxl/libxl_dom_save.c    | 9 ++++++---
+ tools/libxl/libxl_dom_suspend.c | 8 +++-----
+ 2 files changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/tools/libxl/libxl_dom_save.c b/tools/libxl/libxl_dom_save.c
+index 579039f067..4b62fec901 100644
+--- a/tools/libxl/libxl_dom_save.c
++++ b/tools/libxl/libxl_dom_save.c
+@@ -157,6 +157,11 @@ void libxl__domain_suspend_common_switch_qemu_logdirty
+     /* Convenience aliases. */
+     libxl__logdirty_switch *const lds = &dss->logdirty;
+ 
++    if (dss->type == LIBXL_DOMAIN_TYPE_PVH) {
++        domain_suspend_switch_qemu_logdirty_done(egc, lds, 0);
++        return;
++    }
++
+     lds->callback = domain_suspend_switch_qemu_logdirty_done;
+     libxl__domain_common_switch_qemu_logdirty(egc, domid, enable, lds);
+ }
+@@ -175,9 +180,6 @@ void libxl__domain_common_switch_qemu_logdirty(libxl__egc *egc,
+     case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN:
+         domain_suspend_switch_qemu_xen_logdirty(egc, domid, enable, lds);
+         break;
+-    case LIBXL_DEVICE_MODEL_VERSION_NONE:
+-        lds->callback(egc, lds, 0);
+-        break;
+     default:
+         LOG(ERROR,"logdirty switch failed"
+             ", no valid device model version found, abandoning suspend");
+@@ -362,6 +364,7 @@ void libxl__domain_save(libxl__egc *egc, libxl__domain_save_state *dss)
+     if (rc) goto out;
+ 
+     switch (type) {
++    case LIBXL_DOMAIN_TYPE_PVH:
+     case LIBXL_DOMAIN_TYPE_HVM: {
+         dss->hvm = 1;
+         break;
+diff --git a/tools/libxl/libxl_dom_suspend.c b/tools/libxl/libxl_dom_suspend.c
+index 0648919d61..573d1cf19d 100644
+--- a/tools/libxl/libxl_dom_suspend.c
++++ b/tools/libxl/libxl_dom_suspend.c
+@@ -90,8 +90,6 @@ int libxl__domain_suspend_device_model(libxl__gc *gc,
+         if (ret)
+             unlink(filename);
+         break;
+-    case LIBXL_DEVICE_MODEL_VERSION_NONE:
+-        break;
+     default:
+         return ERROR_INVAL;
+     }
+@@ -148,14 +146,14 @@ static void domain_suspend_callback_common(libxl__egc *egc,
+     /* Convenience aliases */
+     const uint32_t domid = dsps->domid;
+ 
+-    if (dsps->type == LIBXL_DOMAIN_TYPE_HVM) {
++    if (dsps->type != LIBXL_DOMAIN_TYPE_PV) {
+         xc_hvm_param_get(CTX->xch, domid, HVM_PARAM_CALLBACK_IRQ, &hvm_pvdrv);
+         xc_hvm_param_get(CTX->xch, domid, HVM_PARAM_ACPI_S_STATE, &hvm_s_state);
+     }
+ 
+     if ((hvm_s_state == 0) && (dsps->guest_evtchn.port >= 0)) {
+         LOG(DEBUG, "issuing %s suspend request via event channel",
+-            dsps->type == LIBXL_DOMAIN_TYPE_HVM ? "PVHVM" : "PV");
++            dsps->type != LIBXL_DOMAIN_TYPE_PV ? "PVH/HVM" : "PV");
+         ret = xenevtchn_notify(CTX->xce, dsps->guest_evtchn.port);
+         if (ret < 0) {
+             LOG(ERROR, "xenevtchn_notify failed ret=%d", ret);
+@@ -190,7 +188,7 @@ static void domain_suspend_callback_common(libxl__egc *egc,
+     }
+ 
+     LOG(DEBUG, "issuing %s suspend request via XenBus control node",
+-        dsps->type == LIBXL_DOMAIN_TYPE_HVM ? "PVHVM" : "PV");
++        dsps->type != LIBXL_DOMAIN_TYPE_PV ? "PVH/HVM" : "PV");
+ 
+     libxl__domain_pvcontrol_write(gc, XBT_NULL, domid, "suspend");
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:39 +0000
+Subject: [PATCH] libxl: add PVH support to vpcu hotplug, domain
+ destruction/pause and domain configuration
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+And remove support for device model "none".
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Ported over spliting of libxl.c into libxl_domain.c
+---
+ tools/libxl/libxl.c | 18 ++++++++----------
+ 1 file changed, 8 insertions(+), 10 deletions(-)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 526eb70bf4..0fb89042ee 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -1011,14 +1011,11 @@ int libxl_domain_unpause(libxl_ctx *ctx, uint32_t domid)
+     }
+ 
+     if (type == LIBXL_DOMAIN_TYPE_HVM) {
+-        if (libxl__device_model_version_running(gc, domid) !=
+-            LIBXL_DEVICE_MODEL_VERSION_NONE) {
+-            rc = libxl__domain_resume_device_model(gc, domid);
+-            if (rc < 0) {
+-                LOG(ERROR, "failed to unpause device model for domain %u:%d",
+-                    domid, rc);
+-                goto out;
+-            }
++        rc = libxl__domain_resume_device_model(gc, domid);
++        if (rc < 0) {
++            LOG(ERROR, "failed to unpause device model for domain %u:%d",
++                domid, rc);
++            goto out;
+         }
+     }
+     ret = xc_domain_unpause(ctx->xch, domid);
+@@ -1584,6 +1581,7 @@ void libxl__destroy_domid(libxl__egc *egc, libxl__destroy_domid_state *dis)
+             break;
+         }
+         /* fall through */
++    case LIBXL_DOMAIN_TYPE_PVH:
+     case LIBXL_DOMAIN_TYPE_PV:
+         dm_present = libxl__dm_active(gc, domid);
+         break;
+@@ -5149,7 +5147,6 @@ int libxl_set_vcpuonline(libxl_ctx *ctx, uint32_t domid, libxl_bitmap *cpumap)
+     case LIBXL_DOMAIN_TYPE_HVM:
+         switch (libxl__device_model_version_running(gc, domid)) {
+         case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN_TRADITIONAL:
+-        case LIBXL_DEVICE_MODEL_VERSION_NONE:
+             break;
+         case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN:
+             rc = libxl__set_vcpuonline_qmp(gc, domid, cpumap, &info);
+@@ -5158,6 +5155,7 @@ int libxl_set_vcpuonline(libxl_ctx *ctx, uint32_t domid, libxl_bitmap *cpumap)
+             rc = ERROR_INVAL;
+         }
+         break;
++    case LIBXL_DOMAIN_TYPE_PVH:
+     case LIBXL_DOMAIN_TYPE_PV:
+         break;
+     default:
+@@ -6796,7 +6794,6 @@ int libxl_retrieve_domain_configuration(libxl_ctx *ctx, uint32_t domid,
+                                                    max_vcpus, map);
+                 break;
+             case LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN_TRADITIONAL:
+-            case LIBXL_DEVICE_MODEL_VERSION_NONE:
+                 rc = libxl__update_avail_vcpus_xenstore(gc, domid,
+                                                         max_vcpus, map);
+                 break;
+@@ -6804,6 +6801,7 @@ int libxl_retrieve_domain_configuration(libxl_ctx *ctx, uint32_t domid,
+                 abort();
+             }
+             break;
++        case LIBXL_DOMAIN_TYPE_PVH:
+         case LIBXL_DOMAIN_TYPE_PV:
+             rc = libxl__update_avail_vcpus_xenstore(gc, domid,
+                                                     max_vcpus, map);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:40 +0000
+Subject: [PATCH] libxl: add PVH support to memory functions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Ported ovet libxl.c -> libxl_mem.c split
+---
+ tools/libxl/libxl.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tools/libxl/libxl.c b/tools/libxl/libxl.c
+index 0fb89042ee..7d0a3bbee9 100644
+--- a/tools/libxl/libxl.c
++++ b/tools/libxl/libxl.c
+@@ -4447,6 +4447,7 @@ int libxl_domain_need_memory(libxl_ctx *ctx,
+ 
+     *need_memkb = b_info->target_memkb;
+     switch (b_info->type) {
++    case LIBXL_DOMAIN_TYPE_PVH:
+     case LIBXL_DOMAIN_TYPE_HVM:
+         *need_memkb += b_info->shadow_memkb + LIBXL_HVM_EXTRA_MEMORY;
+         if (libxl_defbool_val(b_info->device_model_stubdomain))
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:40 +0000
+Subject: [PATCH] libxl: PVH guests use PV nics
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Remove device model "none" support from the nic functions.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_nic.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/tools/libxl/libxl_nic.c b/tools/libxl/libxl_nic.c
+index 220a028b71..e7bd1107e7 100644
+--- a/tools/libxl/libxl_nic.c
++++ b/tools/libxl/libxl_nic.c
+@@ -91,17 +91,17 @@ int libxl__device_nic_setdefault(libxl__gc *gc, libxl_device_nic *nic,
+     switch (libxl__domain_type(gc, domid)) {
+     case LIBXL_DOMAIN_TYPE_HVM:
+         if (!nic->nictype) {
+-            if (hotplug ||
+-                (libxl__device_model_version_running(gc, domid) ==
+-                 LIBXL_DEVICE_MODEL_VERSION_NONE))
++            if (hotplug)
+                 nic->nictype = LIBXL_NIC_TYPE_VIF;
+             else
+                 nic->nictype = LIBXL_NIC_TYPE_VIF_IOEMU;
+         }
+         break;
++    case LIBXL_DOMAIN_TYPE_PVH:
+     case LIBXL_DOMAIN_TYPE_PV:
+         if (nic->nictype == LIBXL_NIC_TYPE_VIF_IOEMU) {
+-            LOG(ERROR, "trying to create PV guest with an emulated interface");
++            LOG(ERROR,
++                "trying to create PV or PVH guest with an emulated interface");
+             return ERROR_INVAL;
+         }
+         nic->nictype = LIBXL_NIC_TYPE_VIF;
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:40 +0000
+Subject: [PATCH] libxl: remove device model "none" support from stream
+ functions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Remove the usage of device model "none" in the migration stream
+related functions.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_stream_read.c  |  6 ++----
+ tools/libxl/libxl_stream_write.c | 11 ++---------
+ 2 files changed, 4 insertions(+), 13 deletions(-)
+
+diff --git a/tools/libxl/libxl_stream_read.c b/tools/libxl/libxl_stream_read.c
+index 89c2f216e9..2e04e3ecdf 100644
+--- a/tools/libxl/libxl_stream_read.c
++++ b/tools/libxl/libxl_stream_read.c
+@@ -584,8 +584,7 @@ static bool process_record(libxl__egc *egc,
+         break;
+ 
+     case REC_TYPE_EMULATOR_XENSTORE_DATA:
+-        if (dcs->guest_config->b_info.device_model_version ==
+-            LIBXL_DEVICE_MODEL_VERSION_NONE) {
++        if (dcs->guest_config->b_info.type != LIBXL_DOMAIN_TYPE_HVM) {
+             rc = ERROR_FAIL;
+             LOG(ERROR,
+                 "Received a xenstore emulator record when none was expected");
+@@ -613,8 +612,7 @@ static bool process_record(libxl__egc *egc,
+         break;
+ 
+     case REC_TYPE_EMULATOR_CONTEXT:
+-        if (dcs->guest_config->b_info.device_model_version ==
+-            LIBXL_DEVICE_MODEL_VERSION_NONE) {
++        if (dcs->guest_config->b_info.type != LIBXL_DOMAIN_TYPE_HVM) {
+             rc = ERROR_FAIL;
+             LOG(ERROR,
+                 "Received an emulator context record when none was expected");
+diff --git a/tools/libxl/libxl_stream_write.c b/tools/libxl/libxl_stream_write.c
+index aba554b5d0..d676fd6249 100644
+--- a/tools/libxl/libxl_stream_write.c
++++ b/tools/libxl/libxl_stream_write.c
+@@ -181,7 +181,6 @@ static void setup_emulator_write(libxl__egc *egc,
+                                  sws_record_done_cb cb)
+ {
+     assert(stream->emu_sub_hdr.id != EMULATOR_UNKNOWN);
+-    assert(stream->device_model_version != LIBXL_DEVICE_MODEL_VERSION_NONE);
+     setup_generic_write(egc, stream, what, hdr, emu_hdr, body, cb);
+ }
+ 
+@@ -261,10 +260,6 @@ void libxl__stream_write_start(libxl__egc *egc,
+             stream->emu_sub_hdr.id = EMULATOR_QEMU_UPSTREAM;
+             break;
+ 
+-        case LIBXL_DEVICE_MODEL_VERSION_NONE:
+-            stream->emu_sub_hdr.id = EMULATOR_UNKNOWN;
+-            break;
+-
+         default:
+             rc = ERROR_FAIL;
+             LOG(ERROR, "Unknown emulator for HVM domain");
+@@ -395,7 +390,7 @@ static void write_emulator_xenstore_record(libxl__egc *egc,
+     char *buf = NULL;
+     uint32_t len = 0;
+ 
+-    if (stream->device_model_version == LIBXL_DEVICE_MODEL_VERSION_NONE) {
++    if (dss->type != LIBXL_DOMAIN_TYPE_HVM) {
+         emulator_xenstore_record_done(egc, stream);
+         return;
+     }
+@@ -449,9 +444,7 @@ static void write_emulator_context_record(libxl__egc *egc,
+     struct stat st;
+     int rc;
+ 
+-    assert(dss->type == LIBXL_DOMAIN_TYPE_HVM);
+-
+-    if (stream->device_model_version == LIBXL_DEVICE_MODEL_VERSION_NONE) {
++    if (dss->type != LIBXL_DOMAIN_TYPE_HVM) {
+         emulator_context_record_done(egc, stream);
+         return;
+     }
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:41 +0000
+Subject: [PATCH] libxl: add PVH support to USB
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add PVH support to usb related functions.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_usb.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl_usb.c b/tools/libxl/libxl_usb.c
+index e5609aa070..fa29e28d65 100644
+--- a/tools/libxl/libxl_usb.c
++++ b/tools/libxl/libxl_usb.c
+@@ -45,13 +45,13 @@ static int libxl__device_usbctrl_setdefault(libxl__gc *gc, uint32_t domid,
+     libxl_domain_type domtype = libxl__domain_type(gc, domid);
+ 
+     if (usbctrl->type == LIBXL_USBCTRL_TYPE_AUTO) {
+-        if (domtype == LIBXL_DOMAIN_TYPE_PV) {
++        if (domtype != LIBXL_DOMAIN_TYPE_HVM) {
+             rc = usbback_is_loaded(gc);
+             if (rc < 0)
+                 goto out;
+             usbctrl->type = rc ? LIBXL_USBCTRL_TYPE_PV
+                                : LIBXL_USBCTRL_TYPE_QUSB;
+-        } else if (domtype == LIBXL_DOMAIN_TYPE_HVM) {
++        } else {
+             /* FIXME: See if we can detect PV frontend */
+             usbctrl->type = LIBXL_USBCTRL_TYPE_DEVICEMODEL;
+         }
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:41 +0000
+Subject: [PATCH] libxl: add PVH support to x86 functions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This also includes the x86 ACPI related functions. Remove support for
+device model "none"
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Port over changes to libxl_x86.c
+---
+ tools/libxl/libxl_x86.c      | 34 +++++++++++++++++-----------------
+ tools/libxl/libxl_x86_acpi.c |  3 +--
+ 2 files changed, 18 insertions(+), 19 deletions(-)
+
+diff --git a/tools/libxl/libxl_x86.c b/tools/libxl/libxl_x86.c
+index f76493e93a..8d208b856d 100644
+--- a/tools/libxl/libxl_x86.c
++++ b/tools/libxl/libxl_x86.c
+@@ -7,20 +7,22 @@ int libxl__arch_domain_prepare_config(libxl__gc *gc,
+                                       libxl_domain_config *d_config,
+                                       xc_domain_configuration_t *xc_config)
+ {
+-
+-    if (d_config->c_info.type == LIBXL_DOMAIN_TYPE_HVM) {
+-        if (d_config->b_info.device_model_version !=
+-            LIBXL_DEVICE_MODEL_VERSION_NONE) {
+-            xc_config->emulation_flags = XEN_X86_EMU_ALL;
+-        } else if (libxl_defbool_val(*U_HVM_F(&d_config->b_info,apic))) {
+-            /*
+-             * HVM guests without device model may want
+-             * to have LAPIC emulation.
+-             */
++    switch(d_config->c_info.type) {
++    case LIBXL_DOMAIN_TYPE_HVM:
++        xc_config->emulation_flags = XEN_X86_EMU_ALL;
++        break;
++    case LIBXL_DOMAIN_TYPE_PVH:
++        if (libxl_defbool_val(d_config->b_info.u.pvh.apic))
++            /* PVH guests may want to have LAPIC emulation. */
+             xc_config->emulation_flags = XEN_X86_EMU_LAPIC;
+-        }
+-    } else {
++        else
++            xc_config->emulation_flags = 0;
++        break;
++    case LIBXL_DOMAIN_TYPE_PV:
+         xc_config->emulation_flags = 0;
++        break;
++    default:
++        abort();
+     }
+ 
+     return 0;
+@@ -266,7 +268,7 @@ static int libxl__e820_alloc(libxl__gc *gc, uint32_t domid,
+     struct e820entry map[E820MAX];
+     libxl_domain_build_info *b_info;
+ 
+-    if (d_config == NULL || d_config->c_info.type == LIBXL_DOMAIN_TYPE_HVM)
++    if (d_config == NULL || d_config->c_info.type != LIBXL_DOMAIN_TYPE_PV)
+         return ERROR_INVAL;
+ 
+     b_info = &d_config->b_info;
+@@ -338,8 +340,7 @@ int libxl__arch_domain_create(libxl__gc *gc, libxl_domain_config *d_config,
+     if (rtc_timeoffset)
+         xc_domain_set_time_offset(ctx->xch, domid, rtc_timeoffset);
+ 
+-    if (d_config->b_info.type == LIBXL_DOMAIN_TYPE_HVM ||
+-        libxl_defbool_val(d_config->c_info.pvh)) {
++    if (d_config->b_info.type != LIBXL_DOMAIN_TYPE_PV) {
+ 
+         unsigned long shadow;
+         shadow = (d_config->b_info.shadow_memkb + 1023) / 1024;
+@@ -382,8 +383,7 @@ int libxl__arch_domain_finalise_hw_description(libxl__gc *gc,
+ {
+     int rc = 0;
+ 
+-    if ((info->type == LIBXL_DOMAIN_TYPE_HVM) &&
+-        (info->device_model_version == LIBXL_DEVICE_MODEL_VERSION_NONE)) {
++    if (info->type == LIBXL_DOMAIN_TYPE_PVH) {
+         rc = libxl__dom_load_acpi(gc, info, dom);
+         if (rc != 0)
+             LOGE(ERROR, "libxl_dom_load_acpi failed");
+diff --git a/tools/libxl/libxl_x86_acpi.c b/tools/libxl/libxl_x86_acpi.c
+index 535b11c6a4..ee768eafd1 100644
+--- a/tools/libxl/libxl_x86_acpi.c
++++ b/tools/libxl/libxl_x86_acpi.c
+@@ -168,8 +168,7 @@ int libxl__dom_load_acpi(libxl__gc *gc,
+     void *acpi_pages;
+     unsigned long page_mask;
+ 
+-    if ((b_info->type != LIBXL_DOMAIN_TYPE_HVM) ||
+-        (b_info->device_model_version != LIBXL_DEVICE_MODEL_VERSION_NONE))
++    if (b_info->type != LIBXL_DOMAIN_TYPE_PVH)
+         goto out;
+ 
+     libxl_ctxt.page_size = XC_DOM_PAGE_SIZE(dom);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:41 +0000
+Subject: [PATCH] xl: add PVH as a guest type
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+And remove device model "none".
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+Ported over xl_cmdimpl.c -> xl_parse.c movement
+---
+ tools/libxl/xl_cmdimpl.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
+index 0490048179..c2e6952fd2 100644
+--- a/tools/libxl/xl_cmdimpl.c
++++ b/tools/libxl/xl_cmdimpl.c
+@@ -1373,6 +1373,8 @@ static void parse_config_data(const char *config_source,
+             c_info->type = LIBXL_DOMAIN_TYPE_HVM;
+         else if (!strncmp(buf, "pv", strlen(buf)))
+             c_info->type = LIBXL_DOMAIN_TYPE_PV;
++        else if (!strncmp(buf, "pvh", strlen(buf)))
++            c_info->type = LIBXL_DOMAIN_TYPE_PVH;
+         else {
+             fprintf(stderr, "Invalid domain type %s.\n", buf);
+             exit(1);
+@@ -1799,6 +1801,7 @@ static void parse_config_data(const char *config_source,
+         }
+ 
+         break;
++    case LIBXL_DOMAIN_TYPE_PVH:
+     case LIBXL_DOMAIN_TYPE_PV:
+     {
+         /*
+@@ -2408,8 +2411,6 @@ skip_usbdev:
+         } else if (!strcmp(buf, "qemu-xen")) {
+             b_info->device_model_version
+                 = LIBXL_DEVICE_MODEL_VERSION_QEMU_XEN;
+-        } else if (!strcmp(buf, "none")) {
+-            b_info->device_model_version = LIBXL_DEVICE_MODEL_VERSION_NONE;
+         } else {
+             fprintf(stderr,
+                     "Unknown device_model_version \"%s\" specified\n", buf);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:42 +0000
+Subject: [PATCH] libxl: remove device model "none" from IDL
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+And the xl.cfg man page documentation.
+
+It should be possible to re-introduce it in the future with a proper
+implementation, in order to create a HVM guest without a device model,
+which is slightly different from a PVHv2 guest.
+
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ docs/man/xl.cfg.pod.5.in    | 5 -----
+ tools/libxl/libxl.h         | 8 --------
+ tools/libxl/libxl_types.idl | 1 -
+ 3 files changed, 14 deletions(-)
+
+diff --git a/docs/man/xl.cfg.pod.5.in b/docs/man/xl.cfg.pod.5.in
+index cbabe2738e..d8b5fc74d5 100644
+--- a/docs/man/xl.cfg.pod.5.in
++++ b/docs/man/xl.cfg.pod.5.in
+@@ -2122,11 +2122,6 @@ This device-model is the default for Linux dom0.
+ Use the device-model based upon the historical Xen fork of Qemu.
+ This device-model is still the default for NetBSD dom0.
+ 
+-=item B<none>
+-
+-Don't use any device model. This requires a kernel capable of booting
+-without emulated devices.
+-
+ =back
+ 
+ It is recommended to accept the default value for new guests.  If
+diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
+index 2c939a18b1..097e54be63 100644
+--- a/tools/libxl/libxl.h
++++ b/tools/libxl/libxl.h
+@@ -1043,14 +1043,6 @@ void libxl_mac_copy(libxl_ctx *ctx, libxl_mac *dst, const libxl_mac *src);
+ */
+ #define LIBXL_HAVE_GFX_PASSTHRU_KIND
+ 
+-/*
+- * LIBXL_HAVE_DEVICE_MODEL_VERSION_NONE
+- *
+- * In the case that LIBXL_HAVE_DEVICE_MODEL_VERSION_NONE is set libxl
+- * allows the creation of HVM guests without a device model.
+- */
+-#define LIBXL_HAVE_DEVICE_MODEL_VERSION_NONE 1
+-
+ /*
+  * LIBXL_HAVE_CHECKPOINTED_STREAM
+  *
+diff --git a/tools/libxl/libxl_types.idl b/tools/libxl/libxl_types.idl
+index 1e9621c76f..70ce42944c 100644
+--- a/tools/libxl/libxl_types.idl
++++ b/tools/libxl/libxl_types.idl
+@@ -99,7 +99,6 @@ libxl_device_model_version = Enumeration("device_model_version", [
+     (0, "UNKNOWN"),
+     (1, "QEMU_XEN_TRADITIONAL"), # Historical qemu-xen device model (qemu-dm)
+     (2, "QEMU_XEN"),             # Upstream based qemu-xen device model
+-    (3, "NONE"),                 # No device model
+     ])
+ 
+ libxl_console_type = Enumeration("console_type", [
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@citrix.com>
+Date: Thu, 18 Jan 2018 16:16:42 +0000
+Subject: [PATCH] xl: Don't warn on using 'deprecated' mode selection
+
+We generally support old config formats indefinintely (see the disk
+format) without emitting warnings.
+
+Signed-off-by: George Dunlap <george.dunlap@citrix.com>
+
+Ported over xl_cmdimpl.c -> xl_parse.c movement
+---
+ tools/libxl/xl_cmdimpl.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
+index c2e6952fd2..1bca1286d0 100644
+--- a/tools/libxl/xl_cmdimpl.c
++++ b/tools/libxl/xl_cmdimpl.c
+@@ -1385,9 +1385,6 @@ static void parse_config_data(const char *config_source,
+     if (!xlu_cfg_get_string(config, "builder", &buf, 0)) {
+         libxl_domain_type builder_type;
+ 
+-        if (c_info->type == LIBXL_DOMAIN_TYPE_INVALID)
+-            fprintf(stderr,
+-"The \"builder\" option is being deprecated, please use \"type\" instead.\n");
+         if (!strncmp(buf, "hvm", strlen(buf)))
+             builder_type = LIBXL_DOMAIN_TYPE_HVM;
+         else if (!strncmp(buf, "generic", strlen(buf)))
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Michael Young <m.a.young@durham.ac.uk>
+Date: Thu, 18 Jan 2018 16:16:56 +0000
+Subject: [PATCH] -xen-attach is needed for pvh boot with qemu-xen
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Currently the boot of a pvh guest using the qemu-xen device model fails
+with the error
+xen emulation not implemented (yet)
+in the qemu-dm log file. This patch adds the missing -xen-attach
+argument.
+
+V2: Use  b_info->type != LIBXL_DOMAIN_TYPE_HVM    instead of
+ 	(b_info->type == LIBXL_DOMAIN_TYPE_PV) ||
+ 	(b_info->type == LIBXL_DOMAIN_TYPE_PVH)
+as recommended by Roger Pau Monné.
+
+Signed-off-by: Michael Young <m.a.young@durham.ac.uk>
+Reviewed-by: Roger Pau Monné <roger.pau@citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+(cherry picked from commit 6f1979c8e4184f1f2b24b860e30d3b037b2e7f05)
+---
+ tools/libxl/libxl_dm.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index 5306623649..c8b033286e 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -991,7 +991,7 @@ static int libxl__build_device_model_args_new(libxl__gc *gc,
+      */
+     flexarray_append(dm_args, "-no-user-config");
+ 
+-    if (b_info->type == LIBXL_DOMAIN_TYPE_PV) {
++    if (b_info->type != LIBXL_DOMAIN_TYPE_HVM) {
+         flexarray_append(dm_args, "-xen-attach");
+     }
+ 
+-- 
+
