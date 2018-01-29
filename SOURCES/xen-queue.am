@@ -555,3 +555,33 @@ index 374e45a..132dcd7 100644
          fd = open("/proc/xen/privcmd", O_RDWR|O_CLOEXEC);
 -- 
 
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Anthony PERARD <anthony.perard@citrix.com>
+Date: Mon, 29 Jan 2018 17:54:22 +0000
+Subject: [PATCH] devicemodel: Handle EACCES on openning /dev/xen/privcmd
+
+The lib devicemodel try to access /dev/xen/privcmd, but the interface might be
+not accessible, due to SElinux. Treat this as if the interface did not exist.
+That would disable any possibility to restrict the interface.
+
+Signed-off-by: Anthony PERARD <anthony.perard@citrix.com>
+---
+ tools/libs/devicemodel/linux.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/libs/devicemodel/linux.c b/tools/libs/devicemodel/linux.c
+index 0fdc712..684a7f6 100644
+--- a/tools/libs/devicemodel/linux.c
++++ b/tools/libs/devicemodel/linux.c
+@@ -47,7 +47,7 @@ int osdep_xendevicemodel_open(xendevicemodel_handle *dmod)
+          * this as an error, but an old privcmd clearly won't implement
+          * IOCTL_PRIVCMD_DM_OP so don't bother trying to open it.
+          */
+-        if (errno == ENOENT || errno == ENXIO || errno == ENODEV)
++        if (errno == ENOENT || errno == ENXIO || errno == ENODEV || errno == EACCES)
+             goto out;
+ 
+         PERROR("Could not obtain handle on privileged command interface");
+-- 
+

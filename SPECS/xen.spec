@@ -72,7 +72,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.0
-Release: 1%{?xen_rc_pkgver}%{?dist}
+Release: 2%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -997,6 +997,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jan 29 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.0-2.el7.centos
+- Fix xenstored startup issue due to old SElinux policy
+
 * Thu Jan 11 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.0-1.el7.centos
 - Xen 4.10.0
 
