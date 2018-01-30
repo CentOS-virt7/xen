@@ -72,7 +72,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.0
-Release: 2%{?xen_rc_pkgver}%{?dist}
+Release: 3%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -214,6 +214,8 @@ Requires: xen-ovmf
 # Ensure we at least have a suitable kernel installed, though we can't
 # force user to actually boot it.
 Requires: xen-hypervisor-abi = %{hv_abi}
+# For hotplug scripts (locking.sh)
+Requires: perl
 
 %description runtime
 This package contains the runtime programs and daemons which
@@ -1000,6 +1002,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Jan 30 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.0-3.el7.centos
+- Add missing perl dependency for xen-runtime package
+
 * Mon Jan 29 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.0-2.el7.centos
 - Fix xenstored startup issue due to old SElinux policy
 
