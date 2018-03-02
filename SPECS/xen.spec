@@ -59,7 +59,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.2
-Release: 11%{?dist}
+Release: 12%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -1003,6 +1003,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Mar 01 2018 Kevin Stange <kevin@steadfast.net> - 4.8.2-12.el7.centos
+- Apply XSA-252, 255, and 256
+
 * Thu Jan 18 2018 George Dunlap <george.dunlap@citrix.com> - 4.8.2-11.el7.centos
 - Build "Comet" PVH shim
 - Add tools and hypervisor support for booting PV guests with Comet

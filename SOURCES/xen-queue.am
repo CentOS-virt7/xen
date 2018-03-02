@@ -6066,11 +6066,10 @@ diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
 index acbf47690e..0064db94af 100644
 --- a/tools/libxl/libxl.h
 +++ b/tools/libxl/libxl.h
-@@ -287,6 +287,98 @@
-  */
+@@ -288,6 +288,98 @@
  #define LIBXL_HAVE_SCHED_CREDIT2_PARAMS 1
  
-+/*
+ /*
 + * LIBXL_BUILDINFO_SUBFIELD_PVH     #defined to simply   u.pvh.  or empty
 + * LIBXL_BUILDINFO_SUBFIELD_PV      #defined to simply   u.pv.   or empty
 + * LIBXL_BUILDINFO_SUBFIELD_HVM     #defined to simply   u.hvm.  or empty
@@ -6162,9 +6161,10 @@ index acbf47690e..0064db94af 100644
 +#define LIBXL_BUILDINFO_SUBFIELD_PV   u.pv.
 +#define LIBXL_BUILDINFO_SUBFIELD_HVM  u.hvm.
 +
- /*
++/*
   * libxl ABI compatibility
   *
+  * The only guarantee which libxl makes regarding ABI compatibility
 -- 
 
 
@@ -7043,20 +7043,20 @@ diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
 index dd1db906af..4460d21a69 100644
 --- a/tools/libxl/libxl_internal.h
 +++ b/tools/libxl/libxl_internal.h
-@@ -734,6 +734,13 @@ int libxl__xs_mknod(libxl__gc *gc, xs_transaction_t t,
-                     const char *path, struct xs_permissions *perms,
-                     unsigned int num_perms);
+@@ -736,6 +736,13 @@ int libxl__xs_mknod(libxl__gc *gc, xs_transaction_t t,
  
-+/* On success, *result_out came from the gc.
-+ * On error, *result_out is undefined.
+ /* On success, *result_out came from the gc.
+  * On error, *result_out is undefined.
 + * ENOENT is regarded as error.
 + */
 +int libxl__xs_read_mandatory(libxl__gc *gc, xs_transaction_t t,
 +                             const char *path, const char **result_out);
 +
- /* On success, *result_out came from the gc.
-  * On error, *result_out is undefined.
++/* On success, *result_out came from the gc.
++ * On error, *result_out is undefined.
   * ENOENT counts as success but sets *result_out=0
+  */
+ int libxl__xs_read_checked(libxl__gc *gc, xs_transaction_t t,
 diff --git a/tools/libxl/libxl_usb.c b/tools/libxl/libxl_usb.c
 index 76260b13f5..e5609aa070 100644
 --- a/tools/libxl/libxl_usb.c
@@ -7603,11 +7603,10 @@ index 50d3de640d..3b19cb2c74 100644
      default:
          LOG(ERROR, "invalid domain type %s in create info",
              libxl_domain_type_to_string(b_info->type));
-@@ -501,6 +491,18 @@ int libxl__domain_build(libxl__gc *gc,
-             vments[i++] = (char *) state->pv_cmdline;
+@@ -502,6 +492,18 @@ int libxl__domain_build(libxl__gc *gc,
          }
  
-+        break;
+         break;
 +    case LIBXL_DOMAIN_TYPE_PVH:
 +        ret = libxl__build_hvm(gc, domid, d_config, state);
 +        if (ret)
@@ -7619,9 +7618,10 @@ index 50d3de640d..3b19cb2c74 100644
 +                              (uint64_t)start_time.tv_sec,
 +                              (long)start_time.tv_usec/10000);
 +
-         break;
++        break;
      default:
          ret = ERROR_INVAL;
+         goto out;
 @@ -536,7 +538,7 @@ int libxl__domain_make(libxl__gc *gc, libxl_domain_config *d_config,
      }
  
@@ -8698,11 +8698,10 @@ diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
 index 2c939a18b1..097e54be63 100644
 --- a/tools/libxl/libxl.h
 +++ b/tools/libxl/libxl.h
-@@ -1043,14 +1043,6 @@ void libxl_mac_copy(libxl_ctx *ctx, libxl_mac *dst, const libxl_mac *src);
- */
+@@ -1044,14 +1044,6 @@ void libxl_mac_copy(libxl_ctx *ctx, libxl_mac *dst, const libxl_mac *src);
  #define LIBXL_HAVE_GFX_PASSTHRU_KIND
  
--/*
+ /*
 - * LIBXL_HAVE_DEVICE_MODEL_VERSION_NONE
 - *
 - * In the case that LIBXL_HAVE_DEVICE_MODEL_VERSION_NONE is set libxl
@@ -8710,9 +8709,10 @@ index 2c939a18b1..097e54be63 100644
 - */
 -#define LIBXL_HAVE_DEVICE_MODEL_VERSION_NONE 1
 -
- /*
+-/*
   * LIBXL_HAVE_CHECKPOINTED_STREAM
   *
+  * If this is defined, then libxl_checkpointed_stream exists.
 diff --git a/tools/libxl/libxl_types.idl b/tools/libxl/libxl_types.idl
 index 1e9621c76f..70ce42944c 100644
 --- a/tools/libxl/libxl_types.idl
@@ -8884,9 +8884,6 @@ this leaf is a flags field that can be used to notice the presence of
 the domain id in ECX. Note that this is only available to HVM guests.
 
 Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
----
-Changes since v1:
- - Use leaf 5 instead.
 ---
  xen/arch/x86/hvm/hvm.c              | 5 +++++
  xen/include/public/arch-x86/cpuid.h | 2 ++
@@ -9651,9 +9648,6 @@ Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
 Signed-off-by: George Dunlap <george.dunlap@citrix.com>
 Signed-off-by: Wei Liu <wei.liu2@citrix.com>
 ---
-v2: pvshim, not pvhshim
-    works with type "pvh", not type "pv"
----
  tools/libxl/libxl.h          |  8 +++++++
  tools/libxl/libxl_create.c   | 15 ++++++++++++
  tools/libxl/libxl_dom.c      | 57 +++++++++++++++++++++++++++++++++++---------
@@ -9844,9 +9838,6 @@ comment in libxl_types.idl.
 
 Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
 ---
-v2: pvshim, not pvhshim
-    works with type "pvh", not type "pv"
----
  tools/libxl/libxl.h          | 2 +-
  tools/libxl/libxl_create.c   | 5 ++++-
  tools/libxl/libxl_internal.h | 2 +-
@@ -9917,10 +9908,6 @@ Subject: [PATCH] xl: pvshim: Provide and document xl config
 
 Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
 Signed-off-by: Wei Liu <wei.liu2@citrix.com>
----
-v2: pvshim, not pvhshim
-    works with type "pvh", not type "pv"
-    pvshim_etc. options in config are not erroneously ignored
 ---
  docs/man/xl.cfg.pod.5.in | 35 +++++++++++++++++++++++++++++++++++
  tools/libxl/xl_cmdimpl.c | 13 +++++++++++++
@@ -9996,5 +9983,448 @@ index 1bca1286d0..9bd09fac59 100644
      /* the following is the actual config parsing with overriding
       * values in the structures */
      if (!xlu_cfg_get_long (config, "cpu_weight", &l, 0))
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 1 Mar 2018 16:50:17 -0600
+Subject: [PATCH] memory: don't implicitly unpin for decrease-reservation
+
+It very likely was a mistake (copy-and-paste from domain cleanup code)
+to implicitly unpin here: The caller should really unpin itself before
+(or after, if they so wish) requesting the page to be removed.
+
+This is XSA-252.
+
+Reported-by: Jann Horn <jannh@google.com>
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/common/memory.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/xen/common/memory.c b/xen/common/memory.c
+index e1a8dc3f80..2209a85f27 100644
+--- a/xen/common/memory.c
++++ b/xen/common/memory.c
+@@ -342,9 +342,6 @@ int guest_remove_page(struct domain *d, unsigned long gmfn)
+ 
+     rc = guest_physmap_remove_page(d, _gfn(gmfn), mfn, 0);
+ 
+-    if ( !rc && test_and_clear_bit(_PGT_pinned, &page->u.inuse.type_info) )
+-        put_page_and_type(page);
+-
+     /*
+      * With the lack of an IOMMU on some platforms, domains with DMA-capable
+      * device must retrieve the same pfn when the hypercall populate_physmap
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 1 Mar 2018 16:50:24 -0600
+Subject: [PATCH] gnttab/ARM: don't corrupt shared GFN array
+
+... by writing status GFNs to it. Introduce a second array instead.
+Also implement gnttab_status_gmfn() properly now that the information is
+suitably being tracked.
+
+While touching it anyway, remove a misguided (but luckily benign) upper
+bound check from gnttab_shared_gmfn(): We should never access beyond the
+bounds of that array.
+
+This is part of XSA-255.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/arm/domain.c             | 22 ++++++++++++++++++++--
+ xen/arch/arm/mm.c                 |  7 ++++++-
+ xen/include/asm-arm/domain.h      |  3 ++-
+ xen/include/asm-arm/grant_table.h |  9 ++++++---
+ 4 files changed, 34 insertions(+), 7 deletions(-)
+
+diff --git a/xen/arch/arm/domain.c b/xen/arch/arm/domain.c
+index 7e43691aaf..c0a61da6f5 100644
+--- a/xen/arch/arm/domain.c
++++ b/xen/arch/arm/domain.c
+@@ -463,19 +463,37 @@ void startup_cpu_idle_loop(void)
+ struct domain *alloc_domain_struct(void)
+ {
+     struct domain *d;
++    unsigned int i, max_status_frames;
++
+     BUILD_BUG_ON(sizeof(*d) > PAGE_SIZE);
+     d = alloc_xenheap_pages(0, 0);
+     if ( d == NULL )
+         return NULL;
+ 
+     clear_page(d);
+-    d->arch.grant_table_gfn = xzalloc_array(gfn_t, max_grant_frames);
++
++    d->arch.grant_shared_gfn = xmalloc_array(gfn_t, max_grant_frames);
++    max_status_frames = grant_to_status_frames(max_grant_frames);
++    d->arch.grant_status_gfn = xmalloc_array(gfn_t, max_status_frames);
++    if ( !d->arch.grant_shared_gfn || !d->arch.grant_status_gfn )
++    {
++        free_domain_struct(d);
++        return NULL;
++    }
++
++    for ( i = 0; i < max_grant_frames; ++i )
++        d->arch.grant_shared_gfn[i] = INVALID_GFN;
++
++    for ( i = 0; i < max_status_frames; ++i )
++        d->arch.grant_status_gfn[i] = INVALID_GFN;
++
+     return d;
+ }
+ 
+ void free_domain_struct(struct domain *d)
+ {
+-    xfree(d->arch.grant_table_gfn);
++    xfree(d->arch.grant_shared_gfn);
++    xfree(d->arch.grant_status_gfn);
+     free_xenheap_page(d);
+ }
+ 
+diff --git a/xen/arch/arm/mm.c b/xen/arch/arm/mm.c
+index 61e1a616b4..591cfd870e 100644
+--- a/xen/arch/arm/mm.c
++++ b/xen/arch/arm/mm.c
+@@ -1150,6 +1150,7 @@ int xenmem_add_to_physmap_one(
+     int rc;
+     p2m_type_t t;
+     struct page_info *page = NULL;
++    bool status = false;
+ 
+     switch ( space )
+     {
+@@ -1167,6 +1168,7 @@ int xenmem_add_to_physmap_one(
+                 mfn = virt_to_mfn(d->grant_table->status[idx]);
+             else
+                 mfn = mfn_x(INVALID_MFN);
++            status = true;
+         }
+         else
+         {
+@@ -1182,7 +1184,10 @@ int xenmem_add_to_physmap_one(
+ 
+         if ( mfn != mfn_x(INVALID_MFN) )
+         {
+-            d->arch.grant_table_gfn[idx] = gfn;
++            if ( status )
++                d->arch.grant_status_gfn[idx] = gfn;
++            else
++                d->arch.grant_shared_gfn[idx] = gfn;
+ 
+             t = p2m_ram_rw;
+         }
+diff --git a/xen/include/asm-arm/domain.h b/xen/include/asm-arm/domain.h
+index 2d6fbb1d23..1fdcf44f28 100644
+--- a/xen/include/asm-arm/domain.h
++++ b/xen/include/asm-arm/domain.h
+@@ -50,7 +50,8 @@ struct arch_domain
+     struct p2m_domain p2m;
+ 
+     struct hvm_domain hvm_domain;
+-    gfn_t *grant_table_gfn;
++    gfn_t *grant_shared_gfn;
++    gfn_t *grant_status_gfn;
+ 
+     struct vmmio vmmio;
+ 
+diff --git a/xen/include/asm-arm/grant_table.h b/xen/include/asm-arm/grant_table.h
+index bc4d61a940..4d576c5905 100644
+--- a/xen/include/asm-arm/grant_table.h
++++ b/xen/include/asm-arm/grant_table.h
+@@ -14,7 +14,6 @@ int replace_grant_host_mapping(unsigned long gpaddr, unsigned long mfn,
+         unsigned long new_gpaddr, unsigned int flags);
+ void gnttab_mark_dirty(struct domain *d, unsigned long l);
+ #define gnttab_create_status_page(d, t, i) do {} while (0)
+-#define gnttab_status_gmfn(d, t, i) (0)
+ #define gnttab_release_host_mappings(domain) 1
+ static inline int replace_grant_supported(void)
+ {
+@@ -29,8 +28,12 @@ static inline int replace_grant_supported(void)
+     } while ( 0 )
+ 
+ #define gnttab_shared_gmfn(d, t, i)                                      \
+-    ( ((i >= nr_grant_frames(d->grant_table)) &&                         \
+-     (i < max_grant_frames)) ? 0 : gfn_x(d->arch.grant_table_gfn[i]))
++    gfn_x(((i) >= nr_grant_frames(t)) ? INVALID_GFN                      \
++                                      : (d)->arch.grant_shared_gfn[i])
++
++#define gnttab_status_gmfn(d, t, i)                                      \
++    gfn_x(((i) >= nr_status_frames(t)) ? INVALID_GFN                     \
++                                       : (d)->arch.grant_status_gfn[i])
+ 
+ #define gnttab_need_iommu_mapping(d)                    \
+     (is_domain_direct_mapped(d) && need_iommu(d))
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 1 Mar 2018 16:50:29 -0600
+Subject: [PATCH] gnttab: don't blindly free status pages upon version change
+
+There may still be active mappings, which would trigger the respective
+BUG_ON(). Split the loop into one dealing with the page attributes and
+the second (when the first fully passed) freeing the pages. Return an
+error if any pages still have pending references.
+
+This is part of XSA-255.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/arm/mm.c                 | 18 +++++++++---
+ xen/common/grant_table.c          | 62 +++++++++++++++++++++++++++++++++++----
+ xen/include/asm-arm/grant_table.h | 11 +++++++
+ xen/include/asm-x86/grant_table.h | 12 ++++++--
+ 4 files changed, 92 insertions(+), 11 deletions(-)
+
+diff --git a/xen/arch/arm/mm.c b/xen/arch/arm/mm.c
+index 591cfd870e..4c1a407c95 100644
+--- a/xen/arch/arm/mm.c
++++ b/xen/arch/arm/mm.c
+@@ -1182,12 +1182,22 @@ int xenmem_add_to_physmap_one(
+                 mfn = mfn_x(INVALID_MFN);
+         }
+ 
++        if ( mfn != mfn_x(INVALID_MFN) &&
++             !gfn_eq(gnttab_get_frame_gfn(d, status, idx), INVALID_GFN) )
++        {
++            rc = guest_physmap_remove_page(d,
++                                           gnttab_get_frame_gfn(d, status, idx),
++                                           _mfn(mfn), 0);
++            if ( rc )
++            {
++                grant_write_unlock(d->grant_table);
++                return rc;
++            }
++        }
++
+         if ( mfn != mfn_x(INVALID_MFN) )
+         {
+-            if ( status )
+-                d->arch.grant_status_gfn[idx] = gfn;
+-            else
+-                d->arch.grant_shared_gfn[idx] = gfn;
++            gnttab_set_frame_gfn(d, status, idx, gfn);
+ 
+             t = p2m_ram_rw;
+         }
+diff --git a/xen/common/grant_table.c b/xen/common/grant_table.c
+index 7f796dfd65..a004949fb4 100644
+--- a/xen/common/grant_table.c
++++ b/xen/common/grant_table.c
+@@ -1524,23 +1524,74 @@ status_alloc_failed:
+     return -ENOMEM;
+ }
+ 
+-static void
++static int
+ gnttab_unpopulate_status_frames(struct domain *d, struct grant_table *gt)
+ {
+-    int i;
++    unsigned int i;
+ 
+     for ( i = 0; i < nr_status_frames(gt); i++ )
+     {
+         struct page_info *pg = virt_to_page(gt->status[i]);
++        gfn_t gfn = gnttab_get_frame_gfn(d, true, i);
++
++        /*
++         * For translated domains, recovering from failure after partial
++         * changes were made is more complicated than it seems worth
++         * implementing at this time. Hence respective error paths below
++         * crash the domain in such a case.
++         */
++        if ( paging_mode_translate(d) )
++        {
++            int rc = gfn_eq(gfn, INVALID_GFN)
++                     ? 0
++                     : guest_physmap_remove_page(d, gfn,
++                                                 _mfn(page_to_mfn(pg)), 0);
++
++            if ( rc )
++            {
++                gprintk(XENLOG_ERR,
++                        "Could not remove status frame %u (GFN %#lx) from P2M\n",
++                        i, gfn_x(gfn));
++                domain_crash(d);
++                return rc;
++            }
++            gnttab_set_frame_gfn(d, true, i, INVALID_GFN);
++        }
+ 
+         BUG_ON(page_get_owner(pg) != d);
+         if ( test_and_clear_bit(_PGC_allocated, &pg->count_info) )
+             put_page(pg);
+-        BUG_ON(pg->count_info & ~PGC_xen_heap);
++
++        if ( pg->count_info & ~PGC_xen_heap )
++        {
++            if ( paging_mode_translate(d) )
++            {
++                gprintk(XENLOG_ERR,
++                        "Wrong page state %#lx of status frame %u (GFN %#lx)\n",
++                        pg->count_info, i, gfn_x(gfn));
++                domain_crash(d);
++            }
++            else
++            {
++                if ( get_page(pg, d) )
++                    set_bit(_PGC_allocated, &pg->count_info);
++                while ( i-- )
++                    gnttab_create_status_page(d, gt, i);
++            }
++            return -EBUSY;
++        }
++
++        page_set_owner(pg, NULL);
++    }
++
++    for ( i = 0; i < nr_status_frames(gt); i++ )
++    {
+         free_xenheap_page(gt->status[i]);
+         gt->status[i] = NULL;
+     }
+     gt->nr_status_frames = 0;
++
++    return 0;
+ }
+ 
+ /*
+@@ -2781,8 +2832,9 @@ gnttab_set_version(XEN_GUEST_HANDLE_PARAM(gnttab_set_version_t) uop)
+         break;
+     }
+ 
+-    if ( op.version < 2 && gt->gt_version == 2 )
+-        gnttab_unpopulate_status_frames(currd, gt);
++    if ( op.version < 2 && gt->gt_version == 2 &&
++         (res = gnttab_unpopulate_status_frames(currd, gt)) != 0 )
++        goto out_unlock;
+ 
+     /* Make sure there's no crud left over from the old version. */
+     for ( i = 0; i < nr_grant_frames(gt); i++ )
+diff --git a/xen/include/asm-arm/grant_table.h b/xen/include/asm-arm/grant_table.h
+index 4d576c5905..2f9224fb7a 100644
+--- a/xen/include/asm-arm/grant_table.h
++++ b/xen/include/asm-arm/grant_table.h
+@@ -20,6 +20,17 @@ static inline int replace_grant_supported(void)
+     return 1;
+ }
+ 
++#define gnttab_set_frame_gfn(d, st, idx, gfn)                            \
++    do {                                                                 \
++        ((st) ? (d)->arch.grant_status_gfn                               \
++              : (d)->arch.grant_shared_gfn)[idx] = (gfn);                \
++    } while ( 0 )
++
++#define gnttab_get_frame_gfn(d, st, idx) ({                              \
++   _gfn((st) ? gnttab_status_gmfn(d, (d)->grant_table, idx)              \
++             : gnttab_shared_gmfn(d, (d)->grant_table, idx));            \
++})
++
+ #define gnttab_create_shared_page(d, t, i)                               \
+     do {                                                                 \
+         share_xen_page_with_guest(                                       \
+diff --git a/xen/include/asm-x86/grant_table.h b/xen/include/asm-x86/grant_table.h
+index 9ca631c4e3..9c64361ee2 100644
+--- a/xen/include/asm-x86/grant_table.h
++++ b/xen/include/asm-x86/grant_table.h
+@@ -18,6 +18,14 @@ int create_grant_host_mapping(uint64_t addr, unsigned long frame,
+ int replace_grant_host_mapping(
+     uint64_t addr, unsigned long frame, uint64_t new_addr, unsigned int flags);
+ 
++#define gnttab_set_frame_gfn(d, st, idx, gfn) do {} while ( 0 )
++#define gnttab_get_frame_gfn(d, st, idx) ({                              \
++    unsigned long mfn_ = (st) ? gnttab_status_mfn((d)->grant_table, idx) \
++                              : gnttab_shared_mfn((d)->grant_table, idx); \
++    unsigned long gpfn_ = get_gpfn_from_mfn(mfn_);                       \
++    VALID_M2P(gpfn_) ? _gfn(gpfn_) : INVALID_GFN;                        \
++})
++
+ #define gnttab_create_shared_page(d, t, i)                               \
+     do {                                                                 \
+         share_xen_page_with_guest(                                       \
+@@ -33,11 +41,11 @@ int replace_grant_host_mapping(
+     } while ( 0 )
+ 
+ 
+-#define gnttab_shared_mfn(d, t, i)                      \
++#define gnttab_shared_mfn(t, i)                         \
+     ((virt_to_maddr((t)->shared_raw[i]) >> PAGE_SHIFT))
+ 
+ #define gnttab_shared_gmfn(d, t, i)                     \
+-    (mfn_to_gmfn(d, gnttab_shared_mfn(d, t, i)))
++    (mfn_to_gmfn(d, gnttab_shared_mfn(t, i)))
+ 
+ 
+ #define gnttab_status_mfn(t, i)                         \
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Thu, 1 Mar 2018 16:50:37 -0600
+Subject: [PATCH] x86/hvm: Disallow the creation of HVM domains without Local
+ APIC emulation
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+There are multiple problems, not necesserily limited to:
+
+ * Guests which configure event channels via hvmop_set_evtchn_upcall_vector(),
+   or which hit %cr8 emulation will cause Xen to fall over a NULL vlapic->regs
+   pointer.
+
+ * On Intel hardware, disabling the TPR_SHADOW execution control without
+   reenabling CR8_{LOAD,STORE} interception means that the guests %cr8
+   accesses interact with the real TPR.  Amongst other things, setting the
+   real TPR to 0xf blocks even IPIs from interrupting this CPU.
+
+ * On hardware which sets up the use of Interrupt Posting, including
+   IOMMU-Posting, guests run without the appropriate non-root configuration,
+   which at a minimum will result in dropped interrupts.
+
+Whether no-LAPIC mode is of any use at all remains to be seen.
+
+This is XSA-256.
+
+Reported-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Reviewed-by: Roger Pau Monné <roger.pau@citrix.com>
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/domain.c | 8 +++-----
+ 1 file changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/xen/arch/x86/domain.c b/xen/arch/x86/domain.c
+index 93575e2120..ddd1c67cb3 100644
+--- a/xen/arch/x86/domain.c
++++ b/xen/arch/x86/domain.c
+@@ -557,11 +557,9 @@ int arch_domain_create(struct domain *d, unsigned int domcr_flags,
+             return -EINVAL;
+         }
+ 
+-        /* PVHv2 guests can request emulated APIC. */
+-        if ( emflags &&
+-            (is_hvm_domain(d) ? ((emflags != XEN_X86_EMU_ALL) &&
+-                                 (emflags != XEN_X86_EMU_LAPIC)) :
+-                                (emflags != XEN_X86_EMU_PIT)) )
++        if ( is_hvm_domain(d) ? ((emflags != XEN_X86_EMU_ALL) &&
++                                 (emflags != XEN_X86_EMU_LAPIC))
++                              : (emflags && emflags != XEN_X86_EMU_PIT) )
+         {
+             printk(XENLOG_G_ERR "d%d: Xen does not allow %s domain creation "
+                    "with the current selection of emulators: %#x\n",
 -- 
 
