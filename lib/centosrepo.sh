@@ -371,12 +371,41 @@ function rebase()
     fi
     
     local oldpq=centos/pq/$XEN_VERSION
+    
     info "Checking out $oldpq"
     git checkout $oldpq || fail "Checking out patchqueue"
+
     info "Creating new patchqueue based on old branch"
     stg branch --clone $newpq || fail "Cloning patchqueue"
+
+    info "Finding duplicate patches to remove from the queue"
+    
+    info " ...Finding patch-id's of current patches in the series"
+    local series_pids
+    stg-get-patch-ids var=series_pids
+
+    local from
+    local to
+    local upstream_pids
+    version-to-tag var=from version="$XEN_VERSION"
+    version-to-tag var=to version="$new"
+    info " ...Finding patch-id's of commits between $from and $to"
+    # Inherits 'from' and 'to'
+    git-get-patch-ids var=upstream_pids
+
+    info " ...Finding duplicate patch-id's"
+    local dups
+    # Inherits series_pids and upstream_pids
+    find-duplicate-patch-ids var=dups
+
+    info " ...Removing duplicate patches"
+    local patch
+    stg pop -a
+    stg delete $patch || fail "Removing patches $dups"
+
     info "Rebasing onto new base branch"
     stg rebase base/$new || fail "Rebasing -- please clean up and run rebase-post"
+    stg push -a || fail "Rebasing -- please clean up and run rebase-post"
 
     rebase-post
 }
