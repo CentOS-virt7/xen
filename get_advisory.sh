@@ -5,8 +5,30 @@ set -e
 trap 'echo Failed to execute "$BASH_COMMAND" with $? at $LINENO' ERR
 
 usage() {
-  echo "usage: $0 [XSA number]"
+  cat <<EOU
+usage: $0 [XSA number]
+options:
+    --xen VERSION	default: 4.8
+EOU
 }
+
+opts_xen_version='4.8'
+
+while [ "$#" -gt 1 ]; do
+  case "$1" in
+    --xen)
+      opts_xen_version="$2"
+      shift
+      ;;
+    -*)
+      echo >&2 "Unknown option $1"
+      usage
+      exit 1
+      ;;
+    *) break ;;
+  esac
+  shift
+done
 
 if [ $# -lt 1 ] || ! [[ "$1" =~ ^[0-9]+$ ]]; then
   usage
@@ -62,7 +84,7 @@ check_file(){
 get_list_of_patches(){
   # Using jq
   local meta="$1"
-  local version='4.8'
+  local version="$opts_xen_version"
   local tree
   local trees
   local has_patch=$(jq --arg v "$version" -r '.SupportedVersions | contains([$v]) | @sh' $meta)
