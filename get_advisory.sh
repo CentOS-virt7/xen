@@ -102,18 +102,22 @@ get_patches_list_from_advisory(){
   local sums
   local -a patches
 
+  sums="$(extract_sha256sum $advisory)"
   if [[ "$glob" =~ ^[^/]+/\*$ ]]; then
-    sums="$(extract_sha256sum $advisory)"
     glob="${glob%/\*}"
     IFS='
 '
     patches=($(sed -rn "s%^[0-9a-f]+  ($glob/.*)$%\1%p" <<<"$sums"))
   elif [[ "$glob" =~ ^[^/]+/\*\.patch$ ]]; then
-    sums="$(extract_sha256sum $advisory)"
     glob="${glob%/\*.patch}"
     IFS='
 '
     patches=($(sed -rn "s%^[0-9a-f]+  ($glob/.*\.patch)$%\1%p" <<<"$sums"))
+  elif [[ "$glob" =~ ^[^/]+-\?\.patch$ ]]; then
+    glob="${glob%\?.patch}"
+    IFS='
+'
+    patches=($(sed -rn "s%^[0-9a-f]+  ($glob.\.patch)$%\1%p" <<<"$sums"))
   else
     patches=("$glob")
   fi
