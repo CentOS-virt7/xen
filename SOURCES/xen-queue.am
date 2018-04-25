@@ -372,7 +372,7 @@ Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
 ---
  tools/Rules.mk              |  6 +++---
- tools/libxl/libxl_blktap2.c | 43 ++++++++++++++++++++++++++++---------------
+ tools/libxl/libxl_blktap2.c | 43 ++++++++++++++++++++++++-------------
  2 files changed, 31 insertions(+), 18 deletions(-)
 
 diff --git a/tools/Rules.mk b/tools/Rules.mk
@@ -934,7 +934,7 @@ Reviewed-by: Jan Beulich <jbeulich@suse.com>
 ---
  tools/firmware/hvmloader/util.c |  1 +
  tools/libacpi/acpi2_0.h         |  8 +++++---
- tools/libacpi/build.c           | 35 ++++++++++++++++++++++++++++-------
+ tools/libacpi/build.c           | 35 ++++++++++++++++++++++++++-------
  tools/libacpi/libacpi.h         |  1 +
  tools/libacpi/static_tables.c   |  6 ++----
  tools/libxl/libxl_x86_acpi.c    |  1 +
@@ -1264,8 +1264,8 @@ No functional changes are introduced.
 Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
 Reviewed-by: Jan Beulich <jbeulich@suse.com>
 ---
- xen/arch/x86/hvm/pmtimer.c       | 67 +++++++++++++++++++++++++---------------
- xen/include/asm-x86/hvm/domain.h | 10 ++++++
+ xen/arch/x86/hvm/pmtimer.c       | 67 ++++++++++++++++++++------------
+ xen/include/asm-x86/hvm/domain.h | 10 +++++
  xen/include/asm-x86/hvm/vpt.h    |  1 -
  3 files changed, 52 insertions(+), 26 deletions(-)
 
@@ -1657,7 +1657,7 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
 
 Ported to modify xl_cmdimpl.c (which was refactored in 4.9).
 ---
- tools/libxl/xl_cmdimpl.c | 95 +++++++++++++++++++++++++-----------------------
+ tools/libxl/xl_cmdimpl.c | 95 +++++++++++++++++++++-------------------
  1 file changed, 50 insertions(+), 45 deletions(-)
 
 diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
@@ -1801,7 +1801,7 @@ And nothing uses them yet, so no functional change in this patch.
 
 Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
 ---
- tools/libxl/libxl.h | 92 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ tools/libxl/libxl.h | 92 +++++++++++++++++++++++++++++++++++++++++++++
  1 file changed, 92 insertions(+)
 
 diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
@@ -2090,9 +2090,9 @@ Again, no functional change.
 
 Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
 ---
- tools/libxl/xl.h         | 32 ++++++++++++++++
- tools/libxl/xl_cmdimpl.c | 98 +++++++++++++++++++++++++++---------------------
- tools/libxl/xl_sxp.c     | 16 ++++----
+ tools/libxl/xl.h         | 32 +++++++++++++
+ tools/libxl/xl_cmdimpl.c | 98 ++++++++++++++++++++++------------------
+ tools/libxl/xl_sxp.c     | 16 +++----
  3 files changed, 95 insertions(+), 51 deletions(-)
 
 diff --git a/tools/libxl/xl.h b/tools/libxl/xl.h
@@ -2496,8 +2496,8 @@ builder option is marked as deprecated.
 Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
 Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
 ---
- docs/man/xl.cfg.pod.5.in | 23 +++++++++++++++++++++--
- tools/libxl/xl_cmdimpl.c | 44 ++++++++++++++++++++++++++++++++++++++++----
+ docs/man/xl.cfg.pod.5.in | 23 +++++++++++++++++++--
+ tools/libxl/xl_cmdimpl.c | 44 ++++++++++++++++++++++++++++++++++++----
  2 files changed, 61 insertions(+), 6 deletions(-)
 
 diff --git a/docs/man/xl.cfg.pod.5.in b/docs/man/xl.cfg.pod.5.in
@@ -2625,8 +2625,8 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
 
 Ported over changes to xl_parse.c
 ---
- docs/man/xl.cfg.pod.5.in | 56 ++++++++++++++++++++++++++++++++++++++++++++++++
- tools/libxl/xl_cmdimpl.c | 47 ++++++++++++++++++++++++++++++++++++++++
+ docs/man/xl.cfg.pod.5.in | 56 ++++++++++++++++++++++++++++++++++++++++
+ tools/libxl/xl_cmdimpl.c | 47 +++++++++++++++++++++++++++++++++
  2 files changed, 103 insertions(+)
 
 diff --git a/docs/man/xl.cfg.pod.5.in b/docs/man/xl.cfg.pod.5.in
@@ -2868,10 +2868,10 @@ Xen 4.8 backport: pvh struct contains copies of the fields that in
 4.10 were added to the main libxl_domain_build_info, and the accessor
 macros are updated to be use them when appropriate.
 ---
- docs/man/xl.cfg.pod.5.in    | 121 ++++++++++++++++++++++++++++++++++++++++++++
+ docs/man/xl.cfg.pod.5.in    | 121 ++++++++++++++++++++++++++++++++++++
  tools/libxl/libxl.h         |   4 ++
- tools/libxl/libxl_create.c  |  21 ++++++--
- tools/libxl/libxl_dom.c     |  28 ++++++++--
+ tools/libxl/libxl_create.c  |  21 +++++--
+ tools/libxl/libxl_dom.c     |  28 ++++++++-
  tools/libxl/libxl_types.idl |   7 +++
  5 files changed, 173 insertions(+), 8 deletions(-)
 
@@ -3267,7 +3267,7 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
 
 Ported over changes to libxl_create.c
 ---
- tools/libxl/libxl_create.c | 74 +++++++++++++++++++++++++---------------------
+ tools/libxl/libxl_create.c | 74 ++++++++++++++++++++------------------
  1 file changed, 40 insertions(+), 34 deletions(-)
 
 diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
@@ -3585,7 +3585,7 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
 Ported over changes in libxl_dom.c
 ---
  tools/libxl/libxl_create.c |   2 +-
- tools/libxl/libxl_dom.c    | 151 ++++++++++++++++++++++++++++-----------------
+ tools/libxl/libxl_dom.c    | 151 +++++++++++++++++++++++--------------
  2 files changed, 96 insertions(+), 57 deletions(-)
 
 diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
@@ -4664,11 +4664,11 @@ Signed-off-by: Wei Liu <wei.liu2@citrix.com>
 ---
  stubdom/grub/kexec.c                 |   7 +-
  tools/helpers/init-xenstore-domain.c |   4 +-
- tools/libxc/include/xc_dom.h         |  48 ++++++-----
+ tools/libxc/include/xc_dom.h         |  48 +++++----
  tools/libxc/xc_dom_compat_linux.c    |   2 +-
- tools/libxc/xc_dom_core.c            | 152 +++++++++++++++++++++++------------
- tools/libxc/xc_dom_x86.c             |  65 ++++++++-------
- tools/libxl/libxl_dom.c              |  10 +--
+ tools/libxc/xc_dom_core.c            | 152 ++++++++++++++++++---------
+ tools/libxc/xc_dom_x86.c             |  65 ++++++------
+ tools/libxl/libxl_dom.c              |  10 +-
  7 files changed, 175 insertions(+), 113 deletions(-)
 
 diff --git a/stubdom/grub/kexec.c b/stubdom/grub/kexec.c
@@ -5322,11 +5322,11 @@ Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
 Signed-off-by: George Dunlap <george.dunlap@citrix.com>
 Signed-off-by: Wei Liu <wei.liu2@citrix.com>
 ---
- tools/libxl/libxl.h          |  8 +++++++
- tools/libxl/libxl_create.c   | 15 ++++++++++++
- tools/libxl/libxl_dom.c      | 57 +++++++++++++++++++++++++++++++++++---------
- tools/libxl/libxl_internal.h |  4 ++++
- tools/libxl/libxl_types.idl  |  3 +++
+ tools/libxl/libxl.h          |  8 +++++
+ tools/libxl/libxl_create.c   | 15 ++++++++++
+ tools/libxl/libxl_dom.c      | 57 +++++++++++++++++++++++++++++-------
+ tools/libxl/libxl_internal.h |  4 +++
+ tools/libxl/libxl_types.idl  |  3 ++
  5 files changed, 76 insertions(+), 11 deletions(-)
 
 diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
@@ -5856,10 +5856,10 @@ Signed-off-by: Jan Beulich <jbeulich@suse.com>
 Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
 Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
 ---
- xen/arch/arm/mm.c                 | 18 +++++++++---
- xen/common/grant_table.c          | 62 +++++++++++++++++++++++++++++++++++----
- xen/include/asm-arm/grant_table.h | 11 +++++++
- xen/include/asm-x86/grant_table.h | 12 ++++++--
+ xen/arch/arm/mm.c                 | 18 +++++++--
+ xen/common/grant_table.c          | 62 ++++++++++++++++++++++++++++---
+ xen/include/asm-arm/grant_table.h | 11 ++++++
+ xen/include/asm-x86/grant_table.h | 12 +++++-
  4 files changed, 92 insertions(+), 11 deletions(-)
 
 diff --git a/xen/arch/arm/mm.c b/xen/arch/arm/mm.c
@@ -6396,10 +6396,10 @@ Conflicts:
 
 (cherry picked from commit 44139fed7c794eb4e47a9bb93061e325bd57fe8c)
 ---
- xen/arch/arm/Kconfig             |  20 ++++++
+ xen/arch/arm/Kconfig             |  20 +++++
  xen/arch/arm/arm64/Makefile      |   1 +
- xen/arch/arm/arm64/bpi.S         |  64 ++++++++++++++++++
- xen/arch/arm/cpuerrata.c         | 139 +++++++++++++++++++++++++++++++++++++++
+ xen/arch/arm/arm64/bpi.S         |  64 ++++++++++++++
+ xen/arch/arm/cpuerrata.c         | 139 +++++++++++++++++++++++++++++++
  xen/arch/arm/traps.c             |   5 +-
  xen/include/asm-arm/cpufeature.h |   3 +-
  xen/include/asm-arm/processor.h  |   5 +-
@@ -6752,8 +6752,8 @@ Conflicts:
 
 (cherry picked from commit 6f6786ef0d7f7025860d360f6b1267193ffd1b27)
 ---
- xen/arch/arm/arm64/bpi.S | 25 +++++++++++++++++++++++++
- xen/arch/arm/cpuerrata.c | 48 ++++++++++++++++++++++++++++++++++++++++++++++++
+ xen/arch/arm/arm64/bpi.S | 25 +++++++++++++++++++++
+ xen/arch/arm/cpuerrata.c | 48 ++++++++++++++++++++++++++++++++++++++++
  2 files changed, 73 insertions(+)
 
 diff --git a/xen/arch/arm/arm64/bpi.S b/xen/arch/arm/arm64/bpi.S
@@ -7088,8 +7088,8 @@ Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
 (cherry picked from commit 7336d0d2a719d6135b8d02801401e449b0dbbfb6)
 ---
  xen/arch/arm/Kconfig       |  3 +++
- xen/arch/arm/arm32/entry.S | 41 ++++++++++++++++++++++++++++++++++++++++-
- xen/arch/arm/cpuerrata.c   | 30 ++++++++++++++++++++++++++++++
+ xen/arch/arm/arm32/entry.S | 41 +++++++++++++++++++++++++++++++++++++-
+ xen/arch/arm/cpuerrata.c   | 30 ++++++++++++++++++++++++++++
  3 files changed, 73 insertions(+), 1 deletion(-)
 
 diff --git a/xen/arch/arm/Kconfig b/xen/arch/arm/Kconfig
@@ -7504,8 +7504,8 @@ master date: 2018-01-05 19:57:07 +0000
 
 (cherry picked from commit 3efcd7fb40a900bc7d4f9063f2d43ee27b0a5270)
 ---
- xen/include/asm-x86/alternative-asm.h | 31 +++++++++++++++++++++++++++++++
- xen/include/asm-x86/alternative.h     | 13 +++----------
+ xen/include/asm-x86/alternative-asm.h | 31 +++++++++++++++++++++++++++
+ xen/include/asm-x86/alternative.h     | 13 +++--------
  2 files changed, 34 insertions(+), 10 deletions(-)
  create mode 100644 xen/include/asm-x86/alternative-asm.h
 
@@ -7595,7 +7595,7 @@ master date: 2018-01-05 19:57:07 +0000
 
 (cherry picked from commit 87cb0e2090fce317c4e6775f343d5caba66f61f1)
 ---
- xen/include/asm-x86/alternative-asm.h | 46 +++++++++++++++++++++++++++++++++++
+ xen/include/asm-x86/alternative-asm.h | 46 +++++++++++++++++++++++++++
  1 file changed, 46 insertions(+)
 
 diff --git a/xen/include/asm-x86/alternative-asm.h b/xen/include/asm-x86/alternative-asm.h
@@ -8232,7 +8232,7 @@ master date: 2018-01-16 17:45:50 +0000
 ---
  xen/arch/x86/Makefile         |  1 +
  xen/arch/x86/Rules.mk         |  7 +++++++
- xen/arch/x86/indirect-thunk.S | 38 ++++++++++++++++++++++++++++++++++++++
+ xen/arch/x86/indirect-thunk.S | 38 +++++++++++++++++++++++++++++++++++
  xen/arch/x86/xen.lds.S        |  1 +
  4 files changed, 47 insertions(+)
  create mode 100644 xen/arch/x86/indirect-thunk.S
@@ -8344,15 +8344,15 @@ master date: 2018-01-16 17:45:50 +0000
 
 (cherry picked from commit 60c50f2b0bf5d3f894ca428cf4b4374fbea2d082)
 ---
- xen/Rules.mk                             |  4 ++--
- xen/arch/x86/Rules.mk                    |  6 +++++
- xen/arch/x86/boot/trampoline.S           | 24 +++++++++++++++++--
- xen/arch/x86/traps.c                     | 41 ++++++++++++++++++++++----------
- xen/arch/x86/x86_64/entry.S              |  6 +++--
- xen/arch/x86/x86_emulate/x86_emulate.c   | 16 ++++++-------
- xen/common/wait.c                        |  8 ++++---
- xen/include/asm-x86/asm_defns.h          |  8 +++++++
- xen/include/asm-x86/indirect_thunk_asm.h | 41 ++++++++++++++++++++++++++++++++
+ xen/Rules.mk                             |  4 +--
+ xen/arch/x86/Rules.mk                    |  6 ++++
+ xen/arch/x86/boot/trampoline.S           | 24 ++++++++++++--
+ xen/arch/x86/traps.c                     | 41 +++++++++++++++++-------
+ xen/arch/x86/x86_64/entry.S              |  6 ++--
+ xen/arch/x86/x86_emulate/x86_emulate.c   | 16 ++++-----
+ xen/common/wait.c                        |  8 +++--
+ xen/include/asm-x86/asm_defns.h          |  8 +++++
+ xen/include/asm-x86/indirect_thunk_asm.h | 41 ++++++++++++++++++++++++
  xen/include/xen/config.h                 |  2 +-
  10 files changed, 126 insertions(+), 30 deletions(-)
  create mode 100644 xen/include/asm-x86/indirect_thunk_asm.h
@@ -8714,8 +8714,8 @@ master date: 2018-01-16 17:45:50 +0000
 ---
  xen/arch/x86/Makefile           |  1 +
  xen/arch/x86/setup.c            |  3 ++
- xen/arch/x86/spec_ctrl.c        | 75 +++++++++++++++++++++++++++++++++++++++++
- xen/include/asm-x86/spec_ctrl.h | 35 +++++++++++++++++++
+ xen/arch/x86/spec_ctrl.c        | 75 +++++++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl.h | 35 +++++++++++++++
  4 files changed, 114 insertions(+)
  create mode 100644 xen/arch/x86/spec_ctrl.c
  create mode 100644 xen/include/asm-x86/spec_ctrl.h
@@ -8896,7 +8896,7 @@ master date: 2018-01-16 17:45:50 +0000
 
 (cherry picked from commit 479b879a7dd0bbf02920d2f6053d9bee271797ce)
 ---
- xen/arch/x86/cpu/amd.c           | 35 ++++++++++++++++++++++++++++++++++-
+ xen/arch/x86/cpu/amd.c           | 35 +++++++++++++++++++++++++++++++-
  xen/include/asm-x86/cpufeature.h |  2 ++
  xen/include/asm-x86/msr-index.h  |  1 +
  3 files changed, 37 insertions(+), 1 deletion(-)
@@ -9003,9 +9003,9 @@ master date: 2018-01-16 17:45:50 +0000
 
 (cherry picked from commit ca9583d9e705aaa74da121e920ebf77d9f7995b2)
 ---
- docs/misc/xen-command-line.markdown | 16 ++++++++
- xen/arch/x86/indirect-thunk.S       | 17 +++++++--
- xen/arch/x86/spec_ctrl.c            | 75 +++++++++++++++++++++++++++++++++++--
+ docs/misc/xen-command-line.markdown | 16 ++++++
+ xen/arch/x86/indirect-thunk.S       | 17 +++++--
+ xen/arch/x86/spec_ctrl.c            | 75 +++++++++++++++++++++++++++--
  xen/include/asm-x86/cpufeature.h    |  2 +
  4 files changed, 104 insertions(+), 6 deletions(-)
 
@@ -9476,10 +9476,10 @@ master date: 2018-01-31 10:47:12 +0000
 
 (cherry picked from commit 532ccf4fd55cfd916f56279a71852585d726ab23)
 ---
- docs/misc/xen-command-line.markdown | 12 ++++++++++++
- xen/arch/x86/cpuid.c                | 35 +++++++++++++++++++++++++++++++++++
- xen/common/kernel.c                 | 36 ++++++++++++++++++++++++++++++++++++
- xen/include/xen/lib.h               |  7 +++++++
+ docs/misc/xen-command-line.markdown | 12 ++++++++++
+ xen/arch/x86/cpuid.c                | 35 ++++++++++++++++++++++++++++
+ xen/common/kernel.c                 | 36 +++++++++++++++++++++++++++++
+ xen/include/xen/lib.h               |  7 ++++++
  4 files changed, 90 insertions(+)
 
 diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
@@ -9657,8 +9657,8 @@ master date: 2018-01-26 14:10:21 +0000
 (cherry picked from commit c3d195cd91385531ed12af2576bfedcab3118211)
 ---
  tools/libxc/xc_cpuid_x86.c                  |  4 +++-
- xen/arch/x86/cpuid.c                        | 20 ++++++++++++++++++++
- xen/arch/x86/domctl.c                       | 22 ++++++++++++++++++----
+ xen/arch/x86/cpuid.c                        | 20 +++++++++++++++++++
+ xen/arch/x86/domctl.c                       | 22 +++++++++++++++++----
  xen/include/public/arch-x86/cpufeatureset.h |  2 +-
  4 files changed, 42 insertions(+), 6 deletions(-)
 
@@ -9805,9 +9805,9 @@ master date: 2018-01-26 14:10:21 +0000
 
 (cherry picked from commit 29e7171e9dd0aa8e35f790157d781dff22f6a970)
 ---
- xen/arch/x86/domain.c           |  5 ++--
- xen/arch/x86/hvm/hvm.c          | 54 +++++++++++++++++++++++++++++++++++++++--
- xen/arch/x86/traps.c            | 49 +++++++++++++++++++++++++++++++++++++
+ xen/arch/x86/domain.c           |  5 ++-
+ xen/arch/x86/hvm/hvm.c          | 54 +++++++++++++++++++++++++++++++--
+ xen/arch/x86/traps.c            | 49 ++++++++++++++++++++++++++++++
  xen/include/asm-x86/domain.h    |  4 ++-
  xen/include/asm-x86/msr-index.h |  2 ++
  5 files changed, 108 insertions(+), 6 deletions(-)
@@ -10341,13 +10341,13 @@ master date: 2018-01-26 14:10:21 +0000
  xen/arch/x86/setup.c                |   1 +
  xen/arch/x86/smpboot.c              |   2 +
  xen/arch/x86/x86_64/asm-offsets.c   |   3 +
- xen/arch/x86/x86_64/compat/entry.S  |  13 +++
- xen/arch/x86/x86_64/entry.S         |  47 +++++++-
+ xen/arch/x86/x86_64/compat/entry.S  |  13 ++
+ xen/arch/x86/x86_64/entry.S         |  47 +++++-
  xen/include/asm-x86/asm_defns.h     |   3 +
  xen/include/asm-x86/current.h       |   6 +
  xen/include/asm-x86/nops.h          |   6 +
  xen/include/asm-x86/spec_ctrl.h     |   9 ++
- xen/include/asm-x86/spec_ctrl_asm.h | 224 ++++++++++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl_asm.h | 224 ++++++++++++++++++++++++++++
  12 files changed, 336 insertions(+), 6 deletions(-)
  create mode 100644 xen/include/asm-x86/spec_ctrl_asm.h
 
@@ -10980,7 +10980,7 @@ master date: 2018-01-26 14:10:21 +0000
 ---
  xen/include/asm-x86/cpufeature.h    |  2 ++
  xen/include/asm-x86/nops.h          |  1 +
- xen/include/asm-x86/spec_ctrl_asm.h | 44 +++++++++++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl_asm.h | 44 +++++++++++++++++++++++++++++
  3 files changed, 47 insertions(+)
 
 diff --git a/xen/include/asm-x86/cpufeature.h b/xen/include/asm-x86/cpufeature.h
@@ -11116,12 +11116,12 @@ master date: 2018-01-26 14:10:21 +0000
 
 (cherry picked from commit 64c1742b206344c51db130b0bb47fc299a1462ca)
 ---
- xen/arch/x86/spec_ctrl.c            |  8 +++++
+ xen/arch/x86/spec_ctrl.c            |  8 ++++
  xen/arch/x86/x86_64/asm-offsets.c   |  1 +
- xen/arch/x86/x86_64/entry.S         |  6 ++--
+ xen/arch/x86/x86_64/entry.S         |  6 +--
  xen/include/asm-x86/current.h       |  1 +
  xen/include/asm-x86/spec_ctrl.h     |  1 +
- xen/include/asm-x86/spec_ctrl_asm.h | 67 +++++++++++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl_asm.h | 67 +++++++++++++++++++++++++++++
  6 files changed, 81 insertions(+), 3 deletions(-)
 
 diff --git a/xen/arch/x86/spec_ctrl.c b/xen/arch/x86/spec_ctrl.c
@@ -11358,8 +11358,8 @@ master date: 2018-02-06 18:32:58 +0000
 
 (cherry picked from commit c0bfde68ccd941b14a2f0ca54c61a83796156ea6)
 ---
- docs/misc/xen-command-line.markdown |  10 ++-
- xen/arch/x86/spec_ctrl.c            | 141 +++++++++++++++++++++++++++++++++++-
+ docs/misc/xen-command-line.markdown |  10 +-
+ xen/arch/x86/spec_ctrl.c            | 141 +++++++++++++++++++++++++++-
  xen/include/asm-x86/spec_ctrl.h     |   4 +-
  3 files changed, 149 insertions(+), 6 deletions(-)
 
@@ -11851,10 +11851,10 @@ master date: 2018-01-26 14:10:21 +0000
 
 (cherry picked from commit 99ed7863b29ea170e50749fe22991b964cbce6ba)
 ---
- xen/arch/x86/acpi/cpu_idle.c    | 21 +++++++++++++++++++++
+ xen/arch/x86/acpi/cpu_idle.c    | 21 ++++++++++++++++++++
  xen/arch/x86/cpu/mwait-idle.c   |  7 +++++++
  xen/arch/x86/domain.c           |  8 ++++++++
- xen/include/asm-x86/spec_ctrl.h | 34 ++++++++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl.h | 34 +++++++++++++++++++++++++++++++++
  4 files changed, 70 insertions(+)
 
 diff --git a/xen/arch/x86/acpi/cpu_idle.c b/xen/arch/x86/acpi/cpu_idle.c
@@ -12247,5 +12247,150 @@ index 50e25c162c..ed0fd0ead9 100644
  
      memcpy(buffer, vcpu->msr, vcpu->msrsz);
  
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Anthony PERARD <anthony.perard@citrix.com>
+Date: Thu, 8 Mar 2018 18:16:41 +0000
+Subject: [PATCH] libxl: Specify format of inserted cdrom
+
+Without this extra parameter on the QMP command, QEMU will guess the
+format of the new file.
+
+This is XSA-258.
+
+Reported-by: Anthony PERARD <anthony.perard@citrix.com>
+Signed-off-by: Anthony PERARD <anthony.perard@citrix.com>
+Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_device.c   | 12 ++++++++++++
+ tools/libxl/libxl_dm.c       | 16 ++--------------
+ tools/libxl/libxl_internal.h |  1 +
+ tools/libxl/libxl_qmp.c      |  2 ++
+ 4 files changed, 17 insertions(+), 14 deletions(-)
+
+diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
+index 5c84508328..cdf5ae9078 100644
+--- a/tools/libxl/libxl_device.c
++++ b/tools/libxl/libxl_device.c
+@@ -425,6 +425,18 @@ char *libxl__device_disk_string_of_backend(libxl_disk_backend backend)
+     }
+ }
+ 
++const char *libxl__qemu_disk_format_string(libxl_disk_format format)
++{
++    switch (format) {
++    case LIBXL_DISK_FORMAT_QCOW: return "qcow";
++    case LIBXL_DISK_FORMAT_QCOW2: return "qcow2";
++    case LIBXL_DISK_FORMAT_VHD: return "vpc";
++    case LIBXL_DISK_FORMAT_RAW: return "raw";
++    case LIBXL_DISK_FORMAT_EMPTY: return NULL;
++    default: return NULL;
++    }
++}
++
+ int libxl__device_physdisk_major_minor(const char *physpath, int *major, int *minor)
+ {
+     struct stat buf;
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index c8b033286e..4877403123 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -670,18 +670,6 @@ static int libxl__build_device_model_args_old(libxl__gc *gc,
+     return 0;
+ }
+ 
+-static const char *qemu_disk_format_string(libxl_disk_format format)
+-{
+-    switch (format) {
+-    case LIBXL_DISK_FORMAT_QCOW: return "qcow";
+-    case LIBXL_DISK_FORMAT_QCOW2: return "qcow2";
+-    case LIBXL_DISK_FORMAT_VHD: return "vpc";
+-    case LIBXL_DISK_FORMAT_RAW: return "raw";
+-    case LIBXL_DISK_FORMAT_EMPTY: return NULL;
+-    default: return NULL;
+-    }
+-}
+-
+ static char *dm_spice_options(libxl__gc *gc,
+                                     const libxl_spice_info *spice)
+ {
+@@ -1344,9 +1332,9 @@ static int libxl__build_device_model_args_new(libxl__gc *gc,
+              * always raw
+              */
+             if (disks[i].backend == LIBXL_DISK_BACKEND_QDISK)
+-                format = qemu_disk_format_string(disks[i].format);
++                format = libxl__qemu_disk_format_string(disks[i].format);
+             else
+-                format = qemu_disk_format_string(LIBXL_DISK_FORMAT_RAW);
++                format = libxl__qemu_disk_format_string(LIBXL_DISK_FORMAT_RAW);
+ 
+             if (disks[i].format == LIBXL_DISK_FORMAT_EMPTY) {
+                 if (!disks[i].is_cdrom) {
+diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
+index 41cf00ec91..0d0df885b2 100644
+--- a/tools/libxl/libxl_internal.h
++++ b/tools/libxl/libxl_internal.h
+@@ -1190,6 +1190,7 @@ _hidden int libxl__domain_pvcontrol_write(libxl__gc *gc, xs_transaction_t t,
+ /* from xl_device */
+ _hidden char *libxl__device_disk_string_of_backend(libxl_disk_backend backend);
+ _hidden char *libxl__device_disk_string_of_format(libxl_disk_format format);
++_hidden const char *libxl__qemu_disk_format_string(libxl_disk_format format);
+ _hidden int libxl__device_disk_set_backend(libxl__gc*, libxl_device_disk*);
+ 
+ _hidden int libxl__device_physdisk_major_minor(const char *physpath, int *major, int *minor);
+diff --git a/tools/libxl/libxl_qmp.c b/tools/libxl/libxl_qmp.c
+index f8addf9ba6..6fc5454a6e 100644
+--- a/tools/libxl/libxl_qmp.c
++++ b/tools/libxl/libxl_qmp.c
+@@ -982,6 +982,8 @@ int libxl__qmp_insert_cdrom(libxl__gc *gc, int domid,
+         return qmp_run_command(gc, domid, "eject", args, NULL, NULL);
+     } else {
+         qmp_parameters_add_string(gc, &args, "target", disk->pdev_path);
++        qmp_parameters_add_string(gc, &args, "arg",
++            libxl__qemu_disk_format_string(disk->format));
+         return qmp_run_command(gc, domid, "change", args, NULL, NULL);
+     }
+ }
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Wed, 25 Apr 2018 15:25:30 +0100
+Subject: [PATCH] x86: fix slow int80 path after XPTI additions
+
+For the int80 slow path to jump to handle_exception_saved, %r14 needs to
+be set up suitably for XPTI purposes. This is because of the difference
+in nature between the int80 path (which is synchronous WRT guest
+actions) and the exception path which is potentially asynchronous.
+
+This is XSA-259.
+
+Reported-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/x86_64/entry.S | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
+index f24bffb574..80c956edff 100644
+--- a/xen/arch/x86/x86_64/entry.S
++++ b/xen/arch/x86/x86_64/entry.S
+@@ -353,6 +353,12 @@ int80_slow_path:
+         movl  $TRAP_gp_fault,UREGS_entry_vector(%rsp)
+         /* A GPF wouldn't have incremented the instruction pointer. */
+         subq  $2,UREGS_rip(%rsp)
++        /*
++         * While we've cleared xen_cr3 above already, normal exception handling
++         * code has logic to restore the original value from %r15. Therefore we
++         * need to set up %r14 here, while %r15 is required to still be zero.
++         */
++        GET_STACK_END(14)
+         jmp   handle_exception_saved
+ 
+ /* CREATE A BASIC EXCEPTION FRAME ON GUEST OS STACK:                     */
 -- 
 
