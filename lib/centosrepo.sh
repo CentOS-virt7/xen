@@ -168,6 +168,8 @@ function import-patches()
 	fail "No patches to import"
     fi
 
+    local original_dir="$(pwd)"
+
     local pqbranch=centos/pq/$XEN_VERSION
 
     cd $TOPDIR/UPSTREAM/xen.git || fail "Directory doesn't exist!"
@@ -177,7 +179,7 @@ function import-patches()
     local p
     for p in "${args[@]}" ; do
 	info "Importing patch  $p..."
-	stg import -m $p || fail "Importing patch $p"
+	stg import -m "$original_dir/$p" || fail "Importing patch $p"
     done
 
     info "Patches imported to patchqueue.  Don't forget to sync-queue and bump the release number."
