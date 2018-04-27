@@ -59,7 +59,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.3
-Release: 4%{?dist}
+Release: 5%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -1003,6 +1003,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Apr 26 2018 Sarah Newman <srn@prgmr.com> - 4.8.3-5.el7.centos
+- Apply XSA 260v1, 261v1, 262v1: xsa260-4.8-2 and xsa260-4.8-3 had conflicts
+
 * Wed Apr 25 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.8.3-4.el7.centos
 - Apply XSA 258,259
 
