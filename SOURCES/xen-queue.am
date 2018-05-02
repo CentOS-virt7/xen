@@ -32,7 +32,7 @@ Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/tools/hotplug/Linux/systemd/xenstored.service.in b/tools/hotplug/Linux/systemd/xenstored.service.in
-index 80c1d40..95d6a52 100644
+index 80c1d408a5..95d6a52fe6 100644
 --- a/tools/hotplug/Linux/systemd/xenstored.service.in
 +++ b/tools/hotplug/Linux/systemd/xenstored.service.in
 @@ -11,6 +11,7 @@ Type=notify
@@ -94,7 +94,7 @@ Signed-off-by: Anthony PERARD <anthony.perard@citrix.com>
  1 file changed, 6 insertions(+), 3 deletions(-)
 
 diff --git a/tools/hotplug/Linux/systemd/xenstored.service.in b/tools/hotplug/Linux/systemd/xenstored.service.in
-index 95d6a52..2b80eee 100644
+index 95d6a52fe6..2b80eeeb83 100644
 --- a/tools/hotplug/Linux/systemd/xenstored.service.in
 +++ b/tools/hotplug/Linux/systemd/xenstored.service.in
 @@ -8,11 +8,14 @@ ConditionPathExists=/proc/xen/capabilities
@@ -132,7 +132,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/configure b/tools/configure
-index f3bb412..8bc1945 100755
+index f3bb412f51..8bc19454e3 100755
 --- a/tools/configure
 +++ b/tools/configure
 @@ -4196,7 +4196,7 @@ xen-scsibk
@@ -145,7 +145,7 @@ index f3bb412..8bc1945 100755
  ;;
  *)
 diff --git a/tools/configure.ac b/tools/configure.ac
-index d1a3a78..5407f96 100644
+index d1a3a78d87..5407f966c1 100644
 --- a/tools/configure.ac
 +++ b/tools/configure.ac
 @@ -106,7 +106,7 @@ xen-scsibk
@@ -176,7 +176,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  3 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/xen/Makefile b/xen/Makefile
-index f8c359a..a774afa 100644
+index ecec297b9b..f1e6a69fc6 100644
 --- a/xen/Makefile
 +++ b/xen/Makefile
 @@ -20,6 +20,7 @@ export XEN_ROOT := $(BASEDIR)/..
@@ -188,10 +188,10 @@ index f8c359a..a774afa 100644
  ARCH=$(XEN_TARGET_ARCH)
  SRCARCH=$(shell echo $(ARCH) | sed -e 's/x86.*/x86/' -e s'/arm\(32\|64\)/arm/g')
 diff --git a/xen/arch/x86/Makefile b/xen/arch/x86/Makefile
-index d5d58a2..7db6421 100644
+index db2842a467..203873e6a1 100644
 --- a/xen/arch/x86/Makefile
 +++ b/xen/arch/x86/Makefile
-@@ -177,20 +177,20 @@ endif
+@@ -182,20 +182,20 @@ endif
  
  $(TARGET).efi: prelink-efi.o $(note_file) efi.lds efi/relocs-dummy.o $(BASEDIR)/common/symbols-dummy.o efi/mkreloc
  	$(foreach base, $(VIRT_BASE) $(ALT_BASE), \
@@ -216,7 +216,7 @@ index d5d58a2..7db6421 100644
  	if $(guard) false; then rm -f $@; echo 'EFI support disabled'; \
  	else $(NM) -pa --format=sysv $(@D)/$(@F) \
 diff --git a/xen/arch/x86/efi/Makefile b/xen/arch/x86/efi/Makefile
-index 3edff1c..100b961 100644
+index 3edff1cf24..100b961fae 100644
 --- a/xen/arch/x86/efi/Makefile
 +++ b/xen/arch/x86/efi/Makefile
 @@ -2,7 +2,7 @@ CFLAGS += -fshort-wchar
@@ -242,7 +242,7 @@ Subject: [PATCH] Disable iptables on the bridge
  2 files changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/tools/hotplug/Linux/vif-bridge b/tools/hotplug/Linux/vif-bridge
-index 6956dea..69bc252 100644
+index 6956dea66a..69bc25279d 100644
 --- a/tools/hotplug/Linux/vif-bridge
 +++ b/tools/hotplug/Linux/vif-bridge
 @@ -93,8 +93,6 @@ case "$command" in
@@ -255,7 +255,7 @@ index 6956dea..69bc252 100644
  
  log debug "Successful vif-bridge $command for $dev, bridge $bridge."
 diff --git a/tools/hotplug/Linux/xen-network-common.sh b/tools/hotplug/Linux/xen-network-common.sh
-index 92ffa60..0b1fde9 100644
+index 92ffa603f7..0b1fde9dac 100644
 --- a/tools/hotplug/Linux/xen-network-common.sh
 +++ b/tools/hotplug/Linux/xen-network-common.sh
 @@ -114,6 +114,13 @@ create_bridge () {
@@ -287,7 +287,7 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index bb80583..b615636 100644
+index 0d1012cbc9..af47bac32a 100644
 --- a/Config.mk
 +++ b/Config.mk
 @@ -282,7 +282,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.10.2
@@ -298,22 +298,22 @@ index bb80583..b615636 100644
 +ETHERBOOT_NICS ?= 10ec8139 8086100e
  
  
- QEMU_TRADITIONAL_REVISION ?= xen-4.10.0
+ QEMU_TRADITIONAL_REVISION ?= xen-4.10.1
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
-index 868b506..b2f7bc2 100644
+index 5a7cf7766d..457281cdf1 100644
 --- a/tools/firmware/Makefile
 +++ b/tools/firmware/Makefile
-@@ -10,7 +10,7 @@ SUBDIRS-$(CONFIG_OVMF) += ovmf-dir
+@@ -15,7 +15,7 @@ SUBDIRS-$(CONFIG_OVMF) += ovmf-dir
  SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
  SUBDIRS-$(CONFIG_ROMBIOS) += rombios
  SUBDIRS-$(CONFIG_ROMBIOS) += vgabios
 -SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
 +#SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
+ SUBDIRS-$(CONFIG_PV_SHIM) += xen-dir
  SUBDIRS-y += hvmloader
  
- LD32BIT-$(CONFIG_FreeBSD) := LD32BIT_FLAG=-melf_i386_fbsd
 diff --git a/tools/firmware/hvmloader/Makefile b/tools/firmware/hvmloader/Makefile
-index a5b4c32..d48b225 100644
+index a5b4c32c1a..d48b225b78 100644
 --- a/tools/firmware/hvmloader/Makefile
 +++ b/tools/firmware/hvmloader/Makefile
 @@ -51,7 +51,7 @@ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.debug.bin
@@ -347,7 +347,7 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
-index 5438577..b6c2b04 100644
+index 17c743d867..6830e38f69 100644
 --- a/tools/libxl/libxl_device.c
 +++ b/tools/libxl/libxl_device.c
 @@ -392,8 +392,8 @@ int libxl__device_disk_set_backend(libxl__gc *gc, libxl_device_disk *disk) {
@@ -372,11 +372,11 @@ Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
 ---
  tools/Rules.mk              |  6 +++---
- tools/libxl/libxl_blktap2.c | 43 ++++++++++++++++++++++++++++---------------
+ tools/libxl/libxl_blktap2.c | 43 ++++++++++++++++++++++++-------------
  2 files changed, 31 insertions(+), 18 deletions(-)
 
 diff --git a/tools/Rules.mk b/tools/Rules.mk
-index 6268c14..29f779a 100644
+index 6268c14e3a..29f779aff3 100644
 --- a/tools/Rules.mk
 +++ b/tools/Rules.mk
 @@ -170,10 +170,10 @@ CFLAGS += -O2 -fomit-frame-pointer
@@ -394,7 +394,7 @@ index 6268c14..29f779a 100644
  CFLAGS_libblktapctl =
  SHDEPS_libblktapctl =
 diff --git a/tools/libxl/libxl_blktap2.c b/tools/libxl/libxl_blktap2.c
-index 5c9a0a2..a54a31e 100644
+index 5c9a0a2da8..a54a31e32b 100644
 --- a/tools/libxl/libxl_blktap2.c
 +++ b/tools/libxl/libxl_blktap2.c
 @@ -29,20 +29,15 @@ char *libxl__blktap_devpath(libxl__gc *gc,
@@ -487,7 +487,7 @@ Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
  1 file changed, 9 insertions(+)
 
 diff --git a/xen/include/public/arch-arm.h b/xen/include/public/arch-arm.h
-index 05fd11c..8aaa157 100644
+index 05fd11ca38..8aaa157441 100644
 --- a/xen/include/public/arch-arm.h
 +++ b/xen/include/public/arch-arm.h
 @@ -362,6 +362,15 @@ typedef uint64_t xen_callback_t;
@@ -528,7 +528,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libs/call/linux.c b/tools/libs/call/linux.c
-index 3f1b691..8c8a56e 100644
+index 3f1b691fe7..8c8a56eb00 100644
 --- a/tools/libs/call/linux.c
 +++ b/tools/libs/call/linux.c
 @@ -43,7 +43,7 @@ int osdep_xencall_open(xencall_handle *xcall)
@@ -541,7 +541,7 @@ index 3f1b691..8c8a56e 100644
          /* Fallback to /proc/xen/privcmd */
          fd = open("/proc/xen/privcmd", O_RDWR|O_CLOEXEC);
 diff --git a/tools/libs/foreignmemory/linux.c b/tools/libs/foreignmemory/linux.c
-index 374e45a..132dcd7 100644
+index 374e45aed5..132dcd7926 100644
 --- a/tools/libs/foreignmemory/linux.c
 +++ b/tools/libs/foreignmemory/linux.c
 @@ -41,7 +41,7 @@ int osdep_xenforeignmemory_open(xenforeignmemory_handle *fmem)
@@ -571,7 +571,7 @@ Signed-off-by: Anthony PERARD <anthony.perard@citrix.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/tools/libs/devicemodel/linux.c b/tools/libs/devicemodel/linux.c
-index 0fdc712..684a7f6 100644
+index 0fdc7121f1..684a7f6b47 100644
 --- a/tools/libs/devicemodel/linux.c
 +++ b/tools/libs/devicemodel/linux.c
 @@ -47,7 +47,7 @@ int osdep_xendevicemodel_open(xendevicemodel_handle *dmod)

@@ -71,8 +71,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: %{hv_abi}.0
-Release: 3%{?xen_rc_pkgver}%{?dist}
+Version: %{hv_abi}.1
+Release: 1%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -643,7 +643,7 @@ popd
 # ...and /usr/lib/xen/boot
 mkdir -p %{buildroot}/usr/lib/xen/boot/
 pushd %{buildroot}/usr/lib/xen/boot/
-for f in pv-grub-x86_32.gz pv-grub-x86_64.gz ioemu-stubdom.gz xenstore-stubdom.gz
+for f in pv-grub-x86_32.gz pv-grub-x86_64.gz ioemu-stubdom.gz xenstore-stubdom.gz xen-shim
   do
     ln -sf ../../../lib64/xen/boot/$f .
   done
@@ -824,6 +824,7 @@ rm -rf %{buildroot}
 /usr/lib/%{name}/boot/pv-grub-x86_64.gz
 /usr/lib/%{name}/boot/ioemu-stubdom.gz
 /usr/lib/%{name}/boot/xenstore-stubdom.gz
+/usr/lib/%{name}/boot/xen-shim
 %endif
 %dir %{_libexecdir}/%{name}/boot
 %{_libexecdir}/xen/boot/hvmloader
@@ -831,6 +832,7 @@ rm -rf %{buildroot}
 %{_libexecdir}/xen/boot/xenstore-stubdom.gz
 %{_libexecdir}/xen/boot/pv-grub-x86_32.gz
 %{_libexecdir}/xen/boot/pv-grub-x86_64.gz
+%{_libexecdir}/xen/boot/xen-shim
 %endif
 
 %if %{with_tianocore}
@@ -863,7 +865,6 @@ rm -rf %{buildroot}
 %{_sbindir}/xen-bugtool
 %{_sbindir}/xen-diag
 %{_sbindir}/xen-livepatch
-%{_sbindir}/xen-tmem-list-parse
 %{_sbindir}/xen-tmem-list-parse
 %{_sbindir}/xenconsoled
 %{_sbindir}/xenlockprof
@@ -1002,6 +1003,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed May 02 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.1-1.el7.centos
+- Xen 4.10.1
+
 * Tue Jan 30 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.0-3.el7.centos
 - Add missing perl dependency for xen-runtime package
 
