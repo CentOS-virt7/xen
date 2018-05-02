@@ -89,8 +89,13 @@ function find-duplicate-patch-ids()
     
     local _result
 
+    # remove duplicates from upstream_pids
+    local pids
+    pids="$(for i in $upstream_pids; do echo "0000_upstream,${i#*,}"; done)"
+    pids="$(sort -u <<<"$pids")"
+
     # Change space to newline, comma to space
-    _result=$((for i in $upstream_pids $series_pids ; do echo ${i/,/ } ; done ) |
+    _result=$((for i in $pids $series_pids ; do echo ${i/,/ } ; done ) |
 		  sort -k 2 -r |
 		  uniq -f 1 -d |
 		  awk '{print $1}')
