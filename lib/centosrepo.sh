@@ -394,9 +394,10 @@ function rebase()
     find-duplicate-patch-ids var=dups
 
     info " ...Removing duplicate patches"
-    local patch
     stg pop -a
-    stg delete $patch || fail "Removing patches $dups"
+    if [ -n "$dups" ]; then
+        stg delete $dups || fail "Removing patches $dups"
+    fi
 
     info "Rebasing onto new base branch"
     stg rebase base/$new || fail "Rebasing -- please clean up and run rebase-post"
