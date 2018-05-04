@@ -69,8 +69,8 @@ function git-get-patch-ids()
     local _pid
     local _result
 
-    for _cid in $(git log ${from}..${to} | awk '{print $1;}') ; do
-	_pid=$(git sh $_cid | git patch-id --stable | awk '{print $1;}')
+    for _cid in $(git rev-list --no-merges ${from}..${to}) ; do
+	_pid=$(git diff-tree --patch $_cid | git patch-id --stable | awk '{print $1;}')
 	if [[ -z "$_result" ]] ; then
 	    _result="$_cid,$_pid"
 	else
