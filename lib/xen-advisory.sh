@@ -11,7 +11,7 @@ function get-xsa-dir()
     report-result "$_dir"
 }
 
-help-add "import-xsa xsa=[XSA]: Download and check and import a Xen Security Advisory"
+help-add "import-xsa xsa=[XSA] <patches/globbing>: Download and check and import a Xen Security Advisory"
 function import-xsa()
 {
     . $TOPDIR/sources.cfg
@@ -38,16 +38,33 @@ function import-xsa()
     advisory="$(get-xsa-dir)/$advisory_file"
     xen-check-files-gpg-signature file="$advisory"
 
-    if download-xsa-file file="$metadata_file"; then
-        metadata="$(get-xsa-dir)/$metadata_file"
-        if ! xsa-check-file-checksum-from-advisory file="$metadata_file"; then
-            fail "Failed to check metadata file ($metadata_file)"
-        fi
+    # If there is no patch/glob on command like, discover them via metadata
+    if [ ${#args[@]} -ge 1 ]; then
+        for a in "${args[@]}"; do
+            patches+=("$a")
+        done
+    else
+        if download-xsa-file file="$metadata_file"; then
+            metadata="$(get-xsa-dir)/$metadata_file"
+            if ! xsa-check-file-checksum-from-advisory file="$metadata_file"; then
+                fail "Failed to check metadata file ($metadata_file)"
+            fi
 
-        xsa-extract-patch-list-from-metadata var=patches
+            xsa-extract-patch-list-from-metadata var=patches
+        fi
     fi
 
     if [ "${#patches[@]}" -eq 0 ]; then
+        if [ "$metadata" ] || [ "${#args[@]}" -eq 0 ]; then
+            if [ "$metadata" ]; then
+                # Metadata are empty (e.g. XSA-240)
+                error "No patch found in $metadata_file,"
+            else
+                # No metadata file (e.g. XSA-246)
+                error "No metadata file found,"
+            fi
+            error "please read advisory $advisory_file and add patches/globbing as arguments"
+        fi
         fail "No patch found for advisory XSA-$xsa"
     fi
 
