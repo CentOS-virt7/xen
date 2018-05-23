@@ -11,7 +11,7 @@ function get-xsa-dir()
     report-result "$_dir"
 }
 
-help-add "import-xsa xsa=[XSA]: Download and check a Xen Security Advisory"
+help-add "import-xsa xsa=[XSA]: Download and check and import a Xen Security Advisory"
 function import-xsa()
 {
     . $TOPDIR/sources.cfg
@@ -52,7 +52,7 @@ function import-xsa()
     fi
 
     local patch_glob file
-    local -a patches_name
+    local -a patches_name to_import
     # Maybe a list of patch, or a list of globbing
     for patch_glob in "${patches[@]}"; do
         xsa-extract-patch-list-from-advisory var=patches_name glob="$patch_glob"
@@ -61,8 +61,24 @@ function import-xsa()
             if ! xsa-check-file-checksum-from-advisory; then
                 fail "Patch $file checksum failed"
             fi
+            to_import+=("$file")
         done
     done
+
+    if [ "${#to_import[@]}" -eq 0 ]; then
+        fail "No patch found to import"
+    fi
+
+    local -a patches_full_path
+    local patch answer
+    for patch in "${to_import[@]}"; do
+        patches_full_path+=("$(get-xsa-dir)/$patch")
+    done
+    echo -n "Import patches ? ${to_import[@]} [yN] "
+    read answer
+    if [[ "$answer" =~ ^[Yy]$ ]]; then
+        import-patches "${patches_full_path[@]}"
+    fi
 }
 
 # Download XSA file into UPSTREAM/XSAs
