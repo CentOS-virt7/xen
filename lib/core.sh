@@ -255,6 +255,38 @@ function test-report-result()
     echo "test: $test"
 }
 
+function report-result-array()
+{
+    local _v
+    if [[ -n "$var" ]] ; then
+        eval "$var=($(for i in "$@"; do echo -n " '$i'"; done))"
+    else
+        for _v in "$@"; do
+            echo -n " '$_v'"
+        done
+    fi
+}
+
+function test-report-result-array()
+{
+    local -a list
+
+    eval list=($(report-result-array "this one" "this other one" "that last one"))
+    echo "${#list[@]} == 3?"
+    # Should print 3 lines
+    for i in "${list[@]}"; do
+        echo "phrase: $i"
+    done
+
+    var=list
+    report-result-array "this one" "this other one" "that last one"
+    echo "${#list[@]} == 3?"
+    # Should print 3 lines
+    for i in "${list[@]}"; do
+        echo "phrase: $i"
+    done
+}
+
 # Call a function remotely, passing in variables when appropriate.
 #
 # tgt-helper should already have been called appropriately before this.
