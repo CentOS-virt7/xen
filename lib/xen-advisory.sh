@@ -51,12 +51,17 @@ function import-xsa()
         fail "No patch found for advisory XSA-$xsa"
     fi
 
-    local file
-    for file in "${patches[@]}"; do
-        download-xsa-file || fail "patch $file missing"
-        if ! xsa-check-file-checksum-from-advisory; then
-            fail "Patch $file checksum failed"
-        fi
+    local patch_glob file
+    local -a patches_name
+    # Maybe a list of patch, or a list of globbing
+    for patch_glob in "${patches[@]}"; do
+        xsa-extract-patch-list-from-advisory var=patches_name glob="$patch_glob"
+        for file in "${patches_name[@]}"; do
+            download-xsa-file || fail "patch $file missing"
+            if ! xsa-check-file-checksum-from-advisory; then
+                fail "Patch $file checksum failed"
+            fi
+        done
     done
 }
 
@@ -148,4 +153,34 @@ function xsa-check-file-checksum-from-advisory()
     sha256sum -c <<<"$sum" || return 1
 
     popd >/dev/null
+}
+
+# advisory: location of the advisory file
+# glob: Some string found in XSAs describing which patch applies to a
+#       particular version of Xen
+#       This may be a filename or a string in globbing format
+function xsa-extract-patch-list-from-advisory()
+{
+    $arg_parse
+    $requireargs advisory glob
+
+    local checksums
+    local -a _patches
+
+    xsa-extract-checksum-list-from-advisory var=checksums
+
+    IFS='
+'
+    _files=($(sed -r "s%^[0-9a-f]+  %%" <<<"$checksums"))
+    unset IFS
+    for _file in "${_files[@]}"; do
+        # Warning: if glob is xsa42*, this will match file both named:
+        # xsa42/001-foo.patch and xsa42-1-bar.patch
+        # This test doesn't care for directories like pathname expansion would do.
+        if [[ "$_file" == $glob ]]; then
+            _patches+=("$_file")
+        fi
+    done
+
+    report-result-array "${_patches[@]}"
 }
