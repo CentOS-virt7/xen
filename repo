@@ -9,6 +9,7 @@ TESTLIB_PATH="$TOPDIR/lib"
 . ${TESTLIB_PATH}/core.sh
 . ${TESTLIB_PATH}/git.sh
 . ${TESTLIB_PATH}/centosrepo.sh
+. ${TESTLIB_PATH}/xen-advisory.sh
 
 # And do your own thing rather than running commands
 # I suggest defining a "main" function of your own and running it like this.
