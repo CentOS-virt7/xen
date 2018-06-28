@@ -372,7 +372,7 @@ Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
 ---
  tools/Rules.mk              |  6 +++---
- tools/libxl/libxl_blktap2.c | 43 ++++++++++++++++++++++++-------------
+ tools/libxl/libxl_blktap2.c | 43 ++++++++++++++++++++++++++++---------------
  2 files changed, 31 insertions(+), 18 deletions(-)
 
 diff --git a/tools/Rules.mk b/tools/Rules.mk
@@ -934,7 +934,7 @@ Reviewed-by: Jan Beulich <jbeulich@suse.com>
 ---
  tools/firmware/hvmloader/util.c |  1 +
  tools/libacpi/acpi2_0.h         |  8 +++++---
- tools/libacpi/build.c           | 35 ++++++++++++++++++++++++++-------
+ tools/libacpi/build.c           | 35 ++++++++++++++++++++++++++++-------
  tools/libacpi/libacpi.h         |  1 +
  tools/libacpi/static_tables.c   |  6 ++----
  tools/libxl/libxl_x86_acpi.c    |  1 +
@@ -1264,8 +1264,8 @@ No functional changes are introduced.
 Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
 Reviewed-by: Jan Beulich <jbeulich@suse.com>
 ---
- xen/arch/x86/hvm/pmtimer.c       | 67 ++++++++++++++++++++------------
- xen/include/asm-x86/hvm/domain.h | 10 +++++
+ xen/arch/x86/hvm/pmtimer.c       | 67 +++++++++++++++++++++++++---------------
+ xen/include/asm-x86/hvm/domain.h | 10 ++++++
  xen/include/asm-x86/hvm/vpt.h    |  1 -
  3 files changed, 52 insertions(+), 26 deletions(-)
 
@@ -1657,7 +1657,7 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
 
 Ported to modify xl_cmdimpl.c (which was refactored in 4.9).
 ---
- tools/libxl/xl_cmdimpl.c | 95 +++++++++++++++++++++-------------------
+ tools/libxl/xl_cmdimpl.c | 95 +++++++++++++++++++++++++-----------------------
  1 file changed, 50 insertions(+), 45 deletions(-)
 
 diff --git a/tools/libxl/xl_cmdimpl.c b/tools/libxl/xl_cmdimpl.c
@@ -1801,18 +1801,17 @@ And nothing uses them yet, so no functional change in this patch.
 
 Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
 ---
- tools/libxl/libxl.h | 92 +++++++++++++++++++++++++++++++++++++++++++++
+ tools/libxl/libxl.h | 92 +++++++++++++++++++++++++++++++++++++++++++++++++++++
  1 file changed, 92 insertions(+)
 
 diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
 index acbf47690e..0064db94af 100644
 --- a/tools/libxl/libxl.h
 +++ b/tools/libxl/libxl.h
-@@ -287,6 +287,98 @@
-  */
+@@ -288,6 +288,98 @@
  #define LIBXL_HAVE_SCHED_CREDIT2_PARAMS 1
  
-+/*
+ /*
 + * LIBXL_BUILDINFO_SUBFIELD_PVH     #defined to simply   u.pvh.  or empty
 + * LIBXL_BUILDINFO_SUBFIELD_PV      #defined to simply   u.pv.   or empty
 + * LIBXL_BUILDINFO_SUBFIELD_HVM     #defined to simply   u.hvm.  or empty
@@ -1904,9 +1903,10 @@ index acbf47690e..0064db94af 100644
 +#define LIBXL_BUILDINFO_SUBFIELD_PV   u.pv.
 +#define LIBXL_BUILDINFO_SUBFIELD_HVM  u.hvm.
 +
- /*
++/*
   * libxl ABI compatibility
   *
+  * The only guarantee which libxl makes regarding ABI compatibility
 -- 
 
 
@@ -2090,9 +2090,9 @@ Again, no functional change.
 
 Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
 ---
- tools/libxl/xl.h         | 32 +++++++++++++
- tools/libxl/xl_cmdimpl.c | 98 ++++++++++++++++++++++------------------
- tools/libxl/xl_sxp.c     | 16 +++----
+ tools/libxl/xl.h         | 32 ++++++++++++++++
+ tools/libxl/xl_cmdimpl.c | 98 +++++++++++++++++++++++++++---------------------
+ tools/libxl/xl_sxp.c     | 16 ++++----
  3 files changed, 95 insertions(+), 51 deletions(-)
 
 diff --git a/tools/libxl/xl.h b/tools/libxl/xl.h
@@ -2496,8 +2496,8 @@ builder option is marked as deprecated.
 Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
 Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
 ---
- docs/man/xl.cfg.pod.5.in | 23 +++++++++++++++++++--
- tools/libxl/xl_cmdimpl.c | 44 ++++++++++++++++++++++++++++++++++++----
+ docs/man/xl.cfg.pod.5.in | 23 +++++++++++++++++++++--
+ tools/libxl/xl_cmdimpl.c | 44 ++++++++++++++++++++++++++++++++++++++++----
  2 files changed, 61 insertions(+), 6 deletions(-)
 
 diff --git a/docs/man/xl.cfg.pod.5.in b/docs/man/xl.cfg.pod.5.in
@@ -2625,8 +2625,8 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
 
 Ported over changes to xl_parse.c
 ---
- docs/man/xl.cfg.pod.5.in | 56 ++++++++++++++++++++++++++++++++++++++++
- tools/libxl/xl_cmdimpl.c | 47 +++++++++++++++++++++++++++++++++
+ docs/man/xl.cfg.pod.5.in | 56 ++++++++++++++++++++++++++++++++++++++++++++++++
+ tools/libxl/xl_cmdimpl.c | 47 ++++++++++++++++++++++++++++++++++++++++
  2 files changed, 103 insertions(+)
 
 diff --git a/docs/man/xl.cfg.pod.5.in b/docs/man/xl.cfg.pod.5.in
@@ -2785,20 +2785,20 @@ diff --git a/tools/libxl/libxl_internal.h b/tools/libxl/libxl_internal.h
 index dd1db906af..4460d21a69 100644
 --- a/tools/libxl/libxl_internal.h
 +++ b/tools/libxl/libxl_internal.h
-@@ -734,6 +734,13 @@ int libxl__xs_mknod(libxl__gc *gc, xs_transaction_t t,
-                     const char *path, struct xs_permissions *perms,
-                     unsigned int num_perms);
+@@ -736,6 +736,13 @@ int libxl__xs_mknod(libxl__gc *gc, xs_transaction_t t,
  
-+/* On success, *result_out came from the gc.
-+ * On error, *result_out is undefined.
+ /* On success, *result_out came from the gc.
+  * On error, *result_out is undefined.
 + * ENOENT is regarded as error.
 + */
 +int libxl__xs_read_mandatory(libxl__gc *gc, xs_transaction_t t,
 +                             const char *path, const char **result_out);
 +
- /* On success, *result_out came from the gc.
-  * On error, *result_out is undefined.
++/* On success, *result_out came from the gc.
++ * On error, *result_out is undefined.
   * ENOENT counts as success but sets *result_out=0
+  */
+ int libxl__xs_read_checked(libxl__gc *gc, xs_transaction_t t,
 diff --git a/tools/libxl/libxl_usb.c b/tools/libxl/libxl_usb.c
 index 76260b13f5..e5609aa070 100644
 --- a/tools/libxl/libxl_usb.c
@@ -2868,10 +2868,10 @@ Xen 4.8 backport: pvh struct contains copies of the fields that in
 4.10 were added to the main libxl_domain_build_info, and the accessor
 macros are updated to be use them when appropriate.
 ---
- docs/man/xl.cfg.pod.5.in    | 121 ++++++++++++++++++++++++++++++++++++
+ docs/man/xl.cfg.pod.5.in    | 121 ++++++++++++++++++++++++++++++++++++++++++++
  tools/libxl/libxl.h         |   4 ++
- tools/libxl/libxl_create.c  |  21 +++++--
- tools/libxl/libxl_dom.c     |  28 ++++++++-
+ tools/libxl/libxl_create.c  |  21 ++++++--
+ tools/libxl/libxl_dom.c     |  28 ++++++++--
  tools/libxl/libxl_types.idl |   7 +++
  5 files changed, 173 insertions(+), 8 deletions(-)
 
@@ -3267,7 +3267,7 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
 
 Ported over changes to libxl_create.c
 ---
- tools/libxl/libxl_create.c | 74 ++++++++++++++++++++------------------
+ tools/libxl/libxl_create.c | 74 +++++++++++++++++++++++++---------------------
  1 file changed, 40 insertions(+), 34 deletions(-)
 
 diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
@@ -3345,11 +3345,10 @@ index 50d3de640d..3b19cb2c74 100644
      default:
          LOG(ERROR, "invalid domain type %s in create info",
              libxl_domain_type_to_string(b_info->type));
-@@ -501,6 +491,18 @@ int libxl__domain_build(libxl__gc *gc,
-             vments[i++] = (char *) state->pv_cmdline;
+@@ -502,6 +492,18 @@ int libxl__domain_build(libxl__gc *gc,
          }
  
-+        break;
+         break;
 +    case LIBXL_DOMAIN_TYPE_PVH:
 +        ret = libxl__build_hvm(gc, domid, d_config, state);
 +        if (ret)
@@ -3361,9 +3360,10 @@ index 50d3de640d..3b19cb2c74 100644
 +                              (uint64_t)start_time.tv_sec,
 +                              (long)start_time.tv_usec/10000);
 +
-         break;
++        break;
      default:
          ret = ERROR_INVAL;
+         goto out;
 @@ -536,7 +538,7 @@ int libxl__domain_make(libxl__gc *gc, libxl_domain_config *d_config,
      }
  
@@ -3585,7 +3585,7 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
 Ported over changes in libxl_dom.c
 ---
  tools/libxl/libxl_create.c |   2 +-
- tools/libxl/libxl_dom.c    | 151 +++++++++++++++++++++++--------------
+ tools/libxl/libxl_dom.c    | 151 ++++++++++++++++++++++++++++-----------------
  2 files changed, 96 insertions(+), 57 deletions(-)
 
 diff --git a/tools/libxl/libxl_create.c b/tools/libxl/libxl_create.c
@@ -4440,11 +4440,10 @@ diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
 index 2c939a18b1..097e54be63 100644
 --- a/tools/libxl/libxl.h
 +++ b/tools/libxl/libxl.h
-@@ -1043,14 +1043,6 @@ void libxl_mac_copy(libxl_ctx *ctx, libxl_mac *dst, const libxl_mac *src);
- */
+@@ -1044,14 +1044,6 @@ void libxl_mac_copy(libxl_ctx *ctx, libxl_mac *dst, const libxl_mac *src);
  #define LIBXL_HAVE_GFX_PASSTHRU_KIND
  
--/*
+ /*
 - * LIBXL_HAVE_DEVICE_MODEL_VERSION_NONE
 - *
 - * In the case that LIBXL_HAVE_DEVICE_MODEL_VERSION_NONE is set libxl
@@ -4452,9 +4451,10 @@ index 2c939a18b1..097e54be63 100644
 - */
 -#define LIBXL_HAVE_DEVICE_MODEL_VERSION_NONE 1
 -
- /*
+-/*
   * LIBXL_HAVE_CHECKPOINTED_STREAM
   *
+  * If this is defined, then libxl_checkpointed_stream exists.
 diff --git a/tools/libxl/libxl_types.idl b/tools/libxl/libxl_types.idl
 index 1e9621c76f..70ce42944c 100644
 --- a/tools/libxl/libxl_types.idl
@@ -4664,11 +4664,11 @@ Signed-off-by: Wei Liu <wei.liu2@citrix.com>
 ---
  stubdom/grub/kexec.c                 |   7 +-
  tools/helpers/init-xenstore-domain.c |   4 +-
- tools/libxc/include/xc_dom.h         |  48 +++++----
+ tools/libxc/include/xc_dom.h         |  48 ++++++-----
  tools/libxc/xc_dom_compat_linux.c    |   2 +-
- tools/libxc/xc_dom_core.c            | 152 ++++++++++++++++++---------
- tools/libxc/xc_dom_x86.c             |  65 ++++++------
- tools/libxl/libxl_dom.c              |  10 +-
+ tools/libxc/xc_dom_core.c            | 152 +++++++++++++++++++++++------------
+ tools/libxc/xc_dom_x86.c             |  65 ++++++++-------
+ tools/libxl/libxl_dom.c              |  10 +--
  7 files changed, 175 insertions(+), 113 deletions(-)
 
 diff --git a/stubdom/grub/kexec.c b/stubdom/grub/kexec.c
@@ -5322,11 +5322,11 @@ Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
 Signed-off-by: George Dunlap <george.dunlap@citrix.com>
 Signed-off-by: Wei Liu <wei.liu2@citrix.com>
 ---
- tools/libxl/libxl.h          |  8 +++++
- tools/libxl/libxl_create.c   | 15 ++++++++++
- tools/libxl/libxl_dom.c      | 57 +++++++++++++++++++++++++++++-------
- tools/libxl/libxl_internal.h |  4 +++
- tools/libxl/libxl_types.idl  |  3 ++
+ tools/libxl/libxl.h          |  8 +++++++
+ tools/libxl/libxl_create.c   | 15 ++++++++++++
+ tools/libxl/libxl_dom.c      | 57 +++++++++++++++++++++++++++++++++++---------
+ tools/libxl/libxl_internal.h |  4 ++++
+ tools/libxl/libxl_types.idl  |  3 +++
  5 files changed, 76 insertions(+), 11 deletions(-)
 
 diff --git a/tools/libxl/libxl.h b/tools/libxl/libxl.h
@@ -5856,10 +5856,10 @@ Signed-off-by: Jan Beulich <jbeulich@suse.com>
 Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
 Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
 ---
- xen/arch/arm/mm.c                 | 18 +++++++--
- xen/common/grant_table.c          | 62 ++++++++++++++++++++++++++++---
- xen/include/asm-arm/grant_table.h | 11 ++++++
- xen/include/asm-x86/grant_table.h | 12 +++++-
+ xen/arch/arm/mm.c                 | 18 +++++++++---
+ xen/common/grant_table.c          | 62 +++++++++++++++++++++++++++++++++++----
+ xen/include/asm-arm/grant_table.h | 11 +++++++
+ xen/include/asm-x86/grant_table.h | 12 ++++++--
  4 files changed, 92 insertions(+), 11 deletions(-)
 
 diff --git a/xen/arch/arm/mm.c b/xen/arch/arm/mm.c
@@ -6171,11 +6171,10 @@ index 088625bbac..c1cd425067 100644
  #include <asm/cpufeature.h>
  
  DECLARE_BITMAP(cpu_hwcaps, ARM_NCAPS);
-@@ -40,6 +41,34 @@ void update_cpu_capabilities(const struct arm_cpu_capabilities *caps,
-     }
+@@ -41,6 +42,34 @@ void update_cpu_capabilities(const struct arm_cpu_capabilities *caps,
  }
  
-+/*
+ /*
 + * Run through the enabled capabilities and enable() it on all active
 + * CPUs.
 + */
@@ -6203,9 +6202,10 @@ index 088625bbac..c1cd425067 100644
 +    }
 +}
 +
- /*
++/*
   * Local variables:
   * mode: C
+  * c-file-style: "BSD"
 diff --git a/xen/arch/arm/setup.c b/xen/arch/arm/setup.c
 index f4e9605bdc..6116caa7ec 100644
 --- a/xen/arch/arm/setup.c
@@ -6396,10 +6396,10 @@ Conflicts:
 
 (cherry picked from commit 44139fed7c794eb4e47a9bb93061e325bd57fe8c)
 ---
- xen/arch/arm/Kconfig             |  20 +++++
+ xen/arch/arm/Kconfig             |  20 ++++++
  xen/arch/arm/arm64/Makefile      |   1 +
- xen/arch/arm/arm64/bpi.S         |  64 ++++++++++++++
- xen/arch/arm/cpuerrata.c         | 139 +++++++++++++++++++++++++++++++
+ xen/arch/arm/arm64/bpi.S         |  64 ++++++++++++++++++
+ xen/arch/arm/cpuerrata.c         | 139 +++++++++++++++++++++++++++++++++++++++
  xen/arch/arm/traps.c             |   5 +-
  xen/include/asm-arm/cpufeature.h |   3 +-
  xen/include/asm-arm/processor.h  |   5 +-
@@ -6752,8 +6752,8 @@ Conflicts:
 
 (cherry picked from commit 6f6786ef0d7f7025860d360f6b1267193ffd1b27)
 ---
- xen/arch/arm/arm64/bpi.S | 25 +++++++++++++++++++++
- xen/arch/arm/cpuerrata.c | 48 ++++++++++++++++++++++++++++++++++++++++
+ xen/arch/arm/arm64/bpi.S | 25 +++++++++++++++++++++++++
+ xen/arch/arm/cpuerrata.c | 48 ++++++++++++++++++++++++++++++++++++++++++++++++
  2 files changed, 73 insertions(+)
 
 diff --git a/xen/arch/arm/arm64/bpi.S b/xen/arch/arm/arm64/bpi.S
@@ -6836,11 +6836,10 @@ index d0693a2ec6..1b49f84f60 100644
  #endif /* CONFIG_ARM64_HARDEN_BRANCH_PREDICTOR */
  
  #define MIDR_RANGE(model, min, max)     \
-@@ -202,6 +228,28 @@ static const struct arm_cpu_capabilities arm_errata[] = {
-         MIDR_RANGE(MIDR_CORTEX_A57, 0x00,
+@@ -203,6 +229,28 @@ static const struct arm_cpu_capabilities arm_errata[] = {
                     (1 << MIDR_VARIANT_SHIFT) | 2),
      },
-+#endif
+ #endif
 +#ifdef CONFIG_ARM64_HARDEN_BRANCH_PREDICTOR
 +    {
 +        .capability = ARM_HARDEN_BRANCH_PREDICTOR,
@@ -6862,9 +6861,10 @@ index d0693a2ec6..1b49f84f60 100644
 +        MIDR_ALL_VERSIONS(MIDR_CORTEX_A75),
 +        .enable = enable_psci_bp_hardening,
 +    },
- #endif
++#endif
      {},
  };
+ 
 -- 
 
 
@@ -7088,8 +7088,8 @@ Reviewed-by: Stefano Stabellini <sstabellini@kernel.org>
 (cherry picked from commit 7336d0d2a719d6135b8d02801401e449b0dbbfb6)
 ---
  xen/arch/arm/Kconfig       |  3 +++
- xen/arch/arm/arm32/entry.S | 41 +++++++++++++++++++++++++++++++++++++-
- xen/arch/arm/cpuerrata.c   | 30 ++++++++++++++++++++++++++++
+ xen/arch/arm/arm32/entry.S | 41 ++++++++++++++++++++++++++++++++++++++++-
+ xen/arch/arm/cpuerrata.c   | 30 ++++++++++++++++++++++++++++++
  3 files changed, 73 insertions(+), 1 deletion(-)
 
 diff --git a/xen/arch/arm/Kconfig b/xen/arch/arm/Kconfig
@@ -7310,11 +7310,10 @@ index 1e3713524e..84fe698d0a 100644
  #endif
  
  #define MIDR_RANGE(model, min, max)     \
-@@ -280,6 +287,18 @@ static const struct arm_cpu_capabilities arm_errata[] = {
-         MIDR_ALL_VERSIONS(MIDR_CORTEX_A75),
+@@ -281,6 +288,18 @@ static const struct arm_cpu_capabilities arm_errata[] = {
          .enable = enable_psci_bp_hardening,
      },
-+#endif
+ #endif
 +#ifdef CONFIG_ARM32_HARDEN_BRANCH_PREDICTOR
 +    {
 +        .capability = ARM_HARDEN_BRANCH_PREDICTOR,
@@ -7326,9 +7325,10 @@ index 1e3713524e..84fe698d0a 100644
 +        MIDR_ALL_VERSIONS(MIDR_CORTEX_A17),
 +        .enable = enable_bp_inv_hardening,
 +    },
- #endif
++#endif
      {},
  };
+ 
 -- 
 
 
@@ -7361,11 +7361,10 @@ diff --git a/xen/arch/arm/arm32/entry.S b/xen/arch/arm/arm32/entry.S
 index 2ffa42248a..3e48ba18d8 100644
 --- a/xen/arch/arm/arm32/entry.S
 +++ b/xen/arch/arm/arm32/entry.S
-@@ -150,6 +150,26 @@ GLOBAL(hyp_traps_vector)
- 
+@@ -151,6 +151,26 @@ GLOBAL(hyp_traps_vector)
  #ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
  
-+        .align 5
+         .align 5
 +GLOBAL(hyp_traps_vector_ic_inv)
 +        /*
 +         * We encode the exception entry in the bottom 3 bits of
@@ -7385,9 +7384,10 @@ index 2ffa42248a..3e48ba18d8 100644
 +
 +        b decode_vectors
 +
-         .align 5
++        .align 5
  GLOBAL(hyp_traps_vector_bp_inv)
          /*
+          * We encode the exception entry in the bottom 3 bits of
 @@ -168,6 +188,7 @@ GLOBAL(hyp_traps_vector_bp_inv)
          mcr	p15, 0, r0, c7, c5, 6	    /* BPIALL */
          isb
@@ -7504,8 +7504,8 @@ master date: 2018-01-05 19:57:07 +0000
 
 (cherry picked from commit 3efcd7fb40a900bc7d4f9063f2d43ee27b0a5270)
 ---
- xen/include/asm-x86/alternative-asm.h | 31 +++++++++++++++++++++++++++
- xen/include/asm-x86/alternative.h     | 13 +++--------
+ xen/include/asm-x86/alternative-asm.h | 31 +++++++++++++++++++++++++++++++
+ xen/include/asm-x86/alternative.h     | 13 +++----------
  2 files changed, 34 insertions(+), 10 deletions(-)
  create mode 100644 xen/include/asm-x86/alternative-asm.h
 
@@ -7595,7 +7595,7 @@ master date: 2018-01-05 19:57:07 +0000
 
 (cherry picked from commit 87cb0e2090fce317c4e6775f343d5caba66f61f1)
 ---
- xen/include/asm-x86/alternative-asm.h | 46 +++++++++++++++++++++++++++
+ xen/include/asm-x86/alternative-asm.h | 46 +++++++++++++++++++++++++++++++++++
  1 file changed, 46 insertions(+)
 
 diff --git a/xen/include/asm-x86/alternative-asm.h b/xen/include/asm-x86/alternative-asm.h
@@ -8232,7 +8232,7 @@ master date: 2018-01-16 17:45:50 +0000
 ---
  xen/arch/x86/Makefile         |  1 +
  xen/arch/x86/Rules.mk         |  7 +++++++
- xen/arch/x86/indirect-thunk.S | 38 +++++++++++++++++++++++++++++++++++
+ xen/arch/x86/indirect-thunk.S | 38 ++++++++++++++++++++++++++++++++++++++
  xen/arch/x86/xen.lds.S        |  1 +
  4 files changed, 47 insertions(+)
  create mode 100644 xen/arch/x86/indirect-thunk.S
@@ -8344,15 +8344,15 @@ master date: 2018-01-16 17:45:50 +0000
 
 (cherry picked from commit 60c50f2b0bf5d3f894ca428cf4b4374fbea2d082)
 ---
- xen/Rules.mk                             |  4 +--
- xen/arch/x86/Rules.mk                    |  6 ++++
- xen/arch/x86/boot/trampoline.S           | 24 ++++++++++++--
- xen/arch/x86/traps.c                     | 41 +++++++++++++++++-------
- xen/arch/x86/x86_64/entry.S              |  6 ++--
- xen/arch/x86/x86_emulate/x86_emulate.c   | 16 ++++-----
- xen/common/wait.c                        |  8 +++--
- xen/include/asm-x86/asm_defns.h          |  8 +++++
- xen/include/asm-x86/indirect_thunk_asm.h | 41 ++++++++++++++++++++++++
+ xen/Rules.mk                             |  4 ++--
+ xen/arch/x86/Rules.mk                    |  6 +++++
+ xen/arch/x86/boot/trampoline.S           | 24 +++++++++++++++++--
+ xen/arch/x86/traps.c                     | 41 ++++++++++++++++++++++----------
+ xen/arch/x86/x86_64/entry.S              |  6 +++--
+ xen/arch/x86/x86_emulate/x86_emulate.c   | 16 ++++++-------
+ xen/common/wait.c                        |  8 ++++---
+ xen/include/asm-x86/asm_defns.h          |  8 +++++++
+ xen/include/asm-x86/indirect_thunk_asm.h | 41 ++++++++++++++++++++++++++++++++
  xen/include/xen/config.h                 |  2 +-
  10 files changed, 126 insertions(+), 30 deletions(-)
  create mode 100644 xen/include/asm-x86/indirect_thunk_asm.h
@@ -8714,8 +8714,8 @@ master date: 2018-01-16 17:45:50 +0000
 ---
  xen/arch/x86/Makefile           |  1 +
  xen/arch/x86/setup.c            |  3 ++
- xen/arch/x86/spec_ctrl.c        | 75 +++++++++++++++++++++++++++++++++
- xen/include/asm-x86/spec_ctrl.h | 35 +++++++++++++++
+ xen/arch/x86/spec_ctrl.c        | 75 +++++++++++++++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl.h | 35 +++++++++++++++++++
  4 files changed, 114 insertions(+)
  create mode 100644 xen/arch/x86/spec_ctrl.c
  create mode 100644 xen/include/asm-x86/spec_ctrl.h
@@ -8896,7 +8896,7 @@ master date: 2018-01-16 17:45:50 +0000
 
 (cherry picked from commit 479b879a7dd0bbf02920d2f6053d9bee271797ce)
 ---
- xen/arch/x86/cpu/amd.c           | 35 +++++++++++++++++++++++++++++++-
+ xen/arch/x86/cpu/amd.c           | 35 ++++++++++++++++++++++++++++++++++-
  xen/include/asm-x86/cpufeature.h |  2 ++
  xen/include/asm-x86/msr-index.h  |  1 +
  3 files changed, 37 insertions(+), 1 deletion(-)
@@ -9003,9 +9003,9 @@ master date: 2018-01-16 17:45:50 +0000
 
 (cherry picked from commit ca9583d9e705aaa74da121e920ebf77d9f7995b2)
 ---
- docs/misc/xen-command-line.markdown | 16 ++++++
- xen/arch/x86/indirect-thunk.S       | 17 +++++--
- xen/arch/x86/spec_ctrl.c            | 75 +++++++++++++++++++++++++++--
+ docs/misc/xen-command-line.markdown | 16 ++++++++
+ xen/arch/x86/indirect-thunk.S       | 17 +++++++--
+ xen/arch/x86/spec_ctrl.c            | 75 +++++++++++++++++++++++++++++++++++--
  xen/include/asm-x86/cpufeature.h    |  2 +
  4 files changed, 104 insertions(+), 6 deletions(-)
 
@@ -9131,7 +9131,7 @@ index 256701a43c..d601c028d8 100644
  
  static void __init print_details(enum ind_thunk thunk)
  {
-@@ -40,13 +76,40 @@ static void __init print_details(enum ind_thunk thunk)
+@@ -40,7 +76,9 @@ static void __init print_details(enum ind_thunk thunk)
      printk(XENLOG_INFO
             "BTI mitigations: Thunk %s\n",
             thunk == THUNK_NONE      ? "N/A" :
@@ -9142,10 +9142,10 @@ index 256701a43c..d601c028d8 100644
  }
  
  void __init init_speculation_mitigations(void)
- {
+@@ -48,6 +86,31 @@ void __init init_speculation_mitigations(void)
      enum ind_thunk thunk = THUNK_DEFAULT;
  
-+    /*
+     /*
 +     * Has the user specified any custom BTI mitigations?  If so, follow their
 +     * instructions exactly and disable all heuristics.
 +     */
@@ -9170,9 +9170,10 @@ index 256701a43c..d601c028d8 100644
 +        }
 +    }
 +
-     /*
++    /*
       * Supplimentary minor adjustments.  Without compiler support, there are
       * no thunks.
+      */
 @@ -61,6 +124,12 @@ void __init init_speculation_mitigations(void)
      if ( thunk == THUNK_DEFAULT )
          thunk = THUNK_RETPOLINE;
@@ -9476,10 +9477,10 @@ master date: 2018-01-31 10:47:12 +0000
 
 (cherry picked from commit 532ccf4fd55cfd916f56279a71852585d726ab23)
 ---
- docs/misc/xen-command-line.markdown | 12 ++++++++++
- xen/arch/x86/cpuid.c                | 35 ++++++++++++++++++++++++++++
- xen/common/kernel.c                 | 36 +++++++++++++++++++++++++++++
- xen/include/xen/lib.h               |  7 ++++++
+ docs/misc/xen-command-line.markdown | 12 ++++++++++++
+ xen/arch/x86/cpuid.c                | 35 +++++++++++++++++++++++++++++++++++
+ xen/common/kernel.c                 | 36 ++++++++++++++++++++++++++++++++++++
+ xen/include/xen/lib.h               |  7 +++++++
  4 files changed, 90 insertions(+)
 
 diff --git a/docs/misc/xen-command-line.markdown b/docs/misc/xen-command-line.markdown
@@ -9657,8 +9658,8 @@ master date: 2018-01-26 14:10:21 +0000
 (cherry picked from commit c3d195cd91385531ed12af2576bfedcab3118211)
 ---
  tools/libxc/xc_cpuid_x86.c                  |  4 +++-
- xen/arch/x86/cpuid.c                        | 20 +++++++++++++++++++
- xen/arch/x86/domctl.c                       | 22 +++++++++++++++++----
+ xen/arch/x86/cpuid.c                        | 20 ++++++++++++++++++++
+ xen/arch/x86/domctl.c                       | 22 ++++++++++++++++++----
  xen/include/public/arch-x86/cpufeatureset.h |  2 +-
  4 files changed, 42 insertions(+), 6 deletions(-)
 
@@ -9805,9 +9806,9 @@ master date: 2018-01-26 14:10:21 +0000
 
 (cherry picked from commit 29e7171e9dd0aa8e35f790157d781dff22f6a970)
 ---
- xen/arch/x86/domain.c           |  5 ++-
- xen/arch/x86/hvm/hvm.c          | 54 +++++++++++++++++++++++++++++++--
- xen/arch/x86/traps.c            | 49 ++++++++++++++++++++++++++++++
+ xen/arch/x86/domain.c           |  5 ++--
+ xen/arch/x86/hvm/hvm.c          | 54 +++++++++++++++++++++++++++++++++++++++--
+ xen/arch/x86/traps.c            | 49 +++++++++++++++++++++++++++++++++++++
  xen/include/asm-x86/domain.h    |  4 ++-
  xen/include/asm-x86/msr-index.h |  2 ++
  5 files changed, 108 insertions(+), 6 deletions(-)
@@ -10341,13 +10342,13 @@ master date: 2018-01-26 14:10:21 +0000
  xen/arch/x86/setup.c                |   1 +
  xen/arch/x86/smpboot.c              |   2 +
  xen/arch/x86/x86_64/asm-offsets.c   |   3 +
- xen/arch/x86/x86_64/compat/entry.S  |  13 ++
- xen/arch/x86/x86_64/entry.S         |  47 +++++-
+ xen/arch/x86/x86_64/compat/entry.S  |  13 +++
+ xen/arch/x86/x86_64/entry.S         |  47 +++++++-
  xen/include/asm-x86/asm_defns.h     |   3 +
  xen/include/asm-x86/current.h       |   6 +
  xen/include/asm-x86/nops.h          |   6 +
  xen/include/asm-x86/spec_ctrl.h     |   9 ++
- xen/include/asm-x86/spec_ctrl_asm.h | 224 ++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl_asm.h | 224 ++++++++++++++++++++++++++++++++++++
  12 files changed, 336 insertions(+), 6 deletions(-)
  create mode 100644 xen/include/asm-x86/spec_ctrl_asm.h
 
@@ -10980,7 +10981,7 @@ master date: 2018-01-26 14:10:21 +0000
 ---
  xen/include/asm-x86/cpufeature.h    |  2 ++
  xen/include/asm-x86/nops.h          |  1 +
- xen/include/asm-x86/spec_ctrl_asm.h | 44 +++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl_asm.h | 44 +++++++++++++++++++++++++++++++++++++
  3 files changed, 47 insertions(+)
 
 diff --git a/xen/include/asm-x86/cpufeature.h b/xen/include/asm-x86/cpufeature.h
@@ -11116,12 +11117,12 @@ master date: 2018-01-26 14:10:21 +0000
 
 (cherry picked from commit 64c1742b206344c51db130b0bb47fc299a1462ca)
 ---
- xen/arch/x86/spec_ctrl.c            |  8 ++++
+ xen/arch/x86/spec_ctrl.c            |  8 +++++
  xen/arch/x86/x86_64/asm-offsets.c   |  1 +
- xen/arch/x86/x86_64/entry.S         |  6 +--
+ xen/arch/x86/x86_64/entry.S         |  6 ++--
  xen/include/asm-x86/current.h       |  1 +
  xen/include/asm-x86/spec_ctrl.h     |  1 +
- xen/include/asm-x86/spec_ctrl_asm.h | 67 +++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl_asm.h | 67 +++++++++++++++++++++++++++++++++++++
  6 files changed, 81 insertions(+), 3 deletions(-)
 
 diff --git a/xen/arch/x86/spec_ctrl.c b/xen/arch/x86/spec_ctrl.c
@@ -11358,8 +11359,8 @@ master date: 2018-02-06 18:32:58 +0000
 
 (cherry picked from commit c0bfde68ccd941b14a2f0ca54c61a83796156ea6)
 ---
- docs/misc/xen-command-line.markdown |  10 +-
- xen/arch/x86/spec_ctrl.c            | 141 +++++++++++++++++++++++++++-
+ docs/misc/xen-command-line.markdown |  10 ++-
+ xen/arch/x86/spec_ctrl.c            | 141 +++++++++++++++++++++++++++++++++++-
  xen/include/asm-x86/spec_ctrl.h     |   4 +-
  3 files changed, 149 insertions(+), 6 deletions(-)
 
@@ -11540,20 +11541,20 @@ index cc1c972845..8aefe29968 100644
      }
  
      /*
-@@ -136,6 +218,13 @@ void __init init_speculation_mitigations(void)
-     if ( !IS_ENABLED(CONFIG_INDIRECT_THUNK) )
+@@ -137,6 +219,13 @@ void __init init_speculation_mitigations(void)
          thunk = THUNK_NONE;
  
-+    /*
+     /*
 +     * If IBRS is in use and thunks are compiled in, there is no point
 +     * suffering extra overhead.  Switch to the least-overhead thunk.
 +     */
 +    if ( ibrs && thunk == THUNK_DEFAULT )
 +        thunk = THUNK_JMP;
 +
-     /*
++    /*
       * If there are still no thunk preferences, the compiled default is
       * actually retpoline, and it is better than nothing.
+      */
 @@ -149,6 +238,50 @@ void __init init_speculation_mitigations(void)
      else if ( thunk == THUNK_JMP )
          setup_force_cpu_cap(X86_FEATURE_IND_THUNK_JMP);
@@ -11851,10 +11852,10 @@ master date: 2018-01-26 14:10:21 +0000
 
 (cherry picked from commit 99ed7863b29ea170e50749fe22991b964cbce6ba)
 ---
- xen/arch/x86/acpi/cpu_idle.c    | 21 ++++++++++++++++++++
+ xen/arch/x86/acpi/cpu_idle.c    | 21 +++++++++++++++++++++
  xen/arch/x86/cpu/mwait-idle.c   |  7 +++++++
  xen/arch/x86/domain.c           |  8 ++++++++
- xen/include/asm-x86/spec_ctrl.h | 34 +++++++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl.h | 34 ++++++++++++++++++++++++++++++++++
  4 files changed, 70 insertions(+)
 
 diff --git a/xen/arch/x86/acpi/cpu_idle.c b/xen/arch/x86/acpi/cpu_idle.c
@@ -12394,10 +12395,11 @@ index f24bffb574..80c956edff 100644
  /* CREATE A BASIC EXCEPTION FRAME ON GUEST OS STACK:                     */
 -- 
 
-From a1a26ccfeb7d33bd31c2abbd261c303d8072dcec Mon Sep 17 00:00:00 2001
+
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Thu, 26 Apr 2018 22:59:08 -0700
-Subject: [PATCH 1/4] x86/traps: Fix %dr6 handing in #DB handler
+Subject: [PATCH] x86/traps: Fix %dr6 handing in #DB handler
 
 Most bits in %dr6 accumulate, rather than being set directly based on the
 current source of #DB.  Have the handler follow the manuals guidance, which
@@ -12413,7 +12415,7 @@ Reviewed-by: Jan Beulich <jbeulich@suse.com>
  2 files changed, 29 insertions(+), 1 deletion(-)
 
 diff --git a/xen/arch/x86/traps.c b/xen/arch/x86/traps.c
-index 7c6af70..e7c3fd4 100644
+index 7c6af7069d..e7c3fd4ec9 100644
 --- a/xen/arch/x86/traps.c
 +++ b/xen/arch/x86/traps.c
 @@ -4032,11 +4032,36 @@ static void ler_enable(void)
@@ -12464,7 +12466,7 @@ index 7c6af70..e7c3fd4 100644
      ler_enable();
      do_guest_trap(TRAP_debug, regs);
 diff --git a/xen/include/asm-x86/debugreg.h b/xen/include/asm-x86/debugreg.h
-index c57914e..b3b10ea 100644
+index c57914efc6..b3b10eaf40 100644
 --- a/xen/include/asm-x86/debugreg.h
 +++ b/xen/include/asm-x86/debugreg.h
 @@ -24,6 +24,8 @@
@@ -12477,13 +12479,12 @@ index c57914e..b3b10ea 100644
     The top two bytes of the control register consist of 4 fields of 4
     bits - each field corresponds to one of the four debug registers,
 -- 
-1.9.1
 
 
-From 0ab7df83cdc689013f788706a32844799c384f04 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Thu, 26 Apr 2018 18:03:04 -0700
-Subject: [PATCH 2/4] x86/pv: Move exception injection into
+Subject: [PATCH] x86/pv: Move exception injection into
  {,compat_}test_all_events()
 
 This allows paths to jump straight to {,compat_}test_all_events() and have
@@ -12507,7 +12508,7 @@ Conflicts:
  2 files changed, 31 insertions(+), 16 deletions(-)
 
 diff --git a/xen/arch/x86/x86_64/compat/entry.S b/xen/arch/x86/x86_64/compat/entry.S
-index 9f65e91..a499e1e 100644
+index 9f65e91d7b..a499e1e634 100644
 --- a/xen/arch/x86/x86_64/compat/entry.S
 +++ b/xen/arch/x86/x86_64/compat/entry.S
 @@ -45,6 +45,12 @@ ENTRY(compat_test_all_events)
@@ -12556,7 +12557,7 @@ index 9f65e91..a499e1e 100644
  ENTRY(cstar_enter)
          sti
 diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
-index 80c956e..b12e993 100644
+index 80c956edff..b12e993ff3 100644
 --- a/xen/arch/x86/x86_64/entry.S
 +++ b/xen/arch/x86/x86_64/entry.S
 @@ -186,6 +186,12 @@ test_all_events:
@@ -12606,13 +12607,12 @@ index 80c956e..b12e993 100644
  
  /* No special register assumptions. */
 -- 
-1.9.1
 
 
-From e8b7a12c597e2714ae01108df44a84ac2be0b6cc Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Thu, 26 Apr 2018 23:13:16 -0700
-Subject: [PATCH 3/4] x86/traps: Use an Interrupt Stack Table for #DB
+Subject: [PATCH] x86/traps: Use an Interrupt Stack Table for #DB
 
 PV guests can use architectural corner cases to cause #DB to be raised after
 transitioning into supervisor mode.
@@ -12634,7 +12634,7 @@ Reviewed-by: Jan Beulich <jbeulich@suse.com>
  6 files changed, 15 insertions(+), 8 deletions(-)
 
 diff --git a/xen/arch/x86/cpu/common.c b/xen/arch/x86/cpu/common.c
-index 948b0a9..e3ddb48 100644
+index 948b0a91ea..e3ddb482a2 100644
 --- a/xen/arch/x86/cpu/common.c
 +++ b/xen/arch/x86/cpu/common.c
 @@ -679,6 +679,7 @@ void load_system_tables(void)
@@ -12654,7 +12654,7 @@ index 948b0a9..e3ddb48 100644
  	/*
  	 * Bottom-of-stack must be 16-byte aligned!
 diff --git a/xen/arch/x86/hvm/svm/svm.c b/xen/arch/x86/hvm/svm/svm.c
-index 19e0265..903c5c2 100644
+index 19e02658be..903c5c26d1 100644
 --- a/xen/arch/x86/hvm/svm/svm.c
 +++ b/xen/arch/x86/hvm/svm/svm.c
 @@ -1042,6 +1042,7 @@ static void svm_ctxt_switch_from(struct vcpu *v)
@@ -12674,7 +12674,7 @@ index 19e0265..903c5c2 100644
      svm_restore_dr(v);
  
 diff --git a/xen/arch/x86/smpboot.c b/xen/arch/x86/smpboot.c
-index 21a8685..1d232db 100644
+index 21a8685739..1d232db775 100644
 --- a/xen/arch/x86/smpboot.c
 +++ b/xen/arch/x86/smpboot.c
 @@ -912,6 +912,7 @@ static int cpu_smpboot_alloc(unsigned int cpu)
@@ -12686,7 +12686,7 @@ index 21a8685..1d232db 100644
      if ( setup_cpu_root_pgt(cpu) )
          goto oom;
 diff --git a/xen/arch/x86/traps.c b/xen/arch/x86/traps.c
-index e7c3fd4..05b3b46 100644
+index e7c3fd4ec9..05b3b46c28 100644
 --- a/xen/arch/x86/traps.c
 +++ b/xen/arch/x86/traps.c
 @@ -258,13 +258,13 @@ static void show_guest_stack(struct vcpu *v, const struct cpu_user_regs *regs)
@@ -12743,7 +12743,7 @@ index e7c3fd4..05b3b46 100644
      /* CPU0 uses the master IDT. */
      idt_tables[0] = idt_table;
 diff --git a/xen/arch/x86/x86_64/entry.S b/xen/arch/x86/x86_64/entry.S
-index b12e993..850dc55 100644
+index b12e993ff3..850dc55bc3 100644
 --- a/xen/arch/x86/x86_64/entry.S
 +++ b/xen/arch/x86/x86_64/entry.S
 @@ -690,7 +690,7 @@ ENTRY(device_not_available)
@@ -12756,7 +12756,7 @@ index b12e993..850dc55 100644
  ENTRY(int3)
          pushq $0
 diff --git a/xen/include/asm-x86/processor.h b/xen/include/asm-x86/processor.h
-index a73993c..c29f397 100644
+index a73993c873..c29f397a8c 100644
 --- a/xen/include/asm-x86/processor.h
 +++ b/xen/include/asm-x86/processor.h
 @@ -505,7 +505,8 @@ struct __packed __cacheline_aligned tss_struct {
@@ -12770,13 +12770,12 @@ index a73993c..c29f397 100644
  /* Set the interrupt stack table used by a particular interrupt
   * descriptor table entry. */
 -- 
-1.9.1
 
 
-From e13c8792786fe1c62205e6d77334d7f647bd4775 Mon Sep 17 00:00:00 2001
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Andrew Cooper <andrew.cooper3@citrix.com>
 Date: Thu, 26 Apr 2018 23:26:56 -0700
-Subject: [PATCH 4/4] x86/traps: Fix handling of #DB exceptions in hypervisor
+Subject: [PATCH] x86/traps: Fix handling of #DB exceptions in hypervisor
  context
 
 The WARN_ON() can be triggered by guest activities, and emits a full stack
@@ -12797,7 +12796,7 @@ Reviewed-by: Jan Beulich <jbeulich@suse.com>
  1 file changed, 36 insertions(+), 8 deletions(-)
 
 diff --git a/xen/arch/x86/traps.c b/xen/arch/x86/traps.c
-index 05b3b46..982d0a4 100644
+index 05b3b46c28..982d0a4834 100644
 --- a/xen/arch/x86/traps.c
 +++ b/xen/arch/x86/traps.c
 @@ -4080,16 +4080,44 @@ void do_debug(struct cpu_user_regs *regs)
@@ -12854,9 +12853,9 @@ index 05b3b46..982d0a4 100644
      }
  
 -- 
-1.9.1
 
-From 519038128255bfffe35fb11a0405f5673e8ec0e4 Mon Sep 17 00:00:00 2001
+
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Xen Project Security Team <security@xenproject.org>
 Date: Thu, 26 Apr 2018 23:28:27 -0700
 Subject: [PATCH] x86/vpt: add support for IO-APIC routed interrupts
@@ -12898,7 +12897,7 @@ Signed-off-by: Jan Beulich <jbeulich@suse.com>
  5 files changed, 89 insertions(+), 26 deletions(-)
 
 diff --git a/xen/arch/x86/hvm/hpet.c b/xen/arch/x86/hvm/hpet.c
-index f7aed7f..2837709 100644
+index f7aed7f69e..28377091ca 100644
 --- a/xen/arch/x86/hvm/hpet.c
 +++ b/xen/arch/x86/hvm/hpet.c
 @@ -264,13 +264,20 @@ static void hpet_set_timer(HPETState *h, unsigned int tn,
@@ -12923,7 +12922,7 @@ index f7aed7f..2837709 100644
      /*
       * diff is the time from now when the timer should fire, for a periodic
 diff --git a/xen/arch/x86/hvm/irq.c b/xen/arch/x86/hvm/irq.c
-index 34814a2..7589c35 100644
+index 34814a2525..7589c351af 100644
 --- a/xen/arch/x86/hvm/irq.c
 +++ b/xen/arch/x86/hvm/irq.c
 @@ -42,6 +42,25 @@ static void assert_gsi(struct domain *d, unsigned ioapic_gsi)
@@ -12953,7 +12952,7 @@ index 34814a2..7589c35 100644
  {
      assert_gsi(d, ioapic_gsi);
 diff --git a/xen/arch/x86/hvm/vpt.c b/xen/arch/x86/hvm/vpt.c
-index 5c48fdb..9a42129 100644
+index 5c48fdb4b5..9a42129a4b 100644
 --- a/xen/arch/x86/hvm/vpt.c
 +++ b/xen/arch/x86/hvm/vpt.c
 @@ -97,22 +97,36 @@ static int pt_irq_vector(struct periodic_time *pt, enum hvm_intsrc src)
@@ -13093,7 +13092,7 @@ index 5c48fdb..9a42129 100644
      if ( pt->vcpu == NULL )
          return;
 diff --git a/xen/include/asm-x86/hvm/irq.h b/xen/include/asm-x86/hvm/irq.h
-index 73b8fb0..e8aedaa 100644
+index 73b8fb0457..e8aedaa946 100644
 --- a/xen/include/asm-x86/hvm/irq.h
 +++ b/xen/include/asm-x86/hvm/irq.h
 @@ -103,4 +103,7 @@ struct hvm_intack hvm_vcpu_has_pending_irq(struct vcpu *v);
@@ -13105,7 +13104,7 @@ index 73b8fb0..e8aedaa 100644
 +
  #endif /* __ASM_X86_HVM_IRQ_H__ */
 diff --git a/xen/include/asm-x86/hvm/vpt.h b/xen/include/asm-x86/hvm/vpt.h
-index 1b7213d..a011a28 100644
+index 1b7213d6be..a011a284c5 100644
 --- a/xen/include/asm-x86/hvm/vpt.h
 +++ b/xen/include/asm-x86/hvm/vpt.h
 @@ -45,6 +45,7 @@ struct periodic_time {
@@ -13117,9 +13116,9 @@ index 1b7213d..a011a28 100644
      u8 irq;
      struct vcpu *vcpu;          /* vcpu timer interrupt delivers to */
 -- 
-1.9.1
 
-From 3cec012f119c29625f375cdc67438c35d9acff0a Mon Sep 17 00:00:00 2001
+
+From git-format-patch Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
 Date: Thu, 26 Apr 2018 23:28:44 -0700
 Subject: [PATCH] x86/HVM: guard against emulator driving ioreq state in weird
@@ -13146,7 +13145,7 @@ Reviewed-by: George Dunlap <george.dunlap@citrix.com>
  1 file changed, 24 insertions(+), 5 deletions(-)
 
 diff --git a/xen/arch/x86/hvm/ioreq.c b/xen/arch/x86/hvm/ioreq.c
-index 9b3994e..45d2180 100644
+index 9b3994e13c..45d218011f 100644
 --- a/xen/arch/x86/hvm/ioreq.c
 +++ b/xen/arch/x86/hvm/ioreq.c
 @@ -88,14 +88,17 @@ static void hvm_io_assist(struct hvm_ioreq_vcpu *sv, uint64_t data)
@@ -13204,5 +13203,556 @@ index 9b3994e..45d2180 100644
              gdprintk(XENLOG_ERR, "Weird HVM iorequest state %u\n", state);
              sv->pending = 0;
 -- 
-1.9.1
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Wed, 27 Jun 2018 13:47:29 -0500
+Subject: [PATCH] x86/mm: don't bypass preemption checks
+
+While unlikely, it is not impossible for a multi-vCPU guest to leverage
+bypasses of preemption checks to drive Xen into an unbounded loop.
+
+This is XSA-264.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Andrew Cooper <andrew.cooper3@citrix.com>
+---
+ xen/arch/x86/mm.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/xen/arch/x86/mm.c b/xen/arch/x86/mm.c
+index 303c551cda..a8111bdc55 100644
+--- a/xen/arch/x86/mm.c
++++ b/xen/arch/x86/mm.c
+@@ -2613,7 +2613,7 @@ static int _put_page_type(struct page_info *page, bool preemptible,
+                 nx = x & ~(PGT_validated|PGT_partial);
+                 if ( unlikely((y = cmpxchg(&page->u.inuse.type_info,
+                                            x, nx)) != x) )
+-                    continue;
++                    goto maybe_preempt;
+                 /* We cleared the 'valid bit' so we do the clean up. */
+                 rc = _put_final_page_type(page, x, preemptible, ptpg);
+                 ptpg = NULL;
+@@ -2649,12 +2649,13 @@ static int _put_page_type(struct page_info *page, bool preemptible,
+              */
+             cpu_relax();
+             y = page->u.inuse.type_info;
+-            continue;
++            goto maybe_preempt;
+         }
+ 
+         if ( likely((y = cmpxchg(&page->u.inuse.type_info, x, nx)) == x) )
+             break;
+ 
++    maybe_preempt:
+         if ( preemptible && hypercall_preempt_check() )
+             return -EINTR;
+     }
+@@ -2758,12 +2759,11 @@ static int __get_page_type(struct page_info *page, unsigned long type,
+             if ( !(x & PGT_partial) )
+             {
+                 /* Someone else is updating validation of this page. Wait... */
+-                while ( (y = page->u.inuse.type_info) == x )
+-                {
++                do {
+                     if ( preemptible && hypercall_preempt_check() )
+                         return -EINTR;
+                     cpu_relax();
+-                }
++                } while ( (y = page->u.inuse.type_info) == x );
+                 continue;
+             }
+             /* Type ref count was left at 1 when PGT_partial got set. */
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Wed, 27 Jun 2018 13:47:35 -0500
+Subject: [PATCH] x86: Refine checks in #DB handler for faulting conditions
+
+One of the fix for XSA-260 (c/s 75d6828bc2 "x86/traps: Fix handling of #DB
+exceptions in hypervisor context") added some safety checks to help avoid
+livelocks of #DB faults.
+
+While a General Detect #DB exception does have fault semantics, hardware
+clears %dr7.gd on entry to the handler, meaning that it is actually safe to
+return to.  Furthermore, %dr6.gd is guest controlled and sticky (never cleared
+by hardware).  A malicious PV guest can therefore trigger the fatal_trap() and
+crash Xen.
+
+Instruction breakpoints are more tricky.  The breakpoint match bits in %dr6
+are not sticky, but the Intel manual warns that they may be set for
+non-enabled breakpoints, so add a breakpoint enabled check.
+
+Beyond that, because of the restriction on the linear addresses PV guests can
+set, and the fault (rather than trap) nature of instruction breakpoints
+(i.e. can't be deferred by a MovSS shadow), there should be no way to
+encounter an instruction breakpoint in Xen context.  However, for extra
+robustness, deal with this situation by clearing the breakpoint configuration,
+rather than crashing.
+
+This is XSA-265
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/traps.c | 42 ++++++++++++++++++++++++++++++------------
+ 1 file changed, 30 insertions(+), 12 deletions(-)
+
+diff --git a/xen/arch/x86/traps.c b/xen/arch/x86/traps.c
+index 982d0a4834..a73075a29f 100644
+--- a/xen/arch/x86/traps.c
++++ b/xen/arch/x86/traps.c
+@@ -4064,6 +4064,13 @@ void do_debug(struct cpu_user_regs *regs)
+ 
+     if ( !guest_mode(regs) )
+     {
++        /*
++         * !!! WARNING !!!
++         *
++         * %dr6 is mostly guest controlled at this point.  Any decsions base
++         * on its value must be crosschecked with non-guest controlled state.
++         */
++
+         if ( regs->eflags & X86_EFLAGS_TF )
+         {
+             /* In SYSENTER entry path we can't zap TF until EFLAGS is saved. */
+@@ -4085,33 +4092,44 @@ void do_debug(struct cpu_user_regs *regs)
+          * Check for fault conditions.  General Detect, and instruction
+          * breakpoints are faults rather than traps, at which point attempting
+          * to ignore and continue will result in a livelock.
++         *
++         * However, on entering the #DB handler, hardware clears %dr7.gd for
++         * us (as confirmed by the earlier %dr6 accesses succeeding), meaning
++         * that a real General Detect exception is restartable.
++         *
++         * PV guests are not permitted to point %dr{0..3} at Xen linear
++         * addresses, and Instruction Breakpoints (being faults) don't get
++         * delayed by a MovSS shadow, so we should never encounter one in
++         * hypervisor context.
++         *
++         * If however we do, safety measures need to be enacted.  Use a big
++         * hammer and clear all debug settings.
+          */
+-        if ( dr6 & DR_GENERAL_DETECT )
+-        {
+-            printk(XENLOG_ERR "Hit General Detect in Xen context\n");
+-            fatal_trap(regs, 0);
+-        }
+-
+         if ( dr6 & (DR_TRAP3 | DR_TRAP2 | DR_TRAP1 | DR_TRAP0) )
+         {
+-            unsigned int bp, dr7 = read_debugreg(7) >> DR_CONTROL_SHIFT;
++            unsigned int bp, dr7 = read_debugreg(7);
+ 
+             for ( bp = 0; bp < 4; ++bp )
+             {
+                 if ( (dr6 & (1u << bp)) && /* Breakpoint triggered? */
+-                     ((dr7 & (3u << (bp * DR_CONTROL_SIZE))) == 0) /* Insn? */ )
++                     (dr7 & (3u << (bp * DR_ENABLE_SIZE))) && /* Enabled? */
++                     ((dr7 & (3u << ((bp * DR_CONTROL_SIZE) + /* Insn? */
++                                     DR_CONTROL_SHIFT))) == DR_RW_EXECUTE) )
+                 {
++                    ASSERT_UNREACHABLE();
++
+                     printk(XENLOG_ERR
+                            "Hit instruction breakpoint in Xen context\n");
+-                    fatal_trap(regs, 0);
++                    write_debugreg(7, 0);
++                    break;
+                 }
+             }
+         }
+ 
+         /*
+-         * Whatever caused this #DB should be a trap.  Note it and continue.
+-         * Guests can trigger this in certain corner cases, so ensure the
+-         * message is ratelimited.
++         * Whatever caused this #DB should be restartable by this point.  Note
++         * it and continue.  Guests can trigger this in certain corner cases,
++         * so ensure the message is ratelimited.
+          */
+         gprintk(XENLOG_WARNING,
+                 "Hit #DB in Xen context: %04x:%p [%ps], stk %04x:%p, dr6 %lx\n",
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Wed, 13 Jun 2018 15:51:36 +0100
+Subject: [PATCH] libxl: qemu_disk_scsi_drive_string: Break out common parts of
+ disk config
+
+The generated configurations are identical apart from, in some cases,
+reordering of the id=%s element.  So, overall, no functional change.
+
+This is part of XSA-266.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_dm.c | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index 4877403123..5e6fcb8ac4 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -774,6 +774,7 @@ static char *qemu_disk_scsi_drive_string(libxl__gc *gc, const char *target_path,
+                                          int colo_mode)
+ {
+     char *drive = NULL;
++    char *common = GCSPRINTF("cache=writeback");
+     const char *exportname = disk->colo_export;
+     const char *active_disk = disk->active_disk;
+     const char *hidden_disk = disk->hidden_disk;
+@@ -781,8 +782,8 @@ static char *qemu_disk_scsi_drive_string(libxl__gc *gc, const char *target_path,
+     switch (colo_mode) {
+     case LIBXL__COLO_NONE:
+         drive = libxl__sprintf
+-            (gc, "file=%s,if=scsi,bus=0,unit=%d,format=%s,cache=writeback",
+-             target_path, unit, format);
++            (gc, "%s,file=%s,if=scsi,bus=0,unit=%d,format=%s",
++             common, target_path, unit, format);
+         break;
+     case LIBXL__COLO_PRIMARY:
+         /*
+@@ -795,13 +796,13 @@ static char *qemu_disk_scsi_drive_string(libxl__gc *gc, const char *target_path,
+          *  vote-threshold=1
+          */
+         drive = GCSPRINTF(
+-            "if=scsi,bus=0,unit=%d,cache=writeback,driver=quorum,"
++            "%s,if=scsi,bus=0,unit=%d,,driver=quorum,"
+             "id=%s,"
+             "children.0.file.filename=%s,"
+             "children.0.driver=%s,"
+             "read-pattern=fifo,"
+             "vote-threshold=1",
+-            unit, exportname, target_path, format);
++            common, unit, exportname, target_path, format);
+         break;
+     case LIBXL__COLO_SECONDARY:
+         /*
+@@ -815,14 +816,14 @@ static char *qemu_disk_scsi_drive_string(libxl__gc *gc, const char *target_path,
+          *  file.backing.backing=exportname,
+          */
+         drive = GCSPRINTF(
+-            "if=scsi,bus=0,unit=%d,cache=writeback,driver=replication,"
++            "%s,if=scsi,bus=0,unit=%d,driver=replication,"
+             "mode=secondary,"
+             "file.driver=qcow2,"
+             "file.file.filename=%s,"
+             "file.backing.driver=qcow2,"
+             "file.backing.file.filename=%s,"
+             "file.backing.backing=%s",
+-            unit, active_disk, hidden_disk, exportname);
++            common, unit, active_disk, hidden_disk, exportname);
+         break;
+     default:
+         abort();
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Wed, 13 Jun 2018 15:54:53 +0100
+Subject: [PATCH] libxl: restore passing "readonly=" to qemu for SCSI disks
+
+A read-only check was introduced for XSA-142, commit ef6cb76026 ("libxl:
+relax readonly check introduced by XSA-142 fix") added the passing of
+the extra setting, but commit dab0539568 ("Introduce COLO mode and
+refactor relevant function") dropped the passing of the setting again,
+quite likely due to improper re-basing.
+
+Restore the readonly= parameter to SCSI disks.  For IDE disks this is
+supposed to be rejected; add an assert.  And there is a bare ad-hoc
+disk drive string in libxl__build_device_model_args_new, which we also
+update.
+
+This is XSA-266.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Signed-off-by: Ian Jackson <Ian.Jackson@eu.citrix.com>
+---
+ tools/libxl/libxl_dm.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/tools/libxl/libxl_dm.c b/tools/libxl/libxl_dm.c
+index 5e6fcb8ac4..66c5884c2b 100644
+--- a/tools/libxl/libxl_dm.c
++++ b/tools/libxl/libxl_dm.c
+@@ -774,7 +774,8 @@ static char *qemu_disk_scsi_drive_string(libxl__gc *gc, const char *target_path,
+                                          int colo_mode)
+ {
+     char *drive = NULL;
+-    char *common = GCSPRINTF("cache=writeback");
++    char *common = GCSPRINTF("cache=writeback,readonly=%s",
++                             disk->readwrite ? "off" : "on");
+     const char *exportname = disk->colo_export;
+     const char *active_disk = disk->active_disk;
+     const char *hidden_disk = disk->hidden_disk;
+@@ -841,6 +842,8 @@ static char *qemu_disk_ide_drive_string(libxl__gc *gc, const char *target_path,
+     const char *exportname = disk->colo_export;
+     const char *active_disk = disk->active_disk;
+     const char *hidden_disk = disk->hidden_disk;
++    
++    assert(disk->readwrite); /* should have been checked earlier */
+ 
+     switch (colo_mode) {
+     case LIBXL__COLO_NONE:
+@@ -1405,8 +1408,9 @@ static int libxl__build_device_model_args_new(libxl__gc *gc,
+                 if (strncmp(disks[i].vdev, "sd", 2) == 0) {
+                     if (colo_mode == LIBXL__COLO_SECONDARY) {
+                         drive = libxl__sprintf
+-                            (gc, "if=none,driver=%s,file=%s,id=%s",
+-                             format, target_path, disks[i].colo_export);
++                            (gc, "if=none,driver=%s,file=%s,id=%s,readonly=%s",
++                             format, target_path, disks[i].colo_export,
++                             disks[i].readwrite ? "off" : "on");
+ 
+                         flexarray_append(dm_args, "-drive");
+                         flexarray_append(dm_args, drive);
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Andrew Cooper <andrew.cooper3@citrix.com>
+Date: Wed, 27 Jun 2018 13:53:40 -0500
+Subject: [PATCH] x86: Support fully eager FPU context switching
+
+This is controlled on a per-vcpu bases for flexibility.
+
+This is part of XSA-267 / CVE-2018-3665
+
+Signed-off-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+---
+ xen/arch/x86/i387.c          | 16 +++++++++++++---
+ xen/include/asm-x86/domain.h |  3 +++
+ 2 files changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/xen/arch/x86/i387.c b/xen/arch/x86/i387.c
+index 86b098dd35..411055523e 100644
+--- a/xen/arch/x86/i387.c
++++ b/xen/arch/x86/i387.c
+@@ -211,7 +211,7 @@ void vcpu_restore_fpu_eager(struct vcpu *v)
+     ASSERT(!is_idle_vcpu(v));
+     
+     /* Restore nonlazy extended state (i.e. parts not tracked by CR0.TS). */
+-    if ( !v->arch.nonlazy_xstate_used )
++    if ( !v->arch.fully_eager_fpu && !v->arch.nonlazy_xstate_used )
+         return;
+ 
+     /* Avoid recursion */
+@@ -222,11 +222,19 @@ void vcpu_restore_fpu_eager(struct vcpu *v)
+      * above) we also need to restore full state, to prevent subsequently
+      * saving state belonging to another vCPU.
+      */
+-    if ( xstate_all(v) )
++    if ( v->arch.fully_eager_fpu || (v->arch.xsave_area && xstate_all(v)) )
+     {
+-        fpu_xrstor(v, XSTATE_ALL);
++        if ( cpu_has_xsave )
++            fpu_xrstor(v, XSTATE_ALL);
++        else
++            fpu_fxrstor(v);
++
+         v->fpu_initialised = 1;
+         v->fpu_dirtied = 1;
++
++        /* Xen doesn't need TS set, but the guest might. */
++        if ( is_pv_vcpu(v) && (v->arch.pv_vcpu.ctrlreg[0] & X86_CR0_TS) )
++            stts();
+     }
+     else
+     {
+@@ -248,6 +256,8 @@ void vcpu_restore_fpu_lazy(struct vcpu *v)
+     if ( v->fpu_dirtied )
+         return;
+ 
++    ASSERT(!v->arch.fully_eager_fpu);
++
+     if ( cpu_has_xsave )
+         fpu_xrstor(v, XSTATE_LAZY);
+     else
+diff --git a/xen/include/asm-x86/domain.h b/xen/include/asm-x86/domain.h
+index 8699fa31b8..d0cae3ac15 100644
+--- a/xen/include/asm-x86/domain.h
++++ b/xen/include/asm-x86/domain.h
+@@ -563,6 +563,9 @@ struct arch_vcpu
+      * and thus should be saved/restored. */
+     bool_t nonlazy_xstate_used;
+ 
++    /* Restore all FPU state (lazy and non-lazy state) on context switch? */
++    bool fully_eager_fpu;
++
+     /* Has the guest enabled CPUID faulting? */
+     bool cpuid_faulting;
+ 
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Kevin Stange <kevin@steadfast.net>
+Date: Wed, 27 Jun 2018 15:00:38 -0500
+Subject: [PATCH] None
+
+---
+ xen/arch/x86/i387.c             |  3 ++
+ xen/arch/x86/spec_ctrl.c        | 84 +++++++++++++++++++++++++++++++++++++++++
+ xen/include/asm-x86/spec_ctrl.h |  1 +
+ 3 files changed, 88 insertions(+)
+
+diff --git a/xen/arch/x86/i387.c b/xen/arch/x86/i387.c
+index 411055523e..279878fab8 100644
+--- a/xen/arch/x86/i387.c
++++ b/xen/arch/x86/i387.c
+@@ -16,6 +16,7 @@
+ #include <asm/i387.h>
+ #include <asm/xstate.h>
+ #include <asm/asm_defns.h>
++#include <asm/spec_ctrl.h>
+ 
+ /*******************************/
+ /*     FPU Restore Functions   */
+@@ -308,6 +309,8 @@ int vcpu_init_fpu(struct vcpu *v)
+ {
+     int rc;
+     
++    v->arch.fully_eager_fpu = opt_eager_fpu;
++
+     if ( (rc = xstate_alloc_save_area(v)) != 0 )
+         return rc;
+ 
+diff --git a/xen/arch/x86/spec_ctrl.c b/xen/arch/x86/spec_ctrl.c
+index 8ad992a700..d8eb3ea54d 100644
+--- a/xen/arch/x86/spec_ctrl.c
++++ b/xen/arch/x86/spec_ctrl.c
+@@ -38,6 +38,7 @@ static int8_t __initdata opt_ibrs = -1;
+ static bool __initdata opt_rsb_native = true;
+ static bool __initdata opt_rsb_vmexit = true;
+ bool __read_mostly opt_ibpb = true;
++int8_t __read_mostly opt_eager_fpu = -1;
+ uint8_t __read_mostly default_bti_ist_info;
+ 
+ static int __init parse_bti(const char *s)
+@@ -106,6 +107,9 @@ static void __init print_details(enum ind_thunk thunk)
+     if ( IS_ENABLED(CONFIG_INDIRECT_THUNK) )
+         printk(XENLOG_DEBUG "  Compiled-in support: INDIRECT_THUNK\n");
+ 
++    printk(XENLOG_DEBUG "  Other mitigations:%s\n",
++           opt_eager_fpu ? " EAGER_FPU" : "");
++
+     printk(XENLOG_INFO
+            "BTI mitigations: Thunk %s, Others:%s%s%s%s\n",
+            thunk == THUNK_NONE      ? "N/A" :
+@@ -173,6 +177,82 @@ static bool __init retpoline_safe(void)
+     }
+ }
+ 
++/* Calculate whether this CPU speculates past #NM */
++static bool __init should_use_eager_fpu(void)
++{
++    /*
++     * Assume all unrecognised processors are ok.  This is only known to
++     * affect Intel Family 6 processors.
++     */
++    if ( boot_cpu_data.x86_vendor != X86_VENDOR_INTEL ||
++         boot_cpu_data.x86 != 6 )
++        return false;
++
++    switch ( boot_cpu_data.x86_model )
++    {
++        /*
++         * Core processors since at least Nehalem are vulnerable.
++         */
++    case 0x1e: /* Nehalem */
++    case 0x1f: /* Auburndale / Havendale */
++    case 0x1a: /* Nehalem EP */
++    case 0x2e: /* Nehalem EX */
++    case 0x25: /* Westmere */
++    case 0x2c: /* Westmere EP */
++    case 0x2f: /* Westmere EX */
++    case 0x2a: /* SandyBridge */
++    case 0x2d: /* SandyBridge EP/EX */
++    case 0x3a: /* IvyBridge */
++    case 0x3e: /* IvyBridge EP/EX */
++    case 0x3c: /* Haswell */
++    case 0x3f: /* Haswell EX/EP */
++    case 0x45: /* Haswell D */
++    case 0x46: /* Haswell H */
++    case 0x3d: /* Broadwell */
++    case 0x47: /* Broadwell H */
++    case 0x4f: /* Broadwell EP/EX */
++    case 0x56: /* Broadwell D */
++    case 0x4e: /* Skylake M */
++    case 0x55: /* Skylake X */
++    case 0x5e: /* Skylake D */
++    case 0x66: /* Cannonlake */
++    case 0x67: /* Cannonlake? */
++    case 0x8e: /* Kabylake M */
++    case 0x9e: /* Kabylake D */
++        return true;
++
++        /*
++         * Atom processors are not vulnerable.
++         */
++    case 0x1c: /* Pineview */
++    case 0x26: /* Lincroft */
++    case 0x27: /* Penwell */
++    case 0x35: /* Cloverview */
++    case 0x36: /* Cedarview */
++    case 0x37: /* Baytrail / Valleyview (Silvermont) */
++    case 0x4d: /* Avaton / Rangely (Silvermont) */
++    case 0x4c: /* Cherrytrail / Brasswell */
++    case 0x4a: /* Merrifield */
++    case 0x5a: /* Moorefield */
++    case 0x5c: /* Goldmont */
++    case 0x5f: /* Denverton */
++    case 0x7a: /* Gemini Lake */
++        return false;
++
++        /*
++         * Knights processors are not vulnerable.
++         */
++    case 0x57: /* Knights Landing */
++    case 0x85: /* Knights Mill */
++        return false;
++
++    default:
++        printk("Unrecognised CPU model %#x - assuming vulnerable to LazyFPU\n",
++               boot_cpu_data.x86_model);
++        return true;
++    }
++}
++
+ void __init init_speculation_mitigations(void)
+ {
+     enum ind_thunk thunk = THUNK_DEFAULT;
+@@ -287,6 +367,10 @@ void __init init_speculation_mitigations(void)
+     if ( !boot_cpu_has(X86_FEATURE_IBRSB) && !boot_cpu_has(X86_FEATURE_IBPB) )
+         opt_ibpb = false;
+ 
++    /* Check whether Eager FPU should be enabled by default. */
++    if ( opt_eager_fpu == -1 )
++        opt_eager_fpu = should_use_eager_fpu();
++
+     /* (Re)init BSP state now that default_bti_ist_info has been calculated. */
+     init_shadow_spec_ctrl_state();
+ 
+diff --git a/xen/include/asm-x86/spec_ctrl.h b/xen/include/asm-x86/spec_ctrl.h
+index 5ab4ff3f68..54731a52ed 100644
+--- a/xen/include/asm-x86/spec_ctrl.h
++++ b/xen/include/asm-x86/spec_ctrl.h
+@@ -28,6 +28,7 @@ void init_speculation_mitigations(void);
+ 
+ extern bool opt_ibpb;
+ extern uint8_t default_bti_ist_info;
++extern int8_t opt_eager_fpu;
+ 
+ static inline void init_shadow_spec_ctrl_state(void)
+ {
+-- 
 
