@@ -58,8 +58,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: %{hv_abi}.3
-Release: 6%{?dist}
+Version: %{hv_abi}.4
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -1003,6 +1003,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jul 12 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.8.4-1
+- Update to Xen 4.8.4
+
 * Wed Jun 27 2018 Kevin Stange <kevin@steadfast.net> - 4.8.3-6.el7.centos
 - Apply XSA-264, 265, 266, and 267
 - Note: This XSA-267 backport does not support the Eager FPU command line switch
