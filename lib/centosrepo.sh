@@ -197,7 +197,7 @@ function sync-patches-internal()
     fi
     
     info "Exporting patchqueue"
-    git format-patch --stdout -N  base/$basever > ../../SOURCES/xen-queue.am || fail "Updating patchqueue"
+    git format-patch --stdout -N --stat-width=80 base/$basever > ../../SOURCES/xen-queue.am || fail "Updating patchqueue"
 
     (cd $TOPDIR;
      ./pqnorm.pl)
