@@ -72,7 +72,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.1
-Release: 1%{?xen_rc_pkgver}%{?dist}
+Release: 2%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -1003,6 +1003,14 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jul 30 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.1-2
+- Apply XSAs 260-267
+
+In order to apply 263, also backport patches:
+- x86: correct ordering of operations during S3 resume
+- x86: suppress BTI mitigations around S3 suspend/resume<Paste>
+- x86/spec_ctrl: Updates to retpoline-safety decision making
+
 * Wed May 02 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.1-1.el7.centos
 - Xen 4.10.1
 
