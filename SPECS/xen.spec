@@ -63,7 +63,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.4%{version_extra}
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -542,6 +542,7 @@ rm -rf %{buildroot}/usr/*-xen-elf
 # When building from a git snapshot tarball, make xenversion and %{version} don't match
 mv -v %{buildroot}/boot/{xen-$xen_version,xen-%{version}-%{release}}.gz
 mv -v %{buildroot}/boot/{xen-$xen_version,xen-%{version}-%{release}}.config
+ln -nfs xen-%{version}-%{release}.gz %{buildroot}/boot/xen.gz
 # hypervisor symlinks
 rm %{buildroot}/boot/xen-$(sed 's/^\([0-9]\+\.[0-9]\+\)\($\|\.\).*/\1/' <<<"$xen_version").gz
 rm %{buildroot}/boot/xen-$(sed 's/^\([0-9]\+\)\..*/\1/' <<<"$xen_version").gz
@@ -1009,6 +1010,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Aug 16 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.8.4.42.gd95b5bb31e-2
+- Fix /boot/xen.gz symbolic link
+
 * Thu Aug 16 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.8.4.42.gd95b5bb31e-1
 - Use a snapshot of the xen git tree instead of a release tarball.
 - Have fixes for XSA 268, 269, 272 and 273.
