@@ -277,6 +277,51 @@ function check-gpg-status() {
     grep -Eq "^\[GNUPG:\] $gpg_status_code $key" || fail "signature check failed"
 }
 
+function get-xen-stable() {
+    $arg_parse
+    $requireargs XEN_VERSION XEN_URL XEN_CSET XEN_FILE
+
+    local tag=RELEASE-$XEN_VERSION
+
+    if [[ ! -e $TOPDIR/SOURCES/$XEN_FILE ]] ; then
+        mkdir -p $TOPDIR/git-tmp
+        pushd $TOPDIR/git-tmp
+
+        git clone $XEN_URL xen.git || fail "git clone"
+        cd xen.git
+
+        # Verify the signature of the expected tag for the current release
+        if gpg --list-keys 0x${XEN_KEY} &>/dev/null; then
+            if ! git-check-version git_ver=2.6; then
+                info "Skip checking tag signature, this requires git 2.6 or newer"
+            else
+                local gpg_status=$(git verify-tag --raw $tag 2>&1)
+                check-gpg-status key=$XEN_KEY <<<"$gpg_status"
+            fi
+        else
+            info "Not checking gpg signature due to missing key; add with gpg --recv-keys ${XEN_KEY}"
+        fi
+
+        # By using merge --ff-only after checking out the tag, we make sure we
+        # have at least the release tag of $XEN_VERSION in the history of
+        # commit id $XEN_CSET.
+        git checkout $tag -b tmp-$XEN_VERSION+ || fail "checkout"
+        git merge --ff-only "$XEN_CSET" || fail "fast-forward merge"
+
+        # make src-tarball will use git describe for the tarball name
+        XEN_FILE="xen-$(git describe).tar.gz"
+        # Allow to run src-tarball without running ./configure first
+        touch config/Tools.mk
+        make src-tarball || error "make src-tarball failed"
+        mv dist/$XEN_FILE $TOPDIR/SOURCES/ || error "failed to move tarball to SOURCES dir"
+
+        info "Updating XEN_FILE in sources.cfg"
+        sed -i --follow-symlinks "s/XEN_FILE=.*$/XEN_FILE=$XEN_FILE/" $TOPDIR/sources.cfg || fail "Updating XEN_FILE"
+
+        popd
+    fi
+}
+
 help-add "get-sources: Download and/or create tarballs for SOURCES based on sources.cfg"
 function get-sources()
 {
@@ -289,28 +334,33 @@ function get-sources()
     local vtype
     version-type var=vtype
 
-    echo "Checking Xen $XEN_VERSION release tarball"
-    if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE ]] ; then
-        local url
-        case "$vtype" in
-            release|rc)
-                url="$XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE"
-                ;;
-            *)
-                fail "Don't know how to get xen tarball for version $XEN_VERSION (type $vtype)"
-                ;;
-        esac
-        wget -P $TOPDIR/SOURCES/ "$url" || exit 1
-    fi
-
-    if gpg --list-keys 0x${XEN_KEY}; then
-	if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig ]]; then
-            wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE.sig || exit 1
-	fi
-	local gpg_status=$(gpg --status-fd 1 --verify $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig $TOPDIR/SOURCES/$XEN_RELEASE_FILE)
-	check-gpg-status key=${XEN_KEY}  <<<"$gpg_status"
+    if [ "$XEN_CSET" ]; then
+        # Do a release based on a stable commit
+        get-xen-stable
     else
-	echo "Not checking gpg signature due to missing key; add with gpg --recv-keys ${XEN_KEY}"
+        echo "Checking Xen $XEN_VERSION release tarball"
+        if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE ]] ; then
+            local url
+            case "$vtype" in
+                release|rc)
+                    url="$XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE"
+                    ;;
+                *)
+                    fail "Don't know how to get xen tarball for version $XEN_VERSION (type $vtype)"
+                    ;;
+            esac
+            wget -P $TOPDIR/SOURCES/ "$url" || exit 1
+        fi
+
+        if gpg --list-keys 0x${XEN_KEY}; then
+            if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig ]]; then
+                wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE.sig || exit 1
+            fi
+            local gpg_status=$(gpg --status-fd 1 --verify $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig $TOPDIR/SOURCES/$XEN_RELEASE_FILE)
+            check-gpg-status key=${XEN_KEY}  <<<"$gpg_status"
+        else
+            echo "Not checking gpg signature due to missing key; add with gpg --recv-keys ${XEN_KEY}"
+        fi
     fi
     
     if [[ -n "$XEN_EXTLIB_FILES" ]] ; then
