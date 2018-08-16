@@ -256,6 +256,27 @@ function sync-tree()
     stg import -M ../../SOURCES/xen-queue.am || fail "Importing patchqueue"
 }
 
+# Parse the special status string from gpg, depending on the key size
+# see gpg --status-fd
+function check-gpg-status() {
+    $arg_parse
+    $requireargs key
+
+    local gpg_status_code
+    case "${#key}" in
+        16)
+            gpg_status_code=GOODSIG
+            ;;
+        40)
+            gpg_status_code=VALIDSIG
+            ;;
+        *)
+            fail "gpg key size incorrect"
+            ;;
+    esac
+    grep -Eq "^\[GNUPG:\] $gpg_status_code $key" || fail "signature check failed"
+}
+
 help-add "get-sources: Download and/or create tarballs for SOURCES based on sources.cfg"
 function get-sources()
 {
@@ -286,8 +307,8 @@ function get-sources()
 	if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig ]]; then
             wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE.sig || exit 1
 	fi
-	gpg --status-fd 1 --verify $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig $TOPDIR/SOURCES/$XEN_RELEASE_FILE \
-	    | grep -q "GOODSIG ${XEN_KEY}" || exit 1
+	local gpg_status=$(gpg --status-fd 1 --verify $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig $TOPDIR/SOURCES/$XEN_RELEASE_FILE)
+	check-gpg-status key=${XEN_KEY}  <<<"$gpg_status"
     else
 	echo "Not checking gpg signature due to missing key; add with gpg --recv-keys ${XEN_KEY}"
     fi
