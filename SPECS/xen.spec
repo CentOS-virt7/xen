@@ -69,14 +69,18 @@
 %define xen_rc -%{xen_rc_base}
 %endif
 
+# snapshot from git tree
+%define version_extra .106.g13e85a6dbc
+%define xen_tarball_dir xen-RELEASE-4.10.1-106-g13e85a6dbc
+
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: %{hv_abi}.1
-Release: 2%{?xen_rc_pkgver}%{?dist}
+Version: %{hv_abi}.1%{version_extra}
+Release: 1%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
-Source0: https://downloads.xenproject.org/release/xen/%{version}%{?xen_rc}/xen-%{version}%{?xen_rc}.tar.gz
+Source0: %{xen_tarball_dir}.tar.gz
 Source1: xen.modules
 Source2: xen.logrotate
 # used by stubdoms
@@ -302,7 +306,7 @@ per https://wiki.xen.org/wiki/LivePatch .
 %endif
 
 %prep
-%setup -q -n "%{name}-%{version}%{?xen_rc}"
+%setup -q -n %{xen_tarball_dir}
 
 ########################
 # To manipulate the am patchqueue (using 4.4.3 as an example):
@@ -352,7 +356,7 @@ git am %{PATCH1}
 #Optionally enable live patching
 %if %{with_livepatch}
 echo "CONFIG_LIVEPATCH=y" > xen/.config
-%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/ -zxf %{SOURCE60}
+%{__tar} -C ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/ -zxf %{SOURCE60}
 %endif
 
 make -C xen olddefconfig
@@ -372,9 +376,9 @@ popd
 
 %if %{with_blktap}
 pushd `pwd`
-rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/blktap2
-%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/ -zxf %{SOURCE101}
-cd ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/blktap2
+rm -rf ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/blktap2
+%{__tar} -C ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/ -zxf %{SOURCE101}
+cd ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/blktap2
 ./autogen.sh
 XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=%{_libexecdir}/xen/bin
 popd
@@ -390,8 +394,8 @@ cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} st
 %endif
 
 %if %with_tianocore
-rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/edk2
-%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}%{?xen_rc}/tools/ -zxf %{SOURCE53}
+rm -rf ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/edk2
+%{__tar} -C ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/ -zxf %{SOURCE53}
 %endif
 
 
@@ -480,6 +484,7 @@ mkdir -p %{buildroot}/boot/efi/efi/%{xen_efi_vendor}
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
 export EFI_VENDOR="%{xen_efi_vendor}"
+xen_version="$(make -C xen xenversion --no-print-directory)"
 make DESTDIR=%{buildroot} %{?efi_flags}  prefix=/usr install-xen
 make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-tools
 make DESTDIR=%{buildroot} prefix=/usr install-docs
@@ -522,9 +527,13 @@ find %{buildroot} -print | xargs ls -ld | sed -e 's|.*%{buildroot}||' > f1.list
 # stubdom: newlib
 rm -rf %{buildroot}/usr/*-xen-elf
 
+# When building from a git snapshot tarball, make xenversion and %{version} don't match
+mv -v %{buildroot}/boot/{xen-$xen_version,xen-%{version}-%{release}}.gz
+mv -v %{buildroot}/boot/{xen-$xen_version,xen-%{version}-%{release}}.config
+ln -nfs xen-%{version}-%{release}.gz %{buildroot}/boot/xen.gz
 # hypervisor symlinks
-rm %{buildroot}/boot/xen-$(sed 's/\.[0-9]\+$//' <<<"%{version}").gz
-rm %{buildroot}/boot/xen-$(sed 's/^\([0-9]\+\)\..*/\1/' <<<"%{version}").gz
+rm %{buildroot}/boot/xen-$(sed 's/^\([0-9]\+\.[0-9]\+\)\($\|\.\).*/\1/' <<<"$xen_version").gz
+rm %{buildroot}/boot/xen-$(sed 's/^\([0-9]\+\)\..*/\1/' <<<"$xen_version").gz
 
 # silly doc dir fun
 rm -fr %{buildroot}%{_datadir}/doc/xen
@@ -1003,6 +1012,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Aug 20 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.1.106.g13e85a6dbc-1
+- Use a snapshot of the xen git tree instead of a release tarball.
+- Have fixes for XSA 268, 269, 272 and 273.
+
 * Mon Jul 30 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.1-2
 - Apply XSAs 260-267
 
