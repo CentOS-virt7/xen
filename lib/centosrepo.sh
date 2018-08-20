@@ -290,6 +290,9 @@ function get-xen-stable() {
 
         cd "$TOPDIR/UPSTREAM/xen.git"
 
+        # Have `git describe` always print the same string for a given commit
+        git config core.abbrev 10
+
         # Verify the signature of the expected tag for the current release
         if gpg --list-keys 0x${XEN_KEY} &>/dev/null; then
             if ! git-check-version git_ver=2.6; then
