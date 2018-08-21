@@ -76,7 +76,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.1%{version_extra}
-Release: 1%{?xen_rc_pkgver}%{?dist}
+Release: 2%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -308,6 +308,11 @@ per https://wiki.xen.org/wiki/LivePatch .
 %prep
 %setup -q -n %{xen_tarball_dir}
 
+export XEN_VENDORVERSION="-%{release}"
+XEN_VENDORVERSION="${XEN_VENDORVERSION//.centos.alt/}"
+export XEN_EXTRAVERSION="%{version}$XEN_VENDORVERSION"
+XEN_EXTRAVERSION="${XEN_EXTRAVERSION#%{hv_abi}}"
+
 ########################
 # To manipulate the am patchqueue (using 4.4.3 as an example):
 # 
@@ -353,6 +358,9 @@ git commit -a -q -m "%{version}%{?xen_rc} baseline."
 # Apply patches to code in the core Xen repo
 git am %{PATCH1}
 
+# Prevent the build system from using information of this temporary git tree
+rm -rf .git
+
 #Optionally enable live patching
 %if %{with_livepatch}
 echo "CONFIG_LIVEPATCH=y" > xen/.config
@@ -380,7 +388,7 @@ rm -rf ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/blktap2
 %{__tar} -C ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/ -zxf %{SOURCE101}
 cd ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/blktap2
 ./autogen.sh
-XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=%{_libexecdir}/xen/bin
+./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=%{_libexecdir}/xen/bin
 popd
 # Add blktap-related patches here
 %patch1001 -p1
@@ -410,6 +418,8 @@ rm -rf ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/edk2
 mkdir -p dist/install/boot/efi/efi/%{xen_efi_vendor}
 %endif
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
+export XEN_EXTRAVERSION="%{version}$XEN_VENDORVERSION"
+XEN_EXTRAVERSION="${XEN_EXTRAVERSION#%{hv_abi}}"
 export XEN_DOMAIN="centos.org"
 export debug="n"
 # From xen.git/INSTALL
@@ -482,6 +492,8 @@ mkdir -p %{buildroot}%{_libdir}/ocaml/stublibs
 mkdir -p %{buildroot}/boot/efi/efi/%{xen_efi_vendor}
 %endif
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
+export XEN_EXTRAVERSION="%{version}$XEN_VENDORVERSION"
+XEN_EXTRAVERSION="${XEN_EXTRAVERSION#%{hv_abi}}"
 export XEN_DOMAIN="centos.org"
 export EFI_VENDOR="%{xen_efi_vendor}"
 xen_version="$(make -C xen xenversion --no-print-directory)"
@@ -527,10 +539,6 @@ find %{buildroot} -print | xargs ls -ld | sed -e 's|.*%{buildroot}||' > f1.list
 # stubdom: newlib
 rm -rf %{buildroot}/usr/*-xen-elf
 
-# When building from a git snapshot tarball, make xenversion and %{version} don't match
-mv -v %{buildroot}/boot/{xen-$xen_version,xen-%{version}-%{release}}.gz
-mv -v %{buildroot}/boot/{xen-$xen_version,xen-%{version}-%{release}}.config
-ln -nfs xen-%{version}-%{release}.gz %{buildroot}/boot/xen.gz
 # hypervisor symlinks
 rm %{buildroot}/boot/xen-$(sed 's/^\([0-9]\+\.[0-9]\+\)\($\|\.\).*/\1/' <<<"$xen_version").gz
 rm %{buildroot}/boot/xen-$(sed 's/^\([0-9]\+\)\..*/\1/' <<<"$xen_version").gz
@@ -1012,6 +1020,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Aug 21 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.1.106.g13e85a6dbc-2
+- Fix xen version string, in e.g. xl info, so it match the RPM version.
+- Also remove the information a xen_changeset, as this information is an
+  artefact of the package build.
+
 * Mon Aug 20 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.1.106.g13e85a6dbc-1
 - Use a snapshot of the xen git tree instead of a release tarball.
 - Have fixes for XSA 268, 269, 272 and 273.
