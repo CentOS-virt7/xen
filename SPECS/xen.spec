@@ -57,13 +57,13 @@
 %define hv_abi  4.8
 
 # snapshot from git tree
-%define version_extra .42.gd95b5bb31e
-%define xen_tarball_dir xen-RELEASE-4.8.4-42-gd95b5bb31e
+%define version_extra .43.ge52ec4b787
+%define xen_tarball_dir xen-RELEASE-4.8.4-43-ge52ec4b787
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{hv_abi}.4%{version_extra}
-Release: 3%{?dist}
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -1018,6 +1018,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Sep 05 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.8.4.43.ge52ec4b787-1
+- Add upstream patch to fix parsing of Xen command line option pv-l1tf
+
 * Tue Aug 21 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.8.4.42.gd95b5bb31e-3
 - Fix xen version string, in e.g. xl info, so it match the RPM version.
 - Also remove the information a xen_changeset, as this information is an
