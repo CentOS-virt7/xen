@@ -284,11 +284,11 @@ function get-xen-stable() {
     local tag=RELEASE-$XEN_VERSION
 
     if [[ ! -e $TOPDIR/SOURCES/$XEN_FILE ]] ; then
-        mkdir -p $TOPDIR/git-tmp
-        pushd $TOPDIR/git-tmp
+        pushd "$PWD"
 
-        git clone $XEN_URL xen.git || fail "git clone"
-        cd xen.git
+        make-tree
+
+        cd "$TOPDIR/UPSTREAM/xen.git"
 
         # Verify the signature of the expected tag for the current release
         if gpg --list-keys 0x${XEN_KEY} &>/dev/null; then
@@ -305,7 +305,7 @@ function get-xen-stable() {
         # By using merge --ff-only after checking out the tag, we make sure we
         # have at least the release tag of $XEN_VERSION in the history of
         # commit id $XEN_CSET.
-        git checkout $tag -b tmp-$XEN_VERSION+ || fail "checkout"
+        git checkout --detach $tag || fail "checkout"
         git merge --ff-only "$XEN_CSET" || fail "fast-forward merge"
 
         # make src-tarball will use git describe for the tarball name
