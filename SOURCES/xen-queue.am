@@ -176,7 +176,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  3 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/xen/Makefile b/xen/Makefile
-index ecec297b9b..f1e6a69fc6 100644
+index d8f57c2e45..f72ed092ab 100644
 --- a/xen/Makefile
 +++ b/xen/Makefile
 @@ -20,6 +20,7 @@ export XEN_ROOT := $(BASEDIR)/..
@@ -287,7 +287,7 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index 0d1012cbc9..af47bac32a 100644
+index 2102b3538d..98b9c411e5 100644
 --- a/Config.mk
 +++ b/Config.mk
 @@ -282,7 +282,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.10.2
@@ -298,7 +298,7 @@ index 0d1012cbc9..af47bac32a 100644
 +ETHERBOOT_NICS ?= 10ec8139 8086100e
  
  
- QEMU_TRADITIONAL_REVISION ?= xen-4.10.1
+ QEMU_TRADITIONAL_REVISION ?= xen-4.10.2
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
 index 5a7cf7766d..457281cdf1 100644
 --- a/tools/firmware/Makefile
@@ -584,5 +584,4 @@ index 0fdc7121f1..684a7f6b47 100644
  
          PERROR("Could not obtain handle on privileged command interface");
 -- 
-
 

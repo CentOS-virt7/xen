@@ -70,13 +70,13 @@
 %endif
 
 # snapshot from git tree
-%define version_extra .106.g13e85a6dbc
-%define xen_tarball_dir xen-RELEASE-4.10.1-106-g13e85a6dbc
+#%define version_extra
+%define xen_tarball_dir xen-RELEASE-4.10.2
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: %{hv_abi}.1%{version_extra}
-Release: 2%{?xen_rc_pkgver}%{?dist}
+Version: %{hv_abi}.2%{?version_extra}
+Release: 1%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -1020,6 +1020,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Sep 25 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.2-1
+- Xen 4.10.2
+
 * Tue Aug 21 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.1.106.g13e85a6dbc-2
 - Fix xen version string, in e.g. xl info, so it match the RPM version.
 - Also remove the information a xen_changeset, as this information is an
