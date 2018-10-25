@@ -70,8 +70,8 @@
 %endif
 
 # snapshot from git tree
-#%define version_extra
-%define xen_tarball_dir xen-RELEASE-4.10.2
+%define version_extra .13.g73788eb585
+%define xen_tarball_dir xen-RELEASE-4.10.2-13-g73788eb585
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
@@ -1020,6 +1020,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Oct 25 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.2.13.g73788eb585-1
+- Update to include XSA-278
+
 * Tue Sep 25 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.2-1
 - Xen 4.10.2
 
