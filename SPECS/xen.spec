@@ -177,12 +177,6 @@ BuildRequires: spice-server-devel usbredir-devel
 %if %with_livepatch
 BuildRequires: elfutils-libelf-devel
 %endif
-# efi image needs an ld that has -mi386pep option
-%if %build_efi
-%ifarch x86_64
-BuildRequires: mingw64-binutils
-%endif
-%endif
 %ifarch aarch64
 BuildRequires: libfdt-devel
 %endif
@@ -412,9 +406,6 @@ rm -rf ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/edk2
 %define ocaml_flags OCAML_TOOLS=n
 %endif
 %if %build_efi
-%ifarch x86_64
-%define efi_flags LD_EFI=/usr/x86_64-w64-mingw32/bin/ld
-%endif
 mkdir -p dist/install/boot/efi/efi/%{xen_efi_vendor}
 %endif
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
@@ -456,7 +447,7 @@ export GIT=$(type -P false)
 WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-xenstored=xenstored --disable-xsmpolicy %{?extra_config}
 
 export EFI_VENDOR="%{xen_efi_vendor}"
-make %{?_smp_mflags} %{?efi_flags}   dist-xen
+make %{?_smp_mflags} dist-xen
 make %{?_smp_mflags} %{?ocaml_flags} dist-tools
 make                                 dist-docs
 
@@ -497,7 +488,7 @@ XEN_EXTRAVERSION="${XEN_EXTRAVERSION#%{hv_abi}}"
 export XEN_DOMAIN="centos.org"
 export EFI_VENDOR="%{xen_efi_vendor}"
 xen_version="$(make -C xen xenversion --no-print-directory)"
-make DESTDIR=%{buildroot} %{?efi_flags}  prefix=/usr install-xen
+make DESTDIR=%{buildroot} prefix=/usr install-xen
 make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-tools
 make DESTDIR=%{buildroot} prefix=/usr install-docs
 %if %{with_stubdom}
