@@ -55,14 +55,26 @@
 
 # Hypervisor ABI
 %define hv_abi  4.8
+%define xen_version %{hv_abi}.4
 
-# snapshot from git tree
-%define version_extra .43.ge52ec4b787
-%define xen_tarball_dir xen-RELEASE-4.8.4-43-ge52ec4b787
+# Snapshot from git tree
+## Number of commit since the last stable tag
+%define nb_commit 43
+## Abbrev to 10 character of the commit id
+%define abbrev_cset e52ec4b787
+
+%if %{nb_commit}
+%define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
+%define xen_tarball_dir xen-RELEASE-%{xen_version}-%{nb_commit}-g%{abbrev_cset}
+%else
+%define pkg_version %{xen_version}
+%define xen_tarball_dir xen-RELEASE-%{xen_version}
+%endif
+
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: %{hv_abi}.4%{version_extra}
+Version: %{pkg_version}
 Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD

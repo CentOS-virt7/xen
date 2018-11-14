@@ -273,11 +273,26 @@ function check-gpg-status() {
 
 function get-xen-stable() {
     $arg_parse
-    $requireargs XEN_VERSION XEN_URL XEN_CSET XEN_FILE
+    $requireargs XEN_VERSION XEN_URL XEN_CSET
 
     local tag=RELEASE-$XEN_VERSION
 
-    if [[ ! -e $TOPDIR/SOURCES/$XEN_FILE ]] ; then
+    local nb_commit=$(perl -ne 'if(/^%define nb_commit ([0-9]+)$/) { print "$1\n";}' SPECS/xen.spec)
+    local cset_abbrev=${XEN_CSET:0:10}
+    local xen_file
+    if [ $nb_commit -gt 0 ]; then
+        xen_file="xen-$tag-$nb_commit-g${cset_abbrev}.tar.gz"
+    else
+        xen_file="xen-$tag.tar.gz"
+        # In this case, the commit id isn't part of the filename, we need to
+        # compare the one in sources.cfg and in xen.spec
+        local spec_abbrev=$(perl -ne 'if(/^%define abbrev_cset ([0-9a-f]+)$/) { print "$1\n";}' SPECS/xen.spec)
+        if [ "$cset_abbrev" != "$spec_abbrev" ]; then
+            xen_file="we_do_need_to_generate_a_new_tarball"
+        fi
+    fi
+
+    if [[ ! -e $TOPDIR/SOURCES/$xen_file ]] ; then
         pushd "$PWD"
 
         make-tree
@@ -306,14 +321,17 @@ function get-xen-stable() {
         git merge --ff-only "$XEN_CSET" || fail "fast-forward merge"
 
         # make src-tarball will use git describe for the tarball name
-        XEN_FILE="xen-$(git describe).tar.gz"
+        xen_file="xen-$(git describe).tar.gz"
         # Allow to run src-tarball without running ./configure first
         touch config/Tools.mk
         make src-tarball || error "make src-tarball failed"
-        mv dist/$XEN_FILE $TOPDIR/SOURCES/ || error "failed to move tarball to SOURCES dir"
+        mv dist/$xen_file $TOPDIR/SOURCES/ || error "failed to move tarball to SOURCES dir"
+        # Update commit count as nb_commit is outdated
+        nb_commit="$(git rev-list --count $tag..HEAD)"
 
-        info "Updating XEN_FILE in sources.cfg"
-        sed -i --follow-symlinks "s/XEN_FILE=.*$/XEN_FILE=$XEN_FILE/" $TOPDIR/sources.cfg || fail "Updating XEN_FILE"
+        info "Updating nb_commit and abbrev_cset in xen.spec"
+        sed -i --follow-symlinks "s/\(%define abbrev_cset \).*$/\1$cset_abbrev/" $TOPDIR/SPECS/xen.spec || fail "Updating abbrev_cset"
+        sed -i --follow-symlinks "s/\(%define nb_commit \).*$/\1$nb_commit/" $TOPDIR/SPECS/xen.spec || fail "Updating nb_commit"
 
         popd
     fi
