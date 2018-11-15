@@ -59,9 +59,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 43
+%define nb_commit 66
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset e52ec4b787
+%define abbrev_cset d6798ce357
 
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
@@ -1030,6 +1030,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Nov 15 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.8.4.66.gd6798ce357-1
+- Update to include XSA-282
+
 * Wed Sep 05 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.8.4.43.ge52ec4b787-1
 - Add upstream patch to fix parsing of Xen command line option pv-l1tf
 
