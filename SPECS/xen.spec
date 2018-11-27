@@ -72,9 +72,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 27
+%define nb_commit 33
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset e907460fd6
+%define abbrev_cset b6e203bc80
 
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
@@ -1022,6 +1022,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Nov 27 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.2.33.gb6e203bc80-1
+- Update to include XSAs 275,279,280
+
 * Thu Nov 15 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.2.27.ge907460fd6-1
 - Update to include XSA-282
 
