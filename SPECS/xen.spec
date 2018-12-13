@@ -55,13 +55,13 @@
 
 # Hypervisor ABI
 %define hv_abi  4.8
-%define xen_version %{hv_abi}.4
+%define xen_version %{hv_abi}.5
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 74
+%define nb_commit 0
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset 090d47c927
+%define abbrev_cset 908e768fae
 
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
@@ -1030,6 +1030,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Dec 13 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.8.5-1
+- Update to 4.8.5 release
+
 * Tue Nov 27 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.8.4.74.g090d47c927-1
 - Update to include XSAs 275,279,280
 
