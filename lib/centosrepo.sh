@@ -277,23 +277,25 @@ function get-xen-stable() {
 
     local tag=RELEASE-$XEN_VERSION
 
-    local nb_commit=$(perl -ne 'if(/^%define nb_commit ([0-9]+)$/) { print "$1\n";}' SPECS/xen.spec)
+    local spec_file="$TOPDIR/SPECS/xen.spec"
+
+    local nb_commit=$(perl -ne 'if(/^%define nb_commit ([0-9]+)$/) { print "$1\n";}' "$spec_file")
     local cset_abbrev=${XEN_CSET:0:10}
     local xen_file
-    if [ $nb_commit -gt 0 ]; then
+    if [ "$nb_commit" -gt 0 ]; then
         xen_file="xen-$tag-$nb_commit-g${cset_abbrev}.tar.gz"
     else
         xen_file="xen-$tag.tar.gz"
         # In this case, the commit id isn't part of the filename, we need to
         # compare the one in sources.cfg and in xen.spec
-        local spec_abbrev=$(perl -ne 'if(/^%define abbrev_cset ([0-9a-f]+)$/) { print "$1\n";}' SPECS/xen.spec)
+        local spec_abbrev=$(perl -ne 'if(/^%define abbrev_cset ([0-9a-f]+)$/) { print "$1\n";}' "$spec_file")
         if [ "$cset_abbrev" != "$spec_abbrev" ]; then
             xen_file="we_do_need_to_generate_a_new_tarball"
         fi
     fi
 
-    if [[ ! -e $TOPDIR/SOURCES/$xen_file ]] ; then
-        pushd "$PWD"
+    if [[ ! -e "$TOPDIR/SOURCES/$xen_file" ]] ; then
+        pushd "$TOPDIR"
 
         make-tree
 
@@ -330,8 +332,8 @@ function get-xen-stable() {
         nb_commit="$(git rev-list --count $tag..HEAD)"
 
         info "Updating nb_commit and abbrev_cset in xen.spec"
-        sed -i --follow-symlinks "s/\(%define abbrev_cset \).*$/\1$cset_abbrev/" $TOPDIR/SPECS/xen.spec || fail "Updating abbrev_cset"
-        sed -i --follow-symlinks "s/\(%define nb_commit \).*$/\1$nb_commit/" $TOPDIR/SPECS/xen.spec || fail "Updating nb_commit"
+        sed -i --follow-symlinks "s/\(%define abbrev_cset \).*$/\1$cset_abbrev/" "$spec_file" || fail "Updating abbrev_cset"
+        sed -i --follow-symlinks "s/\(%define nb_commit \).*$/\1$nb_commit/" "$spec_file" || fail "Updating nb_commit"
 
         popd
     fi
