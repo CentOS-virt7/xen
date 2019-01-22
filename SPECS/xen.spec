@@ -81,7 +81,7 @@
 %define xen_tarball_dir xen-RELEASE-%{xen_version}-%{nb_commit}-g%{abbrev_cset}
 %else
 %define pkg_version %{xen_version}
-%define xen_tarball_dir xen-RELEASE-%{xen_version}
+%define xen_tarball_dir xen-%{xen_version}
 %endif
 
 Summary: Xen is a virtual machine monitor

@@ -540,6 +540,14 @@ function rebase-post()
 
     info "Updating XEN_VERSION in sources.cfg"
     sed -i --follow-symlinks "s/XEN_VERSION=.*$/XEN_VERSION=$new/" $TOPDIR/sources.cfg || fail "Updating XEN_VERSION"
+    local spec_file="$TOPDIR/SPECS/xen.spec"
+    if [ "$XEN_CSET" ]; then
+        # Set XEN_CSET to empty string to download upstream tarball instead of
+        # generating a new one from a commit id
+        sed -i --follow-symlinks "s/^\(XEN_CSET=\).*$/\1/" $TOPDIR/sources.cfg || fail "Updating XEN_CSET"
+        sed -i --follow-symlinks "s/\(%define nb_commit \).*$/\10/" "$spec_file" \
+            || fail "Updating nb_commit"
+    fi
 
     get-sources # NB at this point XEN_VERSION will change
 
