@@ -536,10 +536,17 @@ function rebase-post()
 
     sync-patches-internal basever=$new
 
+    if [ "$XEN_CSET" ]; then
+        local new_id=$(git log --format=format:%H -1 "$new^{commit}")
+    fi
+
     popd
 
     info "Updating XEN_VERSION in sources.cfg"
     sed -i --follow-symlinks "s/XEN_VERSION=.*$/XEN_VERSION=$new/" $TOPDIR/sources.cfg || fail "Updating XEN_VERSION"
+    if [ "$XEN_CSET" ]; then
+        sed -i --follow-symlinks "s/^\(XEN_CSET=\).*$/\1$new_id/" $TOPDIR/sources.cfg || fail "Updating XEN_CSET"
+    fi
 
     get-sources # NB at this point XEN_VERSION will change
 
