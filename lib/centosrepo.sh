@@ -274,7 +274,8 @@ function check-gpg-status() {
             fail "gpg key size incorrect"
             ;;
     esac
-    grep -Eq "^\[GNUPG:\] $gpg_status_code $key" || fail "signature check failed"
+    grep -Eq "^\[GNUPG:\] $gpg_status_code $key" ||
+        fail "signature check failed ${what:+for }$what"
 }
 
 function get-xen-stable() {
@@ -316,6 +317,7 @@ function get-xen-stable() {
                 info "Skip checking tag signature, this requires git 2.6 or newer"
             else
                 local gpg_status=$(git verify-tag --raw $tag 2>&1)
+                local what="Xen git tag $tag"
                 check-gpg-status key=$XEN_KEY <<<"$gpg_status"
             fi
         else
@@ -380,6 +382,7 @@ function get-sources()
                 wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE.sig || exit 1
             fi
             local gpg_status=$(gpg --status-fd 1 --verify $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig $TOPDIR/SOURCES/$XEN_RELEASE_FILE)
+            local what="Xen release tarball $XEN_RELEASE_FILE"
             check-gpg-status key=${XEN_KEY}  <<<"$gpg_status"
         else
             echo "Not checking gpg signature due to missing key; add with gpg --recv-keys ${XEN_KEY}"
