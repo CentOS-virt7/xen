@@ -282,7 +282,8 @@ function get-xen-stable() {
     $arg_parse
     $requireargs XEN_VERSION XEN_URL XEN_CSET
 
-    local tag=RELEASE-$XEN_VERSION
+    local tag
+    version-to-tag version="$XEN_VERSION" var=tag
 
     local spec_file="$TOPDIR/SPECS/xen.spec"
 
