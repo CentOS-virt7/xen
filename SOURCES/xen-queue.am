@@ -132,10 +132,10 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/configure b/tools/configure
-index f3bb412f51..8bc19454e3 100755
+index acc857510e..42b79ace49 100755
 --- a/tools/configure
 +++ b/tools/configure
-@@ -4196,7 +4196,7 @@ xen-scsibk
+@@ -4220,7 +4220,7 @@ xen-scsibk
  usbbk
  pciback
  xen-acpi-processor
@@ -145,7 +145,7 @@ index f3bb412f51..8bc19454e3 100755
  ;;
  *)
 diff --git a/tools/configure.ac b/tools/configure.ac
-index d1a3a78d87..5407f966c1 100644
+index 1499344ce6..3a2c7507d9 100644
 --- a/tools/configure.ac
 +++ b/tools/configure.ac
 @@ -106,7 +106,7 @@ xen-scsibk
@@ -207,59 +207,6 @@ index 92ffa603f7..0b1fde9dac 100644
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Jan 2018 18:41:41 +0000
-Subject: [PATCH] xen.use.fedora.ipxe.patch
-
----
- Config.mk                         | 2 +-
- tools/firmware/Makefile           | 2 +-
- tools/firmware/hvmloader/Makefile | 2 +-
- 3 files changed, 3 insertions(+), 3 deletions(-)
-
-diff --git a/Config.mk b/Config.mk
-index 2102b3538d..98b9c411e5 100644
---- a/Config.mk
-+++ b/Config.mk
-@@ -282,7 +282,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.10.2
- # Wed Jun 22 14:53:24 2016 +0800
- # fw/msr_feature_control: add support to set MSR_IA32_FEATURE_CONTROL
- 
--ETHERBOOT_NICS ?= rtl8139 8086100e
-+ETHERBOOT_NICS ?= 10ec8139 8086100e
- 
- 
- QEMU_TRADITIONAL_REVISION ?= xen-4.10.2
-diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
-index 5a7cf7766d..457281cdf1 100644
---- a/tools/firmware/Makefile
-+++ b/tools/firmware/Makefile
-@@ -15,7 +15,7 @@ SUBDIRS-$(CONFIG_OVMF) += ovmf-dir
- SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
- SUBDIRS-$(CONFIG_ROMBIOS) += rombios
- SUBDIRS-$(CONFIG_ROMBIOS) += vgabios
--SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
-+#SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
- SUBDIRS-$(CONFIG_PV_SHIM) += xen-dir
- SUBDIRS-y += hvmloader
- 
-diff --git a/tools/firmware/hvmloader/Makefile b/tools/firmware/hvmloader/Makefile
-index a5b4c32c1a..d48b225b78 100644
---- a/tools/firmware/hvmloader/Makefile
-+++ b/tools/firmware/hvmloader/Makefile
-@@ -51,7 +51,7 @@ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.debug.bin
- else
- CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.bin
- endif
--ETHERBOOT_ROMS := $(addprefix ../etherboot/ipxe/src/bin/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
-+ETHERBOOT_ROMS := $(addprefix /usr/share/ipxe/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
- endif
- 
- ROMS := 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
  backend"
 
@@ -276,10 +223,10 @@ Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
-index 17c743d867..6830e38f69 100644
+index a4a8e9ac32..c05a682aad 100644
 --- a/tools/libxl/libxl_device.c
 +++ b/tools/libxl/libxl_device.c
-@@ -392,8 +392,8 @@ int libxl__device_disk_set_backend(libxl__gc *gc, libxl_device_disk *disk) {
+@@ -424,8 +424,8 @@ int libxl__device_disk_set_backend(libxl__gc *gc, libxl_device_disk *disk) {
      } else {
          ok=
              disk_try_backend(&a, LIBXL_DISK_BACKEND_PHY) ?:
@@ -305,10 +252,10 @@ Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
  2 files changed, 31 insertions(+), 18 deletions(-)
 
 diff --git a/tools/Rules.mk b/tools/Rules.mk
-index 6268c14e3a..29f779aff3 100644
+index 68f2ed7ce1..27fbabced4 100644
 --- a/tools/Rules.mk
 +++ b/tools/Rules.mk
-@@ -170,10 +170,10 @@ CFLAGS += -O2 -fomit-frame-pointer
+@@ -175,10 +175,10 @@ CFLAGS += -O2 -fomit-frame-pointer
  endif
  
  ifeq ($(CONFIG_BLKTAP2),y)
@@ -416,7 +363,7 @@ Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
  1 file changed, 9 insertions(+)
 
 diff --git a/xen/include/public/arch-arm.h b/xen/include/public/arch-arm.h
-index 05fd11ca38..8aaa157441 100644
+index eb424e8286..ea5d036d5a 100644
 --- a/xen/include/public/arch-arm.h
 +++ b/xen/include/public/arch-arm.h
 @@ -362,6 +362,15 @@ typedef uint64_t xen_callback_t;
@@ -457,7 +404,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libs/call/linux.c b/tools/libs/call/linux.c
-index 3f1b691fe7..8c8a56eb00 100644
+index 51fa4899eb..04a3452a04 100644
 --- a/tools/libs/call/linux.c
 +++ b/tools/libs/call/linux.c
 @@ -43,7 +43,7 @@ int osdep_xencall_open(xencall_handle *xcall)
@@ -470,7 +417,7 @@ index 3f1b691fe7..8c8a56eb00 100644
          /* Fallback to /proc/xen/privcmd */
          fd = open("/proc/xen/privcmd", O_RDWR|O_CLOEXEC);
 diff --git a/tools/libs/foreignmemory/linux.c b/tools/libs/foreignmemory/linux.c
-index 374e45aed5..132dcd7926 100644
+index 8daa5828e3..c0b555ae22 100644
 --- a/tools/libs/foreignmemory/linux.c
 +++ b/tools/libs/foreignmemory/linux.c
 @@ -41,7 +41,7 @@ int osdep_xenforeignmemory_open(xenforeignmemory_handle *fmem)

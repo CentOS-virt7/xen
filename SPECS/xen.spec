@@ -52,8 +52,8 @@
 
 
 # Hypervisor ABI
-%define hv_abi  4.10
-%define xen_version %{hv_abi}.2
+%define hv_abi 4.12
+%define xen_version %{hv_abi}.0
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -61,13 +61,13 @@
 # - package Release number should be "0.X", (increment X as needed in pkg_release)
 # Once Xen is released:
 # - Set xen_rc_base to 0
-%define xen_rc_base 0
+%define xen_rc_base rc1
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 33
+%define nb_commit 0
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset b6e203bc80
+%define abbrev_cset f8db97bc60
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -136,7 +136,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
 BuildRequires: libX11-devel python-devel ghostscript texlive-latex
 BuildRequires: ncurses-devel gtk2-devel libaio-devel libtool
-# for the docs
+# for the docs (also need pandoc but isn't available)
 BuildRequires: perl texinfo graphviz
 %ifarch x86_64
 # so that x86_64 builds pick up glibc32 correctly
@@ -451,9 +451,13 @@ export GIT=$(type -P false)
 %ifarch x86_64
 %define extra_config_arch --with-system-seabios=/usr/share/seabios/bios.bin
 %define extra_config_ovmf --with-system-ovmf=%{_libexecdir}/xen/boot/OVMF.fd
+
+# This used to be done via a patch (xen.use.fedora.ipxe.patch)
+cat /usr/share/ipxe/{10ec8139,8086100e}.rom > ipxe-xen-%{version}.bin
+%define extra_config_ipxe --with-system-ipxe=%{_libexecdir}/xen/boot/ipxe.bin
 %endif
 
-%define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_spice} %{?extra_config_ovmf}
+%define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_spice} %{?extra_config_ovmf} %{?extra_config_ipxe}
 
 WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-xenstored=xenstored --disable-xsmpolicy %{?extra_config}
 
@@ -505,6 +509,11 @@ make DESTDIR=%{buildroot} prefix=/usr install-docs
 %if %{with_stubdom}
 make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-stubdom
 %endif
+
+%ifarch x86_64
+install -m 644 ipxe-xen-%{version}.bin %{buildroot}/%{_libexecdir}/xen/boot/ipxe.bin
+%endif
+
 
 %if %build_efi
 install -m 644 %{SOURCE52} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}${XEN_VENDORVERSION}.cfg.sample
@@ -741,7 +750,7 @@ rm -rf %{buildroot}
 %files libs
 %defattr(-,root,root)
 %{_libdir}/*.so.*
-%{_libdir}/fs
+%{_libdir}/xenfsimage
 
 %files runtime
 %defattr(-,root,root)
@@ -813,6 +822,8 @@ rm -rf %{buildroot}
 %{_mandir}/man5/xlcpupool.cfg.5*
 %{_mandir}/man1/xenstore-chmod.1.gz
 %{_mandir}/man1/xenstore-ls.1.gz
+%{_mandir}/man1/xenstore-read.1.gz
+%{_mandir}/man1/xenstore-write.1.gz
 %{_mandir}/man1/xenstore.1.gz
 %{_mandir}/man5/xl-disk-configuration.5.gz
 %{_mandir}/man5/xl-network-configuration.5.gz
@@ -824,7 +835,7 @@ rm -rf %{buildroot}
 %{_mandir}/man7/xl-numa-placement.7.gz
 
 
-%{python_sitearch}/fsimage.so
+%{python_sitearch}/xenfsimage.so
 %{python_sitearch}/grub
 %{python_sitearch}/pygrub-*.egg-info
 
@@ -848,6 +859,7 @@ rm -rf %{buildroot}
 %dir %{_libexecdir}/%{name}/boot
 %{_libexecdir}/xen/boot/hvmloader
 %{_libexecdir}/xen/boot/ioemu-stubdom.gz
+%{_libexecdir}/xen/boot/ipxe.bin
 %{_libexecdir}/xen/boot/xenstore-stubdom.gz
 %{_libexecdir}/xen/boot/pv-grub-x86_32.gz
 %{_libexecdir}/xen/boot/pv-grub-x86_64.gz
@@ -887,7 +899,7 @@ rm -rf %{buildroot}
 %{_sbindir}/xen-tmem-list-parse
 %{_sbindir}/xenconsoled
 %{_sbindir}/xenlockprof
-%{_sbindir}/xenmon.py*
+%{_sbindir}/xenmon
 %{_sbindir}/xentop
 %{_sbindir}/xenbaked
 %{_sbindir}/xenstored
@@ -903,11 +915,11 @@ rm -rf %{buildroot}
 %{_bindir}/qemu-*-xen
 %{_bindir}/xen-detect
 %{_sbindir}/gdbsx
-%{_sbindir}/kdd
 %{_sbindir}/td-util
 %{_sbindir}/xen-hptool
 %{_sbindir}/xen-hvmcrash
 %{_sbindir}/xen-hvmctx
+%{_sbindir}/xen-kdd
 %{_sbindir}/xen-lowmemd
 %{_sbindir}/xen-mfndump
 %{_bindir}/xenalyze
@@ -1022,6 +1034,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jan 24 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.0-0.1.rc1
+- Update to first release candidate of 4.12
+
 * Tue Nov 27 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.2.33.gb6e203bc80-1
 - Update to include XSAs 275,279,280
 
