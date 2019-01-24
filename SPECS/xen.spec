@@ -58,17 +58,10 @@
 # Xen Project release candidates
 # To build a package for a RC:
 # - Set xen_rc_base to "rcX" (X been the RC release number)
-# - Change the package Release number to "0.X" (X is incremented for every new
-#   build of an RC package)
-# - Version should be the version of Xen once released
+# - package Release number should be "0.X", (increment X as needed in pkg_release)
 # Once Xen is released:
 # - Set xen_rc_base to 0
-# - Change the package Release number to 1
 %define xen_rc_base 0
-%if %{xen_rc_base}
-%define xen_rc_pkgver .%{xen_rc_base}
-%define xen_rc -%{xen_rc_base}
-%endif
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
@@ -76,6 +69,12 @@
 ## Abbrev to 10 character of the commit id
 %define abbrev_cset b6e203bc80
 
+%if %{xen_rc_base}
+%define pkg_version %{xen_version}
+%define pkg_release 0.1.%{xen_rc_base}
+%define xen_tarball_dir xen-%{xen_version}-%{xen_rc_base}
+%else
+%define pkg_release 1
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
 %define xen_tarball_dir xen-RELEASE-%{xen_version}-%{nb_commit}-g%{abbrev_cset}
@@ -83,11 +82,12 @@
 %define pkg_version %{xen_version}
 %define xen_tarball_dir xen-RELEASE-%{xen_version}
 %endif
+%endif
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{pkg_version}
-Release: 1%{?xen_rc_pkgver}%{?dist}
+Release: %{pkg_release}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -358,7 +358,7 @@ git config gc.auto 0
 # Have to remove the .gitignore so that tools/hotplug/Linux/init.d actually get included in the git tree
 rm -f .gitignore
 git add .
-git commit -a -q -m "%{version}%{?xen_rc} baseline."
+git commit -a -q -m "%{version} baseline."
 
 # Apply patches to code in the core Xen repo
 git am %{PATCH1}
@@ -507,7 +507,7 @@ make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-stubdom
 %endif
 
 %if %build_efi
-install -m 644 %{SOURCE52} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}%{?xen_rc}${XEN_VENDORVERSION}.cfg.sample
+install -m 644 %{SOURCE52} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}${XEN_VENDORVERSION}.cfg.sample
 mv %{buildroot}/boot/efi/efi %{buildroot}/boot/efi/EFI
 %endif
 
@@ -932,9 +932,9 @@ rm -rf %{buildroot}
 %files hypervisor
 %defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/xen-kernel
-/boot/xen-%{version}%{?xen_rc:-rc}-%{release}.config
+/boot/xen-%{version}-%{release}.config
 %ifarch x86_64
-/boot/xen-%{version}%{?xen_rc:-rc}-%{release}.gz
+/boot/xen-%{version}-%{release}.gz
 /boot/xen.gz
 %endif
 %ifarch aarch64
