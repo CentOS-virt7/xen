@@ -262,20 +262,34 @@ function check-gpg-status() {
     $arg_parse
     $requireargs key
 
-    local gpg_status_code
-    case "${#key}" in
-        16)
-            gpg_status_code=GOODSIG
-            ;;
-        40)
-            gpg_status_code=VALIDSIG
-            ;;
-        *)
-            fail "gpg key size incorrect"
-            ;;
-    esac
-    grep -Eq "^\[GNUPG:\] $gpg_status_code $key" ||
-        fail "signature check failed ${what:+for }$what"
+    local line fields
+    local reason
+    while read line; do
+        if ! [[ "$line" =~ ^\[GNUPG:\]\  ]]; then
+            continue
+        fi
+        IFS=' '
+        fields=($line)
+        unset IFS
+        case "${fields[1]}" in
+            NO_PUBKEY)
+                reason="Public key missing"
+                break
+                ;;
+            VALIDSIG)
+                if [[ "${fields[2]}" != "$key" ]]; then
+                    reason="Wrong key fingerprint"
+                    break
+                fi
+                if [[ "${fields[10]}" != '00' ]]; then
+                    reason="Wrong signature type"
+                    break
+                fi
+                return 0
+                ;;
+        esac
+    done
+    fail "signature check failed ${what:+for }$what${reason:+: }$reason"
 }
 
 function get-xen-stable() {
