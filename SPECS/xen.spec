@@ -104,12 +104,19 @@ Source14: grub-0.97.tar.gz
 Source15: polarssl-1.1.4-gpl.tgz
 %endif
 # systemd bits
-Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
+%ifarch x86_64
 Source50: xen-kernel.x86_64
+%endif
+%ifarch aarch64
 Source51: xen-kernel.aarch64
+%endif
+%if %{build_efi}
 Source52: efi-xen.cfg.aarch64
+%endif
+%if %{with_tianocore}
 Source53: edk2-947f3737abf65fda63f3ffd97fddfa6986986868.tar.gz
+%endif
 
 %if %{with_livepatch}
 Source60: livepatch-tools-0c104573a1c168995ec553778d1d2d1ebe9c9042.tar.gz
@@ -130,7 +137,9 @@ Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 # aarch64-only
+%ifarch aarch64
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
+%endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
