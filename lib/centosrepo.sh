@@ -379,16 +379,12 @@ function get-sources()
             wget -P $TOPDIR/SOURCES/ "$url" || exit 1
         fi
 
-        if gpg --list-keys 0x${XEN_KEY}; then
-            if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig ]]; then
-                wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE.sig || exit 1
-            fi
-            local gpg_status=$(gpg --status-fd 1 --verify $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig $TOPDIR/SOURCES/$XEN_RELEASE_FILE)
-            local what="Xen release tarball $XEN_RELEASE_FILE"
-            check-gpg-status key=${XEN_KEY}  <<<"$gpg_status"
-        else
-            echo "Not checking gpg signature due to missing key; add with gpg --recv-keys ${XEN_KEY}"
+        if [[ ! -e $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig ]]; then
+            wget -P $TOPDIR/SOURCES/ $XEN_RELEASE_BASE/$XEN_VERSION/$XEN_RELEASE_FILE.sig || exit 1
         fi
+        local gpg_status=$(gpgv --status-fd 1 --keyring $TOPDIR/SOURCES/trustedkeys.gpg $TOPDIR/SOURCES/$XEN_RELEASE_FILE.sig $TOPDIR/SOURCES/$XEN_RELEASE_FILE)
+        local what="Xen release tarball $XEN_RELEASE_FILE"
+        check-gpg-status key=${XEN_KEY}  <<<"$gpg_status"
     fi
     
     if [[ -n "$XEN_EXTLIB_FILES" ]] ; then
