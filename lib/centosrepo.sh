@@ -335,8 +335,9 @@ function get-xen-stable() {
         xen_file="xen-$(git describe).tar.gz"
         # Allow to run src-tarball without running ./configure first
         touch config/Tools.mk
-        make src-tarball || error "make src-tarball failed"
-        mv dist/$xen_file $TOPDIR/SOURCES/ || error "failed to move tarball to SOURCES dir"
+        make src-tarball || fail "make src-tarball failed"
+        mkdir -p "$TOPDIR/SOURCES"
+        mv dist/$xen_file $TOPDIR/SOURCES/ || fail "failed to move tarball to SOURCES dir"
         # Update commit count as nb_commit is outdated
         nb_commit="$(git rev-list --count $tag..HEAD)"
 
