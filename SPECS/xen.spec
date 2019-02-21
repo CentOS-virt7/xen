@@ -55,7 +55,7 @@
 # - package Release number should be "0.X", (increment X as needed in pkg_release)
 # Once Xen is released:
 # - Set xen_rc_base to 0
-%define xen_rc_base rc1
+%define xen_rc_base rc3
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
@@ -868,7 +868,6 @@ rm -rf %{buildroot}
 %{_sbindir}/flask-*
 # Misc stuff
 %{_bindir}/xen-cpuid
-%{_sbindir}/xen-bugtool
 %{_sbindir}/xen-diag
 %{_sbindir}/xen-livepatch
 %{_sbindir}/xen-tmem-list-parse
@@ -883,7 +882,6 @@ rm -rf %{buildroot}
 %{_sbindir}/xenperf
 %{_sbindir}/xenwatchdogd
 %{_sbindir}/xl
-%{_sbindir}/xen-ringwatch
 %{_sbindir}/xencov
 #x86-only stuff
 %ifarch x86_64
@@ -1009,6 +1007,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Feb 22 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.0-0.1.rc3
+- Update to third RC.
+- qemu-xen is now built in a different package.
+
 * Thu Jan 24 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.0-0.1.rc1
 - Update to first release candidate of 4.12
 
