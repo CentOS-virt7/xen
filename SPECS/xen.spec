@@ -26,7 +26,6 @@
 %define with_ocaml 0
 %define with_stubdom 0
 %define with_blktap 0
-%define with_spice 0
 %define with_tianocore 1
 %define build_efi 1
 %else
@@ -35,11 +34,6 @@
 %define with_blktap 1
 # Provided by xen-ovmf package
 %define with_tianocore 0
-%if 0%{?centos_ver} <= 6
-%define with_spice 0
-%else
-%define with_spice 1
-%endif
 # FIXME
 %define build_efi 0
 %endif
@@ -130,21 +124,15 @@ Patch1: xen-queue.am
 #
 # Use the following patch numbers:
 # 1000+: blktap
-# 2000+: qemu-xen
 # 3000+: qemu-traditional
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
-# aarch64-only
-%ifarch aarch64
-Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
-%endif
-
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
-BuildRequires: libX11-devel python-devel ghostscript texlive-latex
-BuildRequires: ncurses-devel gtk2-devel libaio-devel libtool
+BuildRequires: transfig libidn-devel zlib-devel texi2html
+BuildRequires: python-devel ghostscript texlive-latex
+BuildRequires: ncurses-devel libaio-devel libtool
 # for the docs (also need pandoc but isn't available)
 BuildRequires: perl texinfo graphviz
 %ifarch x86_64
@@ -158,7 +146,6 @@ BuildRequires: ipxe-roms-qemu
 BuildRequires: iasl
 %endif
 BuildRequires: gettext
-BuildRequires: gnutls-devel
 BuildRequires: openssl-devel
 # For ioemu PCI passthrough
 BuildRequires: pciutils-devel
@@ -186,13 +173,9 @@ Requires: chkconfig
 Requires: module-init-tools
 Requires: gawk
 Requires: grep
-#Recommends: xen-ovmf
 ExclusiveArch: x86_64 aarch64
 %if %with_ocaml
 BuildRequires: ocaml ocaml-findlib
-%endif
-%if %with_spice
-BuildRequires: spice-server-devel usbredir-devel
 %endif
 %if %with_livepatch
 BuildRequires: elfutils-libelf-devel
@@ -234,6 +217,7 @@ Requires: xen-ovmf
 Requires: xen-hypervisor-abi = %{hv_abi}
 # For hotplug scripts (locking.sh)
 Requires: perl
+Requires: qemu-xen
 
 %description runtime
 This package contains the runtime programs and daemons which
@@ -385,13 +369,6 @@ make -C xen olddefconfig
 
 # Now apply patches to things not in the core Xen repo
 
-pushd tools/qemu-xen
-# Add qemu-xen (aka "qemu upstream") -related patches here
-%ifarch aarch64
-%patch2001 -p1
-%endif
-popd
-
 pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
 popd
@@ -453,10 +430,6 @@ export GIT=$(type -P false)
 %define extra_config_systemd --disable-systemd
 %endif
 
-%if %with_spice
-%define extra_config_spice --with-extra-qemuu-configure-args="--enable-spice --enable-usb-redir"
-%endif
-
 %ifarch x86_64
 %define extra_config_arch --with-system-seabios=/usr/share/seabios/bios.bin
 %define extra_config_ovmf --with-system-ovmf=%{_libexecdir}/xen/boot/OVMF.fd
@@ -466,9 +439,16 @@ cat /usr/share/ipxe/{10ec8139,8086100e}.rom > ipxe-xen-%{version}.bin
 %define extra_config_ipxe --with-system-ipxe=%{_libexecdir}/xen/boot/ipxe.bin
 %endif
 
-%define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_spice} %{?extra_config_ovmf} %{?extra_config_ipxe}
+%define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_ovmf} %{?extra_config_ipxe}
 
-WGET=/bin/false ./configure --prefix=/usr --libexecdir=%{_libexecdir} --libdir=%{_libdir} --with-xenstored=xenstored --disable-xsmpolicy %{?extra_config}
+WGET=/bin/false ./configure \
+     --prefix=/usr \
+     --libexecdir=%{_libexecdir} \
+     --libdir=%{_libdir} \
+     --with-xenstored=xenstored \
+     --disable-xsmpolicy \
+     --with-system-qemu=%{_libdir}/xen/bin/qemu-system-i386 \
+     %{?extra_config}
 
 export EFI_VENDOR="%{xen_efi_vendor}"
 make %{?_smp_mflags} dist-xen
@@ -573,9 +553,7 @@ mkdir -p %{buildroot}%{_datadir}/doc/%{name}-licenses-%{version}-%{release}
 rm -f %{buildroot}%{_sbindir}/xen-python-path
 
 # qemu stuff (unused or available from upstream)
-rm -rf %{buildroot}/usr/share/xen/man
 rm -rf %{buildroot}/usr/bin/qemu-*-xen
-rm %{buildroot}/usr/libexec/qemu-bridge-helper
 %ifarch x86_64
 ln -s qemu-img %{buildroot}/%{_bindir}/qemu-img-xen
 ln -s qemu-img %{buildroot}/%{_bindir}/qemu-nbd-xen
@@ -586,8 +564,6 @@ for file in bios.bin openbios-sparc32 openbios-sparc64 ppc_rom.bin \
 do
 	rm -f %{buildroot}/%{_datadir}/xen/qemu/$file
 done
-rm -f %{buildroot}/%{_mandir}/man1/qemu*
-rm -f %{buildroot}/%{_mandir}/man8/qemu*
 rm -rf %{buildroot}/%{_prefix}/%{_sysconfdir}
 
 # README's not intended for end users
@@ -632,12 +608,6 @@ mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 %if %with_systemd
 mkdir -p %{buildroot}/usr/lib/tmpfiles.d
 install -m 644 %{SOURCE49} %{buildroot}/usr/lib/tmpfiles.d/xen.conf
-%endif
-
-# Not sure why qemu wants to put these here either...
-%if %{with_spice}
-rm -rf %{buildroot}%{_libdir}/xen/include
-rm -rf %{buildroot}%{_libdir}/xen/lib
 %endif
 
 # Not sure why qemu makes an x86_64 file when building on aarch64...
@@ -809,10 +779,6 @@ rm -rf %{buildroot}
 %dir %{_libdir}/%{name}
 %dir %{_libdir}/%{name}/bin
 %attr(0700,root,root) %{_libdir}/%{name}/bin/*
-# QEMU-xen runtime files
-%dir %{_datadir}/qemu-xen
-%{_datadir}/qemu-xen/*
-%{_datadir}/locale/*/LC_MESSAGES/qemu.mo
 
 %ifarch x86_64
 # QEMU runtime files
