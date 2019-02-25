@@ -52,8 +52,8 @@
 
 
 # Hypervisor ABI
-%define hv_abi  4.10
-%define xen_version %{hv_abi}.2
+%define hv_abi 4.10
+%define xen_version %{hv_abi}.3
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -72,7 +72,7 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 33
+%define nb_commit 0
 ## Abbrev to 10 character of the commit id
 %define abbrev_cset b6e203bc80
 
@@ -1031,6 +1031,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Feb 25 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.10.3-1
+- New stable release Xen 4.10.3
+
 * Tue Nov 27 2018 Anthony PERARD <anthony.perard@citrix.com> - 4.10.2.33.gb6e203bc80-1
 - Update to include XSAs 275,279,280
 

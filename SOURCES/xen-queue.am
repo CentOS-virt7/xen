@@ -216,7 +216,7 @@ Subject: [PATCH] xen.use.fedora.ipxe.patch
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Config.mk b/Config.mk
-index 2102b3538d..98b9c411e5 100644
+index ec74d0b6bc..8300138feb 100644
 --- a/Config.mk
 +++ b/Config.mk
 @@ -282,7 +282,7 @@ SEABIOS_UPSTREAM_REVISION ?= rel-1.10.2
@@ -227,7 +227,7 @@ index 2102b3538d..98b9c411e5 100644
 +ETHERBOOT_NICS ?= 10ec8139 8086100e
  
  
- QEMU_TRADITIONAL_REVISION ?= xen-4.10.2
+ QEMU_TRADITIONAL_REVISION ?= xen-4.10.3
 diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
 index 5a7cf7766d..457281cdf1 100644
 --- a/tools/firmware/Makefile
