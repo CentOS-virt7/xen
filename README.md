@@ -1,9 +1,8 @@
 # Branches
 
- - `xen-44` is the branch for Xen 4.4
- - `xen-46` is the branch for Xen 4.6 (currently supported)
- - `xen-48` is the branch for Xen 4.8
+ - `xen-48` is the branch for Xen 4.8 (currently supported)
  - `xen-410` is the branch for Xen 4.10
+ - `xen-412` is the branch for Xen 4.12
 
 # repo script
 
@@ -41,7 +40,6 @@ adding a `PatchNN:` line to the `xen.spec` file, and then adding
 
 For the 'NN', we use the following number sequence for patches:
 * 1000+: blktap
-* 2000+: qemu-xen
 * 3000+: qemu-xen-traditional
 
 Take XSA-130 for example; this had two patches, `xsa130-qemuu.patch`,
@@ -55,15 +53,9 @@ Copy them into `SOURCES`, and then add them to git:
 
 Then add the following two lines in the "Patch" section:
 
-    Patch2001: xsa130-qemuu.patch
-
     Patch3001: xsa130-qemut.patch
 
-And finally, add the the following line after `pushd tools/qemu-xen`:
-
-    %patch2001 -p1
-
-And the following line after `pushd tools/qemu-xen-traditional`:
+And finally, add the following line after `pushd tools/qemu-xen-traditional`:
 
     %patch3001 -p1
 
