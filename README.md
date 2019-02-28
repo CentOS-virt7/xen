@@ -1,9 +1,8 @@
 # Branches
 
- - `xen-44` is the branch for Xen 4.4
- - `xen-46` is the branch for Xen 4.6 (currently supported)
- - `xen-48` is the branch for Xen 4.8
+ - `xen-48` is the branch for Xen 4.8 (currently supported)
  - `xen-410` is the branch for Xen 4.10
+ - `xen-412` is the branch for Xen 4.12
 
 # repo script
 
