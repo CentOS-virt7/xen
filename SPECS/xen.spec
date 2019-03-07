@@ -72,9 +72,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 0
+%define nb_commit 12
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset b6e203bc80
+%define abbrev_cset 7842419a6b
 
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
@@ -1031,6 +1031,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Mar 07 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.10.3.12.g7842419a6b-1
+- Update to include XSAs 284,285,287,288,290-294
+
 * Mon Feb 25 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.10.3-1
 - New stable release Xen 4.10.3
 
