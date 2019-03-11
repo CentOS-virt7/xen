@@ -55,7 +55,7 @@
 # - package Release number should be "0.X", (increment X as needed in pkg_release)
 # Once Xen is released:
 # - Set xen_rc_base to 0
-%define xen_rc_base rc3
+%define xen_rc_base rc5
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
@@ -1007,6 +1007,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Mar 11 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.0-0.1.rc5
+- Update to fifth RC.
+
 * Fri Feb 22 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.0-0.1.rc3
 - Update to third RC.
 - qemu-xen is now built in a different package.
