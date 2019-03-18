@@ -252,7 +252,7 @@ Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
  2 files changed, 31 insertions(+), 18 deletions(-)
 
 diff --git a/tools/Rules.mk b/tools/Rules.mk
-index 68f2ed7ce1..27fbabced4 100644
+index 804176a1d0..2880ecccd6 100644
 --- a/tools/Rules.mk
 +++ b/tools/Rules.mk
 @@ -175,10 +175,10 @@ CFLAGS += -O2 -fomit-frame-pointer
