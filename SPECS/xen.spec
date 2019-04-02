@@ -55,7 +55,7 @@
 # - package Release number should be "0.X", (increment X as needed in pkg_release)
 # Once Xen is released:
 # - Set xen_rc_base to 0
-%define xen_rc_base rc6
+%define xen_rc_base 0
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
@@ -74,7 +74,7 @@
 %define xen_tarball_dir xen-RELEASE-%{xen_version}-%{nb_commit}-g%{abbrev_cset}
 %else
 %define pkg_version %{xen_version}
-%define xen_tarball_dir xen-RELEASE-%{xen_version}
+%define xen_tarball_dir xen-%{xen_version}
 %endif
 %endif
 
@@ -1007,6 +1007,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Apr 02 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.0-1
+- Xen 4.12 release
+
 * Mon Mar 18 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.0-0.1.rc6
 - Updated to sixth RC.
 
