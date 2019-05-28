@@ -59,9 +59,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 0
+%define nb_commit 30
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset f8db97bc60
+%define abbrev_cset b4f291b0ca
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -1007,6 +1007,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue May 28 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.0.30.gb4f291b0ca-1
+- Update to include XSA 297
+
 * Tue Apr 02 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.0-1
 - Xen 4.12 release
 
