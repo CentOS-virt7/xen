@@ -53,7 +53,7 @@
 
 # Hypervisor ABI
 %define hv_abi 4.10
-%define xen_version %{hv_abi}.3
+%define xen_version %{hv_abi}.4
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -72,7 +72,7 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 38
+%define nb_commit 0
 ## Abbrev to 10 character of the commit id
 %define abbrev_cset 48bd9061a2
 
@@ -1031,6 +1031,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jul 04 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4-1
+- Xen 4.10.4 released
+
 * Wed May 15 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.10.3.38.g48bd9061a2-1
 - Update to include XSA 297
 
