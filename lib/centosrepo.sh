@@ -551,23 +551,20 @@ function rebase-post()
 
     sync-patches-internal basever=$new
 
-    if [ "$XEN_CSET" ]; then
-        local new_id=$(git log --format=format:%H -1 "$new^{commit}")
-    fi
-
     popd
 
     info "Updating XEN_VERSION in sources.cfg"
     sed -i --follow-symlinks "s/XEN_VERSION=.*$/XEN_VERSION=$new/" $TOPDIR/sources.cfg || fail "Updating XEN_VERSION"
     if [ "$XEN_CSET" ]; then
-        sed -i --follow-symlinks "s/^\(XEN_CSET=\).*$/\1$new_id/" $TOPDIR/sources.cfg || fail "Updating XEN_CSET"
+        sed -i --follow-symlinks "s/^\(XEN_CSET=\).*$/\1/" $TOPDIR/sources.cfg || fail "Updating XEN_CSET"
     fi
-    info "Updating SPECS/xen.spec (hv_abi, xen_version, xen_rc_base)"
+    info "Updating SPECS/xen.spec (hv_abi, xen_version, xen_rc_base, nb_commit)"
     if [[ "$new" =~ (^[0-9]+\.[0-9]+)(\.[0-9]+)(-(rc[0-9]+))?$ ]] ; then
         local spec_file="$TOPDIR/SPECS/xen.spec"
         sed -i -E -e "s/^(%define hv_abi\s).*/\1${BASH_REMATCH[1]}/" \
             -e "s/^(%define xen_version %\{hv_abi\})\.[0-9]+$/\1${BASH_REMATCH[2]}/" \
             -e "s/^(%define xen_rc_base\s).*$/\1${BASH_REMATCH[4]:-0}/" \
+            -e "s/^(%define nb_commit\s).*$/\10/" \
             "$spec_file"
     else
         fail "Couldn't parse version"
