@@ -59,9 +59,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 0
+%define nb_commit 65
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset b4f291b0ca
+%define abbrev_cset 278e46ae8f
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -1007,6 +1007,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Nov 01 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.1.65.g278e46ae8f-1
+- Update with XSAs 296,298,299,301,302,303
+
 * Mon Aug 12 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.1-1
 - Xen 4.12.1 release
 
