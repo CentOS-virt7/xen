@@ -87,7 +87,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{pkg_version}
-Release: 1%{?xen_rc_pkgver}%{?dist}
+Release: 2%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -1031,6 +1031,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Nov 01 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4-2
+- Update with XSAs 296,298,299,301,302,303
+
 * Thu Jul 04 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4-1
 - Xen 4.10.4 released
 
