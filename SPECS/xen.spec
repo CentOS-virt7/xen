@@ -59,9 +59,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 48
+%define nb_commit 75
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset c67210f60d
+%define abbrev_cset 4c666a7e15
 
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
@@ -1030,6 +1030,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Nov 13 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.8.5.75.g4c666a7e15-1
+- Update to include XSAs 304 and 305
+
 * Fri Nov 01 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.8.5.48.gc67210f60d-1
 - Update to StableRef c67210f60dfa83565d26ae710e4f5e729a95dce5
 - Apply XSAs 296,298,299,301,302,303
