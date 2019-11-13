@@ -72,9 +72,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 0
+%define nb_commit 26
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset 48bd9061a2
+%define abbrev_cset fde09cb80c
 
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
@@ -87,7 +87,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{pkg_version}
-Release: 2%{?xen_rc_pkgver}%{?dist}
+Release: 1%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -1031,6 +1031,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Nov 13 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4.26.gfde09cb80c-1
+- Update to include XSAs 304 and 305
+
 * Fri Nov 01 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4-2
 - Update with XSAs 296,298,299,301,302,303
 
