@@ -630,3 +630,39 @@ function stg-check-patch-one()
 
     stg delete $patchname
 }
+
+update-new-commit-id()
+{
+    $arg_parse
+    $requireargs commit changelog
+
+    if [[ $(wc -l <<<"$changelog") -ne 1 ]]; then
+        fail "changelog= should only be one line"
+    fi
+
+    local spec_file="$TOPDIR/SPECS/xen.spec"
+
+    sed -i --follow-symlinks "s/^\(XEN_CSET=\).*$/\1$commit/" "$TOPDIR/sources.cfg" \
+        || fail "Updating abbrev_cset"
+
+    # Prepare new tarball; Update spec file
+    get-sources
+
+    # Update changelog
+    local pkg_version=$(rpmspec -q --srpm  --queryformat "%{version}-%{release}" "$spec_file")
+    [ -n "$pkg_version" ] || fail "Grab version from spec file"
+    local email="$(git config user.name) <$(git config user.email)>"
+    local changelog_entry="* $(date "+%a %b %d %Y") $email - $pkg_version"
+
+    sed -i -r -e "/^%changelog$/{
+    # Add new changelog entry
+    a $changelog_entry
+    a - $changelog
+    a
+    # Loop until the end of the file
+    :l;n;bl
+}" SPECS/xen.spec
+
+    git add -u SPECS sources.cfg
+    git commit -v -m "$pkg_version: $changelog"
+}
