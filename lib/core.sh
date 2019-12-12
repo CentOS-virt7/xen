@@ -10,7 +10,6 @@ _apd=false
 arg_parse_cmd=\
 "local -a args;
 local _a;
-local _vn;
 local _m;
 local CLVL=\$((\$CLVL+1))
 
@@ -20,9 +19,7 @@ for _a in \"\$@\" ; do
     $_apd && echo \"Evaluating \${_a} [[ \"\${_a/=}\" = \"\${_a}\" ]]\";
     if \$_m && [[ \"\${_a/=}\" != \"\${_a}\" ]] ; then
         $_apd && echo Parameter;
-        _vn=\${_a%%=*};
-        eval \"local \$_vn\";
-        eval \"\$_a\";
+        eval \"local '\$_a'\";
     elif \$_m && [[ \"\${_a}\" == \"--\" ]] ; then
         $_apd && echo Separator;
         _m=false;
