@@ -363,7 +363,7 @@ Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
  1 file changed, 9 insertions(+)
 
 diff --git a/xen/include/public/arch-arm.h b/xen/include/public/arch-arm.h
-index eb424e8286..ea5d036d5a 100644
+index b0cdd87d61..a5ceb0d7da 100644
 --- a/xen/include/public/arch-arm.h
 +++ b/xen/include/public/arch-arm.h
 @@ -362,6 +362,15 @@ typedef uint64_t xen_callback_t;
