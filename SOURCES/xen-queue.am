@@ -246,16 +246,21 @@ Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
 
 Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
+
+Also remove xenblktapctl from libxenlight.pc as this prevents
+newer libvirt from building --with-libxl.
+
+Signed-off-by: Anthony PERARD <anthony.perard@citrix.com>
 ---
- tools/Rules.mk              |  6 +++---
+ tools/Rules.mk              |  7 ++++---
  tools/libxl/libxl_blktap2.c | 43 ++++++++++++++++++++++++++++---------------
- 2 files changed, 31 insertions(+), 18 deletions(-)
+ 2 files changed, 32 insertions(+), 18 deletions(-)
 
 diff --git a/tools/Rules.mk b/tools/Rules.mk
-index 804176a1d0..2880ecccd6 100644
+index 804176a1d0..1ba7fbf863 100644
 --- a/tools/Rules.mk
 +++ b/tools/Rules.mk
-@@ -175,10 +175,10 @@ CFLAGS += -O2 -fomit-frame-pointer
+@@ -175,10 +175,11 @@ CFLAGS += -O2 -fomit-frame-pointer
  endif
  
  ifeq ($(CONFIG_BLKTAP2),y)
@@ -266,6 +271,7 @@ index 804176a1d0..2880ecccd6 100644
 -SHLIB_libblktapctl  = $(SHDEPS_libblktapctl) -Wl,-rpath-link=$(XEN_BLKTAP2)/control
 +LDLIBS_libblktapctl = $(SHDEPS_libblktapctl) $(XEN_BLKTAP2)/control/.libs/libblktapctl$(libextension)
 +SHLIB_libblktapctl  = $(SHDEPS_libblktapctl) -Wl,-rpath-link=$(XEN_BLKTAP2)/control/.libs
++PKG_CONFIG_REMOVE += xenblktapctl
  else
  CFLAGS_libblktapctl =
  SHDEPS_libblktapctl =

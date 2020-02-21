@@ -68,7 +68,7 @@
 %define pkg_release 0.1.%{xen_rc_base}
 %define xen_tarball_dir xen-%{xen_version}-%{xen_rc_base}
 %else
-%define pkg_release 1
+%define pkg_release 2
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
 %define xen_tarball_dir xen-RELEASE-%{xen_version}-%{nb_commit}-g%{abbrev_cset}
@@ -1007,6 +1007,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Feb 21 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.2-2
+- Fix build of newer libvirt by removing non-existent xenblktapctl dependency
+  from libxenlight.pc.
+
 * Fri Dec 20 2019 Anthony PERARD <anthony.perard@citrix.com> - 4.12.2-1
 - Xen 4.12.2 release
 
