@@ -399,9 +399,6 @@ rm -rf ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/edk2
 
 
 %build
-%if !%build_ocaml
-%define ocaml_flags OCAML_TOOLS=n
-%endif
 %if %build_efi
 mkdir -p dist/install/boot/efi/efi/%{xen_efi_vendor}
 %endif
@@ -439,6 +436,12 @@ cat /usr/share/ipxe/{10ec8139,8086100e}.rom > ipxe-xen-%{version}.bin
 %define extra_config_ipxe --with-system-ipxe=%{_libexecdir}/xen/boot/ipxe.bin
 %endif
 
+%if %build_ocaml
+%define config_ocamltools --enable-ocamltools
+%else
+%define config_ocamltools --disable-ocamltools
+%endif
+
 %define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_ovmf} %{?extra_config_ipxe}
 
 WGET=/bin/false ./configure \
@@ -448,16 +451,17 @@ WGET=/bin/false ./configure \
      --with-xenstored=xenstored \
      --disable-xsmpolicy \
      --with-system-qemu=%{_libdir}/xen/bin/qemu-system-i386 \
+     %{?config_ocamltools} \
      %{?extra_config}
 
 export EFI_VENDOR="%{xen_efi_vendor}"
 make %{?_smp_mflags} dist-xen
-make %{?_smp_mflags} %{?ocaml_flags} dist-tools
+make %{?_smp_mflags} dist-tools
 make                                 dist-docs
 
 %if %{with_stubdom}
 unset EXTRA_CFLAGS_XEN_TOOLS
-make %{?ocaml_flags} dist-stubdom
+make dist-stubdom
 %endif
 
 %if %{with_tianocore}
@@ -493,10 +497,10 @@ export XEN_DOMAIN="centos.org"
 export EFI_VENDOR="%{xen_efi_vendor}"
 xen_version="$(make -C xen xenversion --no-print-directory)"
 make DESTDIR=%{buildroot} prefix=/usr install-xen
-make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-tools
+make DESTDIR=%{buildroot} prefix=/usr install-tools
 make DESTDIR=%{buildroot} prefix=/usr install-docs
 %if %{with_stubdom}
-make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-stubdom
+make DESTDIR=%{buildroot} prefix=/usr install-stubdom
 %endif
 
 %ifarch x86_64
