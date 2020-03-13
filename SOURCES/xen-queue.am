@@ -467,3 +467,90 @@ index 0fdc7121f1..684a7f6b47 100644
          PERROR("Could not obtain handle on privileged command interface");
 -- 
 
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Anthony PERARD <anthony.perard@citrix.com>
+Date: Wed, 11 Mar 2020 16:56:50 +0000
+Subject: [PATCH] tools: Use INSTALL_PYTHON_PROG
+
+Whenever python scripts are install, have the shebang be modified to use
+whatever PYTHON is. This is useful for system where python isn't available, or
+where the package build tools prevent unversioned shebang.
+
+INSTALL_PYTHON_PROG only looks for "#!/usr/bin/env python".
+
+Signed-off-by: Anthony PERARD <anthony.perard@citrix.com>
+---
+ tools/misc/xencov_split | 2 +-
+ tools/python/Makefile   | 4 ++--
+ tools/xenmon/Makefile   | 2 +-
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/tools/misc/xencov_split b/tools/misc/xencov_split
+index 1f20518b86..5771f6cfc2 100755
+--- a/tools/misc/xencov_split
++++ b/tools/misc/xencov_split
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/env python
+ 
+ import sys, os, os.path as path, struct, errno
+ from optparse import OptionParser
+diff --git a/tools/python/Makefile b/tools/python/Makefile
+index 541858e2f8..92418bdb17 100644
+--- a/tools/python/Makefile
++++ b/tools/python/Makefile
+@@ -20,8 +20,8 @@ install:
+ 		setup.py install --record $(INSTALL_LOG) $(PYTHON_PREFIX_ARG) \
+ 		--root="$(DESTDIR)" --force
+ 
+-	$(INSTALL_PROG) scripts/convert-legacy-stream $(DESTDIR)$(LIBEXEC_BIN)
+-	$(INSTALL_PROG) scripts/verify-stream-v2 $(DESTDIR)$(LIBEXEC_BIN)
++	$(INSTALL_PYTHON_PROG) scripts/convert-legacy-stream $(DESTDIR)$(LIBEXEC_BIN)
++	$(INSTALL_PYTHON_PROG) scripts/verify-stream-v2 $(DESTDIR)$(LIBEXEC_BIN)
+ 
+ .PHONY: uninstall
+ uninstall:
+diff --git a/tools/xenmon/Makefile b/tools/xenmon/Makefile
+index e1712304d0..3e150b0659 100644
+--- a/tools/xenmon/Makefile
++++ b/tools/xenmon/Makefile
+@@ -32,7 +32,7 @@ install: build
+ 	$(INSTALL_DIR) $(DESTDIR)$(sbindir)
+ 	$(INSTALL_PROG) xenbaked $(DESTDIR)$(sbindir)/xenbaked
+ 	$(INSTALL_PROG) xentrace_setmask  $(DESTDIR)$(sbindir)/xentrace_setmask
+-	$(INSTALL_PROG) xenmon.py  $(DESTDIR)$(sbindir)/xenmon
++	$(INSTALL_PYTHON_PROG) xenmon.py  $(DESTDIR)$(sbindir)/xenmon
+ 
+ .PHONY: uninstall
+ uninstall:
+-- 
+
+
+From git-format-patch Mon Sep 17 00:00:00 2001
+From: Anthony PERARD <anthony.perard@citrix.com>
+Date: Wed, 11 Mar 2020 17:16:10 +0000
+Subject: [PATCH] tools/python: Fix install-wrap
+
+This allows to use install-wrap when the source scripts is in a
+subdirectory.
+
+Signed-off-by: Anthony PERARD <anthony.perard@citrix.com>
+---
+ tools/python/install-wrap | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/python/install-wrap b/tools/python/install-wrap
+index 00e2014016..fef24e0170 100755
+--- a/tools/python/install-wrap
++++ b/tools/python/install-wrap
+@@ -44,7 +44,7 @@ shift
+ destf="$dest"
+ for srcf in ${srcs}; do
+ 	if test -d "$dest"; then
+-		destf="$dest/${srcf%%*/}"
++		destf="$dest/${srcf##*/}"
+ 	fi
+ 	org="$(sed -n '2q; /^#! *\/usr\/bin\/env python *$/p' $srcf)"
+ 	if test "x$org" = x; then
+-- 
+
