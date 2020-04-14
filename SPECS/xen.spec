@@ -59,9 +59,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 0
+%define nb_commit 39
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset 8f333d1391
+%define abbrev_cset 3536f8dc39
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -1007,6 +1007,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Apr 14 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.2.39.g3536f8dc39-2
+- Update for XSAs 313,314,316,318
+
 * Fri Feb 21 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.2-2
 - Fix build of newer libvirt by removing non-existent xenblktapctl dependency
   from libxenlight.pc.
