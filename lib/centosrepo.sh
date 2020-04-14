@@ -628,6 +628,7 @@ function stg-check-patch-one()
     stg delete $patchname
 }
 
+help-add "update-new-commit-id commit=[id] changelog=[text]: Prepare SPEC file + commit"
 update-new-commit-id()
 {
     $arg_parse
