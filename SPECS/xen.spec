@@ -59,9 +59,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 0
+%define nb_commit 2
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset 3536f8dc39
+%define abbrev_cset 199ae1f158
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -1007,6 +1007,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Jun 10 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.3.2.g199ae1f158-1
+- XSA-320
+
 * Wed May 27 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.3-1
 - Xen 4.12.3 release
 
