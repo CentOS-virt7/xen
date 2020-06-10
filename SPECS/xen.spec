@@ -47,7 +47,7 @@
 
 # Hypervisor ABI
 %define hv_abi 4.12
-%define xen_version %{hv_abi}.2
+%define xen_version %{hv_abi}.3
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -59,7 +59,7 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 39
+%define nb_commit 0
 ## Abbrev to 10 character of the commit id
 %define abbrev_cset 3536f8dc39
 
@@ -68,7 +68,7 @@
 %define pkg_release 0.1.%{xen_rc_base}
 %define xen_tarball_dir xen-%{xen_version}-%{xen_rc_base}
 %else
-%define pkg_release 2
+%define pkg_release 1
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
 %define xen_tarball_dir xen-RELEASE-%{xen_version}-%{nb_commit}-g%{abbrev_cset}
@@ -1007,6 +1007,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed May 27 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.3-1
+- Xen 4.12.3 release
+
 * Tue Apr 14 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.2.39.g3536f8dc39-2
 - Update for XSAs 313,314,316,318
 
