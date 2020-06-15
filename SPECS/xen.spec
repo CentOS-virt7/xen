@@ -72,9 +72,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 60
+%define nb_commit 63
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset 934d6e1a77
+%define abbrev_cset fd6e49ecae
 
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
@@ -1031,6 +1031,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jun 15 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4.63.gfd6e49ecae-1
+- Adding new patch from XSA-320 v2
+
 * Wed Jun 10 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4.60.g934d6e1a77-1
 - XSA-320
 
