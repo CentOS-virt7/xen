@@ -41,6 +41,11 @@
 %define build_efi 0
 %endif
 
+# Don't provide blktap2 anymore on CentOS 8 and later
+%if 0%{?centos_ver} >= 8
+%define with_blktap 0
+%endif
+
 # Build ocaml bits unless rpmbuild was run with --without ocaml 
 # or ocamlopt is missing (the xen makefile doesn't build ocaml bits if it isn't there)
 %define build_ocaml %(test -x %{_bindir}/ocamlopt && echo %{with_ocaml} || echo 0)
@@ -119,7 +124,9 @@ Source53: edk2-947f3737abf65fda63f3ffd97fddfa6986986868.tar.gz
 Source60: livepatch-tools-0c104573a1c168995ec553778d1d2d1ebe9c9042.tar.gz
 %endif
 
+%if %{with_blktap}
 Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
+%endif
 
 Patch1: xen-queue.am
 
@@ -128,9 +135,11 @@ Patch1: xen-queue.am
 # Use the following patch numbers:
 # 1000+: blktap
 # 3000+: qemu-traditional
+%if %{with_blktap}
 Patch1001: xen-centos-disableWerror-blktap25.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
+%endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html
@@ -905,7 +914,9 @@ rm -rf %{buildroot}
 %{_bindir}/qemu-*-xen
 %{_bindir}/xen-detect
 %{_sbindir}/gdbsx
+%if %{with_blktap}
 %{_sbindir}/td-util
+%endif
 %{_sbindir}/xen-hptool
 %{_sbindir}/xen-hvmcrash
 %{_sbindir}/xen-hvmctx
@@ -972,7 +983,9 @@ rm -rf %{buildroot}
 
 %{_libdir}/*.so
 %ifarch x86_64
+%if %{with_blktap}
 %{_libdir}/*.la
+%endif
 %endif
 
 %{_datadir}/pkgconfig/xencall.pc
