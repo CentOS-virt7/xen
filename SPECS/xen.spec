@@ -366,8 +366,8 @@ XEN_EXTRAVERSION="${XEN_EXTRAVERSION#%{hv_abi}}"
 
 # Create a git repo within the expanded tarball.
 git init
-git config user.email "..."
-git config user.name "..."
+git config user.email "build@centos"
+git config user.name "build"
 git config gc.auto 0
 # Have to remove the .gitignore so that tools/hotplug/Linux/init.d actually get included in the git tree
 rm -f .gitignore
