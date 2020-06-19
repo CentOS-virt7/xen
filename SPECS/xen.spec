@@ -194,7 +194,7 @@ Requires: chkconfig
 Requires: module-init-tools
 Requires: gawk
 Requires: grep
-ExclusiveArch: x86_64 aarch64
+ExclusiveArch: x86_64
 %if %with_ocaml
 BuildRequires: ocaml ocaml-findlib
 %endif
