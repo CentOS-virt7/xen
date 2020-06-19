@@ -1,6 +1,9 @@
+%if 0%{?centos_ver} <= 7
 %{!?python_sitearch: %define python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
-
-
+%else
+%define python_sitearch %{python2_sitearch}
+%define __python %{__python2}
+%endif
 
 %define _libexecdir %{_libdir}
 
@@ -131,7 +134,12 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html
-BuildRequires: python-devel ghostscript texlive-latex
+%if 0%{?centos_ver} <= 7
+BuildRequires: python-devel
+%else
+BuildRequires: python2-devel
+%endif
+BuildRequires: ghostscript texlive-latex
 BuildRequires: ncurses-devel libaio-devel libtool
 # for the docs (also need pandoc but isn't available)
 BuildRequires: perl texinfo graphviz
@@ -162,7 +170,11 @@ BuildRequires: git
 BuildRequires: pkgconfig(libsystemd-daemon)
 %endif
 Requires: bridge-utils
+%if 0%{?centos_ver} <= 7
 Requires: python-lxml
+%else
+Requires: python2-lxml
+%endif
 Requires: pciutils
 Requires: xen-runtime = %{version}-%{release}
 # Not strictly a dependency, but kpartx is by far the most useful tool right
@@ -452,11 +464,12 @@ WGET=/bin/false ./configure \
      --disable-xsmpolicy \
      --with-system-qemu=%{_libdir}/xen/bin/qemu-system-i386 \
      %{?config_ocamltools} \
+     PYTHON=%{__python} \
      %{?extra_config}
 
 export EFI_VENDOR="%{xen_efi_vendor}"
-make %{?_smp_mflags} dist-xen
-make %{?_smp_mflags} dist-tools
+make %{?_smp_mflags} PYTHON=%{__python} dist-xen
+make %{?_smp_mflags} PYTHON=%{__python} dist-tools
 make                                 dist-docs
 
 %if %{with_stubdom}
@@ -496,7 +509,7 @@ XEN_EXTRAVERSION="${XEN_EXTRAVERSION#%{hv_abi}}"
 export XEN_DOMAIN="centos.org"
 export EFI_VENDOR="%{xen_efi_vendor}"
 xen_version="$(make -C xen xenversion --no-print-directory)"
-make DESTDIR=%{buildroot} prefix=/usr install-xen
+make DESTDIR=%{buildroot} prefix=/usr PYTHON=%{__python} install-xen
 make DESTDIR=%{buildroot} prefix=/usr install-tools
 make DESTDIR=%{buildroot} prefix=/usr install-docs
 %if %{with_stubdom}
