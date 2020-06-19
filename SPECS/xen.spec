@@ -28,22 +28,15 @@
 %ifarch aarch64
 %define with_ocaml 0
 %define with_stubdom 0
-%define with_blktap 0
 %define with_tianocore 1
 %define build_efi 1
 %else
 %define with_ocaml  1
 %define with_stubdom 1
-%define with_blktap 1
 # Provided by xen-ovmf package
 %define with_tianocore 0
 # FIXME
 %define build_efi 0
-%endif
-
-# Don't provide blktap2 anymore on CentOS 8 and later
-%if 0%{?centos_ver} >= 8
-%define with_blktap 0
 %endif
 
 # Build ocaml bits unless rpmbuild was run with --without ocaml 
@@ -54,8 +47,8 @@
 
 
 # Hypervisor ABI
-%define hv_abi 4.12
-%define xen_version %{hv_abi}.3
+%define hv_abi 4.13
+%define xen_version %{hv_abi}.1
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -67,7 +60,7 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 3
+%define nb_commit 0
 ## Abbrev to 10 character of the commit id
 %define abbrev_cset d58c48df8c
 
@@ -124,22 +117,12 @@ Source53: edk2-947f3737abf65fda63f3ffd97fddfa6986986868.tar.gz
 Source60: livepatch-tools-0c104573a1c168995ec553778d1d2d1ebe9c9042.tar.gz
 %endif
 
-%if %{with_blktap}
-Source101: blktap-d73c74874a449c18dc1528076e5c0671cc5ed409.tar.gz
-%endif
-
 Patch1: xen-queue.am
 
 # Out-of-tree patches.  
 #
 # Use the following patch numbers:
-# 1000+: blktap
 # 3000+: qemu-traditional
-%if %{with_blktap}
-Patch1001: xen-centos-disableWerror-blktap25.patch
-Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
-Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
-%endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html
@@ -394,20 +377,6 @@ pushd tools/qemu-xen-traditional
 # Add qemu-traditional-related patches here
 popd
 
-%if %{with_blktap}
-pushd `pwd`
-rm -rf ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/blktap2
-%{__tar} -C ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/ -zxf %{SOURCE101}
-cd ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/blktap2
-./autogen.sh
-./configure --libdir=%{_libdir} --prefix=/usr --libexecdir=%{_libexecdir}/xen/bin
-popd
-# Add blktap-related patches here
-%patch1001 -p1
-%patch1005 -p1
-%patch1006 -p1
-%endif
-
 %if %{with_stubdom}
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} stubdom
@@ -437,12 +406,6 @@ export EXTRA_CFLAGS_QEMU_XEN="$RPM_OPT_FLAGS"
 export WGET=$(type -P false)
 export GIT=$(type -P false)
 
-%if %{with_blktap}
-%define extra_config_blktap --enable-blktap2
-%else
-%define extra_config_blktap --disable-blktap2
-%endif
-
 %if %with_systemd
 %define extra_config_systemd --enable-systemd
 %else
@@ -464,8 +427,6 @@ cat /usr/share/ipxe/{10ec8139,8086100e}.rom > ipxe-xen-%{version}.bin
 %define config_ocamltools --disable-ocamltools
 %endif
 
-%define extra_config %{?extra_config_systemd} %{?extra_config_blktap} %{?extra_config_arch} %{?extra_config_ovmf} %{?extra_config_ipxe}
-
 WGET=/bin/false ./configure \
      --prefix=/usr \
      --libexecdir=%{_libexecdir} \
@@ -475,7 +436,10 @@ WGET=/bin/false ./configure \
      --with-system-qemu=%{_libdir}/xen/bin/qemu-system-i386 \
      %{?config_ocamltools} \
      PYTHON=%{__python} \
-     %{?extra_config}
+     %{?extra_config_systemd} \
+     %{?extra_config_arch} \
+     %{?extra_config_ovmf} \
+     %{?extra_config_ipxe}
 
 make %{?_smp_mflags} PYTHON=%{__python} dist-xen
 make %{?_smp_mflags} PYTHON=%{__python} dist-tools
@@ -896,7 +860,7 @@ rm -rf %{buildroot}
 %{_bindir}/xen-cpuid
 %{_sbindir}/xen-diag
 %{_sbindir}/xen-livepatch
-%{_sbindir}/xen-tmem-list-parse
+%{_sbindir}/xen-ucode
 %{_sbindir}/xenconsoled
 %{_sbindir}/xenlockprof
 %{_sbindir}/xenmon
@@ -914,9 +878,6 @@ rm -rf %{buildroot}
 %{_bindir}/qemu-*-xen
 %{_bindir}/xen-detect
 %{_sbindir}/gdbsx
-%if %{with_blktap}
-%{_sbindir}/td-util
-%endif
 %{_sbindir}/xen-hptool
 %{_sbindir}/xen-hvmcrash
 %{_sbindir}/xen-hvmctx
@@ -924,17 +885,6 @@ rm -rf %{buildroot}
 %{_sbindir}/xen-lowmemd
 %{_sbindir}/xen-mfndump
 %{_bindir}/xenalyze
-%endif
-#blktap
-%if %{with_blktap}
-%{_sbindir}/tap-ctl
-%{_bindir}/vhd-index
-%{_bindir}/vhd-update
-%{_bindir}/vhd-util
-%{_sbindir}/lvm-util
-%{_sbindir}/part-util
-%{_sbindir}/td-rated
-%{_sbindir}/vhdpartx
 %endif
 
 # Xen logfiles
@@ -974,34 +924,22 @@ rm -rf %{buildroot}
 %dir %{_includedir}/xenstore-compat
 %{_includedir}/xenstore-compat/*
 
-%if %{with_blktap}
-%dir %{_includedir}/blktap
-%{_includedir}/blktap/*
-%dir %{_includedir}/vhd
-%{_includedir}/vhd/*
-%endif
-
 %{_libdir}/*.so
-%ifarch x86_64
-%if %{with_blktap}
-%{_libdir}/*.la
-%endif
-%endif
 
-%{_datadir}/pkgconfig/xencall.pc
-%{_datadir}/pkgconfig/xencontrol.pc
-%{_datadir}/pkgconfig/xendevicemodel.pc
-%{_datadir}/pkgconfig/xenevtchn.pc
-%{_datadir}/pkgconfig/xenforeignmemory.pc
-%{_datadir}/pkgconfig/xengnttab.pc
-%{_datadir}/pkgconfig/xenguest.pc
-%{_datadir}/pkgconfig/xenlight.pc
-%{_datadir}/pkgconfig/xenstat.pc
-%{_datadir}/pkgconfig/xenstore.pc
-%{_datadir}/pkgconfig/xentoolcore.pc
-%{_datadir}/pkgconfig/xentoollog.pc
-%{_datadir}/pkgconfig/xenvchan.pc
-%{_datadir}/pkgconfig/xlutil.pc
+%{_libdir}/pkgconfig/xencall.pc
+%{_libdir}/pkgconfig/xencontrol.pc
+%{_libdir}/pkgconfig/xendevicemodel.pc
+%{_libdir}/pkgconfig/xenevtchn.pc
+%{_libdir}/pkgconfig/xenforeignmemory.pc
+%{_libdir}/pkgconfig/xengnttab.pc
+%{_libdir}/pkgconfig/xenguest.pc
+%{_libdir}/pkgconfig/xenlight.pc
+%{_libdir}/pkgconfig/xenstat.pc
+%{_libdir}/pkgconfig/xenstore.pc
+%{_libdir}/pkgconfig/xentoolcore.pc
+%{_libdir}/pkgconfig/xentoollog.pc
+%{_libdir}/pkgconfig/xenvchan.pc
+%{_libdir}/pkgconfig/xlutil.pc
 
 %files licenses
 %defattr(-,root,root)
@@ -1037,6 +975,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Jul 24 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.13.1-1
+- Xen 4.13 release
+- Removed support for blktap2 as blktap support is removed upstream.
+
 * Mon Jun 15 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.3.3.gd58c48df8c-1
 - Adding new patch from XSA-320 v2
 

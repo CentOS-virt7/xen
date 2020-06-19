@@ -121,48 +121,6 @@ index 95d6a52fe6..2b80eeeb83 100644
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: George Dunlap <george.dunlap@eu.citrix.com>
 Date: Thu, 11 Jan 2018 18:41:41 +0000
-Subject: [PATCH] tools/Linux: Fix blktap module name in default module list
-
-The name of the blktap2 kernel module is... blktap.
-
-Signed-off-by: George Dunlap <george.dunlap@citrix.com>
----
- tools/configure    | 2 +-
- tools/configure.ac | 2 +-
- 2 files changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/tools/configure b/tools/configure
-index acc857510e..42b79ace49 100755
---- a/tools/configure
-+++ b/tools/configure
-@@ -4220,7 +4220,7 @@ xen-scsibk
- usbbk
- pciback
- xen-acpi-processor
--blktap2
-+blktap
- "
- ;;
- *)
-diff --git a/tools/configure.ac b/tools/configure.ac
-index 1499344ce6..3a2c7507d9 100644
---- a/tools/configure.ac
-+++ b/tools/configure.ac
-@@ -106,7 +106,7 @@ xen-scsibk
- usbbk
- pciback
- xen-acpi-processor
--blktap2
-+blktap
- "
- ;;
- *)
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] Disable iptables on the bridge
 
 ---
@@ -205,161 +163,6 @@ index 92ffa603f7..0b1fde9dac 100644
 
 
 From git-format-patch Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Jan 2018 18:41:41 +0000
-Subject: [PATCH] Revert "libxl: prefer qdisk over blktap when choosing disk
- backend"
-
-This reverts commit 0166217103e18368424fbd5ffff01c1ea50d0b17.
-
-There are some disk formats commonly supported by both qdisk and blktap.
-As qdisk is better supported and blktap is unmaintained, we choose qdisk
-over blktap whenever possible.
-
-Signed-off-by: Wei Liu <wei.liu2@citrix.com>
-Acked-by: Ian Jackson <ian.jackson@eu.citrix.com>
----
- tools/libxl/libxl_device.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/tools/libxl/libxl_device.c b/tools/libxl/libxl_device.c
-index 0bbf91bb62..b041e54793 100644
---- a/tools/libxl/libxl_device.c
-+++ b/tools/libxl/libxl_device.c
-@@ -424,8 +424,8 @@ int libxl__device_disk_set_backend(libxl__gc *gc, libxl_device_disk *disk) {
-     } else {
-         ok=
-             disk_try_backend(&a, LIBXL_DISK_BACKEND_PHY) ?:
--            disk_try_backend(&a, LIBXL_DISK_BACKEND_QDISK) ?:
--            disk_try_backend(&a, LIBXL_DISK_BACKEND_TAP);
-+            disk_try_backend(&a, LIBXL_DISK_BACKEND_TAP) ?:
-+            disk_try_backend(&a, LIBXL_DISK_BACKEND_QDISK);
-         if (ok)
-             LOG(DEBUG, "Disk vdev=%s, using backend %s",
-                        disk->vdev,
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
-From: George Dunlap <george.dunlap@eu.citrix.com>
-Date: Thu, 11 Jan 2018 18:41:41 +0000
-Subject: [PATCH] Adapt libxl to use blktap 2.5 v0.9.2
-
-Signed-off-by: George Dunlap <george.dunlap@eu.citrix.com>
-
-Also remove xenblktapctl from libxenlight.pc as this prevents
-newer libvirt from building --with-libxl.
-
-Signed-off-by: Anthony PERARD <anthony.perard@citrix.com>
----
- tools/Rules.mk              |  7 ++++---
- tools/libxl/libxl_blktap2.c | 43 ++++++++++++++++++++++++++++---------------
- 2 files changed, 32 insertions(+), 18 deletions(-)
-
-diff --git a/tools/Rules.mk b/tools/Rules.mk
-index 804176a1d0..1ba7fbf863 100644
---- a/tools/Rules.mk
-+++ b/tools/Rules.mk
-@@ -175,10 +175,11 @@ CFLAGS += -O2 -fomit-frame-pointer
- endif
- 
- ifeq ($(CONFIG_BLKTAP2),y)
--CFLAGS_libblktapctl = -I$(XEN_BLKTAP2)/control -I$(XEN_BLKTAP2)/include $(CFLAGS_xeninclude)
-+CFLAGS_libblktapctl = -I$(XEN_BLKTAP2)/include $(CFLAGS_xeninclude)
- SHDEPS_libblktapctl =
--LDLIBS_libblktapctl = $(SHDEPS_libblktapctl) $(XEN_BLKTAP2)/control/libblktapctl$(libextension)
--SHLIB_libblktapctl  = $(SHDEPS_libblktapctl) -Wl,-rpath-link=$(XEN_BLKTAP2)/control
-+LDLIBS_libblktapctl = $(SHDEPS_libblktapctl) $(XEN_BLKTAP2)/control/.libs/libblktapctl$(libextension)
-+SHLIB_libblktapctl  = $(SHDEPS_libblktapctl) -Wl,-rpath-link=$(XEN_BLKTAP2)/control/.libs
-+PKG_CONFIG_REMOVE += xenblktapctl
- else
- CFLAGS_libblktapctl =
- SHDEPS_libblktapctl =
-diff --git a/tools/libxl/libxl_blktap2.c b/tools/libxl/libxl_blktap2.c
-index 5c9a0a2da8..a54a31e32b 100644
---- a/tools/libxl/libxl_blktap2.c
-+++ b/tools/libxl/libxl_blktap2.c
-@@ -29,20 +29,15 @@ char *libxl__blktap_devpath(libxl__gc *gc,
- {
-     const char *type;
-     char *params, *devname = NULL;
--    tap_list_t tap;
-     int err;
- 
-     type = libxl__device_disk_string_of_format(format);
--    err = tap_ctl_find(type, disk, &tap);
--    if (err == 0) {
--        devname = GCSPRINTF("/dev/xen/blktap-2/tapdev%d", tap.minor);
--        if (devname)
--            return devname;
--    }
- 
--    params = GCSPRINTF("%s:%s", type, disk);
--    err = tap_ctl_create(params, &devname);
-+    params = libxl__sprintf(gc, "%s:%s", type, disk);
-+    fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,params);
-+    err = tap_ctl_create(params, &devname, 0, -1, 0, 0);
-     if (!err) {
-+        fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,devname);
-         libxl__ptr_add(gc, devname);
-         return devname;
-     }
-@@ -56,7 +51,10 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
- {
-     char *type, *disk;
-     int err;
--    tap_list_t tap;
-+	struct list_head list = LIST_HEAD_INIT(list);
-+	tap_list_t *entry;
-+    int minor = -1;
-+    pid_t pid = -1;
- 
-     type = libxl__strdup(gc, params);
- 
-@@ -66,19 +64,34 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
-         return ERROR_INVAL;
-     }
- 
-+    fprintf(stderr, "DEBUG %s %d type=%s disk=%s\n",__func__,__LINE__,type,disk);
-     *disk++ = '\0';
- 
--    err = tap_ctl_find(type, disk, &tap);
--    if (err < 0) {
--        /* returns -errno */
-+    err = tap_ctl_list(&list);
-+    if (err)
-+        return err;
-+    tap_list_for_each_entry(entry, &list) {
-+		if (type && (!entry->type || strcmp(entry->type, type)))
-+			continue;
-+
-+		if (disk && (!entry->path || strcmp(entry->path, disk)))
-+			continue;
-+
-+        minor = entry->minor;
-+        pid = entry->pid;
-+		break;
-+	}
-+	tap_ctl_list_free(&list);
-+
-+    if (minor < 0) {
-         LOGEV(ERROR, -err, "Unable to find type %s disk %s", type, disk);
-         return ERROR_FAIL;
-     }
- 
--    err = tap_ctl_destroy(tap.id, tap.minor);
-+    err = tap_ctl_destroy(pid, minor, 1, NULL);
-     if (err < 0) {
-         LOGEV(ERROR, -err, "Failed to destroy tap device id %d minor %d",
--              tap.id, tap.minor);
-+              pid, minor);
-         return ERROR_FAIL;
-     }
- 
--- 
-
-
-From git-format-patch Mon Sep 17 00:00:00 2001
 From: Julien Grall <julien.grall@linaro.org>
 Date: Thu, 11 Jan 2018 18:41:41 +0000
 Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
@@ -369,10 +172,10 @@ Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
  1 file changed, 9 insertions(+)
 
 diff --git a/xen/include/public/arch-arm.h b/xen/include/public/arch-arm.h
-index b0cdd87d61..a5ceb0d7da 100644
+index c365b1b39e..7f949bce46 100644
 --- a/xen/include/public/arch-arm.h
 +++ b/xen/include/public/arch-arm.h
-@@ -362,6 +362,15 @@ typedef uint64_t xen_callback_t;
+@@ -370,6 +370,15 @@ typedef uint64_t xen_callback_t;
  #define PSR_MODE_SYS 0x1f
  
  /* 64 bit modes */
@@ -466,6 +269,7 @@ index 0fdc7121f1..684a7f6b47 100644
  
          PERROR("Could not obtain handle on privileged command interface");
 -- 
+
 
 From git-format-patch Mon Sep 17 00:00:00 2001
 From: Anthony PERARD <anthony.perard@citrix.com>
