@@ -422,6 +422,7 @@ rm -rf ${RPM_BUILD_DIR}/%{xen_tarball_dir}/tools/edk2
 %build
 %if %build_efi
 mkdir -p dist/install/boot/efi/efi/%{xen_efi_vendor}
+export EFI_VENDOR="%{xen_efi_vendor}"
 %endif
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_EXTRAVERSION="%{version}$XEN_VENDORVERSION"
@@ -476,7 +477,6 @@ WGET=/bin/false ./configure \
      PYTHON=%{__python} \
      %{?extra_config}
 
-export EFI_VENDOR="%{xen_efi_vendor}"
 make %{?_smp_mflags} PYTHON=%{__python} dist-xen
 make %{?_smp_mflags} PYTHON=%{__python} dist-tools
 make                                 dist-docs
@@ -511,12 +511,12 @@ mkdir -p %{buildroot}%{_libdir}/ocaml/stublibs
 %endif
 %if %build_efi
 mkdir -p %{buildroot}/boot/efi/efi/%{xen_efi_vendor}
+export EFI_VENDOR="%{xen_efi_vendor}"
 %endif
 export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_EXTRAVERSION="%{version}$XEN_VENDORVERSION"
 XEN_EXTRAVERSION="${XEN_EXTRAVERSION#%{hv_abi}}"
 export XEN_DOMAIN="centos.org"
-export EFI_VENDOR="%{xen_efi_vendor}"
 xen_version="$(make -C xen xenversion --no-print-directory)"
 make DESTDIR=%{buildroot} prefix=/usr PYTHON=%{__python} install-xen
 make DESTDIR=%{buildroot} prefix=/usr install-tools
