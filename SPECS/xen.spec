@@ -67,9 +67,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 3
+%define nb_commit 41
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset d58c48df8c
+%define abbrev_cset 19e0bbb4eb
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -1037,6 +1037,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Jul 10 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.3.41.g19e0bbb4eb-1
+- XSAs 317,319,321,327,328
+
 * Mon Jun 15 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.3.3.gd58c48df8c-1
 - Adding new patch from XSA-320 v2
 
