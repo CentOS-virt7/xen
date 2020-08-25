@@ -87,7 +87,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: %{pkg_version}
-Release: 1%{?xen_rc_pkgver}%{?dist}
+Release: 2%{?xen_rc_pkgver}%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     https://www.xenproject.org/
@@ -140,6 +140,7 @@ Patch1006: xsa155-centos-0002-blktap2-Use-RING_COPY_REQUEST-block-log-only.patch
 %ifarch aarch64
 Patch2001: qemuu-hw-block-xen-disk-WORKAROUND-disable-batch-map-when-.patch
 %endif
+Patch2002: xsa335-qemu.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -390,6 +391,7 @@ pushd tools/qemu-xen
 %ifarch aarch64
 %patch2001 -p1
 %endif
+%patch2002 -p1
 popd
 
 pushd tools/qemu-xen-traditional
@@ -1031,6 +1033,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Aug 25 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4.75.g93be943e7d-2
+- XSA-335
+
 * Fri Jul 10 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4.75.g93be943e7d-1
 - XSAs 317,319,321,327,328
 
