@@ -72,9 +72,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 75
+%define nb_commit 87
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset 93be943e7d
+%define abbrev_cset f58caa40cd
 
 %if %{nb_commit}
 %define pkg_version %{xen_version}.%{nb_commit}.g%{abbrev_cset}
@@ -1033,6 +1033,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Sep 23 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4.87.gf58caa40cd-2
+- XSAs 336-340,342-344
+
 * Tue Aug 25 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.10.4.75.g93be943e7d-2
 - XSA-335
 
