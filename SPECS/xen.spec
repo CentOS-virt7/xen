@@ -48,7 +48,7 @@
 
 # Hypervisor ABI
 %define hv_abi 4.13
-%define xen_version %{hv_abi}.1
+%define xen_version %{hv_abi}.2
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -975,6 +975,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Oct 30 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.13.2-1
+- Xen 4.13.2
+- As reminder: Support for blktap2 removed as blktap support is removed upstream.
+
 * Fri Jul 24 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.13.1-1
 - Xen 4.13 release
 - Removed support for blktap2 as blktap support is removed upstream.
