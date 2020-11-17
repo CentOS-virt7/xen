@@ -55,7 +55,7 @@
 
 # Hypervisor ABI
 %define hv_abi 4.12
-%define xen_version %{hv_abi}.3
+%define xen_version %{hv_abi}.4
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -67,9 +67,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 96
+%define nb_commit 13
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset 4100d463db
+%define abbrev_cset 14c9c0fcea
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -1037,6 +1037,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Nov 17 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.4.13.g14c9c0fcea-1
+- XSA-351
+
 * Wed Oct 28 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.3.96.g4100d463db-1
 - XSA 286
 
