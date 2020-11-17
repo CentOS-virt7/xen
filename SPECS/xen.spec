@@ -60,9 +60,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 0
+%define nb_commit 15
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset d58c48df8c
+%define abbrev_cset d4c0483c0b
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -975,6 +975,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Nov 17 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.13.2.15.gd4c0483c0b-1
+- XSA-351
+
 * Fri Oct 30 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.13.2-1
 - Xen 4.13.2
 - As reminder: Support for blktap2 removed as blktap support is removed upstream.
