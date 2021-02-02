@@ -67,9 +67,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 46
+%define nb_commit 47
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset 2525a745e1
+%define abbrev_cset cce7cbd986
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -1037,6 +1037,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Feb 02 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.12.4.47.gcce7cbd986-1
+- XSA-360
+
 * Thu Dec 17 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.12.4.46.g2525a745e1-1
 - XSAs 115,322,323,324,325,330,348,352,353,358,359
 
