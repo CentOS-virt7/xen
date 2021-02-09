@@ -47,7 +47,7 @@
 
 
 # Hypervisor ABI
-%define hv_abi 4.13
+%define hv_abi 4.14
 %define xen_version %{hv_abi}.1
 
 # Xen Project release candidates
@@ -158,6 +158,7 @@ BuildRequires: e2fsprogs-devel
 # tools now require yajl
 BuildRequires: yajl-devel
 BuildRequires: git
+BuildRequires: flex bison
 %if %with_systemd
 BuildRequires: pkgconfig(libsystemd-daemon)
 %endif
@@ -778,6 +779,7 @@ rm -rf %{buildroot}
 %endif
 
 # man pages
+%{_mandir}/man1/xenhypfs.1.gz
 %{_mandir}/man1/xentop.1*
 %{_mandir}/man1/xentrace_format.1*
 %{_mandir}/man8/xentrace.8*
@@ -858,21 +860,23 @@ rm -rf %{buildroot}
 %{_sbindir}/flask-*
 # Misc stuff
 %{_bindir}/xen-cpuid
+%{_bindir}/vchan-socket-proxy
 %{_sbindir}/xen-diag
 %{_sbindir}/xen-livepatch
 %{_sbindir}/xen-ucode
+%{_sbindir}/xenbaked
 %{_sbindir}/xenconsoled
+%{_sbindir}/xencov
+%{_sbindir}/xenhypfs
 %{_sbindir}/xenlockprof
 %{_sbindir}/xenmon
-%{_sbindir}/xentop
-%{_sbindir}/xenbaked
-%{_sbindir}/xenstored
+%{_sbindir}/xenperf
 %{_sbindir}/xenpm
 %{_sbindir}/xenpmd
-%{_sbindir}/xenperf
+%{_sbindir}/xenstored
+%{_sbindir}/xentop
 %{_sbindir}/xenwatchdogd
 %{_sbindir}/xl
-%{_sbindir}/xencov
 #x86-only stuff
 %ifarch x86_64
 %{_bindir}/qemu-*-xen
@@ -933,6 +937,7 @@ rm -rf %{buildroot}
 %{_libdir}/pkgconfig/xenforeignmemory.pc
 %{_libdir}/pkgconfig/xengnttab.pc
 %{_libdir}/pkgconfig/xenguest.pc
+%{_libdir}/pkgconfig/xenhypfs.pc
 %{_libdir}/pkgconfig/xenlight.pc
 %{_libdir}/pkgconfig/xenstat.pc
 %{_libdir}/pkgconfig/xenstore.pc
@@ -975,6 +980,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Feb 09 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.14.1-1
+- Xen 4.14.1 release
+
 * Fri Jul 24 2020 Anthony PERARD <anthony.perard@citrix.com> - 4.13.1-1
 - Xen 4.13 release
 - Removed support for blktap2 as blktap support is removed upstream.
