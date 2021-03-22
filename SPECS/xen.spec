@@ -60,9 +60,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 9
+%define nb_commit 47
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset 4170218cb9
+%define abbrev_cset ddb39ba714
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -980,6 +980,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Mar 22 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.14.1.47.gddb39ba714-1
+- XSA-368
+
 * Tue Feb 16 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.14.1.9.g4170218cb9-1
 - XSA-360
 
