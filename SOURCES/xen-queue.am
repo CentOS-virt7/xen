@@ -129,10 +129,10 @@ Subject: [PATCH] Disable iptables on the bridge
  2 files changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/tools/hotplug/Linux/vif-bridge b/tools/hotplug/Linux/vif-bridge
-index e722090ca8..45ffaca6ba 100644
+index 906047e82f..9a07c7e1df 100644
 --- a/tools/hotplug/Linux/vif-bridge
 +++ b/tools/hotplug/Linux/vif-bridge
-@@ -99,8 +99,6 @@ case "$command" in
+@@ -87,8 +87,6 @@ case "$command" in
          ;;
  esac
  
@@ -142,7 +142,7 @@ index e722090ca8..45ffaca6ba 100644
  
  log debug "Successful vif-bridge $command for $dev, bridge $bridge."
 diff --git a/tools/hotplug/Linux/xen-network-common.sh b/tools/hotplug/Linux/xen-network-common.sh
-index 8dd3a62068..e51d3bac14 100644
+index 42fa704e8d..2d8c9d4e40 100644
 --- a/tools/hotplug/Linux/xen-network-common.sh
 +++ b/tools/hotplug/Linux/xen-network-common.sh
 @@ -118,6 +118,13 @@ create_bridge () {
@@ -172,7 +172,7 @@ Subject: [PATCH] WORKAROUND: arm64: Fixup PSR
  1 file changed, 9 insertions(+)
 
 diff --git a/xen/include/public/arch-arm.h b/xen/include/public/arch-arm.h
-index c365b1b39e..7f949bce46 100644
+index 713fd65317..af3f580708 100644
 --- a/xen/include/public/arch-arm.h
 +++ b/xen/include/public/arch-arm.h
 @@ -370,6 +370,15 @@ typedef uint64_t xen_callback_t;
@@ -226,10 +226,10 @@ index 51fa4899eb..04a3452a04 100644
          /* Fallback to /proc/xen/privcmd */
          fd = open("/proc/xen/privcmd", O_RDWR|O_CLOEXEC);
 diff --git a/tools/libs/foreignmemory/linux.c b/tools/libs/foreignmemory/linux.c
-index 8daa5828e3..c0b555ae22 100644
+index c1f35e2db7..644fd5930d 100644
 --- a/tools/libs/foreignmemory/linux.c
 +++ b/tools/libs/foreignmemory/linux.c
-@@ -41,7 +41,7 @@ int osdep_xenforeignmemory_open(xenforeignmemory_handle *fmem)
+@@ -40,7 +40,7 @@ int osdep_xenforeignmemory_open(xenforeignmemory_handle *fmem)
      /* prefer this newer interface */
      fd = open("/dev/xen/privcmd", O_RDWR|O_CLOEXEC);
  
@@ -252,13 +252,13 @@ That would disable any possibility to restrict the interface.
 
 Signed-off-by: Anthony PERARD <anthony.perard@citrix.com>
 ---
- tools/libs/devicemodel/linux.c | 2 +-
+ tools/libs/devicemodel/common.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/tools/libs/devicemodel/linux.c b/tools/libs/devicemodel/linux.c
+diff --git a/tools/libs/devicemodel/common.c b/tools/libs/devicemodel/common.c
 index 0fdc7121f1..684a7f6b47 100644
---- a/tools/libs/devicemodel/linux.c
-+++ b/tools/libs/devicemodel/linux.c
+--- a/tools/libs/devicemodel/common.c
++++ b/tools/libs/devicemodel/common.c
 @@ -47,7 +47,7 @@ int osdep_xendevicemodel_open(xendevicemodel_handle *dmod)
           * this as an error, but an old privcmd clearly won't implement
           * IOCTL_PRIVCMD_DM_OP so don't bother trying to open it.

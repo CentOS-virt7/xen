@@ -47,8 +47,8 @@
 
 
 # Hypervisor ABI
-%define hv_abi 4.14
-%define xen_version %{hv_abi}.1
+%define hv_abi 4.15
+%define xen_version %{hv_abi}.0
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -60,7 +60,7 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 47
+%define nb_commit 0
 ## Abbrev to 10 character of the commit id
 %define abbrev_cset ddb39ba714
 
@@ -136,8 +136,6 @@ BuildRequires: ncurses-devel libaio-devel libtool
 # for the docs (also need pandoc but isn't available)
 BuildRequires: perl texinfo graphviz
 %ifarch x86_64
-# so that x86_64 builds pick up glibc32 correctly
-BuildRequires: /usr/include/gnu/stubs-32.h
 # for the VMX "bios"
 BuildRequires: dev86
 # build using Fedora ipxe packages for roms
@@ -160,7 +158,11 @@ BuildRequires: yajl-devel
 BuildRequires: git
 BuildRequires: flex bison
 %if %with_systemd
+%if 0%{?centos_ver} <= 7
 BuildRequires: pkgconfig(libsystemd-daemon)
+%else
+BuildRequires: pkgconfig(libsystemd)
+%endif
 %endif
 Requires: bridge-utils
 %if 0%{?centos_ver} <= 7
@@ -239,6 +241,17 @@ Requires: kernel >= 3.4.26
 %description hypervisor
 This package contains the Xen hypervisor
 
+%if 0%{?centos_ver} >= 8
+%package hypervisor-debuginfo
+Summary: Debuginfo for the Xen hypervisor
+Group: Development/Debug
+Requires: xen-licenses
+AutoReq: 0
+AutoProv: 1
+
+%description hypervisor-debuginfo
+This package provides debug information for package xen-hypervisor.
+%endif
 
 %package doc
 Summary: Xen documentation
@@ -498,6 +511,11 @@ install -m 644 ipxe-xen-%{version}.bin %{buildroot}/%{_libexecdir}/xen/boot/ipxe
 %if %build_efi
 install -m 644 %{SOURCE52} %{buildroot}/boot/efi/efi/%{xen_efi_vendor}/xen-%{version}${XEN_VENDORVERSION}.cfg.sample
 mv %{buildroot}/boot/efi/efi %{buildroot}/boot/efi/EFI
+%else
+%if 0%{?centos_ver} >= 8
+rm -r %{buildroot}/usr/lib64/efi
+rm %{buildroot}/usr/lib/debug/xen-%{version}-%{release}.efi.map
+%endif
 %endif
 
 %if %with_tianocore
@@ -641,7 +659,7 @@ popd
 # ...and /usr/lib/xen/boot
 mkdir -p %{buildroot}/usr/lib/xen/boot/
 pushd %{buildroot}/usr/lib/xen/boot/
-for f in pv-grub-x86_32.gz pv-grub-x86_64.gz ioemu-stubdom.gz xenstore-stubdom.gz xen-shim
+for f in pv-grub-x86_32.gz pv-grub-x86_64.gz ioemu-stubdom.gz xenstore-stubdom.gz xenstorepvh-stubdom.gz xen-shim
   do
     ln -sf ../../../lib64/xen/boot/$f .
   done
@@ -734,7 +752,7 @@ rm -rf %{buildroot}
 %{_sysconfdir}/rc.d/init.d/xen-watchdog
 %{_sysconfdir}/rc.d/init.d/xencommons
 %endif
-%{_sysconfdir}/bash_completion.d/xl.sh
+%{_sysconfdir}/bash_completion.d/xl
 
 %if %with_systemd
 %{_unitdir}/proc-xen.mount
@@ -794,6 +812,7 @@ rm -rf %{buildroot}
 %{_mandir}/man1/xenstore.1.gz
 %{_mandir}/man5/xl-disk-configuration.5.gz
 %{_mandir}/man5/xl-network-configuration.5.gz
+%{_mandir}/man5/xl-pci-configuration.5.gz
 %{_mandir}/man7/xen-pci-device-reservations.7.gz
 %{_mandir}/man7/xen-pv-channel.7.gz
 %{_mandir}/man7/xen-tscmode.7.gz
@@ -821,6 +840,7 @@ rm -rf %{buildroot}
 /usr/lib/%{name}/boot/pv-grub-x86_64.gz
 /usr/lib/%{name}/boot/ioemu-stubdom.gz
 /usr/lib/%{name}/boot/xenstore-stubdom.gz
+/usr/lib/%{name}/boot/xenstorepvh-stubdom.gz
 /usr/lib/%{name}/boot/xen-shim
 %endif
 %dir %{_libexecdir}/%{name}/boot
@@ -828,6 +848,7 @@ rm -rf %{buildroot}
 %{_libexecdir}/xen/boot/ioemu-stubdom.gz
 %{_libexecdir}/xen/boot/ipxe.bin
 %{_libexecdir}/xen/boot/xenstore-stubdom.gz
+%{_libexecdir}/xen/boot/xenstorepvh-stubdom.gz
 %{_libexecdir}/xen/boot/pv-grub-x86_32.gz
 %{_libexecdir}/xen/boot/pv-grub-x86_64.gz
 %{_libexecdir}/xen/boot/xen-shim
@@ -861,8 +882,10 @@ rm -rf %{buildroot}
 # Misc stuff
 %{_bindir}/xen-cpuid
 %{_bindir}/vchan-socket-proxy
+%{_sbindir}/xen-access
 %{_sbindir}/xen-diag
 %{_sbindir}/xen-livepatch
+%{_sbindir}/xen-memshare
 %{_sbindir}/xen-ucode
 %{_sbindir}/xenbaked
 %{_sbindir}/xenconsoled
@@ -913,6 +936,13 @@ rm -rf %{buildroot}
 %if %build_efi
 /boot/efi/EFI/%{xen_efi_vendor}/*.efi
 /boot/efi/EFI/%{xen_efi_vendor}/*.cfg.sample
+%endif
+
+%if 0%{?centos_ver} >= 8
+%files hypervisor-debuginfo
+/usr/lib/debug/usr/lib64/xen/boot/xen-shim-syms
+/usr/lib/debug/xen-syms-%{version}-%{release}
+/usr/lib/debug/xen-syms-%{version}-%{release}.map
 %endif
 
 %files doc
@@ -980,6 +1010,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Apr 13 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.15.0-1
+- Xen 4.15 release
+
 * Mon Mar 22 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.14.1.47.gddb39ba714-1
 - XSA-368
 
