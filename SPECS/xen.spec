@@ -48,7 +48,7 @@
 
 # Hypervisor ABI
 %define hv_abi 4.14
-%define xen_version %{hv_abi}.1
+%define xen_version %{hv_abi}.2
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -60,7 +60,7 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 47
+%define nb_commit 0
 ## Abbrev to 10 character of the commit id
 %define abbrev_cset ddb39ba714
 
@@ -980,6 +980,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue May 04 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.14.2-1
+- Xen 4.14.2 release
+
 * Mon Mar 22 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.14.1.47.gddb39ba714-1
 - XSA-368
 
