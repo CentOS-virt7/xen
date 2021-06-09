@@ -60,9 +60,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 0
+%define nb_commit 20
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset ddb39ba714
+%define abbrev_cset 0ff7f9c5aa
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -980,6 +980,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Jun 09 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.14.2.20.g0ff7f9c5aa-1
+- XSAs 372,372,375,377
+
 * Tue May 04 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.14.2-1
 - Xen 4.14.2 release
 
