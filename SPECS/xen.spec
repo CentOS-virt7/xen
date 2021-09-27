@@ -164,7 +164,9 @@ BuildRequires: pkgconfig(libsystemd-daemon)
 BuildRequires: pkgconfig(libsystemd)
 %endif
 %endif
+%if 0%{?centos_ver} <= 7
 Requires: bridge-utils
+%endif
 %if 0%{?centos_ver} <= 7
 Requires: python-lxml
 %else
