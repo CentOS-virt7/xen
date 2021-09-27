@@ -213,7 +213,7 @@ Signed-off-by: George Dunlap <george.dunlap@citrix.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/tools/libs/call/linux.c b/tools/libs/call/linux.c
-index 51fa4899eb..04a3452a04 100644
+index 6d588e6bea..679993e30b 100644
 --- a/tools/libs/call/linux.c
 +++ b/tools/libs/call/linux.c
 @@ -43,7 +43,7 @@ int osdep_xencall_open(xencall_handle *xcall)
