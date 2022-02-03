@@ -48,7 +48,7 @@
 
 # Hypervisor ABI
 %define hv_abi 4.15
-%define xen_version %{hv_abi}.1
+%define xen_version %{hv_abi}.2
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -60,7 +60,7 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 37
+%define nb_commit 0
 ## Abbrev to 10 character of the commit id
 %define abbrev_cset c623a84c2a
 
@@ -1012,6 +1012,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Feb 03 2022 Anthony PERARD <anthony.perard@citrix.com> - 4.15.2-1
+- Xen 4.15.2
+- XSAs 393,394,395
+
 * Mon Dec 13 2021 Anthony PERARD <anthony.perard@citrix.com> - 4.15.1.37.gc623a84c2a-1
 - XSAs 385,388,389,390
 
