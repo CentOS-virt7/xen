@@ -60,9 +60,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 0
+%define nb_commit 113
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset c623a84c2a
+%define abbrev_cset 0d12261727
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -1012,6 +1012,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jun 16 2022 Anthony PERARD <anthony.perard@citrix.com> - 4.15.2.113.g0d12261727-1
+- XSAs 397-402
+
 * Thu Feb 03 2022 Anthony PERARD <anthony.perard@citrix.com> - 4.15.2-1
 - Xen 4.15.2
 - XSAs 393,394,395
