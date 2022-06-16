@@ -48,7 +48,7 @@
 
 # Hypervisor ABI
 %define hv_abi 4.14
-%define xen_version %{hv_abi}.4
+%define xen_version %{hv_abi}.5
 
 # Xen Project release candidates
 # To build a package for a RC:
@@ -980,6 +980,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jun 16 2022 Anthony PERARD <anthony.perard@citrix.com> - 4.14.5-1
+- Xen 4.14.5
+- XSAs 397-400
+
 * Thu Feb 03 2022 Anthony PERARD <anthony.perard@citrix.com> - 4.14.4-1
 - Xen 4.14.4
 - XSAs 393,394,395
