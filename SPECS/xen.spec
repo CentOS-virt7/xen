@@ -60,9 +60,9 @@
 
 # Snapshot from git tree
 ## Number of commit since the last stable tag
-%define nb_commit 0
+%define nb_commit 21
 ## Abbrev to 10 character of the commit id
-%define abbrev_cset 0d12261727
+%define abbrev_cset 35bf91d30f
 
 %if %{xen_rc_base}
 %define pkg_version %{xen_version}
@@ -1012,6 +1012,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jul 25 2022 Anthony PERARD <anthony.perard@citrix.com> - 4.15.3.21.g35bf91d30f-1
+- XSA-407
+
 * Tue Jul 05 2022 Anthony PERARD <anthony.perard@citrix.com> - 4.15.3-1
 - Xen 4.15.3 release
 - XSA 404
